@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build, Test & Secret-Scan
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore MdExplorer.slnx
+
+      - name: Build (warnings as errors)
+        run: dotnet build MdExplorer.slnx -c Release --no-restore -warnaserror
+
+      - name: Test
+        run: dotnet test MdExplorer.slnx -c Release --no-build
+
+      - name: Secret scan (gitleaks)
+        run: .\tools\gitleaks.exe detect --source . --config .gitleaks.toml --redact --no-banner

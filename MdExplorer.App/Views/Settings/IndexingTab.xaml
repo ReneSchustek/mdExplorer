@@ -1,0 +1,68 @@
+<UserControl x:Class="MdExplorer.App.Views.Settings.IndexingTab"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MdExplorer.App.ViewModels.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:IndexingTabViewModel}">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Index-Roots" FontWeight="SemiBold" Margin="0,0,0,4" />
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding Roots}"
+                     SelectedItem="{Binding SelectedRoot, Mode=TwoWay}" />
+            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                <Button Content="Hinzufügen…" Command="{Binding AddRootCommand}" Margin="0,0,0,4" Padding="6,2" />
+                <Button Content="Entfernen" Command="{Binding RemoveRootCommand}" Padding="6,2" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Grid.Row="2" Text="Ausschluss-Muster (Glob, '!' negiert)" FontWeight="SemiBold" Margin="0,12,0,4" />
+        <Grid Grid.Row="3" Margin="0,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Text="{Binding NewExclusionPattern, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <Button Grid.Column="1"
+                    Content="Hinzufügen"
+                    Command="{Binding AddExclusionCommand}"
+                    Margin="6,0,0,0"
+                    Padding="6,2" />
+        </Grid>
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding ExclusionPatterns}"
+                     SelectedItem="{Binding SelectedExclusion, Mode=TwoWay}" />
+            <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                <Button Content="Entfernen" Command="{Binding RemoveExclusionCommand}" Padding="6,2" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="5" Margin="0,12,0,0">
+            <TextBlock Text="Tagging" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <CheckBox Content="Tags automatisch aus Hashtags extrahieren"
+                      IsChecked="{Binding AutoExtractHashtags, Mode=TwoWay}"
+                      ToolTip="Wenn aktiviert, werden #-Tags im Markdown-Body als Tags indiziert. Frontmatter-Eintraege bleiben unabhaengig davon erhalten." />
+        </StackPanel>
+    </Grid>
+</UserControl>

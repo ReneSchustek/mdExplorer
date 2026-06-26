@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>MdExplorer.App</RootNamespace>
+    <AssemblyName>MdExplorer</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MdExplorer.Core\MdExplorer.Core.csproj" />
+    <ProjectReference Include="..\MdExplorer.Data\MdExplorer.Data.csproj" />
+    <ProjectReference Include="..\MdExplorer.Graph\MdExplorer.Graph.csproj" />
+    <ProjectReference Include="..\MdExplorer.Indexer\MdExplorer.Indexer.csproj" />
+    <ProjectReference Include="..\MdExplorer.Parser\MdExplorer.Parser.csproj" />
+    <ProjectReference Include="..\MdExplorer.Search\MdExplorer.Search.csproj" />
+    <ProjectReference Include="..\MdExplorer.TagCloud\MdExplorer.TagCloud.csproj" />
+    <ProjectReference Include="..\MdExplorer.Update\MdExplorer.Update.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.9" />
+    <PackageReference Include="Markdig" Version="1.3.2" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\Logo.png" />
+    <EmbeddedResource Include="Assets\preview-light.css" />
+    <EmbeddedResource Include="Assets\preview-dark.css" />
+    <EmbeddedResource Include="Assets\Graph\graph.html" />
+    <EmbeddedResource Include="Assets\Graph\graph.css" />
+    <EmbeddedResource Include="Assets\Graph\graph.js" />
+    <EmbeddedResource Include="Assets\Help\help.html" />
+    <EmbeddedResource Include="Assets\Help\help.css" />
+    <EmbeddedResource Include="Assets\Help\help.js" />
+    <EmbeddedResource Include="..\docs\HANDBUCH.md" LogicalName="MdExplorer.App.Assets.Help.Handbuch.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MdExplorer.App.Tests" />
+  </ItemGroup>
+
+</Project>

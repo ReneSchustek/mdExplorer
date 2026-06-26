@@ -1,0 +1,20 @@
+<Solution>
+  <Project Path="MdExplorer.App/MdExplorer.App.csproj" />
+  <Project Path="MdExplorer.App.Tests/MdExplorer.App.Tests.csproj" />
+  <Project Path="MdExplorer.Core/MdExplorer.Core.csproj" />
+  <Project Path="MdExplorer.Core.Tests/MdExplorer.Core.Tests.csproj" />
+  <Project Path="MdExplorer.Data/MdExplorer.Data.csproj" />
+  <Project Path="MdExplorer.Data.Tests/MdExplorer.Data.Tests.csproj" />
+  <Project Path="MdExplorer.Graph/MdExplorer.Graph.csproj" />
+  <Project Path="MdExplorer.Graph.Tests/MdExplorer.Graph.Tests.csproj" />
+  <Project Path="MdExplorer.Indexer/MdExplorer.Indexer.csproj" />
+  <Project Path="MdExplorer.Indexer.Tests/MdExplorer.Indexer.Tests.csproj" />
+  <Project Path="MdExplorer.Parser/MdExplorer.Parser.csproj" />
+  <Project Path="MdExplorer.Parser.Tests/MdExplorer.Parser.Tests.csproj" />
+  <Project Path="MdExplorer.Search/MdExplorer.Search.csproj" />
+  <Project Path="MdExplorer.Search.Tests/MdExplorer.Search.Tests.csproj" />
+  <Project Path="MdExplorer.TagCloud/MdExplorer.TagCloud.csproj" />
+  <Project Path="MdExplorer.TagCloud.Tests/MdExplorer.TagCloud.Tests.csproj" />
+  <Project Path="MdExplorer.Update/MdExplorer.Update.csproj" />
+  <Project Path="MdExplorer.Update.Tests/MdExplorer.Update.Tests.csproj" />
+</Solution>

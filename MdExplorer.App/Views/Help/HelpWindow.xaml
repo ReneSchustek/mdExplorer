@@ -1,0 +1,66 @@
+<Window x:Class="MdExplorer.App.Views.Help.HelpWindow"
+        x:ClassModifier="internal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        xmlns:vm="clr-namespace:MdExplorer.App.ViewModels.Help"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="MdExplorer-Handbuch"
+        Width="980"
+        Height="720"
+        MinWidth="640"
+        MinHeight="420"
+        ShowInTaskbar="True"
+        WindowStartupLocation="Manual"
+        d:DataContext="{d:DesignInstance Type=vm:HelpViewModel}">
+    <DockPanel LastChildFill="True">
+        <Border DockPanel.Dock="Top" Padding="8,6" BorderThickness="0,0,0,1" BorderBrush="#FFD0D7DE">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="SearchBox"
+                         Grid.Column="0"
+                         VerticalContentAlignment="Center"
+                         Padding="6,2"
+                         TextChanged="OnSearchTextChanged" />
+                <TextBlock x:Name="HitLabel"
+                           Grid.Column="1"
+                           Margin="10,0"
+                           VerticalAlignment="Center"
+                           Foreground="#FF57606A"
+                           Text="0 / 0" />
+                <Button Grid.Column="2"
+                        Content="◀"
+                        Width="28"
+                        Margin="0,0,4,0"
+                        Click="OnPreviousHit"
+                        ToolTip="Voriger Treffer" />
+                <Button Grid.Column="3"
+                        Content="▶"
+                        Width="28"
+                        Click="OnNextHit"
+                        ToolTip="Nächster Treffer" />
+            </Grid>
+        </Border>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" MinWidth="180" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ListBox x:Name="TocList"
+                     Grid.Column="0"
+                     BorderThickness="0"
+                     SelectionChanged="OnTocSelectionChanged"
+                     DisplayMemberPath="Title" />
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="#FFE5E7EB" />
+            <wv2:WebView2 x:Name="HelpView" Grid.Column="2" />
+        </Grid>
+    </DockPanel>
+</Window>

@@ -1,0 +1,99 @@
+# ============================================================
+# .gitignore – MdExplorer
+# ============================================================
+# Hinweis: lokale Arbeitsartefakte (STATUS.md, briefs/, DEPLOYMENT.md,
+# zugaenge.md usw.) sind in ~/.gitignore_global eingetragen
+# und müssen hier NICHT wiederholt werden.
+# ============================================================
+
+# ============================================================
+# Lokale Arbeitsvorlagen — nie committen
+# ============================================================
+brief-template.md
+.gitignore-template
+
+# ============================================================
+# SCRIPTE nie committen
+# ============================================================
+*.ps1
+
+# ============================================================
+# Hinweis: reviews/ gehört NICHT in .gitignore
+# ============================================================
+# reviews/ wird auf DevBox in Git versioniert (Entwicklungshistorie).
+# GitHub-Export-Script schließt reviews/ automatisch aus.
+# Niemals reviews/ hier eintragen.
+# ============================================================
+
+# ============================================================
+# docs/ ist global ignoriert, in diesem Projekt aber gewollt
+# (ARCHITECTURE.md, SETTINGS.md — siehe README).
+# ============================================================
+!docs/
+!docs/**
+
+# ============================================================
+# Secrets / Umgebungsvariablen (NIEMALS in Git!)
+# ============================================================
+.env
+.env.local
+.env.*.local
+!.env.example
+secrets.json
+*.pfx
+*.p12
+*.key
+config/secrets/
+
+# ============================================================
+# Logs
+# ============================================================
+*.log
+/logs/
+
+# ============================================================
+# .NET / Visual Studio
+# ============================================================
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+packages/
+*.nupkg
+project.lock.json
+*.nuget.props
+*.nuget.targets
+
+# Build-Ergebnisse
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM64/
+[Bb]uild/
+bld/
+
+# Publish
+publish/
+
+# Test/Coverage-Ergebnisse (lokal, gehoeren nicht ins Repo)
+TestResults/
+*.cobertura.xml
+*.opencover.xml
+
+# NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Rider
+.idea/
+

@@ -1,0 +1,16 @@
+# Erzwingt CRLF im Worktree fuer alle Text-Dateien — konsistent zur .editorconfig
+# (end_of_line = crlf). Verhindert ENDOFLINE-Befunde in dotnet format, die durch
+# externe Tools oder unterschiedliche Editor-Standards entstehen koennen.
+*               text=auto eol=crlf
+
+# Bekannte Binaerdateien
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.pdf           binary
+*.zip           binary
+*.dll           binary
+*.exe           binary
+*.pdb           binary

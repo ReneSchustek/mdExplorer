@@ -1,0 +1,86 @@
+<UserControl x:Class="MdExplorer.App.Views.Panels.SearchPanel"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MdExplorer.App.ViewModels"
+             xmlns:conv="clr-namespace:MdExplorer.App.Converters"
+             xmlns:models="clr-namespace:MdExplorer.Search.Models;assembly=MdExplorer.Search"
+             d:DataContext="{d:DesignInstance Type=vm:SearchViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <conv:HighlightToInlinesConverter x:Key="HighlightConverter" />
+        <x:Array x:Key="SearchModes" Type="{x:Type models:SearchMode}">
+            <models:SearchMode>Fts5</models:SearchMode>
+            <models:SearchMode>Regex</models:SearchMode>
+        </x:Array>
+        <x:Array x:Key="SimilarityModes" Type="{x:Type models:SimilarityMode}">
+            <models:SimilarityMode>None</models:SimilarityMode>
+            <models:SimilarityMode>Stemmed</models:SimilarityMode>
+            <models:SimilarityMode>NearStem</models:SimilarityMode>
+            <models:SimilarityMode>NearStemSynonyms</models:SimilarityMode>
+        </x:Array>
+    </UserControl.Resources>
+    <DockPanel LastChildFill="True">
+        <Grid DockPanel.Dock="Top" Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="QueryTextBox"
+                     Grid.Column="0"
+                     Text="{Binding QueryText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     KeyDown="OnQueryKeyDown"
+                     Padding="4" />
+            <ProgressBar Grid.Column="1"
+                         Width="80"
+                         Height="6"
+                         IsIndeterminate="True"
+                         Margin="8,0,0,0"
+                         Visibility="{Binding IsSearching, Converter={StaticResource BoolToVisibility}}" />
+        </Grid>
+        <Grid DockPanel.Dock="Top" Margin="8,0,8,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Modus:" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{StaticResource SearchModes}"
+                      SelectedItem="{Binding Mode, Mode=TwoWay}" />
+            <TextBlock Grid.Column="2" Text="Ähnlichkeit:" VerticalAlignment="Center" Margin="8,0,4,0" />
+            <ComboBox Grid.Column="3"
+                      ItemsSource="{StaticResource SimilarityModes}"
+                      SelectedItem="{Binding Similarity, Mode=TwoWay}" />
+        </Grid>
+        <CheckBox DockPanel.Dock="Top"
+                  Margin="8,0,8,8"
+                  Content="Nur aktueller Ordner"
+                  ToolTip="Beschränkt die Treffer auf den im Ordnerbaum gewählten Pfad. Ohne Haken wird über alle Wurzeln gesucht."
+                  IsChecked="{Binding ScopeToSelectedFolder, Mode=TwoWay}" />
+        <ListBox ItemsSource="{Binding Results}"
+                 SelectedItem="{Binding SelectedResult, Mode=TwoWay}"
+                 VirtualizingStackPanel.IsVirtualizing="True"
+                 VirtualizingStackPanel.VirtualizationMode="Recycling"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 BorderThickness="0">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Margin="4">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Path}" Foreground="#FF6C7086" FontSize="11" />
+                        <ContentControl Content="{Binding Snippet, Converter={StaticResource HighlightConverter}}" Margin="0,2,0,0" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>
