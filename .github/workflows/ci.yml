@@ -31,7 +31,9 @@ jobs:
         run: dotnet build MdExplorer.slnx -c Release --no-restore -warnaserror
 
       - name: Test
-        run: dotnet test MdExplorer.slnx -c Release --no-build
+        # Performance-Tests sind laufzeitabhaengig und auf gemeinsam genutzten Runnern
+        # nicht aussagekraeftig — sie laufen lokal, nicht als CI-Gate.
+        run: dotnet test MdExplorer.slnx -c Release --no-build --filter "Category!=Performance"
 
       - name: Secret scan (gitleaks)
         run: .\tools\gitleaks.exe detect --source . --config .gitleaks.toml --redact --no-banner
