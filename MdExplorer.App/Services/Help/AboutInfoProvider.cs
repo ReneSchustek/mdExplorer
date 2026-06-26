@@ -39,7 +39,7 @@ internal sealed class AboutInfoProvider : IAboutInfoProvider
     {
         Assembly assembly = typeof(AboutInfoProvider).Assembly;
         string version = ResolveVersion(assembly);
-        DateTime buildDate = ResolveBuildDate(assembly);
+        DateTime buildDate = ResolveBuildDate();
         return new AboutInfo(version, buildDate, KnownLibraries);
     }
 
@@ -55,16 +55,18 @@ internal sealed class AboutInfoProvider : IAboutInfoProvider
         return version?.ToString() ?? "0.0.0";
     }
 
-    private static DateTime ResolveBuildDate(Assembly assembly)
+    private static DateTime ResolveBuildDate()
     {
         try
         {
-            string? location = assembly.Location;
-            if (string.IsNullOrEmpty(location) || !File.Exists(location))
+            // Environment.ProcessPath ist Single-File-tauglich (anders als Assembly.Location,
+            // das im Single-File-Publish leer ist) und zeigt auf die laufende Exe.
+            string? processPath = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(processPath) || !File.Exists(processPath))
             {
                 return DateTime.UtcNow;
             }
-            return File.GetLastWriteTimeUtc(location);
+            return File.GetLastWriteTimeUtc(processPath);
         }
         catch (IOException)
         {
