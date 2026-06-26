@@ -1,0 +1,37 @@
+<UserControl x:Class="MdExplorer.App.Views.Settings.AppearanceTab"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:MdExplorer.App.ViewModels.Settings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:AppearanceTabViewModel}">
+    <Grid Margin="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Theme:" VerticalAlignment="Center" Margin="0,0,8,8" />
+        <ComboBox Grid.Row="0" Grid.Column="1"
+                  ItemsSource="{Binding Source={x:Static vm:AppearanceTabViewModel.AvailableThemes}}"
+                  SelectedItem="{Binding Theme, Mode=TwoWay}"
+                  Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Preview-Schriftgröße (px):" VerticalAlignment="Center" Margin="0,0,8,8" />
+        <TextBox Grid.Row="1" Grid.Column="1"
+                 Text="{Binding PreviewFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Treffer pro Seite:" VerticalAlignment="Center" Margin="0,0,8,8" />
+        <TextBox Grid.Row="2" Grid.Column="1"
+                 Text="{Binding ResultsPerPage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 Margin="0,0,0,8" />
+    </Grid>
+</UserControl>

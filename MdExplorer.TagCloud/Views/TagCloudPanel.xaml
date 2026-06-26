@@ -1,0 +1,69 @@
+<UserControl x:Class="MdExplorer.TagCloud.Views.TagCloudPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:MdExplorer.TagCloud.Models"
+             xmlns:vm="clr-namespace:MdExplorer.TagCloud.ViewModels"
+             xmlns:conv="clr-namespace:MdExplorer.TagCloud.Converters"
+             xmlns:sys="clr-namespace:System;assembly=netstandard"
+             d:DataContext="{d:DesignInstance Type=vm:TagCloudViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <ObjectDataProvider x:Key="SortOptions"
+                            MethodName="GetValues"
+                            ObjectType="{x:Type sys:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="models:TagCloudSortOption" />
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
+    </UserControl.Resources>
+    <DockPanel LastChildFill="True">
+        <Grid DockPanel.Dock="Top" Margin="8,8,8,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0"
+                       Text="Tag-Cloud"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+            <ComboBox Grid.Column="2"
+                      Margin="8,0"
+                      Width="140"
+                      ItemsSource="{Binding Source={StaticResource SortOptions}}"
+                      SelectedItem="{Binding Sort, Mode=TwoWay}" />
+            <ToggleButton Grid.Column="3"
+                          Content="Mehr"
+                          Padding="6,2"
+                          ToolTip="Long-Tail anzeigen"
+                          IsChecked="{Binding IsLongTailExpanded, Mode=TwoWay}" />
+        </Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Items}" Margin="8,4">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:TagItemViewModel}">
+                        <Button Margin="2"
+                                Padding="6,2"
+                                Background="Transparent"
+                                BorderBrush="#FFD0D7DE"
+                                BorderThickness="1"
+                                Cursor="Hand"
+                                Click="OnTagClicked"
+                                ToolTip="{Binding Count, StringFormat='{}{0} Treffer'}">
+                            <TextBlock Text="{Binding Name}" FontSize="11" />
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

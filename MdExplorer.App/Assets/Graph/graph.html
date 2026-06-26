@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-__SCRIPT_NONCE__'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
+    <title>WikiLink-Graph</title>
+    <style>__INLINE_CSS__</style>
+</head>
+<body>
+    <div id="legend"><span id="legend-count">0 Knoten / 0 Kanten</span></div>
+    <canvas id="graph"></canvas>
+    <script type="application/json" id="graph-payload">__GRAPH_JSON__</script>
+    <script nonce="__SCRIPT_NONCE__">__INLINE_JS__</script>
+    <script nonce="__SCRIPT_NONCE__">
+        (function () {
+            const payloadElement = document.getElementById('graph-payload');
+            const payload = JSON.parse(payloadElement.textContent);
+            window.MdExplorerGraph.render(payload);
+        })();
+    </script>
+</body>
+</html>
