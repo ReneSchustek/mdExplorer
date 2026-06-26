@@ -97,3 +97,7 @@ $RECYCLE.BIN/
 # Rider
 .idea/
 
+# Publish- und Installer-Artefakte
+/publish/
+/dist/
+
