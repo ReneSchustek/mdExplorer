@@ -7,6 +7,8 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.10.0] - 2026-07-22
+
 ### Hinzugefügt
 - Update-Prüfung beim Start: Die Anwendung prüft einmal täglich über die
   GitHub-Releases-API auf neue Versionen und blendet bei Verfügbarkeit eine
@@ -19,7 +21,14 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 - Suche lieferte keine Treffer, wenn ein Ordner im Baum gewählt war (der
   Pfad-Filter verglich absolute mit indexrelativen Pfaden).
 
-## [0.9.0]
+### Geändert
+- Umfangreiche Qualitäts- und Härtungsarbeiten: strengere Analyzer-Regeln
+  wiederhergestellt, ein Qualitaets-Durchlauf und ein frischer Security-Review,
+  Testabdeckung auf ≥ 80 % angehoben sowie Datenschicht-Optimierung
+  (Batch-Ladevorgänge statt N+1-Abfragen, case-insensitiver Pfad-Abgleich).
+  Projektstruktur nach `src/` und `tests/` reorganisiert.
+
+## [0.9.0] - 2026-06-26
 
 ### Hinzugefügt
 - Drei-Panel-Oberfläche mit Datei-Browser, Volltext-Suche (SQLite FTS5) und
@@ -30,5 +39,6 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.9.0...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.10.0
 [0.9.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.9.0

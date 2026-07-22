@@ -8,7 +8,6 @@
 # ============================================================
 # Lokale Arbeitsvorlagen — nie committen
 # ============================================================
-.gitignore-template
 
 # ============================================================
 # SCRIPTE nie committen
@@ -98,4 +97,3 @@ $RECYCLE.BIN/
 # Publish- und Installer-Artefakte
 /publish/
 /dist/
-
