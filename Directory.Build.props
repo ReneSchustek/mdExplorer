@@ -40,16 +40,6 @@
   </PropertyGroup>
 
   <!--
-    NuGetAuditSuppress: GHSA-2m69-gcr7-jv3q betrifft SQLitePCLRaw.lib.e_sqlite3 2.1.11
-    (transitive Abhaengigkeit von Microsoft.Data.Sqlite 10.0.9). Stand 2026-06-21 gibt es
-    upstream keine gefixte Release-Version; 2.1.11 ist gleichzeitig die Latest. Den Eintrag
-    entfernen, sobald Upstream eine neue Version liefert.
-  -->
-  <ItemGroup>
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
-  </ItemGroup>
-
-  <!--
     Statische Analyzer: StyleCop + Sonar als zentrale PackageReference, nur in
     Produktivprojekten. Test-Projekte bleiben aussen vor, weil Stil-Regeln dort Boilerplate
     forcieren wuerden (Doku, file headers, public visibility), das Tests nicht brauchen.
