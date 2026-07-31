@@ -52,6 +52,9 @@ internal sealed class FakeUpdateInstaller : IUpdateInstaller
         IProgress<int>? progress,
         CancellationToken cancellationToken)
     {
+        // Wie die echte Umsetzung: ein bereits gesetzter Abbruch beendet den Vorgang,
+        // bevor irgendetwas geschrieben oder gestartet wird.
+        cancellationToken.ThrowIfCancellationRequested();
         progress?.Report(100);
         return Task.FromResult(_result);
     }

@@ -60,6 +60,9 @@ internal sealed partial class SettingsWindow : Window
     {
         _viewModel.CloseRequested -= OnCloseRequested;
         _viewModel.Behavior.Update.InstallerStarted -= OnInstallerStarted;
+        // Bricht einen noch laufenden Download ab. Sonst liefe er ins Leere weiter und
+        // startete am Ende das Installationsprogramm, ohne dass die Anwendung endet.
+        _viewModel.Behavior.Update.Dispose();
         Loaded -= OnLoadedHandler;
         Closed -= OnWindowClosed;
         // Modaler Dialog: nach dem Schliessen den vorherigen Kontext zurueckgeben,

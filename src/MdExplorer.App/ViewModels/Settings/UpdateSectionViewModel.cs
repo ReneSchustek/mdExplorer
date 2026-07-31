@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MdExplorer.Update.Abstractions;
 using MdExplorer.Update.Models;
@@ -14,10 +14,17 @@ namespace MdExplorer.App.ViewModels.Settings;
 /// jemand damit arbeitet, wäre die schlechtere Antwort.
 /// </para>
 /// </summary>
-internal sealed partial class UpdateSectionViewModel : ObservableObject
+internal sealed partial class UpdateSectionViewModel : ObservableObject, IDisposable
 {
     private readonly IUpdateChecker _checker;
     private readonly IUpdateInstaller _installer;
+
+    /// <summary>
+    /// Bricht laufende Vorgänge ab, wenn der Dialog geschlossen wird. Ohne das liefe ein
+    /// begonnener Download weiter und meldete am Ende an ein Fenster, das es nicht mehr
+    /// gibt — das Installationsprogramm startete dann, ohne dass die Anwendung endet.
+    /// </summary>
+    private readonly CancellationTokenSource _cancellation = new();
 
     [ObservableProperty]
     private string _statusText = "Noch nicht geprüft.";
@@ -35,6 +42,7 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject
     private bool _isInstallAvailable;
 
     private UpdateAsset? _asset;
+    private bool _disposed;
 
     /// <summary>Erzeugt den Abschnitt.</summary>
     public UpdateSectionViewModel(IUpdateChecker checker, IUpdateInstaller installer)
@@ -57,6 +65,23 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject
 
     /// <summary>Lädt das geprüfte Paket und startet es.</summary>
     public AsyncRelayCommand InstallCommand { get; }
+
+    /// <summary>Bricht laufende Vorgänge ab. Wird vom Dialog beim Schließen aufgerufen.</summary>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (!_cancellation.IsCancellationRequested)
+        {
+            _cancellation.Cancel();
+        }
+
+        _cancellation.Dispose();
+    }
 
     /// <summary>Formuliert das Prüfergebnis als Satz für die Oberfläche.</summary>
     private static string DescribeResult(UpdateCheckResult result) => result.Status switch
@@ -94,6 +119,13 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject
 
     private async Task CheckAsync()
     {
+        // Nach dem Schliessen des Dialogs ist die Abbruchquelle entsorgt; ein Zugriff
+        // auf ihr Token wuerde werfen.
+        if (_disposed)
+        {
+            return;
+        }
+
         IsBusy = true;
         IsInstallAvailable = false;
         _asset = null;
@@ -104,7 +136,7 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject
             // force: Der Nutzer hat den Knopf gedrückt — die Drossel gilt nur für die
             // automatische Prüfung beim Start.
             UpdateCheckResult result = await _checker
-                .CheckForUpdateAsync(force: true, CancellationToken.None)
+                .CheckForUpdateAsync(force: true, _cancellation.Token)
                 .ConfigureAwait(true);
 
             StatusText = DescribeResult(result);
@@ -122,7 +154,7 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject
 
     private async Task InstallAsync()
     {
-        if (_asset is null)
+        if (_disposed || _asset is null)
         {
             return;
         }
@@ -136,7 +168,7 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject
         {
             Progress<int> progress = new(p => ProgressPercent = p);
             UpdateDownloadResult download = await _installer
-                .DownloadAndVerifyAsync(_asset, progress, CancellationToken.None)
+                .DownloadAndVerifyAsync(_asset, progress, _cancellation.Token)
                 .ConfigureAwait(true);
 
             if (!download.IsVerified)
@@ -155,6 +187,12 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject
                 StatusText = "Das Installationsprogramm ließ sich nicht starten. "
                     + $"Die geprüfte Datei liegt unter {download.InstallerPath}.";
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Der Dialog wurde waehrend des Downloads geschlossen. Der Teil-Download ist
+            // bereits verworfen; hier bleibt nichts zu tun.
+            StatusText = "Abgebrochen.";
         }
         finally
         {

@@ -1,4 +1,4 @@
-using MdExplorer.App.Tests.Fakes;
+﻿using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels.Settings;
 using MdExplorer.Update.Models;
 
@@ -20,7 +20,7 @@ public sealed class UpdateSectionViewModelTests
     public async Task CheckCommand_UsesForce_SoDerNutzerNichtDieGedrosselteAuskunftBekommt()
     {
         FakeUpdateChecker checker = new(UpdateCheckResult.UpToDate(Current, Current));
-        UpdateSectionViewModel sut = Build(checker, out _);
+        using UpdateSectionViewModel sut = Build(checker, out _);
 
         await sut.CheckCommand.ExecuteAsync(null);
 
@@ -32,7 +32,7 @@ public sealed class UpdateSectionViewModelTests
     {
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
-        UpdateSectionViewModel sut = Build(checker, out _);
+        using UpdateSectionViewModel sut = Build(checker, out _);
 
         await sut.CheckCommand.ExecuteAsync(null);
 
@@ -47,7 +47,7 @@ public sealed class UpdateSectionViewModelTests
         // keinen Beleg fuer die Datei. Dann bleibt nur der Weg ueber die Release-Seite.
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, null);
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
-        UpdateSectionViewModel sut = Build(checker, out _);
+        using UpdateSectionViewModel sut = Build(checker, out _);
 
         await sut.CheckCommand.ExecuteAsync(null);
 
@@ -59,7 +59,7 @@ public sealed class UpdateSectionViewModelTests
     public async Task CheckCommand_OhneUpdate_MeldetAktuellUndBietetNichtsAn()
     {
         FakeUpdateChecker checker = new(UpdateCheckResult.UpToDate(Current, Current));
-        UpdateSectionViewModel sut = Build(checker, out _);
+        using UpdateSectionViewModel sut = Build(checker, out _);
 
         await sut.CheckCommand.ExecuteAsync(null);
 
@@ -73,7 +73,7 @@ public sealed class UpdateSectionViewModelTests
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
-        UpdateSectionViewModel sut = new(checker, installer);
+        using UpdateSectionViewModel sut = new(checker, installer);
         bool started = false;
         sut.InstallerStarted += (_, _) => started = true;
 
@@ -90,7 +90,7 @@ public sealed class UpdateSectionViewModelTests
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Failed(UpdateDownloadStatus.ChecksumMismatch));
-        UpdateSectionViewModel sut = new(checker, installer);
+        using UpdateSectionViewModel sut = new(checker, installer);
         bool started = false;
         sut.InstallerStarted += (_, _) => started = true;
 
@@ -107,11 +107,47 @@ public sealed class UpdateSectionViewModelTests
     {
         FakeUpdateChecker checker = new(UpdateCheckResult.UpToDate(Current, Current));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
-        UpdateSectionViewModel sut = new(checker, installer);
+        using UpdateSectionViewModel sut = new(checker, installer);
 
         await sut.InstallCommand.ExecuteAsync(null);
 
         Assert.Null(installer.StartedPath);
+    }
+
+    [Fact]
+    public async Task Dispose_WaehrendDerDialogSchliesst_StartetKeinenInstaller()
+    {
+        // Wird der Dialog waehrend des Downloads geschlossen, darf das
+        // Installationsprogramm nicht mehr anlaufen: Die Anwendung wuerde dann nicht
+        // beendet und koennte ihre eigenen Dateien nicht ersetzen.
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
+        FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
+        UpdateSectionViewModel sut = new(checker, installer);
+        bool started = false;
+        sut.InstallerStarted += (_, _) => started = true;
+
+        await sut.CheckCommand.ExecuteAsync(null);
+        sut.Dispose();
+        await sut.InstallCommand.ExecuteAsync(null);
+
+        Assert.Null(installer.StartedPath);
+        Assert.False(started);
+    }
+
+    [Fact]
+    public async Task Dispose_MehrfachAufgerufen_WirftNicht()
+    {
+        // Das Fenster meldet sich beim Schliessen ab; ein zweiter Aufruf darf nicht
+        // ueber die bereits entsorgte Abbruchquelle stolpern.
+        FakeUpdateChecker checker = new(UpdateCheckResult.UpToDate(Current, Current));
+        UpdateSectionViewModel sut = Build(checker, out _);
+
+        sut.Dispose();
+        sut.Dispose();
+        await sut.CheckCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, checker.CallCount);
     }
 
     private static UpdateSectionViewModel Build(FakeUpdateChecker checker, out FakeUpdateInstaller installer)

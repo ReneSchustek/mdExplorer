@@ -41,7 +41,8 @@ public sealed class SettingsViewModelsTests
     {
         BehaviorSettings initial = new(500, 120, CheckForUpdatesAtStartup: false);
 
-        BehaviorTabViewModel sut = new(initial, BuildUpdateSection());
+        using UpdateSectionViewModel update = BuildUpdateSection();
+        BehaviorTabViewModel sut = new(initial, update);
 
         Assert.Equal(500, sut.SearchDebounceMs);
         Assert.Equal(120, sut.IndexerResyncIntervalSeconds);
