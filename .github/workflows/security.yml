@@ -103,8 +103,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: gitleaks ausführen
-        uses: gitleaks/gitleaks-action@v2
+      # Bewusst der direkte Aufruf statt der Action: Die Action leitet den zu prüfenden
+      # Bereich aus dem Push-Ereignis ab und bildet dabei `<erster-commit>^`. Für den
+      # Wurzel-Commit gibt es keinen Vorgänger — dann bricht git ab und der Scan läuft
+      # überhaupt nicht, meldet aber „kein Fund". Ein Scan, der still nichts prüft, ist
+      # schlechter als keiner. `detect` ohne Bereichsangabe prüft immer die vollständige
+      # Historie und ist von der Beschaffenheit des Pushes unabhängig.
+      - name: gitleaks installieren
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: true
+          GITLEAKS_VERSION: 8.24.3
+
+      - name: gitleaks ausführen
+        run: gitleaks detect --source . --config .gitleaks.toml --redact --no-banner --exit-code 1
