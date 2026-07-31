@@ -227,7 +227,7 @@ dotnet_diagnostic.SA1312.severity = none
 # StyleCop meldet das als SA0001. Kein Bug-Risiko.
 dotnet_diagnostic.SA0001.severity = none
 
-# Documentation-Tag-Konsistenz: Wortlaut- und Reihenfolge-Regeln hart als Warning
+# Documentation-Tag-Konsistenz: Wortlaut- und Reihenfolge-Regeln hart als Warning,
 # damit vorhandene XML-Doku konsistent bleibt.
 #
 # SA1611 (fehlende <param>) und SA1615 (fehlender <returns>) bleiben bewusst auf
@@ -263,16 +263,16 @@ dotnet_diagnostic.S1135.severity = warning
 # String-Literal-Duplikate: hart als Warning; Locale-Strings/UI-Texte werden als Konstanten extrahiert.
 dotnet_diagnostic.S1192.severity = warning
 
-# Cognitive/Cyclomatic Complexity: hart als Warning. Kollidiert sonst mit
-# dem Grundsatz "Kleine Methoden, eine Verantwortung". Bewusst komplexe Parser-/Walker-
-# Methoden werden lokal per #pragma + Begruendung supprimiert.
+# Cognitive/Cyclomatic Complexity: hart als Warning. Kollidiert sonst mit dem Grundsatz
+# "Kleine Methoden, eine Verantwortung". Bewusst komplexe Parser-/Walker-Methoden werden
+# lokal per #pragma + Begruendung supprimiert.
 dotnet_diagnostic.S3776.severity = warning
 dotnet_diagnostic.S1541.severity = warning
 
 # Parametergleichheit fuer Vergleichsmethoden — hart als Warning.
 dotnet_diagnostic.S2342.severity = warning
 
-# Magic-Number-Detection: hart als Warning.
+# Magic-Number-Detection: hart als Warning ("Keine Magic Values").
 # 0/1 sind via sonar.core.magicNumbers-Standard ausgenommen; echte Magic Values werden
 # als benannte Konstanten extrahiert, bewusste Ausnahmen lokal per #pragma begruendet.
 dotnet_diagnostic.S109.severity = warning

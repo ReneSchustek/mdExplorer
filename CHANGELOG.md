@@ -7,6 +7,17 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.11.0] - 2026-07-31
+
+### Hinzugefügt
+- Über-Dialog: freiwilliger Spenden-Eintrag. Wer möchte, kann die Weiterarbeit
+  am Projekt mit einem Kaffee unterstützen; der Button öffnet die Spendenseite
+  im Standardbrowser.
+
+### Sicherheit
+- Die mitgelieferte SQLite-Bibliothek läuft jetzt in einer Fassung ohne die
+  bekannte Schwachstelle GHSA-2m69-gcr7-jv3q.
+
 ## [0.10.0] - 2026-07-22
 
 ### Hinzugefügt
@@ -39,6 +50,7 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.10.0...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.11.0
 [0.10.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.10.0
 [0.9.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.9.0

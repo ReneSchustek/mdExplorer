@@ -8,7 +8,7 @@ namespace MdExplorer.App.Services.Help;
 /// und Build-Datum aus der App-Assembly und liefert eine fest gepflegte Liste
 /// der unmittelbar eingesetzten Open-Source-Bibliotheken. Die Liste wird
 /// projektweit kuratiert, damit der Dialog sauber bleibt — eine vollständige
-/// transitive Inventur folgt aus einer eigenen Betrachtung.
+/// transitive Inventur bleibt einer eigenen Betrachtung vorbehalten.
 /// </summary>
 internal sealed class AboutInfoProvider : IAboutInfoProvider
 {

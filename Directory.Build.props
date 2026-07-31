@@ -50,7 +50,7 @@
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json" />
   </ItemGroup>
 
-  <!-- SemVer aus VERSION-Datei im Repo-Root. -->
+  <!-- SemVer aus der VERSION-Datei im Repo-Root. -->
   <PropertyGroup>
     <_VersionFromFile>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</_VersionFromFile>
     <Version>$(_VersionFromFile)</Version>

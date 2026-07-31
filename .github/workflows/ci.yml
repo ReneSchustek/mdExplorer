@@ -35,5 +35,5 @@ jobs:
         # nicht aussagekraeftig — sie laufen lokal, nicht als CI-Gate.
         run: dotnet test MdExplorer.slnx -c Release --no-build --filter "Category!=Performance"
 
-      - name: Secret scan (gitleaks)
-        run: .\tools\gitleaks.exe detect --source . --config .gitleaks.toml --redact --no-banner
+# Der Secret-Scan läuft im Security-Workflow über die offizielle gitleaks-Action —
+# dort über die vollständige Historie und zusätzlich nach Zeitplan.

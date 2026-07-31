@@ -30,6 +30,23 @@
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="Schließen" Width="100" IsDefault="True" IsCancel="True" Click="OnCloseClick" />
         </StackPanel>
+        <!-- Freiwilliger Spenden-Einstieg. Bleibt ausgeblendet, solange kein echter
+             PayPal-Handle konfiguriert ist, damit nie ein toter Link erscheint. -->
+        <StackPanel DockPanel.Dock="Bottom"
+                    Margin="0,12,0,0"
+                    Visibility="{Binding IsDonationVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+            <Separator Margin="0,0,0,8" />
+            <TextBlock Text="Gefällt dir MdExplorer? Über einen Kaffee freue ich mich – ganz freiwillig."
+                       Foreground="#FF57606A"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center" />
+            <Button Content="☕ Kaffee spendieren"
+                    HorizontalAlignment="Center"
+                    Padding="12,4"
+                    Margin="0,8,0,0"
+                    AutomationProperties.Name="Kaffee spendieren"
+                    Click="OnDonationClick" />
+        </StackPanel>
         <DataGrid ItemsSource="{Binding Libraries}"
                   AutoGenerateColumns="False"
                   IsReadOnly="True"

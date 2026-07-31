@@ -97,3 +97,6 @@ $RECYCLE.BIN/
 # Publish- und Installer-Artefakte
 /publish/
 /dist/
+
+# Portable Werkzeuge: Binaries werden lokal installiert, nicht eingecheckt
+tools/*.exe
