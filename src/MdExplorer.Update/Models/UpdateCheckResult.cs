@@ -8,22 +8,37 @@ namespace MdExplorer.Update.Models;
 /// <param name="CurrentVersion">Die installierte (laufende) Version.</param>
 /// <param name="LatestVersion">Die neueste veröffentlichte Version, oder <see langword="null"/>, wenn nicht ermittelt.</param>
 /// <param name="ReleaseUrl">Browser-URL der neuesten Release-Seite, oder <see langword="null"/>.</param>
+/// <param name="Asset">
+/// Das Installationspaket des Releases, oder <see langword="null"/>, wenn keines gefunden wurde.
+/// Fehlt es, bleibt nur der Weg über die Release-Seite im Browser.
+/// </param>
 public sealed record UpdateCheckResult(
     UpdateCheckStatus Status,
     SemanticVersion CurrentVersion,
     SemanticVersion? LatestVersion,
-    Uri? ReleaseUrl)
+    Uri? ReleaseUrl,
+    UpdateAsset? Asset = null)
 {
     /// <summary><see langword="true"/>, wenn eine neuere Version verfügbar ist.</summary>
     public bool IsUpdateAvailable => Status == UpdateCheckStatus.UpdateAvailable;
+
+    /// <summary>
+    /// <see langword="true"/>, wenn ein Update vorliegt, das sich auch installieren lässt —
+    /// also ein Paket mit belegbarer Prüfsumme.
+    /// </summary>
+    public bool IsInstallable => IsUpdateAvailable && Asset is { IsVerifiable: true };
 
     /// <summary>Liefert ein <see cref="UpdateCheckStatus.UpToDate"/>-Ergebnis.</summary>
     public static UpdateCheckResult UpToDate(SemanticVersion current, SemanticVersion latest) =>
         new(UpdateCheckStatus.UpToDate, current, latest, null);
 
     /// <summary>Liefert ein <see cref="UpdateCheckStatus.UpdateAvailable"/>-Ergebnis.</summary>
-    public static UpdateCheckResult Available(SemanticVersion current, SemanticVersion latest, Uri releaseUrl) =>
-        new(UpdateCheckStatus.UpdateAvailable, current, latest, releaseUrl);
+    public static UpdateCheckResult Available(
+        SemanticVersion current,
+        SemanticVersion latest,
+        Uri releaseUrl,
+        UpdateAsset? asset = null) =>
+        new(UpdateCheckStatus.UpdateAvailable, current, latest, releaseUrl, asset);
 
     /// <summary>Liefert ein <see cref="UpdateCheckStatus.Skipped"/>-Ergebnis.</summary>
     public static UpdateCheckResult Skipped(SemanticVersion current) =>

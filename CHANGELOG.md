@@ -7,6 +7,20 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.12.0] - 2026-07-31
+
+### Hinzugefügt
+- Updates lassen sich direkt aus der Anwendung installieren: `Einstellungen →
+  Verhalten` prüft auf Anfrage, lädt das Installationspaket herunter, gleicht es
+  gegen die veröffentlichte Prüfsumme ab und startet es. Stimmt die Prüfsumme
+  nicht, wird die Datei verworfen statt ausgeführt.
+- Programmsymbol: Die Anwendung erscheint in der Taskleiste jetzt mit eigenem
+  Logo statt mit dem Standardsymbol.
+
+### Geändert
+- Der Startbildschirm hat einen hellen Hintergrund; das Logo fügt sich damit ein,
+  statt als Kachel aufzusitzen.
+
 ## [0.11.0] - 2026-07-31
 
 ### Hinzugefügt
@@ -50,7 +64,8 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.11.0...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.12.0
 [0.11.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.11.0
 [0.10.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.10.0
 [0.9.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.9.0

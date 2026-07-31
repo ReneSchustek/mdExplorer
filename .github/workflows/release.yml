@@ -43,10 +43,23 @@ jobs:
           & $iscc "/DSourceDir=$((Resolve-Path publish).Path)" "/DMyAppVersion=$version" installer\MdExplorer.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen." }
 
+      # Der Installer ist nicht signiert. Die veroeffentlichte Pruefsumme ist damit der
+      # einzige Beleg, dass eine heruntergeladene Datei die veroeffentlichte ist — die
+      # Update-Funktion der Anwendung installiert ohne sie bewusst nicht.
+      - name: Pruefsumme des Installers veroeffentlichen
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dist/MdExplorer-*-setup.exe | Select-Object -First 1
+          if (-not $setup) { throw "Setup.exe nicht gefunden." }
+          $hash = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($setup.Name)" | Out-File -FilePath "$($setup.FullName).sha256" -Encoding ascii -NoNewline
+          Write-Host "SHA-256 $hash"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             MdExplorer-${{ github.ref_name }}-win-x64.zip
             dist/MdExplorer-*-setup.exe
+            dist/MdExplorer-*-setup.exe.sha256
           generate_release_notes: true

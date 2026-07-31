@@ -16,7 +16,11 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
+        <Grid.Resources>
+            <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        </Grid.Resources>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Such-Debounce (ms):" VerticalAlignment="Center" Margin="0,0,8,8" />
         <TextBox Grid.Row="0" Grid.Column="1"
@@ -32,5 +36,30 @@
                   Content="Beim Start nach Updates suchen"
                   IsChecked="{Binding CheckForUpdatesAtStartup, Mode=TwoWay}"
                   Margin="0,4,0,0" />
+
+        <!-- Update-Abschnitt: Prüfen und Installieren. Bewusst zweistufig — installiert
+             wird erst auf ausdrücklichen zweiten Klick. -->
+        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,16,0,0"
+                    DataContext="{Binding Update}">
+            <Separator Margin="0,0,0,10" />
+            <TextBlock Text="{Binding StatusText, Mode=OneWay}"
+                       Foreground="#FF57606A"
+                       TextWrapping="Wrap" />
+            <ProgressBar Height="6"
+                         Margin="0,8,0,0"
+                         Minimum="0" Maximum="100"
+                         Value="{Binding ProgressPercent, Mode=OneWay}"
+                         Visibility="{Binding IsProgressVisible, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <Button Content="Nach Updates suchen"
+                        Command="{Binding CheckCommand}"
+                        Padding="12,4" />
+                <Button Content="Jetzt aktualisieren"
+                        Command="{Binding InstallCommand}"
+                        Padding="12,4"
+                        Margin="8,0,0,0"
+                        Visibility="{Binding IsInstallAvailable, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </UserControl>

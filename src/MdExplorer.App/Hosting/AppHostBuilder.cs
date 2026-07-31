@@ -191,6 +191,8 @@ internal static class AppHostBuilder
             sp.GetRequiredService<ISettingsService>(),
             sp.GetRequiredService<SettingsValidator>(),
             sp.GetRequiredService<IDialogService>(),
+            sp.GetRequiredService<MdExplorer.Update.Abstractions.IUpdateChecker>(),
+            sp.GetRequiredService<MdExplorer.Update.Abstractions.IUpdateInstaller>(),
             sp.GetRequiredService<ILogger<SettingsWindowViewModel>>()));
         _ = builder.Services.AddTransient(sp => new SettingsWindow(
             sp.GetRequiredService<SettingsWindowViewModel>(),

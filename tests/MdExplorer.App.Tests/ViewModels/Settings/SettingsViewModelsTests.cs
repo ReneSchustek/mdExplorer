@@ -1,8 +1,9 @@
-using System.IO;
+﻿using System.IO;
 using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels.Settings;
 using MdExplorer.Core.Models;
 using MdExplorer.Core.Settings;
+using MdExplorer.Update.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels.Settings;
@@ -40,7 +41,7 @@ public sealed class SettingsViewModelsTests
     {
         BehaviorSettings initial = new(500, 120, CheckForUpdatesAtStartup: false);
 
-        BehaviorTabViewModel sut = new(initial);
+        BehaviorTabViewModel sut = new(initial, BuildUpdateSection());
 
         Assert.Equal(500, sut.SearchDebounceMs);
         Assert.Equal(120, sut.IndexerResyncIntervalSeconds);
@@ -183,5 +184,17 @@ public sealed class SettingsViewModelsTests
     }
 
     private static SettingsWindowViewModel BuildWindow(FakeSettingsService settings, FakeDialogService dialog) =>
-        new(settings, new SettingsValidator(new FakeFileSystem()), dialog, NullLogger<SettingsWindowViewModel>.Instance);
+        new(
+            settings,
+            new SettingsValidator(new FakeFileSystem()),
+            dialog,
+            BuildChecker(),
+            new FakeUpdateInstaller(UpdateDownloadResult.Failed(UpdateDownloadStatus.DownloadFailed)),
+            NullLogger<SettingsWindowViewModel>.Instance);
+
+    private static FakeUpdateChecker BuildChecker() =>
+        new(UpdateCheckResult.UpToDate(new SemanticVersion(1, 0, 0), new SemanticVersion(1, 0, 0)));
+
+    private static UpdateSectionViewModel BuildUpdateSection() =>
+        new(BuildChecker(), new FakeUpdateInstaller(UpdateDownloadResult.Failed(UpdateDownloadStatus.DownloadFailed)));
 }

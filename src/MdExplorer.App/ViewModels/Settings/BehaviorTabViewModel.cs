@@ -18,13 +18,18 @@ internal sealed partial class BehaviorTabViewModel : ObservableObject
     private bool _checkForUpdatesAtStartup;
 
     /// <summary>Erzeugt das ViewModel mit den aktuellen Settings.</summary>
-    public BehaviorTabViewModel(BehaviorSettings initial)
+    public BehaviorTabViewModel(BehaviorSettings initial, UpdateSectionViewModel update)
     {
         ArgumentNullException.ThrowIfNull(initial);
+        ArgumentNullException.ThrowIfNull(update);
         _searchDebounceMs = initial.SearchDebounceMs;
         _indexerResyncIntervalSeconds = initial.IndexerResyncIntervalSeconds;
         _checkForUpdatesAtStartup = initial.CheckForUpdatesAtStartup;
+        Update = update;
     }
+
+    /// <summary>Update-Abschnitt: Prüfen und Installieren.</summary>
+    public UpdateSectionViewModel Update { get; }
 
     /// <summary>Erzeugt das Settings-Record aus den aktuellen Eingaben.</summary>
     public BehaviorSettings ToSettings() => new(SearchDebounceMs, IndexerResyncIntervalSeconds, CheckForUpdatesAtStartup);

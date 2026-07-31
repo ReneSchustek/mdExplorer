@@ -101,9 +101,15 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
 
         public int CallCount { get; private set; }
 
-        public Task<UpdateCheckResult> CheckForUpdateAsync(CancellationToken cancellationToken)
+        public bool LastForce { get; private set; }
+
+        public Task<UpdateCheckResult> CheckForUpdateAsync(CancellationToken cancellationToken) =>
+            CheckForUpdateAsync(force: false, cancellationToken);
+
+        public Task<UpdateCheckResult> CheckForUpdateAsync(bool force, CancellationToken cancellationToken)
         {
             CallCount++;
+            LastForce = force;
             return Task.FromResult(_result);
         }
     }

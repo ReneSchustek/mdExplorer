@@ -18,9 +18,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d">
 
+    <!-- Weisser Grund mit dunkelblauer Schrift: Das Logo hat selbst einen weissen
+         Hintergrund und sass auf der frueheren dunklen Flaeche als helle Kachel auf.
+         Auf Weiss verschwindet der Rahmen, und es wirkt als eigenes Zeichen. -->
     <Border CornerRadius="12"
-            Background="#FF1E1E2E"
-            BorderBrush="#FF89B4FA"
+            Background="#FFFFFFFF"
+            BorderBrush="#FF105776"
             BorderThickness="1">
         <Grid Margin="24">
             <Grid.RowDefinitions>
@@ -41,21 +44,21 @@
                        Text="MdExplorer"
                        FontSize="22"
                        FontWeight="SemiBold"
-                       Foreground="#FFCDD6F4"
+                       Foreground="#FF105776"
                        HorizontalAlignment="Center"
                        Margin="0,16,0,0" />
 
             <TextBlock Grid.Row="2"
                        Text="{Binding VersionText}"
                        FontSize="11"
-                       Foreground="#FF9399B2"
+                       Foreground="#FF6B7C88"
                        HorizontalAlignment="Center"
                        Margin="0,4,0,0" />
 
             <TextBlock Grid.Row="3"
                        Text="{Binding StatusText}"
                        FontSize="12"
-                       Foreground="#FFA6ADC8"
+                       Foreground="#FF44636F"
                        HorizontalAlignment="Center"
                        Margin="0,16,0,0" />
         </Grid>

@@ -27,8 +27,20 @@ internal sealed partial class SettingsWindow : Window
         _helpContextProvider = helpContextProvider;
         DataContext = viewModel;
         viewModel.CloseRequested += OnCloseRequested;
+        viewModel.Behavior.Update.InstallerStarted += OnInstallerStarted;
         Loaded += OnLoadedHandler;
         Closed += OnWindowClosed;
+    }
+
+    /// <summary>
+    /// Beendet die Anwendung, sobald das Installationsprogramm läuft. Ohne das Beenden
+    /// kann der Installer die noch geöffneten Programmdateien nicht ersetzen.
+    /// </summary>
+    private void OnInstallerStarted(object? sender, EventArgs args)
+    {
+        DialogResult = false;
+        Close();
+        Application.Current?.Shutdown();
     }
 
     private void OnLoadedHandler(object sender, RoutedEventArgs args)
@@ -47,6 +59,7 @@ internal sealed partial class SettingsWindow : Window
     private void OnWindowClosed(object? sender, EventArgs args)
     {
         _viewModel.CloseRequested -= OnCloseRequested;
+        _viewModel.Behavior.Update.InstallerStarted -= OnInstallerStarted;
         Loaded -= OnLoadedHandler;
         Closed -= OnWindowClosed;
         // Modaler Dialog: nach dem Schliessen den vorherigen Kontext zurueckgeben,

@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
 using MdExplorer.Core.Settings;
+using MdExplorer.Update.Abstractions;
 using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.ViewModels.Settings;
@@ -26,11 +27,15 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
         ISettingsService settingsService,
         SettingsValidator validator,
         IDialogService dialogService,
+        IUpdateChecker updateChecker,
+        IUpdateInstaller updateInstaller,
         ILogger<SettingsWindowViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(settingsService);
         ArgumentNullException.ThrowIfNull(validator);
         ArgumentNullException.ThrowIfNull(dialogService);
+        ArgumentNullException.ThrowIfNull(updateChecker);
+        ArgumentNullException.ThrowIfNull(updateInstaller);
         ArgumentNullException.ThrowIfNull(logger);
 
         _settingsService = settingsService;
@@ -41,7 +46,7 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
         AppSettings current = settingsService.Current;
         Indexing = new IndexingTabViewModel(current.Indexing, dialogService);
         Appearance = new AppearanceTabViewModel(current.Appearance);
-        Behavior = new BehaviorTabViewModel(current.Behavior);
+        Behavior = new BehaviorTabViewModel(current.Behavior, new UpdateSectionViewModel(updateChecker, updateInstaller));
 
         ApplyAndCloseCommand = new AsyncRelayCommand(ApplyAndCloseAsync);
         CancelCommand = new RelayCommand(RaiseCloseRequested);

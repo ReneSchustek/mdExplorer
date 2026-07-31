@@ -13,4 +13,16 @@ public interface IUpdateChecker
     /// <param name="cancellationToken">Abbruch-Token; wird kooperativ beachtet.</param>
     /// <returns>Das Prüfergebnis, niemals <see langword="null"/>.</returns>
     Task<UpdateCheckResult> CheckForUpdateAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Führt die Prüfung aus und übergeht dabei auf Wunsch die Drossel.
+    /// </summary>
+    /// <param name="force">
+    /// <see langword="true"/> für eine vom Nutzer ausgelöste Prüfung. Die Drossel schützt die
+    /// GitHub-API vor häufigen Programmstarts — wer den Knopf drückt, erwartet dagegen eine
+    /// echte Abfrage und keine stille Auskunft von gestern.
+    /// </param>
+    /// <param name="cancellationToken">Abbruch-Token; wird kooperativ beachtet.</param>
+    /// <returns>Das Prüfergebnis, niemals <see langword="null"/>.</returns>
+    Task<UpdateCheckResult> CheckForUpdateAsync(bool force, CancellationToken cancellationToken);
 }
