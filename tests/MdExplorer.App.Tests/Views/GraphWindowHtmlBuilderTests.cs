@@ -4,8 +4,8 @@ using MdExplorer.App.Views.Graph;
 namespace MdExplorer.App.Tests.Views;
 
 /// <summary>
-/// Tests die HTML-Verpackung des Graph-Fensters. Pruefparameter: CSP-Strenge (kein
-/// <c>'unsafe-inline'</c>), pro Aufruf neuer Nonce, Snapshot-JSON liegt im nicht-ausfuehrbaren
+/// Tests die HTML-Verpackung des Graph-Fensters. Prüfparameter: CSP-Strenge (kein
+/// <c>'unsafe-inline'</c>), pro Aufruf neuer Nonce, Snapshot-JSON liegt im nicht-ausführbaren
 /// <c>application/json</c>-Datenblock und kann kein <c>&lt;/script&gt;</c> einschleusen.
 /// </summary>
 public sealed class GraphWindowHtmlBuilderTests
@@ -25,7 +25,7 @@ public sealed class GraphWindowHtmlBuilderTests
         string policy = cspMatch.Groups[1].Value;
         string scriptSrc = ExtractDirective(policy, "script-src");
         Assert.Contains("'nonce-", scriptSrc, StringComparison.Ordinal);
-        // Skripte werden ausschliesslich ueber die Nonce autorisiert — kein 'unsafe-inline' zulaessig.
+        // Skripte werden ausschließlich über die Nonce autorisiert — kein 'unsafe-inline' zulässig.
         Assert.DoesNotContain("'unsafe-inline'", scriptSrc, StringComparison.Ordinal);
     }
 

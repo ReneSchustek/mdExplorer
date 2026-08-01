@@ -190,7 +190,7 @@ public sealed class Fts5IndexMaintainerTests
         Assert.Equal(string.Empty, result);
     }
 
-    // TrySynchronizeAsync muss erholbare Exceptions abfangen — Periodic-Loop laeuft weiter.
+    // TrySynchronizeAsync muss erholbare Exceptions abfangen — Periodic-Loop läuft weiter.
     [Fact]
     public async Task TrySynchronizeAsync_OnArgumentException_LogsAndDoesNotThrow()
     {
@@ -222,7 +222,7 @@ public sealed class Fts5IndexMaintainerTests
         List<SearchSourceDocument> documents = BuildDocuments(DocumentCount);
         SearchSourceData source = new(documents, new Dictionary<Guid, IReadOnlyList<string>>());
         Dictionary<Guid, string> indexedHashes = new(BatchSize);
-        // 100 ueber den gesamten Bereich verteilte IDs (jeder 5.) sind bereits aktuell indiziert.
+        // 100 über den gesamten Bereich verteilte IDs (jeder 5.) sind bereits aktuell indiziert.
         for (int i = 0; i < DocumentCount; i += 5)
         {
             indexedHashes[documents[i].MarkdownFileId] = documents[i].SourceContentHash;

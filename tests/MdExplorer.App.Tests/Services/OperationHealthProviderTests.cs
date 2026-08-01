@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.Tests.Services;
 
-/// <summary>Tests fuer den Health-Aggregator des MainWindow-LED.</summary>
+/// <summary>Tests für den Health-Aggregator des MainWindow-LED.</summary>
 public sealed class OperationHealthProviderTests
 {
     [Fact]

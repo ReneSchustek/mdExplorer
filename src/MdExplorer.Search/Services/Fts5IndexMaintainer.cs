@@ -90,9 +90,9 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         SearchSourceData source,
         int batchSize)
     {
-        // Die liveIds muessen ueber den gesamten Source-Snapshot vollstaendig sein, sonst markiert
-        // der Orphan-Pass weiter unten alle nicht erreichten Source-Eintraege faelschlich als
-        // verwaist. Targets werden separat bis zum Batch-Limit beschnitten — die Iteration laeuft
+        // Die liveIds müssen über den gesamten Source-Snapshot vollständig sein, sonst markiert
+        // der Orphan-Pass weiter unten alle nicht erreichten Source-Einträge fälschlich als
+        // verwaist. Targets werden separat bis zum Batch-Limit beschnitten — die Iteration läuft
         // dennoch weiter, damit liveIds komplett bleibt.
         HashSet<Guid> liveIds = new(source.Documents.Count);
         List<SearchSourceDocument> targets = new(batchSize);
@@ -176,7 +176,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         }
     }
 
-    /// <summary>Wrapper um <see cref="SynchronizeAsync"/>, der erwartbare Fehler frisst. Sichtbar fuer Tests via <c>InternalsVisibleTo</c>.</summary>
+    /// <summary>Wrapper um <see cref="SynchronizeAsync"/>, der erwartbare Fehler frisst. Sichtbar für Tests via <c>InternalsVisibleTo</c>.</summary>
     internal async Task TrySynchronizeAsync(CancellationToken stoppingToken)
     {
         try
@@ -190,14 +190,14 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         catch (DbException ex)
         {
             // SQLite-Spitze nach Retry-Budget darf den HostedService nicht killen —
-            // der naechste Periodic-Tick erhaelt eine erneute Chance.
+            // der nächste Periodic-Tick erhält eine erneute Chance.
             LogSynchronizationFailed(_logger, ex);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             // Defense-in-Depth. Wenn eine korrupte Frontmatter-JSON oder ein
             // unerwarteter State im BuildUpserts-Pfad eine ArgumentException erzeugt,
-            // bleibt der Periodic-Loop am Leben — naechster Tick versucht es erneut.
+            // bleibt der Periodic-Loop am Leben — nächster Tick versucht es erneut.
             LogSynchronizationFailed(_logger, ex);
         }
     }
@@ -228,7 +228,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         }
         catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex))
         {
-            // Letzte Schicht. Faengt unerwartete Exceptions ab, damit der Host
+            // Letzte Schicht. Fängt unerwartete Exceptions ab, damit der Host
             // den Service ordentlich beendet statt unhandled-Crash.
             LogMaintainerWatchdogTriggered(_logger, ex);
         }
@@ -305,7 +305,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
     [LoggerMessage(EventId = 303, Level = LogLevel.Warning, Message = "Quelldatei konnte nicht gelesen werden: {Path}")]
     private static partial void LogReadFailed(ILogger logger, string path, Exception exception);
 
-    [LoggerMessage(EventId = 304, Level = LogLevel.Warning, Message = "FTS5-Synchronisation übersprungen — Datenbank-Spitze, naechster Periodic-Tick versucht es erneut.")]
+    [LoggerMessage(EventId = 304, Level = LogLevel.Warning, Message = "FTS5-Synchronisation übersprungen — Datenbank-Spitze, nächster Periodic-Tick versucht es erneut.")]
     private static partial void LogSynchronizationFailed(ILogger logger, Exception exception);
 
     [LoggerMessage(EventId = 305, Level = LogLevel.Error, Message = "Fts5IndexMaintainer-Watchdog: unerwartete Exception aufgefangen, Service wird ordentlich beendet.")]

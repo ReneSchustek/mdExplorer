@@ -9,7 +9,7 @@ public static class Utf8Decoder
 {
     /// <summary>Die UTF-8-Byte-Order-Mark (<c>EF BB BF</c>).</summary>
     // Die drei Bytes bilden gemeinsam die benannte Konstante Utf8Bom (Unicode-Standard-Sequenz).
-    // Eine Aufspaltung in Einzel-Byte-Konstanten waere ueberfluessig.
+    // Eine Aufspaltung in Einzel-Byte-Konstanten wäre Rausch-Doku (deep-quality Kap. 5).
 #pragma warning disable S109 // Standardisierte UTF-8-BOM-Bytes, gemeinsam als Utf8Bom benannt.
     private static ReadOnlySpan<byte> Utf8Bom => [0xEF, 0xBB, 0xBF];
 #pragma warning restore S109

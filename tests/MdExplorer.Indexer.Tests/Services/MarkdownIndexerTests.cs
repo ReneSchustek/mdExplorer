@@ -130,7 +130,7 @@ public sealed class MarkdownIndexerTests
     }
 
     // Wenn ein Batch beim SaveChanges crasht (DbException / IO / InvalidOperation),
-    // darf die ConsumeEventsAsync-Schleife nicht abbrechen. Naechster Watcher-Event muss
+    // darf die ConsumeEventsAsync-Schleife nicht abbrechen. Nächster Watcher-Event muss
     // weiterhin verarbeitet werden.
     [Fact]
     public async Task ProcessBatch_OnSaveChangesFailure_LogsAndContinuesWithNextEvent()
@@ -178,7 +178,7 @@ public sealed class MarkdownIndexerTests
         }
         if (!condition())
         {
-            throw new TimeoutException($"Bedingung nicht innerhalb von {timeout.TotalSeconds:F1}s erfuellt.");
+            throw new TimeoutException($"Bedingung nicht innerhalb von {timeout.TotalSeconds:F1}s erfüllt.");
         }
     }
 

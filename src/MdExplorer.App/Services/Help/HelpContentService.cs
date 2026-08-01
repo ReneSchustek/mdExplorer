@@ -127,7 +127,7 @@ internal sealed partial class HelpContentService : IHelpContentService, IDisposa
         StringBuilder builder = new();
         AppendBlocks(builder, ast);
         // Mehrfach-Whitespace vereinheitlichen, damit IndexOf-Treffer nicht durch
-        // Markdown-Strukturen (Listen, Tabellen, eingerueckte Zeilen) verfaelscht werden.
+        // Markdown-Strukturen (Listen, Tabellen, eingerückte Zeilen) verfälscht werden.
         return CollapseWhitespace().Replace(builder.ToString(), " ").Trim();
     }
 

@@ -119,8 +119,8 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
 
     private async Task CheckAsync()
     {
-        // Nach dem Schliessen des Dialogs ist die Abbruchquelle entsorgt; ein Zugriff
-        // auf ihr Token wuerde werfen.
+        // Nach dem Schließen des Dialogs ist die Abbruchquelle entsorgt; ein Zugriff
+        // auf ihr Token würde werfen.
         if (_disposed)
         {
             return;
@@ -190,7 +190,7 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
         }
         catch (OperationCanceledException)
         {
-            // Der Dialog wurde waehrend des Downloads geschlossen. Der Teil-Download ist
+            // Der Dialog wurde während des Downloads geschlossen. Der Teil-Download ist
             // bereits verworfen; hier bleibt nichts zu tun.
             StatusText = "Abgebrochen.";
         }

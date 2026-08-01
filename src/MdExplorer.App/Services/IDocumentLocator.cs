@@ -14,14 +14,14 @@ internal interface IDocumentLocator
     Task<Guid?> FindByWikiLinkAsync(string wikiLinkTarget, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Loest einen vollqualifizierten Dateipfad in die zugehoerige <c>MarkdownFile.Id</c> auf.
+    /// Löst einen vollqualifizierten Dateipfad in die zugehörige <c>MarkdownFile.Id</c> auf.
     /// Liefert <see langword="null"/>, wenn die Datei nicht indiziert ist.
     /// </summary>
     Task<Guid?> FindByAbsolutePathAsync(string absoluteFilePath, CancellationToken cancellationToken);
 
     /// <summary>
     /// Liefert den absoluten Dateipfad zur angegebenen <c>MarkdownFile.Id</c>.
-    /// Wird vom Editor benoetigt, der die Datei im UI direkt vom Datentraeger lesen muss.
+    /// Wird vom Editor benötigt, der die Datei im UI direkt vom Datenträger lesen muss.
     /// </summary>
     Task<string?> GetAbsolutePathAsync(Guid markdownFileId, CancellationToken cancellationToken);
 }

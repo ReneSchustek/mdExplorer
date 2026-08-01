@@ -36,17 +36,17 @@ jobs:
         shell: pwsh
         run: |
           choco install innosetup --no-progress -y
-          # Installer-Version aus dem Tag ableiten (ohne fuehrendes 'v'),
-          # damit Setup-Version und Release-Tag stets uebereinstimmen.
+          # Installer-Version aus dem Tag ableiten (ohne führendes 'v'),
+          # damit Setup-Version und Release-Tag stets übereinstimmen.
           $version = "${{ github.ref_name }}".TrimStart('v')
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           & $iscc "/DSourceDir=$((Resolve-Path publish).Path)" "/DMyAppVersion=$version" installer\MdExplorer.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen." }
 
-      # Der Installer ist nicht signiert. Die veroeffentlichte Pruefsumme ist damit der
-      # einzige Beleg, dass eine heruntergeladene Datei die veroeffentlichte ist — die
+      # Der Installer ist nicht signiert. Die veröffentlichte Prüfsumme ist damit der
+      # einzige Beleg, dass eine heruntergeladene Datei die veröffentlichte ist — die
       # Update-Funktion der Anwendung installiert ohne sie bewusst nicht.
-      - name: Pruefsumme des Installers veroeffentlichen
+      - name: Prüfsumme des Installers veröffentlichen
         shell: pwsh
         run: |
           $setup = Get-ChildItem dist/MdExplorer-*-setup.exe | Select-Object -First 1

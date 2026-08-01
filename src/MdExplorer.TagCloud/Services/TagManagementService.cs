@@ -10,11 +10,11 @@ using Microsoft.Extensions.Logging;
 namespace MdExplorer.TagCloud.Services;
 
 /// <summary>
-/// Projektweite Tag-Verwaltung. Liest betroffene Pfade ueber <see cref="ITagFileLookupQuery"/>,
-/// schreibt jede Datei ueber <see cref="IFileSystem.WriteAllBytesAtomicAsync"/> atomar neu
-/// (Temp + Move) und ueberlasst den DB-Re-Sync dem Indexer-Watcher. Body-Vorkommen werden
-/// per Slug-Identitaet erkannt (Boundary-Regex + Normalizer), Frontmatter-Eintraege
-/// werden zeilenbasiert manipuliert — gleicher Datei-Schreibpfad fuer Rename, Merge und Delete.
+/// Projektweite Tag-Verwaltung. Liest betroffene Pfade über <see cref="ITagFileLookupQuery"/>,
+/// schreibt jede Datei über <see cref="IFileSystem.WriteAllBytesAtomicAsync"/> atomar neu
+/// (Temp + Move) und überlasst den DB-Re-Sync dem Indexer-Watcher. Body-Vorkommen werden
+/// per Slug-Identität erkannt (Boundary-Regex + Normalizer), Frontmatter-Einträge
+/// werden zeilenbasiert manipuliert — gleicher Datei-Schreibpfad für Rename, Merge und Delete.
 /// </summary>
 public sealed partial class TagManagementService : ITagManagementService
 {
@@ -26,7 +26,7 @@ public sealed partial class TagManagementService : ITagManagementService
     private readonly IMarkdownTagRewriter _rewriter;
     private readonly ILogger<TagManagementService> _logger;
 
-    /// <summary>Erzeugt den Service und bindet die Pflichtabhaengigkeiten.</summary>
+    /// <summary>Erzeugt den Service und bindet die Pflichtabhängigkeiten.</summary>
     public TagManagementService(
         ITagFileLookupQuery lookupQuery,
         IFileSystem fileSystem,
@@ -103,13 +103,13 @@ public sealed partial class TagManagementService : ITagManagementService
         return ApplyAsync(slug, operations, cancellationToken);
     }
 
-    [LoggerMessage(EventId = 1000, Level = LogLevel.Information, Message = "Tag-Operation '{Slug}' abgeschlossen — {FilesAffected}/{FilesAttempted} Dateien geaendert, {ErrorCount} Fehler.")]
+    [LoggerMessage(EventId = 1000, Level = LogLevel.Information, Message = "Tag-Operation '{Slug}' abgeschlossen — {FilesAffected}/{FilesAttempted} Dateien geändert, {ErrorCount} Fehler.")]
     private static partial void LogOperationCompleted(ILogger logger, string slug, int filesAffected, int filesAttempted, int errorCount);
 
-    [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = "Tag-Operation '{Slug}' uebersprungen — keine indizierten Dateien.")]
+    [LoggerMessage(EventId = 1001, Level = LogLevel.Information, Message = "Tag-Operation '{Slug}' übersprungen — keine indizierten Dateien.")]
     private static partial void LogNoFilesAffected(ILogger logger, string slug);
 
-    [LoggerMessage(EventId = 1002, Level = LogLevel.Warning, Message = "Datei {Path} konnte fuer Tag-Operation nicht geschrieben werden.")]
+    [LoggerMessage(EventId = 1002, Level = LogLevel.Warning, Message = "Datei {Path} konnte für Tag-Operation nicht geschrieben werden.")]
     private static partial void LogFileWriteFailed(ILogger logger, Exception exception, string path);
 
     private async Task<TagRewriteResult> ApplyAsync(

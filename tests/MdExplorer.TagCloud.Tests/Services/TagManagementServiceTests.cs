@@ -11,7 +11,7 @@ namespace MdExplorer.TagCloud.Tests.Services;
 
 /// <summary>
 /// Unit-Tests: Rename / Merge / Delete inkl. Frontmatter- und Body-Schreibstrategie.
-/// Sowie Integrationstest fuer projektweites Rename in 100 Dateien (Performance-Budget &lt; 5 s).
+/// Sowie Integrationstest für projektweites Rename in 100 Dateien (Performance-Budget &lt; 5 s).
 /// </summary>
 public sealed class TagManagementServiceTests
 {
@@ -128,7 +128,7 @@ public sealed class TagManagementServiceTests
     {
         InMemoryFileSystem fs = new();
         // Datei wird laut Index zwar referenziert, im aktuellen Text aber nicht mehr — z. B. weil
-        // sie zwischen Index-Lauf und Operation veraendert wurde. Soll keinen Schreib-Roundtrip ausloesen.
+        // sie zwischen Index-Lauf und Operation verändert wurde. Soll keinen Schreib-Roundtrip auslösen.
         fs.AddFile(@"C:\notes\a.md", "Kein passender Hashtag im Body.");
         FakeTagFileLookupQuery query = new();
         query.SetFiles("foo", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
@@ -168,7 +168,7 @@ public sealed class TagManagementServiceTests
         Assert.Empty(result.Errors);
         Assert.True(
             stopwatch.Elapsed < TimeSpan.FromSeconds(5),
-            $"Projektweites Rename benoetigte {stopwatch.Elapsed.TotalSeconds:F2}s — Budget ist 5 s.");
+            $"Projektweites Rename benötigte {stopwatch.Elapsed.TotalSeconds:F2}s — Budget ist 5 s.");
         for (int index = 0; index < FileCount; index++)
         {
             string actual = fs.ReadText($@"C:\notes\bulk-{index:D3}.md");

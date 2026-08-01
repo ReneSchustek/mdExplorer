@@ -2,12 +2,12 @@ namespace MdExplorer.App.Services;
 
 /// <summary>
 /// Aggregierter Betriebs-Status der Anwendung. Wird in der Statusleiste als Health-LED
-/// angezeigt und vom <see cref="IOperationHealthProvider"/> aus Subsystem-Zustaenden
+/// angezeigt und vom <see cref="IOperationHealthProvider"/> aus Subsystem-Zuständen
 /// berechnet (Indexer, Settings, jüngste Log-Einträge).
 /// </summary>
 internal enum OperationHealth
 {
-    /// <summary>Alles im Normalbetrieb — gruene LED.</summary>
+    /// <summary>Alles im Normalbetrieb — grüne LED.</summary>
     Healthy = 0,
 
     /// <summary>Recoverable-Problem (z. B. fehlgeschlagene Operation) — gelbe LED.</summary>

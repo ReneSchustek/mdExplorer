@@ -13,16 +13,16 @@ internal sealed class FakeMarkdownDocumentRepository : IMarkdownDocumentReposito
 
     public int ParseCount { get; private set; }
 
-    // Zaehlt die per-Datei-Point-Lookups; muss nach der Batch-Umstellung 0 bleiben.
+    // Zählt die per-Datei-Point-Lookups; muss nach der Batch-Umstellung 0 bleiben.
     public int PointLookupCallCount { get; private set; }
 
-    // Zaehlt die gechunkten Batch-Lookups; einer pro Batch-Durchlauf mit Treffern.
+    // Zählt die gechunkten Batch-Lookups; einer pro Batch-Durchlauf mit Treffern.
     public int BatchLookupCallCount { get; private set; }
 
     public IReadOnlyDictionary<Guid, MarkdownDocument> Snapshot => _storeByFileId;
 
     // Im echten EF teilen docRepo und tagRepo denselben DbContext, ein einziger
-    // SaveChanges committet beide. Der Test-Harness haengt hier die TagRepo-SaveChanges ein,
+    // SaveChanges committet beide. Der Test-Harness hängt hier die TagRepo-SaveChanges ein,
     // damit der Fake dasselbe Sichtbarkeitsmodell hat.
     public Func<CancellationToken, Task>? OnSaveChangesAsync { get; set; }
 

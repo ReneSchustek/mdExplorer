@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.Tests.ViewModels;
 
-/// <summary>Tests fuer das ViewModel des integrierten Log-Viewers.</summary>
+/// <summary>Tests für das ViewModel des integrierten Log-Viewers.</summary>
 public sealed class LogViewerViewModelTests
 {
     [Fact]

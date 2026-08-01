@@ -45,15 +45,15 @@ public sealed partial class GlobExclusionFilter : IExclusionFilter, IDisposable
 
         string normalizedFile = Path.GetFullPath(absoluteFilePath);
         string normalizedRoot = Path.GetFullPath(rootAbsolutePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        // Datei muss zwingend unterhalb des Roots liegen — sonst keine Aussage moeglich.
-        // Praefix-Vergleich ohne Separator-Terminator wuerde "C:\Roots-evil" als unter "C:\Roots" zaehlen.
+        // Datei muss zwingend unterhalb des Roots liegen — sonst keine Aussage möglich.
+        // Präfix-Vergleich ohne Separator-Terminator würde "C:\Roots-evil" als unter "C:\Roots" zählen.
         if (!IsUnderRoot(normalizedFile, normalizedRoot))
         {
             return false;
         }
 
-        // UI-Pausen wirken ueber Pfad-Praefix und damit unabhaengig vom Glob-Matcher.
-        // Bewusst vor dem Globbing-Pfad, weil ein Praefix-Treffer den teureren Matcher uebergeht.
+        // UI-Pausen wirken über Pfad-Präfix und damit unabhängig vom Glob-Matcher.
+        // Bewusst vor dem Globbing-Pfad, weil ein Präfix-Treffer den teureren Matcher übergeht.
         if (IsBelowUiExcludedFolder(normalizedFile))
         {
             return true;

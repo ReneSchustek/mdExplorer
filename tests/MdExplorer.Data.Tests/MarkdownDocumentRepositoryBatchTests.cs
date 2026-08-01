@@ -10,7 +10,7 @@ namespace MdExplorer.Data.Tests;
 /// <summary>
 /// Stellt sicher, dass ein 2.000-File-Batch in
 /// <see cref="MarkdownDocumentRepository.GetStaleOrMissingAsync"/>
-/// kein SQLite-Parameter-Limit ausloest.
+/// kein SQLite-Parameter-Limit auslöst.
 /// </summary>
 public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
 {
@@ -51,7 +51,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
             hashes[Guid.NewGuid()] = $"hash-{i}";
         }
 
-        // Sollte ohne SqliteException "too many SQL variables" zurueckkommen — alle Ids fehlen in der leeren DB.
+        // Sollte ohne SqliteException "too many SQL variables" zurückkommen — alle Ids fehlen in der leeren DB.
         IReadOnlyList<Guid> result = await _documentRepository
             .GetStaleOrMissingAsync(hashes, CancellationToken.None)
             .ConfigureAwait(true);
@@ -69,7 +69,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
             ids.Add(Guid.NewGuid());
         }
 
-        // Alle Ids fehlen in der leeren DB — darf ohne SqliteException "too many SQL variables" zurueckkommen.
+        // Alle Ids fehlen in der leeren DB — darf ohne SqliteException "too many SQL variables" zurückkommen.
         IReadOnlyDictionary<Guid, MarkdownDocument> result = await _documentRepository
             .GetByMarkdownFileIdsAsync(ids, CancellationToken.None)
             .ConfigureAwait(true);

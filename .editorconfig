@@ -63,7 +63,7 @@ dotnet_diagnostic.CA2007.severity = warning
 # SQL-Injection
 dotnet_diagnostic.CA2100.severity = error
 
-# Schwacher Zufallsgenerator (System.Random fuer Security)
+# Schwacher Zufallsgenerator (System.Random für Security)
 dotnet_diagnostic.CA5394.severity = error
 
 # Unsichere Deserialisierung
@@ -71,7 +71,7 @@ dotnet_diagnostic.CA2300.severity = error
 dotnet_diagnostic.CA2301.severity = error
 dotnet_diagnostic.CA2302.severity = error
 
-# Hardcodierte Verschluesselung
+# Hardcodierte Verschlüsselung
 dotnet_diagnostic.CA5350.severity = error
 dotnet_diagnostic.CA5351.severity = error
 
@@ -117,7 +117,7 @@ dotnet_diagnostic.IDE0058.severity = warning
 # Kein generischer Exception-Catch
 dotnet_diagnostic.CA1031.severity = warning
 
-# Static-faehige Methoden
+# Static-fähige Methoden
 dotnet_diagnostic.CA1822.severity = suggestion
 
 # Logger-Performance
@@ -129,23 +129,23 @@ dotnet_diagnostic.CA1848.severity = suggestion
 
 # Repo-Konvention: using-Direktiven AUSSERHALB des Namespaces. stylecop.json setzt das,
 # trotzdem hier explizit erlaubt, weil viele StyleCop-Default-Regeln das gegenteilig
-# konfigurieren wuerden.
+# konfigurieren würden.
 dotnet_diagnostic.SA1200.severity = none
 
-# `this.`-Praefix nicht erzwingen (moderner C#-Stil).
+# `this.`-Präfix nicht erzwingen (moderner C#-Stil).
 dotnet_diagnostic.SA1101.severity = none
 
 # Eingebaute Typen (`int`/`string`/...) statt `Int32`/`String` zulassen.
-# Wird bereits ueber `dotnet_style_predefined_type_*` geregelt.
+# Wird bereits über `dotnet_style_predefined_type_*` geregelt.
 dotnet_diagnostic.SA1121.severity = none
 
-# `_camelCase` fuer private Felder ist Repo-Konvention.
+# `_camelCase` für private Felder ist Repo-Konvention.
 dotnet_diagnostic.SA1309.severity = none
 
 # Trailing-Kommas: erzwingen wir nicht (kein konsistenter Repo-Stil).
 dotnet_diagnostic.SA1413.severity = none
 
-# Regions sind erlaubt; sie strukturieren grosse XAML-Code-behinds.
+# Regions sind erlaubt; sie strukturieren große XAML-Code-behinds.
 dotnet_diagnostic.SA1124.severity = none
 
 # File-Header: wir haben keinen Copyright-Banner pro Datei.
@@ -157,7 +157,7 @@ dotnet_diagnostic.SA1640.severity = none
 dotnet_diagnostic.SA1641.severity = none
 dotnet_diagnostic.SA1649.severity = none
 
-# Dokumentations-Pflicht nur fuer oeffentliche Elemente (siehe stylecop.json).
+# Dokumentations-Pflicht nur für öffentliche Elemente (siehe stylecop.json).
 # Interne/private Elemente bleiben pragmatisch undokumentiert.
 dotnet_diagnostic.SA1600.severity = none
 dotnet_diagnostic.SA1601.severity = none
@@ -167,7 +167,7 @@ dotnet_diagnostic.SA1629.severity = none
 dotnet_diagnostic.SA1642.severity = none
 dotnet_diagnostic.SA1643.severity = none
 
-# Layout-Detail-Regeln, die mit `dotnet format` kollidieren oder uebertrieben sind.
+# Layout-Detail-Regeln, die mit `dotnet format` kollidieren oder übertrieben sind.
 dotnet_diagnostic.SA1502.severity = none
 dotnet_diagnostic.SA1503.severity = none
 dotnet_diagnostic.SA1512.severity = none
@@ -182,7 +182,7 @@ dotnet_diagnostic.SA1648.severity = none
 
 # Reihenfolge: Static vor Instanz, public vor private, modifier-order. Hart als Warning.
 # SA1201 bleibt hart deaktiviert, weil StyleCop 1.1.118 bei `record`/
-# `record struct`-Deklarationen mit AD0001 (`KeyNotFoundException`) abstuerzt.
+# `record struct`-Deklarationen mit AD0001 (`KeyNotFoundException`) abstürzt.
 # Re-enabling erfordert eine neue StyleCop-Version.
 dotnet_diagnostic.SA1201.severity = none
 dotnet_diagnostic.SA1202.severity = warning
@@ -196,7 +196,7 @@ dotnet_diagnostic.SA1513.severity = none
 # `new` ohne Trailing-Space: target-typed `new()` ist Standard ab C# 9.
 dotnet_diagnostic.SA1000.severity = none
 
-# Parameter-Naming fuer Records (PascalCase ist konventionsgemaess).
+# Parameter-Naming für Records (PascalCase ist konventionsgemäß).
 dotnet_diagnostic.SA1313.severity = none
 
 # Opening square bracket spacing (`[` als Collection-Expression).
@@ -220,7 +220,7 @@ dotnet_diagnostic.SA1501.severity = none
 dotnet_diagnostic.SA1505.severity = none
 dotnet_diagnostic.SA1508.severity = none
 
-# Discard-Variable `_` darf gross beginnen.
+# Discard-Variable `_` darf groß beginnen.
 dotnet_diagnostic.SA1312.severity = none
 
 # XML-Doc-Analyse: in App-Modul deaktiviert (GenerateDocumentationFile=false),
@@ -231,13 +231,13 @@ dotnet_diagnostic.SA0001.severity = none
 # damit vorhandene XML-Doku konsistent bleibt.
 #
 # SA1611 (fehlende <param>) und SA1615 (fehlender <returns>) bleiben bewusst auf
-# suggestion: SA1600 ist deaktiviert, d. h. Doku ist nicht flaechendeckend Pflicht.
-# Diese beiden Regeln wuerden ~790 Member, die bereits eine aussagekraeftige <summary>
+# suggestion: SA1600 ist deaktiviert, d. h. Doku ist nicht flächendeckend Pflicht.
+# Diese beiden Regeln würden ~790 Member, die bereits eine aussagekräftige <summary>
 # tragen (oft mit <paramref>), zu mechanischen Rausch-Tags zwingen
 # ("<param name=\"path\">Der Pfad.</param>", "<param name=\"cancellationToken\">Das
 # Cancellation-Token.</param>"). Das widerspricht dem Grundsatz
-# dass Doku, die nur den Code wiederholt, Laerm statt Dokumentation ist.
-# Aussagekraeftige <param>/<returns> werden dort ergaenzt, wo sie Mehrwert liefern.
+# dass Doku, die nur den Code wiederholt, Lärm statt Dokumentation ist.
+# Aussagekräftige <param>/<returns> werden dort ergänzt, wo sie Mehrwert liefern.
 dotnet_diagnostic.SA1611.severity = suggestion
 dotnet_diagnostic.SA1612.severity = warning
 dotnet_diagnostic.SA1614.severity = warning
@@ -265,20 +265,20 @@ dotnet_diagnostic.S1192.severity = warning
 
 # Cognitive/Cyclomatic Complexity: hart als Warning. Kollidiert sonst mit dem Grundsatz
 # "Kleine Methoden, eine Verantwortung". Bewusst komplexe Parser-/Walker-Methoden werden
-# lokal per #pragma + Begruendung supprimiert.
+# lokal per #pragma + Begründung supprimiert.
 dotnet_diagnostic.S3776.severity = warning
 dotnet_diagnostic.S1541.severity = warning
 
-# Parametergleichheit fuer Vergleichsmethoden — hart als Warning.
+# Parametergleichheit für Vergleichsmethoden — hart als Warning.
 dotnet_diagnostic.S2342.severity = warning
 
 # Magic-Number-Detection: hart als Warning ("Keine Magic Values").
 # 0/1 sind via sonar.core.magicNumbers-Standard ausgenommen; echte Magic Values werden
-# als benannte Konstanten extrahiert, bewusste Ausnahmen lokal per #pragma begruendet.
+# als benannte Konstanten extrahiert, bewusste Ausnahmen lokal per #pragma begründet.
 dotnet_diagnostic.S109.severity = warning
 
-# Empty-Block-Hinweis: legitime Faelle wie ICommand.CanExecuteChanged Event-Akzessor
-# werden lokal per #pragma supprimiert (mit Begruendung).
+# Empty-Block-Hinweis: legitime Fälle wie ICommand.CanExecuteChanged Event-Akzessor
+# werden lokal per #pragma supprimiert (mit Begründung).
 dotnet_diagnostic.S108.severity = warning
 
 # Make-Static: WPF-ViewModels mit Binding-Setup werden lokal mit #pragma supprimiert.
@@ -287,7 +287,7 @@ dotnet_diagnostic.S2325.severity = warning
 # LINQ-Replacement-Vorschlag: hart als Warning; Hot-Paths bei Bedarf lokal supprimiert.
 dotnet_diagnostic.S3267.severity = warning
 
-# Index-Mutation in for-Schleifen: Skip-Ahead-Faelle lokal mit #pragma + Begruendung.
+# Index-Mutation in for-Schleifen: Skip-Ahead-Fälle lokal mit #pragma + Begründung.
 dotnet_diagnostic.S127.severity = warning
 
 # Projekt- und Config-Dateien

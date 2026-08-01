@@ -31,8 +31,8 @@ jobs:
         run: dotnet build MdExplorer.slnx -c Release --no-restore -warnaserror
 
       - name: Test
-        # Performance-Tests sind laufzeitabhaengig und auf gemeinsam genutzten Runnern
-        # nicht aussagekraeftig — sie laufen lokal, nicht als CI-Gate.
+        # Performance-Tests sind laufzeitabhängig und auf gemeinsam genutzten Runnern
+        # nicht aussagekräftig — sie laufen lokal, nicht als CI-Gate.
         run: dotnet test MdExplorer.slnx -c Release --no-build --filter "Category!=Performance"
 
 # Der Secret-Scan läuft im Security-Workflow über die offizielle gitleaks-Action —

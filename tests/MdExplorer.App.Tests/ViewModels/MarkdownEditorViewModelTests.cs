@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace MdExplorer.App.Tests.ViewModels;
 
 /// <summary>
-/// Tests fuer Dirty-Tracking, Live-Tag-Extraktion und Save-Pfad des Markdown-Editor-ViewModels.
+/// Tests für Dirty-Tracking, Live-Tag-Extraktion und Save-Pfad des Markdown-Editor-ViewModels.
 /// </summary>
 public sealed class MarkdownEditorViewModelTests
 {
@@ -50,7 +50,7 @@ public sealed class MarkdownEditorViewModelTests
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("original");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
         await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
-        vm.Text = "geaendert";
+        vm.Text = "geändert";
         Assert.True(vm.IsDirty);
 
         vm.Text = "original";
@@ -116,7 +116,7 @@ public sealed class MarkdownEditorViewModelTests
         await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
         vm.EnterEditMode();
         vm.Text = "v2 vom Editor";
-        fs.Files[TestPath] = Encoding.UTF8.GetBytes("v1-extern-veraendert");
+        fs.Files[TestPath] = Encoding.UTF8.GetBytes("v1-extern-verändert");
 
         await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
 

@@ -91,13 +91,13 @@ public sealed class NavigationAndLocatorTests
         repo.Add(new MarkdownFile
         {
             Id = expected,
-            AbsolutePath = @"C:\notes\Spaeter.md",
-            RelativePath = "Spaeter.md",
-            FileNameWithoutExtension = "Spaeter",
+            AbsolutePath = @"C:\notes\Später.md",
+            RelativePath = "Später.md",
+            FileNameWithoutExtension = "Später",
             ContentHash = "h",
         });
 
-        Guid? second = await locator.FindByWikiLinkAsync("spaeter", CancellationToken.None).ConfigureAwait(true);
+        Guid? second = await locator.FindByWikiLinkAsync("später", CancellationToken.None).ConfigureAwait(true);
 
         Assert.Equal(expected, second);
     }

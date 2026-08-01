@@ -6,7 +6,7 @@ internal sealed class FakeMarkdownSourceProvider : IMarkdownSourceProvider
 {
     public List<MarkdownSourceSnapshot> Sources { get; } = [];
 
-    /// <summary>Optionaler Throw fuer Defense-in-Depth-Tests.</summary>
+    /// <summary>Optionaler Throw für Defense-in-Depth-Tests.</summary>
     public Exception? ThrowOnNextEnumeration { get; set; }
 
     public async IAsyncEnumerable<MarkdownSourceSnapshot> EnumerateAsync(

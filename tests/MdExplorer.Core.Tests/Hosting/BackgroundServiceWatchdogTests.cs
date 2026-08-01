@@ -3,9 +3,9 @@ using MdExplorer.Core.Hosting;
 
 namespace MdExplorer.Core.Tests.Hosting;
 
-/// <summary>Tests fuer den <see cref="BackgroundServiceWatchdog"/>.</summary>
+/// <summary>Tests für den <see cref="BackgroundServiceWatchdog"/>.</summary>
 [SuppressMessage("Usage", "CA2201:Do not raise reserved exception types",
-    Justification = "Wir konstruieren die Runtime-reservierten Exceptions ausschliesslich, um den Watchdog-Klassifizierer zu testen; sie werden nie geworfen.")]
+    Justification = "Wir konstruieren die Runtime-reservierten Exceptions ausschließlich, um den Watchdog-Klassifizierer zu testen; sie werden nie geworfen.")]
 public sealed class BackgroundServiceWatchdogTests
 {
     [Fact]

@@ -196,7 +196,7 @@ internal sealed partial class MainWindow : Window
     private async Task ShowHelpWindowAsync(string slug)
     {
         // Wenn das Fenster bereits offen ist, holen wir es nur in den Vordergrund
-        // und navigieren zum gewünschten Slug — ein zweites Fenster waere verwirrend.
+        // und navigieren zum gewünschten Slug — ein zweites Fenster wäre verwirrend.
         if (_activeHelpWindow is not null)
         {
             if (_activeHelpWindow.WindowState == WindowState.Minimized)

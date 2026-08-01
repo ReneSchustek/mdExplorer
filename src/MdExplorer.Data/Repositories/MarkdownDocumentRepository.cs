@@ -8,9 +8,9 @@ namespace MdExplorer.Data.Repositories;
 public sealed class MarkdownDocumentRepository(MdExplorerDbContext dbContext) : IMarkdownDocumentRepository
 {
     /// <summary>
-    /// Maximalgroesse fuer SQLite-IN-Listen. Default-Limit fuer gebundene Parameter in SQLite
+    /// Maximalgröße für SQLite-IN-Listen. Default-Limit für gebundene Parameter in SQLite
     /// vor Version 3.32 lag bei 999; wir bleiben defensiv unter dieser Schwelle, damit auch
-    /// aeltere Build-Konfigurationen funktionieren.
+    /// ältere Build-Konfigurationen funktionieren.
     /// </summary>
     private const int SqliteInListBatchSize = 500;
 
@@ -36,7 +36,7 @@ public sealed class MarkdownDocumentRepository(MdExplorerDbContext dbContext) : 
         Guid[] ids = [.. markdownFileIds];
         Dictionary<Guid, MarkdownDocument> result = new(ids.Length);
         // Getrackt (kein AsNoTracking) — der Aufrufer mutiert die geladenen Dokumente und ruft
-        // anschliessend Update/SaveChanges; ein Detached-Ergebnis wuerde die Aenderungen verlieren.
+        // anschließend Update/SaveChanges; ein Detached-Ergebnis würde die Änderungen verlieren.
         foreach (Guid[] chunk in ids.Chunk(SqliteInListBatchSize))
         {
             List<MarkdownDocument> chunkResult = await _dbContext.Set<MarkdownDocument>()

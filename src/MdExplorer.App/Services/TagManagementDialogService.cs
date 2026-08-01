@@ -7,7 +7,7 @@ namespace MdExplorer.App.Services;
 
 /// <summary>
 /// WPF-Implementierung von <see cref="ITagManagementDialogService"/>. Zeigt eine
-/// modale Bestaetigung mit Ja/Nein-Buttons. Die UI-Abstraktion bleibt im
+/// modale Bestätigung mit Ja/Nein-Buttons. Die UI-Abstraktion bleibt im
 /// TagCloud-Modul (testbar), die WPF-Bindung lebt hier.
 /// </summary>
 [ExcludeFromCodeCoverage]

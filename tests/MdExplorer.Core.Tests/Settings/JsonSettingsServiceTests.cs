@@ -214,10 +214,10 @@ public sealed class JsonSettingsServiceTests : IDisposable
     public async Task SaveAsync_OnContentEquivalentButFreshListInstance_DoesNotTreatAsChange()
     {
         // Regression: AppSettings ist ein Record; IReadOnlyList<string>-Felder fallen beim
-        // Default-Equality auf Reference-Equality zurueck. Der Settings-Dialog erzeugt bei
-        // jedem OK-Klick neue Listen-Instanzen — ohne strukturellen Vergleich wuerde der
-        // Dienst jedes Save als geaendert melden und unnoetigen Snapshot / SettingsChanged-Event
-        // ausloesen (Befund 2026-06-10).
+        // Default-Equality auf Reference-Equality zurück. Der Settings-Dialog erzeugt bei
+        // jedem OK-Klick neue Listen-Instanzen — ohne strukturellen Vergleich würde der
+        // Dienst jedes Save als geändert melden und unnötigen Snapshot / SettingsChanged-Event
+        // auslösen (Befund 2026-06-10).
         string path = Path.Combine(_tempDir, "fresh-list.json");
         string historyDir = Path.Combine(_tempDir, "fresh-list-history");
         string auditLog = Path.Combine(_tempDir, "fresh-list-audit.log");

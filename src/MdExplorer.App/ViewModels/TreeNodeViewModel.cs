@@ -7,10 +7,10 @@ using MdExplorer.Indexer.Abstractions;
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// Knoten im TreeView. Repraesentiert entweder ein Verzeichnis (mit Lazy-Loading der Children
-/// per Sentinel-Pattern) oder eine Markdown-Datei (Blattknoten, klickbar — oeffnet die Preview).
+/// Knoten im TreeView. Repräsentiert entweder ein Verzeichnis (mit Lazy-Loading der Children
+/// per Sentinel-Pattern) oder eine Markdown-Datei (Blattknoten, klickbar — öffnet die Preview).
 /// Datei-Knoten werden erst beim Aufklappen des Eltern-Verzeichnisses materialisiert, weil
-/// der Verzeichnis-Lazy-Load das einzige Trigger-Event fuer Datei-Enumeration ist.
+/// der Verzeichnis-Lazy-Load das einzige Trigger-Event für Datei-Enumeration ist.
 /// </summary>
 internal sealed partial class TreeNodeViewModel : ObservableObject
 {
@@ -53,7 +53,7 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDirectlyExcluded;
 
-    /// <summary>Erzeugt einen Verzeichnisknoten mit Sentinel-Child fuer Lazy-Loading.</summary>
+    /// <summary>Erzeugt einen Verzeichnisknoten mit Sentinel-Child für Lazy-Loading.</summary>
     public TreeNodeViewModel(
         string absolutePath,
         string displayName,
@@ -74,7 +74,7 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
         IsMarkdownFile = false;
         _fileSystem = fileSystem;
         _exclusionFilter = exclusionFilter;
-        // Der Root bleibt ueber die ganze Hierarchie konstant — fuer die IExclusionFilter-API.
+        // Der Root bleibt über die ganze Hierarchie konstant — für die IExclusionFilter-API.
         _rootAbsolutePath = rootAbsolutePath ?? absolutePath;
         _exclusions = exclusions;
         _isUiExcluded = isUiExcluded;
@@ -112,10 +112,10 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
     /// <summary>Anzeigename im Baum.</summary>
     public string DisplayName { get; }
 
-    /// <summary><see langword="true"/>, wenn der Knoten eine Markdown-Datei repraesentiert.</summary>
+    /// <summary><see langword="true"/>, wenn der Knoten eine Markdown-Datei repräsentiert.</summary>
     public bool IsMarkdownFile { get; }
 
-    /// <summary>Sichtbare Kinder. Verzeichnis: initial Sentinel, nach Expand reale Eintraege. Datei: leer.</summary>
+    /// <summary>Sichtbare Kinder. Verzeichnis: initial Sentinel, nach Expand reale Einträge. Datei: leer.</summary>
     public ObservableCollection<TreeNodeViewModel> Children { get; }
 
     partial void OnIsExpandedChanged(bool value)

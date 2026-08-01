@@ -17,8 +17,8 @@ internal static partial class TagDocumentEditor
     public const string ManagedBlockSuffix = "-->";
 
     /// <summary>
-    /// Fuegt <paramref name="tagName"/> dem Dokument hinzu, sofern noch nicht vorhanden.
-    /// Liefert den unveraenderten Text, wenn der Tag bereits irgendwo im Body steht
+    /// Fügt <paramref name="tagName"/> dem Dokument hinzu, sofern noch nicht vorhanden.
+    /// Liefert den unveränderten Text, wenn der Tag bereits irgendwo im Body steht
     /// (Vermeidung von Duplikaten im verwalteten Block).
     /// </summary>
     public static string Add(string text, string tagName, IReadOnlyList<string> currentTags)
@@ -100,7 +100,7 @@ internal static partial class TagDocumentEditor
     private static Regex BuildHashtagRegex(string tagName)
     {
         // Identische Boundary-Regeln wie TagExtractor: davor kein Wortzeichen / kein '#',
-        // danach kein Wortzeichen / kein '-' (sonst wuerden Praefix-Treffer falsch matchen).
+        // danach kein Wortzeichen / kein '-' (sonst würden Präfix-Treffer falsch matchen).
         string pattern = $@"(?<![\w#])#{Regex.Escape(tagName)}(?![\w\-])";
         return new Regex(pattern, RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     }

@@ -17,7 +17,7 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     public async Task<MarkdownFile?> GetByAbsolutePathAsync(string absolutePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
-        // Der Vergleich ist case-insensitiv, weil die Spalte NOCASE-Collation traegt — die
+        // Der Vergleich ist case-insensitiv, weil die Spalte NOCASE-Collation trägt — die
         // Abfrage nutzt weiterhin den Unique-Index (kein Full-Scan, kein EF.Functions.Collate).
         return await _dbContext.Set<MarkdownFile>()
             .FirstOrDefaultAsync(file => file.AbsolutePath == absolutePath, cancellationToken)
@@ -42,11 +42,11 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootAbsolutePath);
         // Trailing-Separator-Terminator verhindert, dass z.B. der Root "C:\Notes" auch Dateien
-        // unter "C:\Notes-evil\..." matcht — beide haetten sonst gleiche StartsWith-Prefix-Praefixe.
+        // unter "C:\Notes-evil\..." matcht — beide hätten sonst gleiche StartsWith-Prefix-Präfixe.
         string trimmedRoot = rootAbsolutePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string prefix = trimmedRoot + Path.DirectorySeparatorChar;
-        // AsNoTracking: das Repo liefert Read-Only-Sichten — falls Remove(entity) noetig wird,
-        // haengt der Caller die Entitaet per Update/Remove an. Spart Change-Tracker-Overhead
+        // AsNoTracking: das Repo liefert Read-Only-Sichten — falls Remove(entity) nötig wird,
+        // hängt der Caller die Entität per Update/Remove an. Spart Change-Tracker-Overhead
         // bei Bulk-Scans (Initial-Indexer-Lauf, Background-Re-Sync).
         List<MarkdownFile> result = await _dbContext.Set<MarkdownFile>()
             .AsNoTracking()
@@ -91,8 +91,8 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     public void Remove(MarkdownFile entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        // GetAllUnderRootAsync liefert AsNoTracking-Entities — die muessen vor Remove
-        // an den Change-Tracker angehaengt werden. Bevorzugt eine bereits getrackte Kopie
+        // GetAllUnderRootAsync liefert AsNoTracking-Entities — die müssen vor Remove
+        // an den Change-Tracker angehängt werden. Bevorzugt eine bereits getrackte Kopie
         // mit derselben Id (sonst wirft Attach IdentityConflict, wenn der Caller die Entity
         // im selben Scope schon angelegt/geladen hat).
         MarkdownFile? alreadyTracked = _dbContext.Set<MarkdownFile>().Local.FirstOrDefault(file => file.Id == entity.Id);

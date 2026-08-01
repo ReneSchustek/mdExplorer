@@ -70,7 +70,7 @@ public sealed class LocalFileSystemTests : IDisposable
     [Fact]
     public void GetFileSize_OnExistingFile_ReturnsCorrectLength()
     {
-        string path = Path.Combine(_testRoot, "groesse.bin");
+        string path = Path.Combine(_testRoot, "größe.bin");
         byte[] payload = new byte[123];
         File.WriteAllBytes(path, payload);
 

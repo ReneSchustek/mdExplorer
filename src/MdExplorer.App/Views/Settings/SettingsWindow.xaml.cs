@@ -65,7 +65,7 @@ internal sealed partial class SettingsWindow : Window
         _viewModel.Behavior.Update.Dispose();
         Loaded -= OnLoadedHandler;
         Closed -= OnWindowClosed;
-        // Modaler Dialog: nach dem Schliessen den vorherigen Kontext zurueckgeben,
+        // Modaler Dialog: nach dem Schließen den vorherigen Kontext zurückgeben,
         // damit F1 wieder dort weitermacht, wo der Anwender vor dem Dialog war.
         if (_previousHelpSlug is not null)
         {

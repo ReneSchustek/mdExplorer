@@ -9,17 +9,17 @@ using MdExplorer.App.ViewModels;
 namespace MdExplorer.App.Views.Panels;
 
 /// <summary>
-/// Container-Panel der rechten Spalte. Bettet die <see cref="PreviewPanel"/>-Instanz fuer den
+/// Container-Panel der rechten Spalte. Bettet die <see cref="PreviewPanel"/>-Instanz für den
 /// Read-Modus ein und blendet im Edit-Modus die monospace TextBox des Editors ein. Die
-/// Mode-Logik liegt vollstaendig im <see cref="DocumentPanelViewModel"/> — der Code-Behind
-/// kuemmert sich nur um den View-Aufbau und Tastenkuerzel (Ctrl+E / Ctrl+S / Ctrl+F).
+/// Mode-Logik liegt vollständig im <see cref="DocumentPanelViewModel"/> — der Code-Behind
+/// kümmert sich nur um den View-Aufbau und Tastenkürzel (Ctrl+E / Ctrl+S / Ctrl+F).
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class DocumentPanel : UserControl
 {
     private readonly PreviewPanel _previewPanel;
 
-    /// <summary>Erstellt das Panel und haengt das WebView2-Preview-Control als Read-Mode-Inhalt ein.</summary>
+    /// <summary>Erstellt das Panel und hängt das WebView2-Preview-Control als Read-Mode-Inhalt ein.</summary>
     public DocumentPanel(PreviewPanel previewPanel)
     {
         ArgumentNullException.ThrowIfNull(previewPanel);
@@ -44,9 +44,9 @@ internal sealed partial class DocumentPanel : UserControl
 
     private DocumentPanelViewModel? ViewModel => DataContext as DocumentPanelViewModel;
 
-    /// <summary>Oeffnet die Find-Bar im Edit-Modus, fokussiert das Eingabefeld und
-    /// uebernimmt die aktuelle Selektion als Voreinstellung. Im Read-Modus uebernimmt das
-    /// WebView2 die Find-Funktionalitaet selbst (Default-Browser-Accelerator).</summary>
+    /// <summary>Öffnet die Find-Bar im Edit-Modus, fokussiert das Eingabefeld und
+    /// übernimmt die aktuelle Selektion als Voreinstellung. Im Read-Modus übernimmt das
+    /// WebView2 die Find-Funktionalität selbst (Default-Browser-Accelerator).</summary>
     private void OpenFind()
     {
         if (ViewModel is null || !ViewModel.IsEditMode)

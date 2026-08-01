@@ -6,8 +6,8 @@ namespace MdExplorer.Data.Repositories;
 
 /// <summary>
 /// EF-Core-Implementierung von <see cref="IAllFilesQuery"/>. Holt alle indizierten Dateien
-/// und joint die zugehoerigen Tag-Slugs in zwei untracked Queries (keine N+1, kein
-/// Cartesian-Product). Tag-Slugs werden in der ersten DB-Antwort projiziert, anschliessend
+/// und joint die zugehörigen Tag-Slugs in zwei untracked Queries (keine N+1, kein
+/// Cartesian-Product). Tag-Slugs werden in der ersten DB-Antwort projiziert, anschließend
 /// pro Datei zugeordnet — vermeidet das LEFT-JOIN-Explosionsproblem bei mehreren Tags pro Datei.
 /// </summary>
 public sealed class AllFilesQuery : IAllFilesQuery

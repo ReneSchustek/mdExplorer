@@ -6,15 +6,15 @@ namespace MdExplorer.Search.Abstractions;
 /// Erweitert User-Eingaben um Pre-Filter (RegEx) und Similarity-Pfade (Stemming,
 /// NEAR-Operator, Synonyme). Bewusst getrennt von <see cref="ISearchQueryBuilder"/>:
 /// der reine FTS5-Build-Pfad und die expansionsstarken Pfade haben unterschiedliche
-/// Aenderungsgruende (SRP).
+/// Änderungsgründe (SRP).
 /// </summary>
 public interface ISimilarityQueryBuilder
 {
     /// <summary>
     /// Erzeugt einen FTS5-Vorfilter aus einem RegEx-Pattern. Extrahiert
-    /// alle Wort-Tokens (<c>\w{2,}</c>) und verbindet sie per <c>OR</c> mit Praefix-
+    /// alle Wort-Tokens (<c>\w{2,}</c>) und verbindet sie per <c>OR</c> mit Präfix-
     /// Wildcards. Liefert leere Match-Expression, wenn das Pattern keinen Token-Anker
-    /// enthaelt (z. B. <c>.+</c>) — der Service interpretiert das als „alle Dokumente
+    /// enthält (z. B. <c>.+</c>) — der Service interpretiert das als „alle Dokumente
     /// kandidieren".
     /// </summary>
     Fts5QueryPlan BuildRegexPrefilter(string regexPattern);

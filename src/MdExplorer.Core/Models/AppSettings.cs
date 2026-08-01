@@ -39,7 +39,7 @@ public sealed record AppSettings(
 /// Wirkt additiv zu <paramref name="ExclusionPatterns"/> und <c>.mdignore</c>-Hierarchie.</param>
 /// <param name="AutoExtractHashtags">Wenn <see langword="true"/>, extrahiert
 /// der Indexer Hashtags aus dem Markdown-Body. Frontmatter-<c>tags</c>-Werte werden
-/// unabhaengig davon stets uebernommen, weil sie explizit gesetzt sind.</param>
+/// unabhängig davon stets übernommen, weil sie explizit gesetzt sind.</param>
 public sealed record IndexingSettings(
     IReadOnlyList<string> Roots,
     IReadOnlyList<string> ExclusionPatterns,

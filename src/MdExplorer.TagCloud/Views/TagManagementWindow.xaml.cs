@@ -6,8 +6,8 @@ namespace MdExplorer.TagCloud.Views;
 
 /// <summary>
 /// Code-Behind des Tag-Management-Fensters. Bindet das ViewModel und triggert beim
-/// Oeffnen einen initialen <see cref="TagManagementViewModel.RefreshAsync"/>-Aufruf,
-/// damit die Liste sofort befuellt wird.
+/// Öffnen einen initialen <see cref="TagManagementViewModel.RefreshAsync"/>-Aufruf,
+/// damit die Liste sofort befüllt wird.
 /// </summary>
 [ExcludeFromCodeCoverage]
 public sealed partial class TagManagementWindow : Window

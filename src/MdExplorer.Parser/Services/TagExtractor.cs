@@ -15,7 +15,7 @@ namespace MdExplorer.Parser.Services;
 /// Der Settings-Schalter <see cref="Core.Models.IndexingSettings.AutoExtractHashtags"/>
 /// steuert die Body-Extraktion. Steht er auf <see langword="false"/>, liefert der Extractor
 /// eine leere Liste — Frontmatter-<c>tags</c>-Werte werden weiterhin vom <see cref="MarkdigParser"/>
-/// hinzugefuegt, weil sie explizit gesetzt sind.
+/// hinzugefügt, weil sie explizit gesetzt sind.
 /// </remarks>
 public sealed partial class TagExtractor : ITagExtractor
 {
@@ -24,7 +24,7 @@ public sealed partial class TagExtractor : ITagExtractor
 
     private readonly ISettingsService _settingsService;
 
-    /// <summary>Erzeugt den Extractor und bindet den Settings-Service fuer den Auto-Tagging-Schalter.</summary>
+    /// <summary>Erzeugt den Extractor und bindet den Settings-Service für den Auto-Tagging-Schalter.</summary>
     public TagExtractor(ISettingsService settingsService)
     {
         ArgumentNullException.ThrowIfNull(settingsService);
@@ -43,7 +43,7 @@ public sealed partial class TagExtractor : ITagExtractor
         {
             return [];
         }
-        // Minimal-Pipeline: kein WikiLink-Render noetig, kein YAML-Frontmatter — ExtractFromAst ueberspringt
+        // Minimal-Pipeline: kein WikiLink-Render nötig, kein YAML-Frontmatter — ExtractFromAst überspringt
         // CodeBlocks ohnehin. Reduziert Allokationen pro Tastendruck.
         MarkdownDocument ast = Markdown.Parse(markdownText);
         return ExtractFromAstCore(ast);

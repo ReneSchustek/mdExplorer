@@ -255,15 +255,15 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     private static partial void LogNavigationFailed(ILogger logger, string absolutePath, Exception exception);
 
     /// <summary>
-    /// Hot-Save. Jeder Wechsel der Sichtbarkeit (Command, Menue-TwoWay-Binding,
-    /// Ctrl+T) wird sofort persistiert, damit der Stand beim naechsten Start auch dann erhalten
-    /// bleibt, wenn das Hauptfenster ungewoehnlich beendet wird (Task-Manager / Power-Loss).
+    /// Hot-Save. Jeder Wechsel der Sichtbarkeit (Command, Menü-TwoWay-Binding,
+    /// Ctrl+T) wird sofort persistiert, damit der Stand beim nächsten Start auch dann erhalten
+    /// bleibt, wenn das Hauptfenster ungewöhnlich beendet wird (Task-Manager / Power-Loss).
     /// Der Initial-Wert wird im Konstruktor direkt in das Backing-Field geschrieben — die
     /// partielle Methode feuert daher beim Initial-Load nicht, und es entsteht keine Save-Schleife.
     /// </summary>
     partial void OnIsTagCloudVisibleChanged(bool value) => PersistColumnLayout();
 
-    /// <summary>Hot-Save fuer den Left-Tab-Index. Initial-Wert wird im Konstruktor
+    /// <summary>Hot-Save für den Left-Tab-Index. Initial-Wert wird im Konstruktor
     /// direkt in das Backing-Field geschrieben — der Hook feuert beim Start nicht.</summary>
     partial void OnLeftTabIndexChanged(int value) => PersistColumnLayout();
 
@@ -332,7 +332,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
             if (targetId is null)
             {
                 // Indexer kennt die Datei noch nicht — Direct-Load aus dem Dateisystem,
-                // damit der Nutzer Inhalt sieht, ohne auf den ersten Scan warten zu muessen.
+                // damit der Nutzer Inhalt sieht, ohne auf den ersten Scan warten zu müssen.
                 LogPathUnresolved(_logger, absolutePath);
                 await DocumentPanel.LoadByPathAsync(absolutePath, CancellationToken.None).ConfigureAwait(true);
                 return;

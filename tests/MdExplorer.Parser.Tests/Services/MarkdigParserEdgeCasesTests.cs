@@ -7,9 +7,9 @@ using MdExplorer.Parser.Tests.Helpers;
 namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
-/// Edge-Case-Tests fuer den <see cref="MarkdigParser"/>. Decken die
-/// pathologischen Eingaben ab, die vom User-Report 2026-06-12 hochgespuelt wurden
-/// (Markdig-Renderer-Limit) und sichern die Resilienz gegen ungewoehnliche
+/// Edge-Case-Tests für den <see cref="MarkdigParser"/>. Decken die
+/// pathologischen Eingaben ab, die vom User-Report 2026-06-12 hochgespült wurden
+/// (Markdig-Renderer-Limit) und sichern die Resilienz gegen ungewöhnliche
 /// Eingaben ab — leerer Input, Whitespace-only, BOM, sehr lange Zeilen,
 /// Surrogate-Pairs, Null-Byte, kaputtes YAML.
 /// </summary>
@@ -130,13 +130,13 @@ public sealed class MarkdigParserEdgeCasesTests
         Assert.NotNull(result);
         Assert.True(
             stopwatch.Elapsed < TimeSpan.FromSeconds(5),
-            $"Huge-Input-Parse benoetigte {stopwatch.Elapsed.TotalSeconds:F2}s, Budget 5s.");
+            $"Huge-Input-Parse benötigte {stopwatch.Elapsed.TotalSeconds:F2}s, Budget 5s.");
     }
 
     [Fact]
     public void Parse_OnRepeatedEmphasisMarkers_DoesNotCrash()
     {
-        // 200 abwechselnde Emphasis-Marker — Markdig waehlt seine eigenen
+        // 200 abwechselnde Emphasis-Marker — Markdig wählt seine eigenen
         // Pairing-Heuristiken, soll aber nicht crashen.
         StringBuilder builder = new(800);
         for (int i = 0; i < 200; i++)

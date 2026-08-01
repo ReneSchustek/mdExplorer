@@ -9,13 +9,13 @@ public interface IMarkdownTagRewriter
 {
     /// <summary>
     /// Wendet die angegebenen Slug-Operationen auf den Rohtext an. Body-Vorkommen werden
-    /// per Boundary-Regex erkannt (gleiche Regel wie <c>TagExtractor</c>), Frontmatter-Eintraege
+    /// per Boundary-Regex erkannt (gleiche Regel wie <c>TagExtractor</c>), Frontmatter-Einträge
     /// im <c>tags</c>-Feld werden zeilenbasiert manipuliert. Verarbeitet Inline-Sequenzen
     /// (<c>tags: [a, b]</c>), kommagetrennte Werte (<c>tags: a, b</c>) und Block-Listen
     /// (<c>- a</c> in Folgezeilen).
     /// </summary>
     /// <param name="original">Original-Markdown-Inhalt.</param>
     /// <param name="operations">Pro Slug: neuer Name (Rename / Merge) oder <see langword="null"/> (Delete).</param>
-    /// <returns>Umgeschriebener Text — identisch zu <paramref name="original"/>, wenn keine Aenderung anfaellt.</returns>
+    /// <returns>Umgeschriebener Text — identisch zu <paramref name="original"/>, wenn keine Änderung anfällt.</returns>
     string Apply(string original, IReadOnlyDictionary<string, string?> operations);
 }

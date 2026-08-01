@@ -31,7 +31,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     private readonly IMessenger _messenger;
     private readonly Lock _gate = new();
     // Object-Lock (kein System.Threading.Lock!) — EnableCollectionSynchronization erfordert
-    // einen kompatiblen Monitor-Lock fuer das WPF-Binding (Memory: wpf_collection_sync_lock).
+    // einen kompatiblen Monitor-Lock für das WPF-Binding (Memory: wpf_collection_sync_lock).
     private readonly object _resultsGate = new();
 
     private CancellationTokenSource? _currentRunCts;
@@ -53,8 +53,8 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     [ObservableProperty]
     private SimilarityMode _similarity = SimilarityMode.None;
 
-    // Standard: globale Suche ueber alle Roots. Erst wenn der Nutzer den Scope aktiviert,
-    // wird die Trefferliste auf den im Ordnerbaum gewaehlten Pfad (PathPrefixFilter) beschnitten.
+    // Standard: globale Suche über alle Roots. Erst wenn der Nutzer den Scope aktiviert,
+    // wird die Trefferliste auf den im Ordnerbaum gewählten Pfad (PathPrefixFilter) beschnitten.
     [ObservableProperty]
     private bool _scopeToSelectedFolder;
 
@@ -80,10 +80,10 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
         _debounce = debounce;
         Results = [];
         // Cross-Thread-Schreiben in Results: der Debounce-Timer feuert auf ThreadPool, das
-        // anschliessende ApplyResults muss aber an die UI-bound ListBox kommen. Ohne diese
+        // anschließende ApplyResults muss aber an die UI-bound ListBox kommen. Ohne diese
         // Registrierung fliegt eine NotSupportedException ("CollectionView aus Nicht-Dispatcher-
-        // Thread"), die aus dem RunSearchAsync-Catch herausfaellt (NotSupportedException ist
-        // keine InvalidOperationException) und die Trefferliste leer bleiben laesst.
+        // Thread"), die aus dem RunSearchAsync-Catch herausfällt (NotSupportedException ist
+        // keine InvalidOperationException) und die Trefferliste leer bleiben lässt.
         BindingOperations.EnableCollectionSynchronization(Results, _resultsGate);
         _messenger.RegisterAll(this);
     }
@@ -273,7 +273,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
         // Nur scopen, wenn der Nutzer es aktiv eingeschaltet hat — sonst bleibt die Suche global.
         string? prefix = ScopeToSelectedFolder ? PathPrefixFilter : null;
         // Lock-Pflicht: EnableCollectionSynchronization erwartet, dass jeder Schreiber den
-        // gleichen Monitor-Lock haelt — sonst kann WPF beim Reverse-Read (Dispatcher-Thread)
+        // gleichen Monitor-Lock hält — sonst kann WPF beim Reverse-Read (Dispatcher-Thread)
         // einen inkonsistenten Mittelzustand sehen.
         lock (_resultsGate)
         {

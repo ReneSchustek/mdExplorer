@@ -81,7 +81,7 @@ public sealed class MainViewModelTests
     {
         using TestHarness harness = new();
 
-        bool result = await harness.Main.NavigateToWikiLinkAsync("ungeloest", CancellationToken.None).ConfigureAwait(true);
+        bool result = await harness.Main.NavigateToWikiLinkAsync("ungelöst", CancellationToken.None).ConfigureAwait(true);
 
         Assert.False(result);
         Assert.Null(harness.Preview.CurrentDocumentId);
@@ -106,7 +106,7 @@ public sealed class MainViewModelTests
 
         Assert.Equal(22, harness.Main.IndexedFileCount);
 
-        // Re-Emission der gleichen Root ueberschreibt, sie wird nicht aufaddiert.
+        // Re-Emission der gleichen Root überschreibt, sie wird nicht aufaddiert.
         harness.Indexer.RaiseProgress("F:/root-a", 30, isCompleted: true);
 
         Assert.Equal(35, harness.Main.IndexedFileCount);
@@ -118,11 +118,11 @@ public sealed class MainViewModelTests
         using TestHarness harness = new();
         int dispatcherCallsBefore = harness.UiDispatcher.InvokeCount;
 
-        harness.HealthProvider.SetState(OperationHealth.Warning, "Indexer haengt.");
+        harness.HealthProvider.SetState(OperationHealth.Warning, "Indexer hängt.");
 
         Assert.Equal(OperationHealth.Warning, harness.Main.Health);
-        Assert.Equal("Indexer haengt.", harness.Main.HealthDetail);
-        Assert.True(harness.UiDispatcher.InvokeCount > dispatcherCallsBefore, "OnHealthChanged muss ueber den UI-Dispatcher marshalen.");
+        Assert.Equal("Indexer hängt.", harness.Main.HealthDetail);
+        Assert.True(harness.UiDispatcher.InvokeCount > dispatcherCallsBefore, "OnHealthChanged muss über den UI-Dispatcher marshalen.");
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class MainViewModelTests
 
     [Fact]
     [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
-        Justification = "Die FolderTree-/Search-/TagCloud-/DocumentPanel-VMs werden von MainViewModel.Dispose() ueber das using freigegeben.")]
+        Justification = "Die FolderTree-/Search-/TagCloud-/DocumentPanel-VMs werden von MainViewModel.Dispose() über das using freigegeben.")]
     public void LeftTabIndex_Change_PersistsToSettings()
     {
         using TestHarness harness = new();
@@ -159,7 +159,7 @@ public sealed class MainViewModelTests
         UiLayout persisted = new UiSettingsStore(harness.SettingsStore.StorageLocation, NullLogger<UiSettingsStore>.Instance).Load();
         Assert.Equal(2, persisted.LeftTabIndex);
 
-        // Eine zweite MainViewModel-Instanz auf demselben Store liest den Stand zurueck.
+        // Eine zweite MainViewModel-Instanz auf demselben Store liest den Stand zurück.
         using ServiceProvider freshProvider = new ServiceCollection()
             .AddScoped<IAllFilesQuery>(_ => harness.AllFilesQuery)
             .AddScoped<ISearchService>(_ => harness.SearchService)

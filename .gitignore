@@ -76,7 +76,7 @@ bld/
 # Publish
 publish/
 
-# Test/Coverage-Ergebnisse (lokal, gehoeren nicht ins Repo)
+# Test/Coverage-Ergebnisse (lokal, gehören nicht ins Repo)
 TestResults/
 *.cobertura.xml
 *.opencover.xml

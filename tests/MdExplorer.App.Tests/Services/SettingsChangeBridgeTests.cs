@@ -121,7 +121,7 @@ public sealed class SettingsChangeBridgeTests
             await WaitForAsync(() => indexer.CallCount >= 1, TimeSpan.FromSeconds(5)).ConfigureAwait(true);
             Assert.Equal(1, indexer.CallCount);
 
-            // Bridge laeuft weiter, ArgumentException wird konsumiert.
+            // Bridge läuft weiter, ArgumentException wird konsumiert.
             indexer.ThrowOnNextCall = null;
             settings.RaiseChanged(AppSettings.Default, AppSettings.Default);
             await WaitForAsync(() => indexer.CallCount >= 2, TimeSpan.FromSeconds(5)).ConfigureAwait(true);
@@ -149,7 +149,7 @@ public sealed class SettingsChangeBridgeTests
 
             Assert.Equal(1, indexer.CallCount);
 
-            // Zweiter Lauf — Bridge laeuft weiter, Exception ist konsumiert.
+            // Zweiter Lauf — Bridge läuft weiter, Exception ist konsumiert.
             indexer.ThrowOnNextCall = null;
             settings.RaiseChanged(AppSettings.Default, AppSettings.Default);
             await WaitForAsync(() => indexer.CallCount >= 2, TimeSpan.FromSeconds(5)).ConfigureAwait(true);
@@ -181,7 +181,7 @@ public sealed class SettingsChangeBridgeTests
         }
         if (!condition())
         {
-            throw new TimeoutException($"Bedingung nicht innerhalb von {timeout.TotalSeconds:F1}s erfuellt.");
+            throw new TimeoutException($"Bedingung nicht innerhalb von {timeout.TotalSeconds:F1}s erfüllt.");
         }
     }
 

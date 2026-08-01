@@ -1,7 +1,7 @@
-; Inno Setup 6 Skript fuer MdExplorer.
+; Inno Setup 6 Skript für MdExplorer.
 ; Erzeugt eine Setup.exe aus dem self-contained win-x64 Publish-Output.
 ; Der Publish liefert eine einzige MdExplorer.exe (native Bibliotheken sind
-; eingebettet), daher genuegt es, genau diese Datei zu installieren.
+; eingebettet), daher genügt es, genau diese Datei zu installieren.
 ;
 ; Build:  installer\build-installer.ps1   (publisht + kompiliert)
 ; Manuell: ISCC /DSourceDir="<publish-pfad>" /DMyAppVersion=0.9.0 installer\MdExplorer.iss
@@ -18,7 +18,7 @@
 #endif
 
 [Setup]
-; AppId identifiziert das Programm fuer Updates/Deinstallation — stabil halten.
+; AppId identifiziert das Programm für Updates/Deinstallation — stabil halten.
 AppId={{B7E6F4C2-4E2A-4C9E-9B3F-2D1A8C5E0F77}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}

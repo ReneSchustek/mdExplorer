@@ -11,9 +11,9 @@ public sealed class MarkdownFileTag
     /// <summary>Fremdschlüssel auf <see cref="Tag.Id"/> — Teil des zusammengesetzten Primärschlüssels.</summary>
     public Guid TagId { get; set; }
 
-    /// <summary>Navigation auf die referenzierte <see cref="Models.MarkdownFile"/> — fuer Cascade-Delete bei File-Loeschung.</summary>
+    /// <summary>Navigation auf die referenzierte <see cref="Models.MarkdownFile"/> — für Cascade-Delete bei File-Löschung.</summary>
     public MarkdownFile? MarkdownFile { get; set; }
 
-    /// <summary>Navigation auf den referenzierten <see cref="Models.Tag"/> — fuer Cascade-Delete bei Tag-Loeschung.</summary>
+    /// <summary>Navigation auf den referenzierten <see cref="Models.Tag"/> — für Cascade-Delete bei Tag-Löschung.</summary>
     public Tag? Tag { get; set; }
 }

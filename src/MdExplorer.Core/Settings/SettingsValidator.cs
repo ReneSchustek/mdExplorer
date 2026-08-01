@@ -14,7 +14,7 @@ namespace MdExplorer.Core.Settings;
 /// Sicherheits-Hinweis: Root-Pfade werden nicht gegen Symlink-Ziele kanonisiert.
 /// Ein Symlink kann damit auf Systempfade verweisen, ohne dass die Validierung das erkennt.
 /// MdExplorer geht davon aus, dass der Endanwender Vertrauen in seine eigene Workspace-Konfiguration hat —
-/// im Multi-User- oder Server-Kontext muss die kanonische Aufloesung von Symlinks ergaenzt werden.
+/// im Multi-User- oder Server-Kontext muss die kanonische Auflösung von Symlinks ergänzt werden.
 /// </remarks>
 public sealed class SettingsValidator
 {
@@ -31,7 +31,7 @@ public sealed class SettingsValidator
     private readonly IFileSystem _fileSystem;
 
     /// <summary>Erzeugt den Validator und injiziert das Dateisystem.</summary>
-    /// <param name="fileSystem">Dateisystem-Abstraktion, ueber die Root-Pfade gepruefte werden.</param>
+    /// <param name="fileSystem">Dateisystem-Abstraktion, über die Root-Pfade geprüfte werden.</param>
     public SettingsValidator(IFileSystem fileSystem)
     {
         ArgumentNullException.ThrowIfNull(fileSystem);
@@ -39,8 +39,8 @@ public sealed class SettingsValidator
     }
 
     /// <summary>Validiert die Settings und liefert eine Liste lokaler Fehlerbefunde.</summary>
-    /// <param name="settings">Settings-Snapshot, der auf Vollstaendigkeit und Konsistenz geprueft wird.</param>
-    /// <returns>Validierungsergebnis mit gesammelten Befunden; leere Liste = gueltig.</returns>
+    /// <param name="settings">Settings-Snapshot, der gegen die Senior-Pflichten geprüft wird.</param>
+    /// <returns>Validierungsergebnis mit gesammelten Befunden; leere Liste = gültig.</returns>
     public SettingsValidationResult Validate(AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels;
 
-/// <summary>Tests fuer das ViewModel des "Alle Dateien"-Tabs.</summary>
+/// <summary>Tests für das ViewModel des "Alle Dateien"-Tabs.</summary>
 public sealed class AllFilesViewModelTests
 {
     private static readonly Guid FileAId = new("11111111-1111-1111-1111-111111111111");

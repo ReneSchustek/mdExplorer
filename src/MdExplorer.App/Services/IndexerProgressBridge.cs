@@ -9,7 +9,7 @@ namespace MdExplorer.App.Services;
 /// Reicht Indexer-Fortschritts-Events an das „Alle Dateien"-ViewModel weiter, damit
 /// dessen Liste während des Initial-Scans inkrementell befüllt wird. Ohne diese
 /// Brücke bliebe der Tab leer, bis der gesamte Scan durchgelaufen ist —
-/// auf grossen Roots (mehrere Tausend Dateien) sind das mehrere Minuten.
+/// auf großen Roots (mehrere Tausend Dateien) sind das mehrere Minuten.
 /// </summary>
 internal sealed partial class IndexerProgressBridge : IHostedService, IDisposable
 {
@@ -83,7 +83,7 @@ internal sealed partial class IndexerProgressBridge : IHostedService, IDisposabl
         }
         catch (OperationCanceledException)
         {
-            // Erwartet — Shutdown reisst den Refresh ab; nicht loggen.
+            // Erwartet — Shutdown reißt den Refresh ab; nicht loggen.
         }
 #pragma warning disable CA1031 // Grund: Bridge ist die letzte Auffangstelle gegen UnobservedTaskException, daher Catch(Exception) bewusst.
         catch (Exception ex)

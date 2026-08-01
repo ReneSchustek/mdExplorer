@@ -21,7 +21,7 @@ public static class SnippetExtractor
     /// auch im Markup-Text liegen — der <c>&lt;mark&gt;</c>-Marker zählt mit.
     /// </summary>
     /// <param name="snippet">FTS5-Snippet inklusive Markup-Marker.</param>
-    /// <returns>Liste der erkannten Highlights mit Start-Position und Laenge.</returns>
+    /// <returns>Liste der erkannten Highlights mit Start-Position und Länge.</returns>
     public static IReadOnlyList<SearchHighlight> Extract(string snippet)
     {
         ArgumentNullException.ThrowIfNull(snippet);

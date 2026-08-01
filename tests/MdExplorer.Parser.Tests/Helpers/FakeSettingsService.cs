@@ -4,8 +4,8 @@ using MdExplorer.Core.Models;
 namespace MdExplorer.Parser.Tests.Helpers;
 
 /// <summary>
-/// In-Memory-<see cref="ISettingsService"/> fuer Parser-Unit-Tests. Haelt den Stand,
-/// loest <see cref="SettingsChanged"/> beim <see cref="SaveAsync"/>-Aufruf aus.
+/// In-Memory-<see cref="ISettingsService"/> für Parser-Unit-Tests. Hält den Stand,
+/// löst <see cref="SettingsChanged"/> beim <see cref="SaveAsync"/>-Aufruf aus.
 /// </summary>
 internal sealed class FakeSettingsService : ISettingsService
 {

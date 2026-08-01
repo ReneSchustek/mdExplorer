@@ -11,7 +11,7 @@ namespace MdExplorer.App.Services;
 /// <param name="HelpWindow">Geometrie des Hilfefensters; <see langword="null"/>, solange
 /// das Fenster noch nie geöffnet wurde — dann gilt die Default-Geometrie.</param>
 /// <param name="IsTagCloudVisible">Ob das Tag-Cloud-Panel sichtbar ist. Default sichtbar.</param>
-/// <param name="LeftTabIndex">Zuletzt gewaehlter Tab in der linken Spalte (0=Ordner, 1=Alle Dateien, 2=Suche).</param>
+/// <param name="LeftTabIndex">Zuletzt gewählter Tab in der linken Spalte (0=Ordner, 1=Alle Dateien, 2=Suche).</param>
 /// <param name="GraphPathPrefix">Zuletzt im Graph-Fenster gesetzter Pfad-Prefix-Filter. <see langword="null"/>
 /// oder leer = kein Filter. Persistierung erlaubt Wiederkehr in die zuletzt fokussierte Sicht.</param>
 internal sealed record UiLayout(

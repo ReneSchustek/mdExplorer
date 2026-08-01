@@ -136,7 +136,7 @@ internal sealed partial class PreviewPanel : UserControl
     private void ConfigureCoreSettings()
     {
         CoreWebView2Settings settings = Browser.CoreWebView2.Settings;
-        // Preview ist reines HTML+CSS — Skripte und postMessage sind weder noetig noch erwuenscht.
+        // Preview ist reines HTML+CSS — Skripte und postMessage sind weder nötig noch erwünscht.
         settings.IsScriptEnabled = false;
         settings.IsWebMessageEnabled = false;
         settings.AreDefaultContextMenusEnabled = false;

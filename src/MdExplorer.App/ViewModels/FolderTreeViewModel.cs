@@ -76,7 +76,7 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
         _settings.SettingsChanged -= OnSettingsChanged;
     }
 
-    /// <summary>Pause ist nur fuer Ordnerknoten sinnvoll, die nicht bereits ausgeschlossen sind.</summary>
+    /// <summary>Pause ist nur für Ordnerknoten sinnvoll, die nicht bereits ausgeschlossen sind.</summary>
     private static bool CanPauseIndexing(TreeNodeViewModel? node) =>
         node is not null && !node.IsMarkdownFile && !node.IsExcluded;
 
@@ -188,8 +188,8 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     /// (<c>Path.GetRelativePath(root, …)</c>), darum darf der Filter nicht der absolute Pfad sein —
     /// sonst greift <c>StartsWith</c> nie und die Trefferliste bleibt leer. Wird die Wurzel selbst
     /// (oder ein Pfad ausserhalb aller Roots) selektiert, liefert die Methode <c>null</c>: dann gilt
-    /// kein Filter und die Suche bleibt global. Der angehaengte Separator verhindert, dass ein
-    /// Prefix wie <c>dotnet</c> faelschlich auch <c>dotnetfoo\…</c> trifft.
+    /// kein Filter und die Suche bleibt global. Der angehängte Separator verhindert, dass ein
+    /// Prefix wie <c>dotnet</c> fälschlich auch <c>dotnetfoo\…</c> trifft.
     /// </summary>
     private string? ToRelativePrefix(string? absolutePath)
     {

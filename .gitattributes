@@ -1,9 +1,9 @@
-# Erzwingt CRLF im Worktree fuer alle Text-Dateien — konsistent zur .editorconfig
+# Erzwingt CRLF im Worktree für alle Text-Dateien — konsistent zur .editorconfig
 # (end_of_line = crlf). Verhindert ENDOFLINE-Befunde in dotnet format, die durch
-# externe Tools oder unterschiedliche Editor-Standards entstehen koennen.
+# externe Tools oder unterschiedliche Editor-Standards entstehen können.
 *               text=auto eol=crlf
 
-# Bekannte Binaerdateien
+# Bekannte Binärdateien
 *.png           binary
 *.jpg           binary
 *.jpeg          binary

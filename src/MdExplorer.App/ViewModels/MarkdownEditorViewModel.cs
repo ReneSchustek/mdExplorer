@@ -15,14 +15,14 @@ namespace MdExplorer.App.ViewModels;
 
 /// <summary>
 /// ViewModel des Markdown-Editors. Verwaltet den Rohtext einer Markdown-Datei,
-/// erkennt Live-Tags mit Debounce, traegt Dirty-Status, persistiert atomar und bewahrt
-/// das ursprueengliche Zeilenende. Tag-CRUD (Hinzufuegen, Umbenennen, Entfernen)
-/// wird ueber <see cref="TagDocumentEditor"/> auf dem Roh-Text ausgefuehrt — keine
-/// Geschaeftslogik im Code-Behind.
+/// erkennt Live-Tags mit Debounce, trägt Dirty-Status, persistiert atomar und bewahrt
+/// das ursprüngliche Zeilenende. Tag-CRUD (Hinzufügen, Umbenennen, Entfernen)
+/// wird über <see cref="TagDocumentEditor"/> auf dem Roh-Text ausgeführt — keine
+/// Geschäftslogik im Code-Behind.
 /// </summary>
 internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDisposable
 {
-    /// <summary>Standard-Debounce-Zeit fuer die Live-Tag-Extraktion.</summary>
+    /// <summary>Standard-Debounce-Zeit für die Live-Tag-Extraktion.</summary>
     public static readonly TimeSpan DefaultDebounce = TimeSpan.FromMilliseconds(300);
 
     private readonly IFileSystem _fileSystem;
@@ -93,7 +93,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
     {
     }
 
-    /// <summary>Konstruktor mit anpassbarem Debounce + optionalem Confirm-Dialog — fuer Tests.</summary>
+    /// <summary>Konstruktor mit anpassbarem Debounce + optionalem Confirm-Dialog — für Tests.</summary>
     internal MarkdownEditorViewModel(
         IFileSystem fileSystem,
         ITagExtractor tagExtractor,
@@ -124,11 +124,11 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
     /// <summary>Wird gefeuert, nachdem die Datei erfolgreich gespeichert wurde.</summary>
     public event EventHandler<EditorSavedEventArgs>? Saved;
 
-    /// <summary>Wird nach jedem Debounce-Lauf der Tag-Extraktion gefeuert — fuer Tests.</summary>
+    /// <summary>Wird nach jedem Debounce-Lauf der Tag-Extraktion gefeuert — für Tests.</summary>
     public event EventHandler? TagsRefreshed;
 
     /// <summary>
-    /// Laedt die Datei in den Editor, erkennt EOL und initialisiert Dirty-Tracking.
+    /// Lädt die Datei in den Editor, erkennt EOL und initialisiert Dirty-Tracking.
     /// </summary>
     public async Task LoadAsync(Guid markdownFileId, string absolutePath, CancellationToken cancellationToken)
     {
@@ -141,9 +141,9 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
     }
 
     /// <summary>
-    /// Uebernimmt einen bereits geladenen Roh-Text (typischer Fall: Direct-Load durch
+    /// Übernimmt einen bereits geladenen Roh-Text (typischer Fall: Direct-Load durch
     /// <see cref="DocumentPanelViewModel"/>, weil der Indexer die Datei noch nicht kennt).
-    /// Verhaelt sich danach wie ein normaler <see cref="LoadAsync"/>-Aufruf.
+    /// Verhält sich danach wie ein normaler <see cref="LoadAsync"/>-Aufruf.
     /// </summary>
     public Task LoadDirectAsync(string absolutePath, string text, CancellationToken cancellationToken)
     {
@@ -165,10 +165,10 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
             return;
         }
         IsLocked = false;
-        StatusMessage = "Bearbeitung aktiv — Strg+S oeffnet Speichern-Dialog.";
+        StatusMessage = "Bearbeitung aktiv — Strg+S öffnet Speichern-Dialog.";
     }
 
-    /// <summary>Verlaesst den Bearbeiten-Modus (zurueck zur Anzeige).</summary>
+    /// <summary>Verlässt den Bearbeiten-Modus (zurück zur Anzeige).</summary>
     [RelayCommand]
     public void ExitEditMode()
     {
@@ -176,7 +176,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
         StatusMessage = "Anzeigen-Modus.";
     }
 
-    /// <summary>Persistiert den aktuellen Text atomar und reindiziert ueber den Datei-Watcher.</summary>
+    /// <summary>Persistiert den aktuellen Text atomar und reindiziert über den Datei-Watcher.</summary>
     [RelayCommand(CanExecute = nameof(CanSave))]
     public async Task SaveAsync(CancellationToken cancellationToken)
     {
@@ -190,7 +190,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
             return;
         }
 
-        // Speichern mit Bestaetigungs-Dialog. Wenn kein Dialog-Service injiziert ist
+        // Speichern mit Bestätigungs-Dialog. Wenn kein Dialog-Service injiziert ist
         // (z. B. Tests), wird der Speichervorgang ohne Confirm fortgesetzt — die alte Semantik.
         if (_confirmationDialog is not null && !_confirmationDialog.ConfirmSave())
         {
@@ -235,7 +235,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
         }
     }
 
-    /// <summary>Fuegt einen Tag im Dokument-Kontext hinzu (siehe <see cref="TagDocumentEditor.Add"/>).</summary>
+    /// <summary>Fügt einen Tag im Dokument-Kontext hinzu (siehe <see cref="TagDocumentEditor.Add"/>).</summary>
     [RelayCommand(CanExecute = nameof(CanAddTag))]
     public void AddTag()
     {
@@ -279,7 +279,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
         Text = TagDocumentEditor.Rename(Text, oldName, newName);
     }
 
-    /// <summary>Loescht Debounce-Timer und meldet sich von Resources ab.</summary>
+    /// <summary>Löscht Debounce-Timer und meldet sich von Resources ab.</summary>
     public void Dispose()
     {
         if (_disposed)
@@ -290,7 +290,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
         DisposeTimer();
     }
 
-    /// <summary>Liefert <see langword="true"/>, wenn ungespeicherte Aenderungen vorliegen — fuer Confirm-Dialog.</summary>
+    /// <summary>Liefert <see langword="true"/>, wenn ungespeicherte Änderungen vorliegen — für Confirm-Dialog.</summary>
     public bool HasUnsavedChanges => IsDirty;
 
     private static string ComputeHash(byte[] bytes)
@@ -302,7 +302,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
     [LoggerMessage(EventId = 500, Level = LogLevel.Information, Message = "Datei {FilePath} gespeichert.")]
     private static partial void LogSaved(ILogger logger, string filePath);
 
-    [LoggerMessage(EventId = 501, Level = LogLevel.Warning, Message = "Speichern abgebrochen: externe Aenderung an {FilePath}.")]
+    [LoggerMessage(EventId = 501, Level = LogLevel.Warning, Message = "Speichern abgebrochen: externe Änderung an {FilePath}.")]
     private static partial void LogConflict(ILogger logger, string filePath);
 
     [LoggerMessage(EventId = 502, Level = LogLevel.Error, Message = "Speichern von {FilePath} fehlgeschlagen.")]
@@ -404,7 +404,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
         string currentHash = ComputeHash(currentBytes);
         if (!string.Equals(currentHash, _originalContentHash, StringComparison.Ordinal))
         {
-            throw new ExternalEditConflictException("Die Datei wurde extern geaendert. Aenderungen wurden NICHT gespeichert.");
+            throw new ExternalEditConflictException("Die Datei wurde extern geändert. Änderungen wurden NICHT gespeichert.");
         }
     }
 
@@ -415,7 +415,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
     }
 }
 
-/// <summary>Konflikt-Marker, wenn die Quelldatei zwischen Load und Save extern geaendert wurde.</summary>
+/// <summary>Konflikt-Marker, wenn die Quelldatei zwischen Load und Save extern geändert wurde.</summary>
 internal sealed class ExternalEditConflictException : InvalidOperationException
 {
     public ExternalEditConflictException()

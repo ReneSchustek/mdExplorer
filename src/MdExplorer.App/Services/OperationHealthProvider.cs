@@ -7,8 +7,8 @@ namespace MdExplorer.App.Services;
 /// <summary>
 /// Bewertet den Live-Log-Puffer (<see cref="IMemoryLogStore"/>) und leitet daraus
 /// den aggregierten <see cref="OperationHealth"/>-Status ab. Reagiert auf jedes
-/// neue Log-Event und feuert <see cref="Changed"/> nur bei tatsaechlicher
-/// Stand-Aenderung — UI-Bindings updaten dadurch nicht unnoetig.
+/// neue Log-Event und feuert <see cref="Changed"/> nur bei tatsächlicher
+/// Stand-Änderung — UI-Bindings updaten dadurch nicht unnötig.
 /// </summary>
 internal sealed class OperationHealthProvider : IOperationHealthProvider, IDisposable
 {

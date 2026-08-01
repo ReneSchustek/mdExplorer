@@ -17,7 +17,7 @@ namespace MdExplorer.Data.Repositories;
 public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
 {
     /// <summary>
-    /// Chunk-Groesse fuer die IN-Listen der Body-Sammelabfrage. Bleibt defensiv unter dem
+    /// Chunk-Größe für die IN-Listen der Body-Sammelabfrage. Bleibt defensiv unter dem
     /// SQLite-Default-Limit von 999 gebundenen Parametern (analog <c>MarkdownDocumentRepository</c>).
     /// </summary>
     private const int SqliteInListBatchSize = 500;
@@ -28,7 +28,7 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
         """;
 
     // Konstante SELECT-Basis der Body-Sammelabfrage; die IN-Platzhalter ($p0..$pn) werden je
-    // Chunk angehaengt. So bleibt der WHERE-Wert-Pfad rein parametrisiert (siehe CA2100-Hinweis).
+    // Chunk angehängt. So bleibt der WHERE-Wert-Pfad rein parametrisiert (siehe CA2100-Hinweis).
     private const string SelectBodiesByIdsPrefix = """
         SELECT "MarkdownFileId", "Body"
         FROM "MarkdownSearchIndex"
@@ -248,8 +248,8 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
         }
     }
 
-    // Laedt die Body-Spalten eines Id-Chunks in einem einzigen Roundtrip. Fehlende Ids liefert
-    // FTS5 einfach nicht zurueck — der Aufrufer-Kontrakt (fehlende Ids ausgelassen) bleibt gewahrt.
+    // Lädt die Body-Spalten eines Id-Chunks in einem einzigen Roundtrip. Fehlende Ids liefert
+    // FTS5 einfach nicht zurück — der Aufrufer-Kontrakt (fehlende Ids ausgelassen) bleibt gewahrt.
     private static async Task LoadBodyChunkAsync(
         SqliteConnection connection,
         Guid[] chunk,
@@ -259,7 +259,7 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
         using SqliteCommand command = connection.CreateCommand();
         // CA2100: Der CommandText besteht aus der konstanten SELECT-Basis plus generierten
         // Parameter-Platzhaltern ($p0..$pn). Kein Guid-Wert wird per String-Konkatenation
-        // eingesetzt — die Werte reisen ausschliesslich als gebundene Parameter (AddWithValue).
+        // eingesetzt — die Werte reisen ausschließlich als gebundene Parameter (AddWithValue).
 #pragma warning disable CA2100
         command.CommandText = BuildBodiesByIdsSql(chunk.Length);
 #pragma warning restore CA2100
@@ -287,7 +287,7 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
     }
 
     // Setzt "... IN ($p0, $p1, ..., $pn);" aus der konstanten Basis und reinen Platzhaltern
-    // zusammen. Werte tauchen hier bewusst nicht auf — nur die Anzahl steuert die Laenge.
+    // zusammen. Werte tauchen hier bewusst nicht auf — nur die Anzahl steuert die Länge.
     private static string BuildBodiesByIdsSql(int parameterCount)
     {
         StringBuilder sql = new(SelectBodiesByIdsPrefix.Length + (parameterCount * 6) + 4);

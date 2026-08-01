@@ -148,7 +148,7 @@ public sealed class DocumentPanelViewModelTests
 
         await sut.Editor.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
         sut.Editor.EnterEditMode();
-        sut.Editor.Text = "geaendert";
+        sut.Editor.Text = "geändert";
         await sut.Editor.SaveAsync(CancellationToken.None).ConfigureAwait(true);
         int parseCountAfterFirstSave = parser.ParseCount;
 
@@ -158,14 +158,14 @@ public sealed class DocumentPanelViewModelTests
         // Nach Dispose: Editor.Saved ist nicht mehr abonniert. Ein weiterer Save (mit erneut entsperrtem Editor)
         // darf den DocumentPanel.OnEditorSaved-Handler nicht mehr triggern.
         sut.Editor.EnterEditMode();
-        sut.Editor.Text = "nochmal geaendert";
+        sut.Editor.Text = "nochmal geändert";
         await sut.Editor.SaveAsync(CancellationToken.None).ConfigureAwait(true);
 
         Assert.Equal(parseCountAfterFirstSave, parser.ParseCount);
     }
 
     [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
-        Justification = "Editor + ServiceProvider werden durch den DocumentPanelViewModel-Lebenszyklus gehalten und vom Test ueber dessen using-Statement disposed.")]
+        Justification = "Editor + ServiceProvider werden durch den DocumentPanelViewModel-Lebenszyklus gehalten und vom Test über dessen using-Statement disposed.")]
     private static DocumentPanelViewModel CreateSut(
         FakeFileSystem fs,
         FakeMarkdownDocumentRepository repo,

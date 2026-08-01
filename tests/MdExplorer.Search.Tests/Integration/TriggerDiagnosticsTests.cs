@@ -44,7 +44,7 @@ public sealed class TriggerDiagnosticsTests
     }
 
     // Regression: Die NOCASE-Migration baut MarkdownFiles neu auf und droppt dabei den
-    // File-Cleanup-Trigger. Er muss danach weiter greifen — Loeschen der Datei entfernt die FTS-Zeile.
+    // File-Cleanup-Trigger. Er muss danach weiter greifen — Löschen der Datei entfernt die FTS-Zeile.
     [Fact]
     public async Task Trigger_OnFileDelete_RemovesFtsRowImmediately()
     {

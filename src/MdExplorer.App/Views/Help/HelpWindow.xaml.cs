@@ -98,7 +98,7 @@ internal sealed partial class HelpWindow : Window
         string css = ReadEmbeddedResource("help.css");
         string js = ReadEmbeddedResource("help.js");
         string nonce = GenerateNonce();
-        // Reihenfolge wie im GraphWindow: erst die vertrauenswuerdigen Platzhalter,
+        // Reihenfolge wie im GraphWindow: erst die vertraünswürdigen Platzhalter,
         // dann der Markdig-Output, damit der nicht versehentlich Platzhalter ersetzt.
         return htmlTemplate
             .Replace(CssPlaceholder, css, StringComparison.Ordinal)
@@ -113,7 +113,7 @@ internal sealed partial class HelpWindow : Window
         return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) ? value : 0;
     }
 
-#pragma warning disable S3400 // Stub-Methode: liefert vorerst konstant `false`, behaelt aber Methoden-Signatur als Erweiterungspunkt fuer kuenftige System-Theme-Erkennung.
+#pragma warning disable S3400 // Stub-Methode: liefert vorerst konstant `false`, behält aber Methoden-Signatur als Erweiterungspunkt für künftige System-Theme-Erkennung.
     private static bool IsSystemDarkTheme()
     {
         // WPF kennt kein zentrales System-Theme-API; im Zweifel der hellere Default,

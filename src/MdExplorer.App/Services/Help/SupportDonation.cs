@@ -20,7 +20,7 @@ internal static class SupportDonation
     [SuppressMessage(
         "Design",
         "S1075:URIs should not be hardcoded",
-        Justification = "Die feste Verdrahtung ist hier die Sicherheitseigenschaft, nicht der Mangel: Ein Spendenziel aus Settings, Datenbank oder Netz-Antwort waere zur Laufzeit austauschbar und wuerde fremdes Geld umleiten. Genau das schliesst die Compile-Zeit-Konstante aus.")]
+        Justification = "Die feste Verdrahtung ist hier die Sicherheitseigenschaft, nicht der Mangel: Ein Spendenziel aus Settings, Datenbank oder Netz-Antwort wäre zur Laufzeit austauschbar und würde fremdes Geld umleiten. Genau das schließt die Compile-Zeit-Konstante aus.")]
     public const string PayPalUrl = "https://paypal.me/rschustek";
 
     /// <summary>

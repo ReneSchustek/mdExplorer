@@ -58,7 +58,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
         _logger = logger;
     }
 
-    /// <summary>Wrapper um <see cref="RunOnceAsync"/>, der erwartbare Fehler frisst. Sichtbar fuer Tests via <c>InternalsVisibleTo</c>.</summary>
+    /// <summary>Wrapper um <see cref="RunOnceAsync"/>, der erwartbare Fehler frisst. Sichtbar für Tests via <c>InternalsVisibleTo</c>.</summary>
     internal async Task TryRunOnceAsync(CancellationToken stoppingToken)
     {
         try
@@ -76,9 +76,9 @@ public sealed partial class ParseOrchestrator : BackgroundService
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            // Defense-in-Depth. Falls eine Markdig-/Yaml-/JSON-Exception ueber den
-            // ParseOneAsync-Catch hinausschluepft (z. B. aus einem Sub-Renderer oder einem
-            // Frontmatter-Pfad), bleibt der Periodic-Tick-Loop am Leben — naechster Tick
+            // Defense-in-Depth. Falls eine Markdig-/Yaml-/JSON-Exception über den
+            // ParseOneAsync-Catch hinausschlüpft (z. B. aus einem Sub-Renderer oder einem
+            // Frontmatter-Pfad), bleibt der Periodic-Tick-Loop am Leben — nächster Tick
             // versucht es erneut, ohne dass ein einziges kaputtes File den Service killt.
             LogPollFailed(_logger, ex);
         }
@@ -160,8 +160,8 @@ public sealed partial class ParseOrchestrator : BackgroundService
     }
 
     // Sammelt alle einzigartigen Tag-Slugs aus dem Batch, fragt vorhandene in einem
-    // einzigen Roundtrip ab und legt fehlende genau einmal an. Liefert einen vollstaendigen
-    // Slug→Id-Lookup, ueber den die per-File-Verlinkung deterministisch arbeitet.
+    // einzigen Roundtrip ab und legt fehlende genau einmal an. Liefert einen vollständigen
+    // Slug→Id-Lookup, über den die per-File-Verlinkung deterministisch arbeitet.
     private static async Task<Dictionary<string, Guid>> EnsureTagsForBatchAsync(
         ITagRepository tagRepo,
         List<ParsedEntry> results,
@@ -243,7 +243,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
         IReadOnlyDictionary<Guid, MarkdownDocument> existingByFileId =
             await docRepo.GetByMarkdownFileIdsAsync(resultIds, cancellationToken).ConfigureAwait(false);
 
-        // Tag-Cache fuer den ganzen Batch — sonst ruft jede Datei einen frischen
+        // Tag-Cache für den ganzen Batch — sonst ruft jede Datei einen frischen
         // GetBySlugsAsync auf und addiert denselben Slug doppelt; SaveChanges scheitert dann mit
         // SqliteException 19 (UNIQUE constraint failed: Tags.Slug). Wir sammeln die Slugs einmal,
         // resolven die existierenden Tags in einem einzigen Roundtrip und legen die fehlenden
@@ -313,10 +313,10 @@ public sealed partial class ParseOrchestrator : BackgroundService
             }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
             {
-                // Markdig wirft ArgumentException u. a. bei depth-limit-Verstoessen
+                // Markdig wirft ArgumentException u. a. bei depth-limit-Verstößen
                 // (zu tief verschachtelte Emphasis/Listen). InvalidOperationException kommt
                 // aus dem Yaml-/Frontmatter-Pfad. Beide sind Format-Fehler im Dokument —
-                // Datei ueberspringen, restlicher Batch laeuft weiter.
+                // Datei überspringen, restlicher Batch läuft weiter.
                 LogParseFailed(_logger, snapshot.AbsolutePath, ex);
                 return;
             }
@@ -393,7 +393,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
     [LoggerMessage(EventId = 206, Level = LogLevel.Warning, Message = "Datei konnte nicht geparst werden: {Path}")]
     private static partial void LogParseFailed(ILogger logger, string path, Exception exception);
 
-    [LoggerMessage(EventId = 207, Level = LogLevel.Warning, Message = "Parser-Poll übersprungen — Datenbank-Spitze, naechster Periodic-Tick versucht es erneut.")]
+    [LoggerMessage(EventId = 207, Level = LogLevel.Warning, Message = "Parser-Poll übersprungen — Datenbank-Spitze, nächster Periodic-Tick versucht es erneut.")]
     private static partial void LogPollFailed(ILogger logger, Exception exception);
 
     [LoggerMessage(EventId = 208, Level = LogLevel.Error, Message = "ParseOrchestrator-Watchdog: unerwartete Exception aufgefangen, Service wird ordentlich beendet.")]

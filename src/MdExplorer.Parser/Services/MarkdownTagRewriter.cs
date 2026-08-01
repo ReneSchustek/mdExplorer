@@ -8,7 +8,7 @@ namespace MdExplorer.Parser.Services;
 /// <summary>
 /// Reine Funktionen zum projektweiten Umschreiben von Hashtags in einem Markdown-Dokument.
 /// Verarbeitet sowohl Body-Vorkommen (Regex mit denselben Boundary-Regeln wie der
-/// <see cref="TagExtractor"/>) als auch YAML-Frontmatter-Eintraege im <c>tags</c>-Feld
+/// <see cref="TagExtractor"/>) als auch YAML-Frontmatter-Einträge im <c>tags</c>-Feld
 /// (zeilenbasiert, damit andere Frontmatter-Felder bitgenau erhalten bleiben).
 /// </summary>
 public sealed partial class MarkdownTagRewriter : IMarkdownTagRewriter
@@ -24,7 +24,7 @@ public sealed partial class MarkdownTagRewriter : IMarkdownTagRewriter
 
     private readonly ITagNormalizer _normalizer;
 
-    /// <summary>Erzeugt den Rewriter und bindet den Normalisierer fuer Slug-Vergleiche.</summary>
+    /// <summary>Erzeugt den Rewriter und bindet den Normalisierer für Slug-Vergleiche.</summary>
     public MarkdownTagRewriter(ITagNormalizer normalizer)
     {
         ArgumentNullException.ThrowIfNull(normalizer);
@@ -208,7 +208,7 @@ public sealed partial class MarkdownTagRewriter : IMarkdownTagRewriter
     {
         string[] tokens = inner.Split(',', StringSplitOptions.None);
         List<string> rewritten = new(tokens.Length);
-        // Dedupe ueber Slug — Merge-Operationen sollen keine Doppel-Eintraege erzeugen.
+        // Dedupe über Slug — Merge-Operationen sollen keine Doppel-Einträge erzeugen.
         HashSet<string> seenSlugs = new(StringComparer.Ordinal);
         foreach (string token in tokens)
         {
@@ -279,7 +279,7 @@ public sealed partial class MarkdownTagRewriter : IMarkdownTagRewriter
         string? mapped = MapTagToken(token, operations);
         if (mapped is null)
         {
-            // Loeschen: Zeile NICHT in die Output-Liste uebernehmen.
+            // Löschen: Zeile NICHT in die Output-Liste übernehmen.
             changed = true;
             return;
         }

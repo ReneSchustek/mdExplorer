@@ -39,8 +39,8 @@ public static class SettingsDiff
     /// </summary>
     /// <typeparam name="T">Typ des zu serialisierenden Snapshots — meist <see cref="MdExplorer.Core.Models.AppSettings"/>.</typeparam>
     /// <param name="value">Snapshot-Instanz, die serialisiert wird.</param>
-    /// <param name="options">JSON-Optionen (CamelCase, Indent, Converter) fuer das Wire-Format.</param>
-    /// <returns>Serialisierte JSON-Repraesentation von <paramref name="value"/>.</returns>
+    /// <param name="options">JSON-Optionen (CamelCase, Indent, Converter) für das Wire-Format.</param>
+    /// <returns>Serialisierte JSON-Repräsentation von <paramref name="value"/>.</returns>
     public static string Serialize<T>(T value, JsonSerializerOptions options)
     {
         ArgumentNullException.ThrowIfNull(value);

@@ -6,7 +6,7 @@ namespace MdExplorer.Graph.Models;
 /// kapselt nur den dynamisch durch die UI gesetzten Pfad-Prefix.
 /// </summary>
 /// <param name="PathPrefix">Relativer Pfad-Prefix (Trennzeichen <c>/</c>); nur Dateien deren
-/// <c>RelativePath</c> mit dem Prefix beginnt fliessen in den Snapshot. <see langword="null"/>
+/// <c>RelativePath</c> mit dem Prefix beginnt fließen in den Snapshot. <see langword="null"/>
 /// oder leer bedeutet kein Filter.</param>
 public sealed record GraphFilter(string? PathPrefix = null)
 {

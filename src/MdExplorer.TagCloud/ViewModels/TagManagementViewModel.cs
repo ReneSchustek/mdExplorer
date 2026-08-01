@@ -13,7 +13,7 @@ namespace MdExplorer.TagCloud.ViewModels;
 /// <summary>
 /// ViewModel des Tag-Management-Fensters. Listet alle Tags mit Anzahl betroffener Dateien
 /// und stellt projektweite Rename / Merge / Delete-Operationen bereit. Operationen verbergen
-/// einen Bestaetigungsdialog ueber den injizierten <see cref="ITagManagementDialogService"/>.
+/// einen Bestätigungsdialog über den injizierten <see cref="ITagManagementDialogService"/>.
 /// </summary>
 public sealed partial class TagManagementViewModel : ObservableObject
 {
@@ -37,7 +37,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
     [ObservableProperty]
     private bool _isBusy;
 
-    /// <summary>Erzeugt das ViewModel und bindet die Pflichtabhaengigkeiten.</summary>
+    /// <summary>Erzeugt das ViewModel und bindet die Pflichtabhängigkeiten.</summary>
     public TagManagementViewModel(
         ITagStatisticsService statisticsService,
         ITagManagementService managementService,
@@ -60,7 +60,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
     /// <summary>Top-Tags mit Anzahl betroffener Dateien.</summary>
     public ObservableCollection<TagManagementItem> Items { get; }
 
-    /// <summary>Laedt die Tag-Liste neu.</summary>
+    /// <summary>Lädt die Tag-Liste neu.</summary>
     [RelayCommand]
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
@@ -88,7 +88,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
         }
     }
 
-    /// <summary>Benennt den ausgewaehlten Tag um. Liest <see cref="NewTagName"/> als Zielname.</summary>
+    /// <summary>Benennt den ausgewählten Tag um. Liest <see cref="NewTagName"/> als Zielname.</summary>
     [RelayCommand(CanExecute = nameof(CanOperateOnSelection))]
     public Task RenameAsync(CancellationToken cancellationToken) =>
         ExecuteWriteOperationAsync(
@@ -96,15 +96,15 @@ public sealed partial class TagManagementViewModel : ObservableObject
             (slug, ct) => _managementService.RenameAsync(slug, NewTagName, ct),
             cancellationToken);
 
-    /// <summary>Fuehrt den ausgewaehlten Tag in <see cref="NewTagName"/> ueber.</summary>
+    /// <summary>Führt den ausgewählten Tag in <see cref="NewTagName"/> über.</summary>
     [RelayCommand(CanExecute = nameof(CanOperateOnSelection))]
     public Task MergeAsync(CancellationToken cancellationToken) =>
         ExecuteWriteOperationAsync(
-            "Tags zusammenfuehren",
+            "Tags zusammenführen",
             (slug, ct) => _managementService.MergeAsync(slug, NewTagName, ct),
             cancellationToken);
 
-    /// <summary>Loescht den ausgewaehlten Tag aus allen Dateien.</summary>
+    /// <summary>Löscht den ausgewählten Tag aus allen Dateien.</summary>
     [RelayCommand(CanExecute = nameof(CanOperateOnSelectionWithoutTarget))]
     public async Task DeleteAsync(CancellationToken cancellationToken)
     {
@@ -114,13 +114,13 @@ public sealed partial class TagManagementViewModel : ObservableObject
         }
         TagPreview preview = await _managementService
             .GetPreviewAsync(SelectedItem.Slug, cancellationToken).ConfigureAwait(true);
-        string question = BuildConfirmText("loeschen", SelectedItem.Slug, null, preview);
-        if (!_dialogService.Confirm("Tag loeschen", question))
+        string question = BuildConfirmText("löschen", SelectedItem.Slug, null, preview);
+        if (!_dialogService.Confirm("Tag löschen", question))
         {
             return;
         }
         await RunWriteAsync(
-            "Tag loeschen",
+            "Tag löschen",
             ct => _managementService.DeleteAsync(SelectedItem.Slug, ct),
             cancellationToken).ConfigureAwait(true);
     }
@@ -149,7 +149,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
     private static partial void LogRefreshFailed(ILogger logger, Exception exception);
 
     // Reload als reiner Helfer ohne Status-Message. RunWriteAsync nutzt ihn,
-    // damit das Op-Feedback nicht vom Refresh-Status ueberschrieben wird.
+    // damit das Op-Feedback nicht vom Refresh-Status überschrieben wird.
     private async Task<int> ReloadItemsAsync(CancellationToken cancellationToken)
     {
         IReadOnlyList<TagStatistic> stats = await _statisticsService
@@ -225,7 +225,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
             }
             StatusMessage = string.Create(
                 CultureInfo.CurrentCulture,
-                $"{title}: {result.FilesAffected} von {result.FilesAttempted} Datei(en) geaendert. Fehler: {result.Errors.Count}.");
+                $"{title}: {result.FilesAffected} von {result.FilesAttempted} Datei(en) geändert. Fehler: {result.Errors.Count}.");
         }
         catch (OperationCanceledException)
         {
@@ -252,9 +252,9 @@ public sealed partial class TagManagementViewModel : ObservableObject
 /// <param name="Count">Anzahl Dateien mit diesem Tag.</param>
 public sealed record TagManagementItem(string Name, string Slug, int Count);
 
-/// <summary>UI-Abstraktion fuer Tag-Management-Bestaetigungen.</summary>
+/// <summary>UI-Abstraktion für Tag-Management-Bestätigungen.</summary>
 public interface ITagManagementDialogService
 {
-    /// <summary>Zeigt eine Bestaetigung und liefert die Antwort des Benutzers.</summary>
+    /// <summary>Zeigt eine Bestätigung und liefert die Antwort des Benutzers.</summary>
     bool Confirm(string title, string message);
 }

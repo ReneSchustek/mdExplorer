@@ -85,7 +85,7 @@ public sealed class GlobExclusionFilterTests
         FakeSettingsService settings = BuildSettings([], [@"C:\Wurzel\paused"]);
         using GlobExclusionFilter sut = Build(settings);
 
-        // "paused-extra" startet zwar mit demselben Praefix, ist aber ein eigenstaendiger Ordner.
+        // "paused-extra" startet zwar mit demselben Präfix, ist aber ein eigenständiger Ordner.
         Assert.False(sut.IsExcluded(@"C:\Wurzel\paused-extra\note.md", Root));
     }
 

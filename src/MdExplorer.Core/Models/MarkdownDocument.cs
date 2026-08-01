@@ -14,7 +14,7 @@ public sealed class MarkdownDocument
     /// <summary>Fremdschlüssel auf <see cref="MarkdownFile.Id"/> (Unique — 1:1-Beziehung).</summary>
     public Guid MarkdownFileId { get; set; }
 
-    /// <summary>Navigation auf die zugehoerige <see cref="Models.MarkdownFile"/> — fuer EF-Core-Cascade-Delete und Fluent-Mapping.</summary>
+    /// <summary>Navigation auf die zugehörige <see cref="Models.MarkdownFile"/> — für EF-Core-Cascade-Delete und Fluent-Mapping.</summary>
     public MarkdownFile? MarkdownFile { get; set; }
 
     /// <summary>Hash des Quell-Markdowns zum Parse-Zeitpunkt — Grundlage für Idempotenz-Prüfung.</summary>

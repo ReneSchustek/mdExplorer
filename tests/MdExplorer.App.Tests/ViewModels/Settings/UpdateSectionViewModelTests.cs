@@ -43,8 +43,8 @@ public sealed class UpdateSectionViewModelTests
     [Fact]
     public async Task CheckCommand_OhnePruefsumme_BietetKeineInstallationAn()
     {
-        // Genau der Fall, den die Pruefsumme absichert: Es gibt eine neuere Fassung, aber
-        // keinen Beleg fuer die Datei. Dann bleibt nur der Weg ueber die Release-Seite.
+        // Genau der Fall, den die Prüfsumme absichert: Es gibt eine neuere Fassung, aber
+        // keinen Beleg für die Datei. Dann bleibt nur der Weg über die Release-Seite.
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, null);
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         using UpdateSectionViewModel sut = Build(checker, out _);
@@ -117,9 +117,9 @@ public sealed class UpdateSectionViewModelTests
     [Fact]
     public async Task Dispose_WaehrendDerDialogSchliesst_StartetKeinenInstaller()
     {
-        // Wird der Dialog waehrend des Downloads geschlossen, darf das
-        // Installationsprogramm nicht mehr anlaufen: Die Anwendung wuerde dann nicht
-        // beendet und koennte ihre eigenen Dateien nicht ersetzen.
+        // Wird der Dialog während des Downloads geschlossen, darf das
+        // Installationsprogramm nicht mehr anlaufen: Die Anwendung würde dann nicht
+        // beendet und könnte ihre eigenen Dateien nicht ersetzen.
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
@@ -138,8 +138,8 @@ public sealed class UpdateSectionViewModelTests
     [Fact]
     public async Task Dispose_MehrfachAufgerufen_WirftNicht()
     {
-        // Das Fenster meldet sich beim Schliessen ab; ein zweiter Aufruf darf nicht
-        // ueber die bereits entsorgte Abbruchquelle stolpern.
+        // Das Fenster meldet sich beim Schließen ab; ein zweiter Aufruf darf nicht
+        // über die bereits entsorgte Abbruchquelle stolpern.
         FakeUpdateChecker checker = new(UpdateCheckResult.UpToDate(Current, Current));
         UpdateSectionViewModel sut = Build(checker, out _);
 

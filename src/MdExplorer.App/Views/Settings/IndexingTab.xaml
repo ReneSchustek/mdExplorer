@@ -62,7 +62,7 @@
             <TextBlock Text="Tagging" FontWeight="SemiBold" Margin="0,0,0,4" />
             <CheckBox Content="Tags automatisch aus Hashtags extrahieren"
                       IsChecked="{Binding AutoExtractHashtags, Mode=TwoWay}"
-                      ToolTip="Wenn aktiviert, werden #-Tags im Markdown-Body als Tags indiziert. Frontmatter-Eintraege bleiben unabhaengig davon erhalten." />
+                      ToolTip="Wenn aktiviert, werden #-Tags im Markdown-Body als Tags indiziert. Frontmatter-Einträge bleiben unabhängig davon erhalten." />
         </StackPanel>
     </Grid>
 </UserControl>

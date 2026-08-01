@@ -1,7 +1,7 @@
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// Schaltzustaende des <see cref="DocumentPanelViewModel"/>. <c>Read</c> zeigt die WebView2-Preview,
+/// Schaltzustände des <see cref="DocumentPanelViewModel"/>. <c>Read</c> zeigt die WebView2-Preview,
 /// <c>Edit</c> blendet den Markdown-Editor ein.
 /// </summary>
 internal enum DocumentPanelMode

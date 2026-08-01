@@ -8,8 +8,8 @@ namespace MdExplorer.Data.Migrations
     /// <summary>
     /// Legt den beim NOCASE-Rebuild von <c>MarkdownFiles</c> verlorenen FTS5-Cleanup-Trigger neu an.
     /// Bewusst als eigene Migration nach <c>AddAbsolutePathNoCaseCollation</c>: SqlOperation und
-    /// Tabellen-Rebuild in derselben Migration wuerden von EF getrennt ausgefuehrt (Rebuild zuletzt),
-    /// sodass der Trigger sonst erneut gedroppt wuerde.
+    /// Tabellen-Rebuild in derselben Migration würden von EF getrennt ausgeführt (Rebuild zuletzt),
+    /// sodass der Trigger sonst erneut gedroppt würde.
     /// </summary>
     public partial class RestoreFileTriggerAfterNoCaseRebuild : Migration
     {
@@ -40,7 +40,7 @@ namespace MdExplorer.Data.Migrations
             ArgumentNullException.ThrowIfNull(migrationBuilder);
 
             // Beim Revert dieser Migration verschwindet der Trigger; der Down der vorherigen
-            // Migration (Rebuild zurueck auf BINARY) hinterlaesst ohnehin keinen Trigger.
+            // Migration (Rebuild zurück auf BINARY) hinterlässt ohnehin keinen Trigger.
             _ = migrationBuilder.Sql(DropDeleteFileTriggerSql);
         }
     }

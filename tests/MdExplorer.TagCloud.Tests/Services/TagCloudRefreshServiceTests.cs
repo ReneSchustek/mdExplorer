@@ -127,7 +127,7 @@ public sealed class TagCloudRefreshServiceTests
 
         Assert.Equal(0, received);
 
-        // Naechster Snapshot wird normal published.
+        // Nächster Snapshot wird normal published.
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
         await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
         Assert.Equal(1, received);
@@ -150,7 +150,7 @@ public sealed class TagCloudRefreshServiceTests
 
         Assert.Equal(0, received);
 
-        // Wenn die naechste Iteration einen gueltigen Snapshot liefert, muss er publiziert werden —
+        // Wenn die nächste Iteration einen gültigen Snapshot liefert, muss er publiziert werden —
         // _lastSignature darf vom Fehler nicht beeinflusst worden sein.
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
         await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
@@ -228,7 +228,7 @@ public sealed class TagCloudRefreshServiceTests
         }
         if (!condition())
         {
-            throw new TimeoutException($"Bedingung nicht innerhalb von {timeout.TotalSeconds:F1}s erfuellt.");
+            throw new TimeoutException($"Bedingung nicht innerhalb von {timeout.TotalSeconds:F1}s erfüllt.");
         }
     }
 

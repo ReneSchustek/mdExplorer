@@ -3,18 +3,18 @@ using System;
 namespace MdExplorer.App.Services;
 
 /// <summary>
-/// Reine Find-Algorithmen fuer den Editor-Textbox (Ctrl+F). Stateless, damit der
-/// Code unter Test stehen kann ohne WPF-Abhaengigkeit. Die UI bleibt im Code-Behind und
-/// uebernimmt nur das Lesen/Schreiben von <c>SelectionStart</c> / <c>SelectionLength</c>.
+/// Reine Find-Algorithmen für den Editor-Textbox (Ctrl+F). Stateless, damit der
+/// Code unter Test stehen kann ohne WPF-Abhängigkeit. Die UI bleibt im Code-Behind und
+/// übernimmt nur das Lesen/Schreiben von <c>SelectionStart</c> / <c>SelectionLength</c>.
 /// </summary>
 internal static class EditorFindHelper
 {
     /// <summary>Position eines Treffers im Quelltext.</summary>
     /// <param name="StartIndex">Nullbasierter Start-Index des Treffers.</param>
-    /// <param name="Length">Treffer-Laenge in Zeichen.</param>
+    /// <param name="Length">Treffer-Länge in Zeichen.</param>
     internal readonly record struct FindMatch(int StartIndex, int Length);
 
-    /// <summary>Sucht das naechste Vorkommen von <paramref name="query"/> in <paramref name="text"/>
+    /// <summary>Sucht das nächste Vorkommen von <paramref name="query"/> in <paramref name="text"/>
     /// ab <paramref name="startIndex"/>. Wenn ab dort kein Treffer existiert, wird vom Anfang wieder gesucht
     /// (Wrap-Around). Liefert <see langword="null"/>, wenn der Suchstring leer ist oder kein Treffer existiert.</summary>
     public static FindMatch? FindNext(string text, string query, int startIndex, bool caseSensitive = false)

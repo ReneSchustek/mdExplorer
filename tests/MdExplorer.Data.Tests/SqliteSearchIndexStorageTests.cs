@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Integrationstests fuer <see cref="SqliteSearchIndexStorage"/> gegen ein echtes FTS5-Schema
+/// Integrationstests für <see cref="SqliteSearchIndexStorage"/> gegen ein echtes FTS5-Schema
 /// (per Migration erzeugt). Fokus: die gechunkte <see cref="SqliteSearchIndexStorage.LoadBodiesAsync"/>
-/// liefert korrekte Bodies fuer beliebige Id-Mengen inklusive nicht existenter Ids.
+/// liefert korrekte Bodies für beliebige Id-Mengen inklusive nicht existenter Ids.
 /// </summary>
 public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
 {

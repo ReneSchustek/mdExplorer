@@ -9,9 +9,9 @@ public interface ITagExtractor
     IReadOnlyList<string> ExtractFromAst(Markdig.Syntax.MarkdownDocument ast);
 
     /// <summary>
-    /// Liefert die Tag-Namen direkt aus rohem Markdown-Text. Gedacht fuer den Editor:
+    /// Liefert die Tag-Namen direkt aus rohem Markdown-Text. Gedacht für den Editor:
     /// vermeidet den HTML-Render-Schritt aus <c>IMarkdownParser.Parse</c>, der bei jedem
-    /// Tastendruck wiederholt wuerde.
+    /// Tastendruck wiederholt würde.
     /// </summary>
     IReadOnlyList<string> ExtractFromText(string markdownText);
 }

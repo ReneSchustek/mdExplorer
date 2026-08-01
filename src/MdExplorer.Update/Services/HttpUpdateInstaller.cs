@@ -105,14 +105,14 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or FileNotFoundException)
         {
-            // Start verweigert (z. B. durch SmartScreen abgebrochen): die Anwendung laeuft
-            // unveraendert weiter, der Nutzer kann die Datei selbst ausfuehren.
+            // Start verweigert (z. B. durch SmartScreen abgebrochen): die Anwendung läuft
+            // unverändert weiter, der Nutzer kann die Datei selbst ausführen.
             LogInstallerStartFailed(_logger, ex);
             return false;
         }
     }
 
-    /// <summary>Berechnet den SHA-256 der Datei in Hex-Grossschreibung.</summary>
+    /// <summary>Berechnet den SHA-256 der Datei in Hex-Großschreibung.</summary>
     private static async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
     {
         FileStream stream = new(path, FileMode.Open, FileAccess.Read, FileShare.Read, BufferSize, useAsync: true);
@@ -134,8 +134,8 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Aufraeumen ist Kuer: bleibt die Datei liegen, wird sie beim naechsten
-            // Versuch ueberschrieben. Kein Grund, den Vorgang scheitern zu lassen.
+            // Aufräumen ist Kür: bleibt die Datei liegen, wird sie beim nächsten
+            // Versuch überschrieben. Kein Grund, den Vorgang scheitern zu lassen.
         }
     }
 
@@ -160,7 +160,7 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
                 continue;
             }
 
-            // Nur bei tatsaechlichem Prozentwechsel melden — sonst flutet der Fortschritt die UI.
+            // Nur bei tatsächlichem Prozentwechsel melden — sonst flutet der Fortschritt die UI.
             int percent = (int)(written * 100 / total.Value);
             if (percent != lastPercent)
             {

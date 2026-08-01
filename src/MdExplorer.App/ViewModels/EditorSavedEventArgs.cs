@@ -1,9 +1,9 @@
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// Argumente des <see cref="MarkdownEditorViewModel.Saved"/>-Events. Enthaelt den
-/// Text, der gerade auf den Datentraeger geschrieben wurde, damit Konsumenten
-/// (z. B. <see cref="DocumentPanelViewModel"/>) die Preview frisch rendern koennen.
+/// Argumente des <see cref="MarkdownEditorViewModel.Saved"/>-Events. Enthält den
+/// Text, der gerade auf den Datenträger geschrieben wurde, damit Konsumenten
+/// (z. B. <see cref="DocumentPanelViewModel"/>) die Preview frisch rendern können.
 /// </summary>
 internal sealed class EditorSavedEventArgs(string savedText) : EventArgs
 {

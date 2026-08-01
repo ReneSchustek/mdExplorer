@@ -16,8 +16,8 @@ namespace MdExplorer.App.Views.Graph;
 /// (HTML/CSS/JS), injiziert das aktuelle Snapshot-JSON über String-Replacement
 /// und schreibt das Ergebnis in eine Temp-Datei unter <c>%LOCALAPPDATA%\MdExplorer\webview2</c>.
 /// Die View navigiert per <c>file://</c>-URI dorthin — <see cref="Microsoft.Web.WebView2.Wpf.WebView2.NavigateToString(string)"/>
-/// hat ein hartes Groessen-Limit (Edge meldet <c>E_INVALIDARG</c> oberhalb von ~2 MB),
-/// das bei grossen Wikis (&gt;10k Knoten) regelmaessig ueberschritten wird.
+/// hat ein hartes Größen-Limit (Edge meldet <c>E_INVALIDARG</c> oberhalb von ~2 MB),
+/// das bei großen Wikis (&gt;10k Knoten) regelmäßig überschritten wird.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class GraphWindow : Window
@@ -59,7 +59,7 @@ internal sealed partial class GraphWindow : Window
         string css = ReadEmbeddedResource("graph.css");
         string js = ReadEmbeddedResource("graph.js");
         string nonce = GenerateNonce();
-        // Reihenfolge bewusst: vertrauenswuerdige Platzhalter zuerst, das nutzerkontrollierte
+        // Reihenfolge bewusst: vertraünswürdige Platzhalter zuerst, das nutzerkontrollierte
         // Snapshot-JSON ganz zum Schluss — so ersetzt das Platzhalter-Replace im JSON nichts mehr.
         return htmlTemplate
             .Replace(CssPlaceholder, css, StringComparison.Ordinal)
@@ -120,9 +120,9 @@ internal sealed partial class GraphWindow : Window
         File.WriteAllText(_snapshotFilePath, html, Utf8NoBom);
 
         // CoreWebView2.Navigate erzwingt einen Reload auch bei gleicher URI; ein Setter
-        // auf Source ignoriert identische Werte und wuerde den frisch geschriebenen Inhalt
-        // nicht laden. Der Cache-Buster verhindert zusaetzlich, dass Chromium die alte
-        // Datei aus dem Memory-Cache liefert, wenn sich nur der Inhalt geaendert hat.
+        // auf Source ignoriert identische Werte und würde den frisch geschriebenen Inhalt
+        // nicht laden. Der Cache-Buster verhindert zusätzlich, dass Chromium die alte
+        // Datei aus dem Memory-Cache liefert, wenn sich nur der Inhalt geändert hat.
         string uri = new Uri(_snapshotFilePath).AbsoluteUri + "?t=" + DateTime.UtcNow.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture);
         GraphView.CoreWebView2.Navigate(uri);
     }

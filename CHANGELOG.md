@@ -7,6 +7,13 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.12.1] - 2026-08-01
+
+### Behoben
+- Falsch geschriebene Umlaute in Anzeigetexten korrigiert, darunter der Hinweis
+  „Tag hinzufügen" im Dokument-Bereich und die Meldung beim Zusammenführen von
+  Tags.
+
 ## [0.12.0] - 2026-07-31
 
 ### Hinzugefügt
@@ -48,7 +55,7 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Geändert
 - Umfangreiche Qualitäts- und Härtungsarbeiten: strengere Analyzer-Regeln
-  wiederhergestellt, ein Qualitaets-Durchlauf und ein frischer Security-Review,
+  wiederhergestellt, Deep-Quality-Durchlauf und frischer Security-Review,
   Testabdeckung auf ≥ 80 % angehoben sowie Datenschicht-Optimierung
   (Batch-Ladevorgänge statt N+1-Abfragen, case-insensitiver Pfad-Abgleich).
   Projektstruktur nach `src/` und `tests/` reorganisiert.
@@ -64,7 +71,8 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.12.0...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.12.1
 [0.12.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.12.0
 [0.11.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.11.0
 [0.10.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.10.0

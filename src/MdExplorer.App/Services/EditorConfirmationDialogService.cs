@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 namespace MdExplorer.App.Services;
 
 /// <summary>
-/// Standard-Implementierung von <see cref="IEditorConfirmationDialogService"/> ueber
+/// Standard-Implementierung von <see cref="IEditorConfirmationDialogService"/> über
 /// <see cref="MessageBox"/>. Strikt nur in der WPF-Schicht aktiv.
 /// </summary>
 [ExcludeFromCodeCoverage]
@@ -15,8 +15,8 @@ internal sealed class EditorConfirmationDialogService : IEditorConfirmationDialo
     public bool ConfirmSave()
     {
         MessageBoxResult result = MessageBox.Show(
-            "Moechten Sie die Aenderungen wirklich speichern?",
-            "Aenderungen speichern",
+            "Möchten Sie die Änderungen wirklich speichern?",
+            "Änderungen speichern",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question,
             MessageBoxResult.Yes);

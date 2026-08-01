@@ -42,8 +42,8 @@ public static class UpdateServiceCollectionExtensions
         _ = services
             .AddHttpClient<IUpdateChecker, GitHubUpdateChecker>(ConfigureGitHubClient);
 
-        // Eigener, benannter Client fuer den Paket-Download: Der API-Client traegt ein knappes
-        // Timeout und GitHub-spezifische Header — fuer eine 45-MB-Datei waere beides falsch.
+        // Eigener, benannter Client für den Paket-Download: Der API-Client trägt ein knappes
+        // Timeout und GitHub-spezifische Header — für eine 45-MB-Datei wäre beides falsch.
         _ = services.AddHttpClient(DownloadClientName, ConfigureDownloadClient);
 
         _ = services.AddTransient<IUpdateInstaller>(sp => new HttpUpdateInstaller(
@@ -56,7 +56,7 @@ public static class UpdateServiceCollectionExtensions
 
     private static void ConfigureDownloadClient(HttpClient client)
     {
-        // Grosse Datei ueber moeglicherweise langsame Leitung: das API-Timeout waere zu knapp.
+        // Große Datei über möglicherweise langsame Leitung: das API-Timeout wäre zu knapp.
         client.Timeout = TimeSpan.FromMinutes(10);
         client.DefaultRequestHeaders.UserAgent.ParseAdd("MdExplorer-UpdateInstaller");
     }

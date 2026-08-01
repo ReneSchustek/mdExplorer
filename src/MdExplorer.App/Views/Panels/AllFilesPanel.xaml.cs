@@ -5,8 +5,8 @@ namespace MdExplorer.App.Views.Panels;
 
 /// <summary>
 /// Tab-Panel mit der flachen Liste aller indizierten Markdown-Dateien. Datenfluss
-/// laeuft komplett ueber das gebundene <see cref="MdExplorer.App.ViewModels.AllFilesViewModel"/>
-/// — Code-Behind beschraenkt sich auf den partial-Class-Stub fuers XAML-Loading.
+/// läuft komplett über das gebundene <see cref="MdExplorer.App.ViewModels.AllFilesViewModel"/>
+/// — Code-Behind beschränkt sich auf den partial-Class-Stub fürs XAML-Loading.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class AllFilesPanel : UserControl

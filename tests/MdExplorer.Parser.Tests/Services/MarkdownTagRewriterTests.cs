@@ -3,8 +3,8 @@ using MdExplorer.Parser.Services;
 namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
-/// Tests fuer den Tag-Rewriter: pruefen Body-Regex, YAML-Frontmatter (inline + block),
-/// Rename / Merge / Delete und Edge-Cases (Code-Bloecke werden NICHT geschont — Indexer-
+/// Tests für den Tag-Rewriter: prüfen Body-Regex, YAML-Frontmatter (inline + block),
+/// Rename / Merge / Delete und Edge-Cases (Code-Blöcke werden NICHT geschont — Indexer-
 /// Re-Sync triggert ohnehin neuen Parse).
 /// </summary>
 public sealed class MarkdownTagRewriterTests
@@ -49,12 +49,12 @@ public sealed class MarkdownTagRewriterTests
     [Fact]
     public void Apply_PreservesAdjacentText()
     {
-        const string Markdown = "Praefix#nottag ist nicht #echt-tag.";
+        const string Markdown = "Präfix#nottag ist nicht #echt-tag.";
         string result = _sut.Apply(Markdown, new Dictionary<string, string?>(StringComparer.Ordinal)
         {
             ["echt-tag"] = "neutag",
         });
-        Assert.Equal("Praefix#nottag ist nicht #neutag.", result);
+        Assert.Equal("Präfix#nottag ist nicht #neutag.", result);
     }
 
     [Fact]

@@ -15,9 +15,9 @@ namespace MdExplorer.App.ViewModels;
 /// <summary>
 /// Container-ViewModel der rechten Spalte. Verwaltet den Mode-Switch zwischen
 /// <see cref="DocumentPanelMode.Read"/> (WebView2-Vorschau) und <see cref="DocumentPanelMode.Edit"/>
-/// (Markdown-Editor) und uebernimmt nach dem Speichern die direkte Vorschau-Aktualisierung
+/// (Markdown-Editor) und übernimmt nach dem Speichern die direkte Vorschau-Aktualisierung
 /// gegen den aktuellen Editor-Text — damit Akzeptanzkriterium 4 (Preview &lt;= 2 s nach Save)
-/// unabhaengig vom Hintergrund-Indexer eingehalten wird.
+/// unabhängig vom Hintergrund-Indexer eingehalten wird.
 /// </summary>
 internal sealed partial class DocumentPanelViewModel : ObservableObject, IDisposable
 {
@@ -33,7 +33,7 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     [NotifyPropertyChangedFor(nameof(IsEditMode))]
     private DocumentPanelMode _mode = DocumentPanelMode.Read;
 
-    /// <summary>Erstellt das ViewModel und verdrahtet die Save-Event-Bruecke zur Preview.</summary>
+    /// <summary>Erstellt das ViewModel und verdrahtet die Save-Event-Brücke zur Preview.</summary>
     public DocumentPanelViewModel(
         PreviewViewModel preview,
         MarkdownEditorViewModel editor,
@@ -68,15 +68,15 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     /// <summary>Liefert den Editor im Edit-Modus.</summary>
     public MarkdownEditorViewModel Editor { get; }
 
-    /// <summary>Wahr, solange das Panel im Lese-Modus ist (Binding-Helfer fuer Visibility).</summary>
+    /// <summary>Wahr, solange das Panel im Lese-Modus ist (Binding-Helfer für Visibility).</summary>
     public bool IsReadMode => Mode == DocumentPanelMode.Read;
 
-    /// <summary>Wahr, solange das Panel im Bearbeiten-Modus ist (Binding-Helfer fuer Visibility).</summary>
+    /// <summary>Wahr, solange das Panel im Bearbeiten-Modus ist (Binding-Helfer für Visibility).</summary>
     public bool IsEditMode => Mode == DocumentPanelMode.Edit;
 
     /// <summary>
-    /// Laedt das Dokument in beiden Modi. Auswahl-Pfad wird ueber den
-    /// <see cref="IDocumentLocator"/> aufgeloest, damit der Aufruf nur die Id kennen muss.
+    /// Lädt das Dokument in beiden Modi. Auswahl-Pfad wird über den
+    /// <see cref="IDocumentLocator"/> aufgelöst, damit der Aufruf nur die Id kennen muss.
     /// </summary>
     public async Task LoadAsync(Guid markdownFileId, CancellationToken cancellationToken)
     {
@@ -104,9 +104,9 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     }
 
     /// <summary>
-    /// Laedt eine Datei direkt vom Dateisystem — Fallback fuer Klicks auf Markdown-Dateien,
+    /// Lädt eine Datei direkt vom Dateisystem — Fallback für Klicks auf Markdown-Dateien,
     /// die der Indexer noch nicht erfasst hat. Wenn die Datei bereits in der DB liegt,
-    /// wird der ueberlieferte ID-Pfad bevorzugt (Tag-Persistenz, Outlink-Resolution).
+    /// wird der überlieferte ID-Pfad bevorzugt (Tag-Persistenz, Outlink-Resolution).
     /// </summary>
     public async Task LoadByPathAsync(string absolutePath, CancellationToken cancellationToken)
     {
@@ -131,11 +131,11 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         Mode = Mode == DocumentPanelMode.Read ? DocumentPanelMode.Edit : DocumentPanelMode.Read;
     }
 
-    /// <summary>Speichert den Editor — wird vom MainWindow ueber Ctrl+S aufgerufen.</summary>
+    /// <summary>Speichert den Editor — wird vom MainWindow über Ctrl+S aufgerufen.</summary>
     [RelayCommand]
     public Task SaveAsync(CancellationToken cancellationToken) => Editor.SaveAsync(cancellationToken);
 
-    /// <summary>Loest Event-Handler und gibt Ressourcen frei.</summary>
+    /// <summary>Löst Event-Handler und gibt Ressourcen frei.</summary>
     public void Dispose()
     {
         if (_disposed)
@@ -160,7 +160,7 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         return reader.ReadToEnd();
     }
 
-    [LoggerMessage(EventId = 510, Level = LogLevel.Warning, Message = "Editor-Load fuer {MarkdownFileId} ohne Datei-Pfad — Indexer-Eintrag fehlt.")]
+    [LoggerMessage(EventId = 510, Level = LogLevel.Warning, Message = "Editor-Load für {MarkdownFileId} ohne Datei-Pfad — Indexer-Eintrag fehlt.")]
     private static partial void LogPathMissing(ILogger logger, Guid markdownFileId);
 
     [LoggerMessage(EventId = 511, Level = LogLevel.Error, Message = "Preview-Refresh nach Save fehlgeschlagen.")]
@@ -169,13 +169,13 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     [LoggerMessage(EventId = 512, Level = LogLevel.Information, Message = "Datei {Path} direkt aus dem Dateisystem geladen (Indexer noch nicht durch).")]
     private static partial void LogDirectLoadCompleted(ILogger logger, string path);
 
-    [LoggerMessage(EventId = 513, Level = LogLevel.Warning, Message = "Direkt-Load fuer {Path} fehlgeschlagen.")]
+    [LoggerMessage(EventId = 513, Level = LogLevel.Warning, Message = "Direkt-Load für {Path} fehlgeschlagen.")]
     private static partial void LogDirectLoadFailed(ILogger logger, string path, Exception exception);
 
-    [LoggerMessage(EventId = 514, Level = LogLevel.Warning, Message = "Direkt-Load uebersprungen — Datei {Path} existiert nicht.")]
+    [LoggerMessage(EventId = 514, Level = LogLevel.Warning, Message = "Direkt-Load übersprungen — Datei {Path} existiert nicht.")]
     private static partial void LogDirectLoadMissingFile(ILogger logger, string path);
 
-    [LoggerMessage(EventId = 515, Level = LogLevel.Warning, Message = "Document-Load fuer {MarkdownFileId} fehlgeschlagen — Datenbank-Spitze.")]
+    [LoggerMessage(EventId = 515, Level = LogLevel.Warning, Message = "Document-Load für {MarkdownFileId} fehlgeschlagen — Datenbank-Spitze.")]
     private static partial void LogLoadFailed(ILogger logger, Guid markdownFileId, Exception exception);
 
     private async Task LoadDirectFromFileAsync(string absolutePath, CancellationToken cancellationToken)
@@ -203,8 +203,8 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         ParseResult result = _markdownParser.Parse(text);
         string body = DecompressHtml(result.RenderedHtmlGz);
         Preview.SetHtml(_htmlBuilder.Build(body));
-        // Editor uebernimmt den Rohtext via LoadDirectAsync. Eine kuenstliche Guid waere
-        // im Conflict-Check unsicher, deshalb laeuft der Editor in einem Read-Only-Modus
+        // Editor übernimmt den Rohtext via LoadDirectAsync. Eine künstliche Guid wäre
+        // im Conflict-Check unsicher, deshalb läuft der Editor in einem Read-Only-Modus
         // ohne MarkdownFileId — Save bleibt gesperrt, bis der Indexer die Datei kennt.
         await Editor.LoadDirectAsync(absolutePath, text, cancellationToken).ConfigureAwait(true);
         LogDirectLoadCompleted(_logger, absolutePath);

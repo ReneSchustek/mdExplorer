@@ -139,7 +139,7 @@ public sealed class ParseOrchestratorTests
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("ok2"));
     }
 
-    // Defense-in-Depth — wenn eine ArgumentException ueber den ParseOneAsync-
+    // Defense-in-Depth — wenn eine ArgumentException über den ParseOneAsync-
     // Catch hinaus durchreicht (z. B. aus einer Sub-Pipeline oder einem anderen Throwing-
     // Service), darf TryRunOnceAsync sie schlucken und der Periodic-Loop weiterlaufen.
     [Fact]
@@ -151,7 +151,7 @@ public sealed class ParseOrchestratorTests
         // Darf NICHT werfen — TryRunOnceAsync fasert das in den Defense-in-Depth-Catches ab.
         await harness.Sut.TryRunOnceAsync(CancellationToken.None);
 
-        // Zweiter Tick laeuft normal weiter.
+        // Zweiter Tick läuft normal weiter.
         _ = harness.AddSource("/r/good.md", "h1", "#weiter");
         await harness.Sut.TryRunOnceAsync(CancellationToken.None);
 
@@ -172,8 +172,8 @@ public sealed class ParseOrchestratorTests
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("weiter"));
     }
 
-    // Reproduktions-Test fuer das UNIQUE-constraint-Fehlerbild aus dem User-Report.
-    // Ohne Batch-Cache wuerde tagRepo.AddAsync(Tag{Slug="shared"}) zweimal aufgerufen (pro Datei)
+    // Reproduktions-Test für das UNIQUE-constraint-Fehlerbild aus dem User-Report.
+    // Ohne Batch-Cache würde tagRepo.AddAsync(Tag{Slug="shared"}) zweimal aufgerufen (pro Datei)
     // und SaveChanges einen UNIQUE constraint failed: Tags.Slug werfen.
     [Fact]
     public async Task ProcessBatch_OnTwoFilesSharingNewTag_DoesNotThrowUniqueConstraint()
@@ -192,8 +192,8 @@ public sealed class ParseOrchestratorTests
     }
 
     // Regression: Vor der Batch-Umstellung rief PersistDocumentAsync pro Datei einen
-    // GetByMarkdownFileIdAsync-Point-Lookup (N+1). Jetzt laedt ProcessBatchAsync die
-    // existierenden Dokumente einmal gesammelt — Point-Lookup-Zaehler muss 0 bleiben.
+    // GetByMarkdownFileIdAsync-Point-Lookup (N+1). Jetzt lädt ProcessBatchAsync die
+    // existierenden Dokumente einmal gesammelt — Point-Lookup-Zähler muss 0 bleiben.
     [Fact]
     public async Task ProcessBatch_LoadsExistingDocumentsInSingleBatch_WithoutPerFilePointLookup()
     {
@@ -210,7 +210,7 @@ public sealed class ParseOrchestratorTests
     }
 
     // Der Batch-Load muss auch den Update-Pfad speisen: ein bereits vorhandenes Dokument
-    // wird ueber den gesammelten Lookup gefunden und aktualisiert, nicht dupliziert.
+    // wird über den gesammelten Lookup gefunden und aktualisiert, nicht dupliziert.
     [Fact]
     public async Task ProcessBatch_OnExistingDocument_UpdatesViaBatchLoadedEntry()
     {
@@ -301,7 +301,7 @@ public sealed class ParseOrchestratorTests
     }
 
     // Harness mit einem Parser, der bei einem bestimmten Roh-Inhalt wirft. Damit testen
-    // wir die ParseOneAsync-Catch-Pfade unabhaengig vom Markdig-Versionsverhalten.
+    // wir die ParseOneAsync-Catch-Pfade unabhängig vom Markdig-Versionsverhalten.
     private sealed class ThrowingParserHarness
     {
         public FakeFileSystem FileSystem { get; } = new();

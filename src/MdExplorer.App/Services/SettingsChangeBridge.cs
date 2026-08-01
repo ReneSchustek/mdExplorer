@@ -93,10 +93,10 @@ internal sealed partial class SettingsChangeBridge : IHostedService
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DbException or ArgumentException or InvalidOperationException)
         {
-            // DbException ergaenzt — Settings-Rescan ueberlebt SQLite-Spitzen.
-            // Argument-/InvalidOperationException ergaenzt — falls der Indexer
+            // DbException ergänzt — Settings-Rescan überlebt SQLite-Spitzen.
+            // Argument-/InvalidOperationException ergänzt — falls der Indexer
             // (jetzt mit Watchdog) doch noch eine Library-Exception durchreicht, bleibt
-            // der naechste Settings-Save / Rescan funktional.
+            // der nächste Settings-Save / Rescan funktional.
             LogRescanFailed(_logger, ex);
         }
     }

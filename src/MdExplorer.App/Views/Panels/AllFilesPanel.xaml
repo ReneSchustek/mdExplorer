@@ -32,7 +32,7 @@
         </Grid>
         <Border DockPanel.Dock="Top" Padding="8,0,8,4">
             <TextBlock Foreground="#FF6C7086" FontSize="11">
-                <Run Text="Eintraege: " />
+                <Run Text="Einträge: " />
                 <Run Text="{Binding Items.Count, Mode=OneWay}" FontWeight="SemiBold" />
             </TextBlock>
         </Border>

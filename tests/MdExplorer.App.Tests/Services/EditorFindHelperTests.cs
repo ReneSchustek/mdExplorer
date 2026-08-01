@@ -2,7 +2,7 @@ using MdExplorer.App.Services;
 
 namespace MdExplorer.App.Tests.Services;
 
-/// <summary>Tests des reinen Find-Algorithmus fuer den Editor (Ctrl+F).</summary>
+/// <summary>Tests des reinen Find-Algorithmus für den Editor (Ctrl+F).</summary>
 public sealed class EditorFindHelperTests
 {
     [Fact]

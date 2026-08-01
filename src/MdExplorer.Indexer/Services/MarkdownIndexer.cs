@@ -99,7 +99,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         }
         catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex))
         {
-            // Letzte Schicht: faengt unerwartete Exceptions (DbException aus
+            // Letzte Schicht: fängt unerwartete Exceptions (DbException aus
             // RunInitialScanInternalAsync, Library-Fehler aus ConsumeEventsAsync) damit der
             // Host den Service ordentlich beendet statt unhandled-Crash.
             LogWatchdogTriggered(_logger, ex);
@@ -153,7 +153,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     [LoggerMessage(EventId = 113, Level = LogLevel.Warning, Message = "Indexer-Fortschritts-Event konnte nicht zugestellt werden.")]
     private static partial void LogProgressDispatchFailed(ILogger logger, Exception exception);
 
-    [LoggerMessage(EventId = 114, Level = LogLevel.Warning, Message = "Indexer-Batch fehlgeschlagen — Schleife laeuft weiter.")]
+    [LoggerMessage(EventId = 114, Level = LogLevel.Warning, Message = "Indexer-Batch fehlgeschlagen — Schleife läuft weiter.")]
     private static partial void LogProcessBatchFailed(ILogger logger, Exception exception);
 
     [LoggerMessage(EventId = 115, Level = LogLevel.Error, Message = "MarkdownIndexer-Watchdog: unerwartete Exception aufgefangen, Service wird ordentlich beendet.")]
@@ -207,9 +207,9 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         CancellationToken cancellationToken)
     {
         // Batching im Initial-Scan: nach jeweils _options.InitialScanBatchSize Dateien
-        // committen wir Zwischen-Stand und feuern ein Progress-Event. Auf grossen Roots
+        // committen wir Zwischen-Stand und feuern ein Progress-Event. Auf großen Roots
         // (mehrere Tausend .md-Dateien) wird damit der "Alle Dateien"-Tab inkrementell
-        // befuellt — er bleibt sonst minutenlang leer, bis SaveChangesAsync ganz am Ende greift.
+        // befüllt — er bleibt sonst minutenlang leer, bis SaveChangesAsync ganz am Ende greift.
         int batchSize = Math.Max(1, _options.InitialScanBatchSize);
         HashSet<string> filesOnDisk = new(PathComparer);
         int totalProcessed = 0;
@@ -234,7 +234,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
                     RaiseProgress(root, totalProcessed, isCompleted: false);
 
                     // Neuer Scope: EF-Change-Tracker bleibt schlank — bei 10k+ Files
-                    // wuerde ein einziger Tracker ueberproportional viel RAM ziehen.
+                    // würde ein einziger Tracker überproportional viel RAM ziehen.
                     await scope.DisposeAsync().ConfigureAwait(false);
                     scope = _scopeFactory.CreateAsyncScope();
                     repository = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
@@ -349,8 +349,8 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
             catch (Exception ex) when (ex is DbException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
             {
                 // Eine Exception in einem Batch (SQLite-Spitze, IO-Fehler, kaputter
-                // FileSystemEvent) darf die ConsumeEventsAsync-Schleife nicht abbrechen — naechster
-                // Read laeuft weiter, betroffener Batch verloren.
+                // FileSystemEvent) darf die ConsumeEventsAsync-Schleife nicht abbrechen — nächster
+                // Read läuft weiter, betroffener Batch verloren.
                 LogProcessBatchFailed(_logger, ex);
             }
         }

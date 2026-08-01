@@ -5,14 +5,14 @@ using System.Text.RegularExpressions;
 namespace MdExplorer.Search.Services;
 
 /// <summary>
-/// Gemeinsame, seiteneffektfreie Tokenizer-Helfer fuer <see cref="SearchQueryBuilder"/>
+/// Gemeinsame, seiteneffektfreie Tokenizer-Helfer für <see cref="SearchQueryBuilder"/>
 /// und <see cref="SimilarityQueryBuilder"/>.
 /// </summary>
 internal static partial class SearchTokens
 {
     private const int MaxTermLength = 128;
 
-    /// <summary>Quotiert als FTS5-Phrase, eskapiert <c>"</c> per Verdopplung, haengt optional <c>*</c> an.</summary>
+    /// <summary>Quotiert als FTS5-Phrase, eskapiert <c>"</c> per Verdopplung, hängt optional <c>*</c> an.</summary>
     public static string FormatPhrase(string content, bool withWildcard)
     {
         StringBuilder builder = new("\"", content.Length + 4);
@@ -33,7 +33,7 @@ internal static partial class SearchTokens
         return builder.ToString();
     }
 
-    /// <summary>Filtert Nicht-Wort-Zeichen, verwirft Anfuehrungszeichen, begrenzt auf <c>MaxTermLength</c>.</summary>
+    /// <summary>Filtert Nicht-Wort-Zeichen, verwirft Anführungszeichen, begrenzt auf <c>MaxTermLength</c>.</summary>
     public static string SanitizeTerm(string raw)
     {
         if (raw.Length == 0)

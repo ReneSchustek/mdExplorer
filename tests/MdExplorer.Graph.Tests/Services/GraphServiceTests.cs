@@ -158,7 +158,7 @@ public sealed class GraphServiceTests
 
         Assert.Equal(2, snapshot.Nodes.Count);
         Assert.Contains(snapshot.Nodes, n => n.Id == hubId);
-        // Hub hat den hoechsten Verbindungsgrad (in 2 + out 2); ein Leaf reicht (in 1 + out 1).
+        // Hub hat den höchsten Verbindungsgrad (in 2 + out 2); ein Leaf reicht (in 1 + out 1).
         _ = Assert.Single(snapshot.Nodes, n => n.Id == leafA || n.Id == leafB);
         Assert.Equal(3, snapshot.OriginalNodeCount);
         Assert.Equal(4, snapshot.OriginalEdgeCount);
@@ -222,7 +222,7 @@ public sealed class GraphServiceTests
     public async Task BuildSnapshotAsync_OnNonSluggableFileNameAndLinkTarget_DoesNotThrow()
     {
         // Regression: Ein Dateiname bzw. WikiLink-Ziel aus reinen Sonderzeichen
-        // ("#.md" — unter Windows gueltig, [[+]]) loeste frueher eine ArgumentException aus
+        // ("#.md" — unter Windows gültig, [[+]]) löste früher eine ArgumentException aus
         // TagNormalizer.ToSlug aus und brachte den gesamten Graph-Build zum Absturz.
         Guid symbolId = new("88888888-8888-8888-8888-888888888888");
         FakeSourceProvider provider = new(new GraphSourceData(
@@ -238,7 +238,7 @@ public sealed class GraphServiceTests
 
         GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
 
-        // Kein Absturz; die nicht-slugfaehige Datei bleibt Knoten, ist aber nicht ueber ihren Namen verlinkbar.
+        // Kein Absturz; die nicht-slugfähige Datei bleibt Knoten, ist aber nicht über ihren Namen verlinkbar.
         Assert.Contains(snapshot.Nodes, n => n.Id == symbolId);
         Assert.Empty(snapshot.Edges);
     }

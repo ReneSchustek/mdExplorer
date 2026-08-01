@@ -22,7 +22,7 @@
                 <Style TargetType="TreeViewItem">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                    <!-- Tag-Trick: holt das FolderTreeViewModel ueber den TreeView-DataContext in den ContextMenu-Scope. -->
+                    <!-- Tag-Trick: holt das FolderTreeViewModel über den TreeView-DataContext in den ContextMenu-Scope. -->
                     <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                     <Setter Property="ContextMenu">
                         <Setter.Value>

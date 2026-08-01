@@ -14,8 +14,8 @@ namespace MdExplorer.App.ViewModels.Settings;
 internal sealed partial class IndexingTabViewModel : ObservableObject
 {
     private readonly IDialogService _dialogService;
-    // Die per Folder-Tree-Kontextmenue gesetzten UI-Ausschluesse werden vom Settings-Dialog
-    // nicht editiert, muessen aber beim Save unveraendert durchgereicht werden, damit ein
+    // Die per Folder-Tree-Kontextmenü gesetzten UI-Ausschlüsse werden vom Settings-Dialog
+    // nicht editiert, müssen aber beim Save unverändert durchgereicht werden, damit ein
     // OK-Klick im Dialog die im Tree gesetzten Pausen nicht stillschweigend verwirft.
     private readonly IReadOnlyList<string> _preservedUiExcludedFolders;
 

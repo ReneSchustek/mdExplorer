@@ -9,8 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Verifiziert die DB-Kompatibilitaet der NOCASE-Collation-Migration: eine bestehende Datenbank
-/// (migriert bis zur Vorgaenger-Migration, mit Daten befuellt) muss sauber auf den neuen Stand
+/// Verifiziert die DB-Kompatibilität der NOCASE-Collation-Migration: eine bestehende Datenbank
+/// (migriert bis zur Vorgänger-Migration, mit Daten befüllt) muss sauber auf den neuen Stand
 /// wandern — Zeilen bleiben erhalten, der Lookup wird case-insensitiv und der beim Tabellen-Rebuild
 /// gedroppte FTS5-Cleanup-Trigger auf <c>MarkdownFiles</c> ist danach wieder vorhanden.
 /// </summary>
@@ -47,7 +47,7 @@ public sealed class AbsolutePathNoCaseMigrationTests : IAsyncDisposable
     {
         IMigrator migrator = _dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
 
-        // 1. Bestehende DB bis zur Vorgaenger-Migration aufbauen und mit einer Zeile befuellen.
+        // 1. Bestehende DB bis zur Vorgänger-Migration aufbauen und mit einer Zeile befüllen.
         await migrator.MigrateAsync(PreviousMigration).ConfigureAwait(true);
         Guid fileId = Guid.Parse("aaaaaaaa-1111-2222-3333-444444444444");
         await InsertMarkdownFileAsync(fileId, @"C:\Notes\MixedCase.md").ConfigureAwait(true);

@@ -202,7 +202,7 @@ der `FileSystemWatcher` triggert anschließend automatisch den Re-Index.
 
 ### Indexer-Fortschritt während des ersten Scans
 
-Auf grossen Wurzeln (mehrere Tausend `.md`-Dateien) committed der Indexer den
+Auf großen Wurzeln (mehrere Tausend `.md`-Dateien) committed der Indexer den
 Initial-Scan in Batches: nach jeweils `Indexer.InitialScanBatchSize` Dateien
 (Default 100) erfolgt ein Zwischen-`SaveChanges`. Der „Alle Dateien"-Tab und
 der Folder-Tree aktualisieren sich nach jedem Batch automatisch — der Tab

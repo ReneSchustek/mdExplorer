@@ -180,7 +180,7 @@ public sealed partial class GraphService : IGraphService
     [LoggerMessage(EventId = 1100, Level = LogLevel.Information, Message = "Graph-Snapshot erzeugt — {NodeCount} Knoten, {EdgeCount} Kanten.")]
     private static partial void LogSnapshotBuilt(ILogger logger, int nodeCount, int edgeCount);
 
-    [LoggerMessage(EventId = 1101, Level = LogLevel.Information, Message = "Graph-Snapshot getrimmt — {OriginalCount} Knoten ueberstiegen die Obergrenze, behalten werden die Top {RetainedCount} nach Verbindungsgrad.")]
+    [LoggerMessage(EventId = 1101, Level = LogLevel.Information, Message = "Graph-Snapshot getrimmt — {OriginalCount} Knoten überstiegen die Obergrenze, behalten werden die Top {RetainedCount} nach Verbindungsgrad.")]
     private static partial void LogSnapshotTrimmed(ILogger logger, int originalCount, int retainedCount);
 
     /// <summary>

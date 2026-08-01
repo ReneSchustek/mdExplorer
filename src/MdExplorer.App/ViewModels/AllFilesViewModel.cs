@@ -9,8 +9,8 @@ using Microsoft.Extensions.Logging;
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// ViewModel des "Alle Dateien"-Tabs. Laedt die flache Liste indizierter
-/// Markdown-Dateien inklusive ihrer Tag-Slugs ueber <see cref="IAllFilesQuery"/> und
+/// ViewModel des "Alle Dateien"-Tabs. Lädt die flache Liste indizierter
+/// Markdown-Dateien inklusive ihrer Tag-Slugs über <see cref="IAllFilesQuery"/> und
 /// filtert sie clientseitig nach Substring-Match in Titel, Pfad und Tags. Sortierung
 /// und Tag-Klick (Filter-Token) sind UI-getrieben.
 /// </summary>
@@ -32,7 +32,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     [ObservableProperty]
     private AllFilesItemViewModel? _selectedItem;
 
-    /// <summary>Wird ausgeloest, sobald ein Eintrag ausgewaehlt wird (mit absolutem Pfad).</summary>
+    /// <summary>Wird ausgelöst, sobald ein Eintrag ausgewählt wird (mit absolutem Pfad).</summary>
     public event Action<string>? FileSelected;
 
     /// <summary>Erzeugt das ViewModel und verdrahtet die Refresh-Aktion.</summary>
@@ -50,10 +50,10 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// <summary>Aktuelle (gefilterte + sortierte) Sicht auf die Datei-Liste.</summary>
     public ObservableCollection<AllFilesItemViewModel> Items { get; }
 
-    /// <summary>Loest einen Lade-Roundtrip aus.</summary>
+    /// <summary>Löst einen Lade-Roundtrip aus.</summary>
     public AsyncRelayCommand RefreshCommand { get; }
 
-    /// <summary>Laedt die flache Datei-Liste aus dem Indexer-Store.</summary>
+    /// <summary>Lädt die flache Datei-Liste aus dem Indexer-Store.</summary>
     public async Task RefreshAsync()
     {
         if (IsBusy)
@@ -96,7 +96,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         return item.TagSlugs.Any(slug => slug.Contains(needle, StringComparison.OrdinalIgnoreCase));
     }
 
-    [LoggerMessage(EventId = 1300, Level = LogLevel.Information, Message = "Alle-Dateien-Tab geladen — {Count} Eintraege.")]
+    [LoggerMessage(EventId = 1300, Level = LogLevel.Information, Message = "Alle-Dateien-Tab geladen — {Count} Einträge.")]
     private static partial void LogLoaded(ILogger logger, int count);
 
     [LoggerMessage(EventId = 1301, Level = LogLevel.Warning, Message = "Alle-Dateien-Tab konnte nicht geladen werden.")]
@@ -143,7 +143,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     }
 }
 
-/// <summary>Sortier-Modi fuer die Datei-Liste.</summary>
+/// <summary>Sortier-Modi für die Datei-Liste.</summary>
 internal enum AllFilesSortMode
 {
     /// <summary>Standard: nach Schreibdatum absteigend.</summary>
@@ -156,7 +156,7 @@ internal enum AllFilesSortMode
     RelativePath = 2,
 }
 
-/// <summary>Item-View fuer einen Datei-Eintrag im Alle-Dateien-Tab.</summary>
+/// <summary>Item-View für einen Datei-Eintrag im Alle-Dateien-Tab.</summary>
 internal sealed class AllFilesItemViewModel
 {
     /// <summary>Erzeugt einen Eintrag aus einer Query-Zeile.</summary>
@@ -171,7 +171,7 @@ internal sealed class AllFilesItemViewModel
         TagSlugs = row.TagSlugs;
     }
 
-    /// <summary>Stabiler Schluessel.</summary>
+    /// <summary>Stabiler Schlüssel.</summary>
     public Guid MarkdownFileId { get; }
 
     /// <summary>Dateiname ohne Erweiterung.</summary>
@@ -180,10 +180,10 @@ internal sealed class AllFilesItemViewModel
     /// <summary>Pfad relativ zum konfigurierten Root.</summary>
     public string RelativePath { get; }
 
-    /// <summary>Vollqualifizierter Pfad — Eingabe fuer den Navigations-Locator.</summary>
+    /// <summary>Vollqualifizierter Pfad — Eingabe für den Navigations-Locator.</summary>
     public string AbsolutePath { get; }
 
-    /// <summary>Letzte Aenderung auf Disk (UTC).</summary>
+    /// <summary>Letzte Änderung auf Disk (UTC).</summary>
     public DateTime LastWriteTimeUtc { get; }
 
     /// <summary>Slugs der angewendeten Tags.</summary>

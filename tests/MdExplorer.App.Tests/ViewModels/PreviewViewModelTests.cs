@@ -79,7 +79,7 @@ public sealed class PreviewViewModelTests
 
         string html = builder.Build("<script>alert(1)</script>");
 
-        // Auch wenn der Markdown-Pfad HTML einschleust, der CSP-Header laesst keinen Script-Lauf zu.
+        // Auch wenn der Markdown-Pfad HTML einschleust, der CSP-Header lässt keinen Script-Lauf zu.
         Assert.Contains("script-src 'none'", html, StringComparison.Ordinal);
     }
 

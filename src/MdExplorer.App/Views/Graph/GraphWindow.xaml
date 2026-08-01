@@ -1,4 +1,4 @@
-<Window x:Class="MdExplorer.App.Views.Graph.GraphWindow"
+﻿<Window x:Class="MdExplorer.App.Views.Graph.GraphWindow"
         x:ClassModifier="internal"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -83,7 +83,7 @@
                                Text="Noch keine Graph-Daten verfügbar" />
                     <TextBlock TextWrapping="Wrap"
                                Foreground="#FF4B5563"
-                               Text="Moegliche Ursachen: der Indexer ist gerade noch dabei, deine Workspaces einzulesen, oder die Markdown-Dateien enthalten noch keine [[WikiLinks]]. Schliesse das Fenster nicht — der Klick auf „Neu laden“ aktualisiert die Anzeige." />
+                               Text="Mögliche Ursachen: der Indexer ist gerade noch dabei, deine Workspaces einzulesen, oder die Markdown-Dateien enthalten noch keine [[WikiLinks]]. Schließe das Fenster nicht — der Klick auf „Neu laden“ aktualisiert die Anzeige." />
                 </StackPanel>
             </Border>
         </Grid>

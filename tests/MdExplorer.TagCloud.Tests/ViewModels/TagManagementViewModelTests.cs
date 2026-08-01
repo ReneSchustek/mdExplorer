@@ -135,7 +135,7 @@ public sealed class TagManagementViewModelTests
         Assert.Equal("neu", managementService.LastRenameTarget);
         Assert.Equal(string.Empty, sut.NewTagName);
         Assert.True(statsService.CallCount >= 1, "RunWriteAsync muss nach RenameAsync die Statistik neu laden.");
-        Assert.Equal("Tag umbenennen: 2 von 2 Datei(en) geaendert. Fehler: 0.", sut.StatusMessage);
+        Assert.Equal("Tag umbenennen: 2 von 2 Datei(en) geändert. Fehler: 0.", sut.StatusMessage);
         Assert.False(sut.IsBusy);
     }
 
@@ -203,7 +203,7 @@ public sealed class TagManagementViewModelTests
 
         await sut.MergeAsync(CancellationToken.None).ConfigureAwait(true);
 
-        Assert.Equal("Tags zusammenfuehren: 1 von 1 Datei(en) geaendert. Fehler: 0.", sut.StatusMessage);
+        Assert.Equal("Tags zusammenführen: 1 von 1 Datei(en) geändert. Fehler: 0.", sut.StatusMessage);
         Assert.Equal(string.Empty, sut.NewTagName);
         Assert.False(sut.IsBusy);
     }
@@ -227,7 +227,7 @@ public sealed class TagManagementViewModelTests
         await sut.DeleteAsync(CancellationToken.None).ConfigureAwait(true);
 
         Assert.Equal(1, managementService.DeleteCount);
-        Assert.Equal("Tag loeschen: 1 von 1 Datei(en) geaendert. Fehler: 0.", sut.StatusMessage);
+        Assert.Equal("Tag löschen: 1 von 1 Datei(en) geändert. Fehler: 0.", sut.StatusMessage);
         Assert.False(sut.IsBusy);
     }
 

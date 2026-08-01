@@ -20,7 +20,7 @@ public static class GraphJsonBuilder
 
     /// <summary>Wandelt den Snapshot in eine kompakte JSON-Repräsentation um.</summary>
     /// <param name="snapshot">Graph-Snapshot mit Knoten und Kanten.</param>
-    /// <returns>Kompakte camelCase-JSON-Repraesentation fuer das WebView2-Frontend.</returns>
+    /// <returns>Kompakte camelCase-JSON-Repräsentation für das WebView2-Frontend.</returns>
     public static string Serialize(GraphSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
