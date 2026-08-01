@@ -96,6 +96,96 @@ public sealed class LogViewerViewModelTests
         }
     }
 
+    [Fact]
+    public void Dispose_CalledTwice_DoesNotThrow()
+    {
+        FakeLogStore store = new(capacity: 100);
+        LogViewerViewModel sut = new(store, new ImmediateDispatcher(), new NullSaveDialog());
+
+        sut.Dispose();
+        sut.Dispose();
+    }
+
+    [Fact]
+    public void EntryAdded_AfterDispose_IsIgnored()
+    {
+        // Das Protokollfenster kann geschlossen werden, während im Hintergrund weiter
+        // geschrieben wird. Ohne die Sperre liefe die Liste eines toten Fensters weiter voll.
+        FakeLogStore store = new(capacity: 100);
+        LogViewerViewModel sut = new(store, new ImmediateDispatcher(), new NullSaveDialog());
+        sut.Dispose();
+
+        store.Add(LogLevel.Information, "nach dem Schließen", "X");
+
+        Assert.Empty(sut.Entries);
+    }
+
+    [Fact]
+    public void AppendEntry_BeyondCapacity_DropsTheOldestEntry()
+    {
+        // Spiegelt die Ringpuffer-Grenze des Protokollspeichers. Ohne sie wächst die
+        // Liste unbegrenzt, solange das Fenster offen bleibt.
+        FakeLogStore store = new(capacity: 2);
+        using LogViewerViewModel sut = new(store, new ImmediateDispatcher(), new NullSaveDialog());
+
+        store.Add(LogLevel.Information, "erste", "X");
+        store.Add(LogLevel.Information, "zweite", "X");
+        store.Add(LogLevel.Information, "dritte", "X");
+
+        Assert.Equal(2, sut.Entries.Count);
+        Assert.Equal("zweite", sut.Entries[0].Message, StringComparer.Ordinal);
+        Assert.Equal("dritte", sut.Entries[1].Message, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExportCommand_WhenTheDialogIsCancelled_WritesNothing()
+    {
+        FakeLogStore store = new(capacity: 100);
+        store.Add(LogLevel.Information, "Eintrag", "Mod");
+        using LogViewerViewModel sut = new(store, new ImmediateDispatcher(), new NullSaveDialog());
+
+        await sut.ExportCommand.ExecuteAsync(null).ConfigureAwait(true);
+
+        // Kein Wurf, keine Datei — der Abbruch ist der Normalfall.
+        _ = Assert.Single(sut.Entries);
+    }
+
+    [Fact]
+    public async Task ExportCommand_WritesEveryLevelAbbreviationAndTheExceptionText()
+    {
+        FakeLogStore store = new(capacity: 100);
+        store.Add(LogLevel.Trace, "spur", "Mod");
+        store.Add(LogLevel.Debug, "fehlersuche", "Mod");
+        store.Add(LogLevel.Error, "fehler", "Mod", "System.InvalidOperationException: kaputt");
+        store.Add(LogLevel.Critical, "kritisch", "Mod");
+        store.Add((LogLevel)99, "unbekannt", "Mod");
+
+        string zielDatei = Path.Combine(Path.GetTempPath(), "mdexp-log-export-" + Guid.NewGuid().ToString("N") + ".log");
+        try
+        {
+            using LogViewerViewModel sut = new(store, new ImmediateDispatcher(), new ScriptedSaveDialog(zielDatei));
+            sut.SelectedLevelFilter = sut.LevelFilters.Single(f => f.MinimumLevel == LogLevel.Trace);
+
+            await sut.ExportCommand.ExecuteAsync(null).ConfigureAwait(true);
+
+            string inhalt = await File.ReadAllTextAsync(zielDatei).ConfigureAwait(true);
+            Assert.Contains("[TRC]", inhalt, StringComparison.Ordinal);
+            Assert.Contains("[DBG]", inhalt, StringComparison.Ordinal);
+            Assert.Contains("[ERR]", inhalt, StringComparison.Ordinal);
+            Assert.Contains("[CRT]", inhalt, StringComparison.Ordinal);
+            Assert.Contains("[???]", inhalt, StringComparison.Ordinal);
+            // Der Ausnahmetext ist der eigentliche Grund, warum jemand ein Protokoll exportiert.
+            Assert.Contains("kaputt", inhalt, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (File.Exists(zielDatei))
+            {
+                File.Delete(zielDatei);
+            }
+        }
+    }
+
     private sealed class FakeLogStore : IMemoryLogStore
     {
         private readonly List<LogEntry> _entries = [];
@@ -109,9 +199,11 @@ public sealed class LogViewerViewModelTests
 
         public event EventHandler<LogEntry>? EntryAdded;
 
-        public void Add(LogLevel level, string message, string source)
+        public void Add(LogLevel level, string message, string source) => Add(level, message, source, exception: null);
+
+        public void Add(LogLevel level, string message, string source, string? exception)
         {
-            LogEntry entry = new(DateTimeOffset.UtcNow, level, source, message, null);
+            LogEntry entry = new(DateTimeOffset.UtcNow, level, source, message, exception);
             _entries.Add(entry);
             EntryAdded?.Invoke(this, entry);
         }

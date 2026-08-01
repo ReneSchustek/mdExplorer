@@ -18,7 +18,7 @@ public sealed class MarkdownEditorViewModelTests
     private static readonly TimeSpan TestDebounce = TimeSpan.FromMilliseconds(40);
 
     [Fact]
-    public async Task LoadAsync_SetztTextUndResetIsDirty()
+    public async Task LoadAsync_SetsTextAndResetsIsDirty()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("# Titel\r\nText");
@@ -31,7 +31,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task TextAenderung_MarkiertIsDirty()
+    public async Task TextChange_MarksIsDirty()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
@@ -44,7 +44,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task TextZurueckaufOriginal_LoeschtIsDirty()
+    public async Task TextBackToOriginal_ClearsIsDirty()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("original");
@@ -59,7 +59,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task LiveTagExtraktion_LiefertTagsBeiTextAenderung()
+    public async Task LiveTagExtraction_ReturnsTagsOnTextChange()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("Body");
@@ -76,7 +76,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task SaveAsync_PersistiertAtomarUndResetIsDirty()
+    public async Task SaveAsync_PersistsAtomicallyAndResetsIsDirty()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt\r\n");
@@ -92,7 +92,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task SaveAsync_NormalisertEolAufOriginal()
+    public async Task SaveAsync_NormalizesEolToOriginal()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("zeile1\nzeile2\n");
@@ -108,7 +108,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task SaveAsync_BeiExternerAenderung_StatusMeldetKonflikt()
+    public async Task SaveAsync_OnExternalChange_StatusReportsConflict()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("v1");
@@ -126,7 +126,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task AddTag_LeerenText_FuegtVerwaltetenBlockAn()
+    public async Task AddTag_EmptyText_AppendsManagedBlock()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("Text");
@@ -142,7 +142,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task RemoveTag_EntferntTagAusText()
+    public async Task RemoveTag_RemovesTagFromText()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("Text mit #weg und #bleibt.");
@@ -157,7 +157,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task RenameTag_BenenntAlleVorkommenUm()
+    public async Task RenameTag_RenamesAllOccurrences()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("#alpha hier, #alpha dort.");
@@ -172,7 +172,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task SaveAsync_LoestSavedEvent()
+    public async Task SaveAsync_RaisesSavedEvent()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
@@ -189,7 +189,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task LoadAsync_SetztIsLockedAufTrue()
+    public async Task LoadAsync_SetsIsLockedToTrue()
     {
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("Body");
@@ -215,7 +215,7 @@ public sealed class MarkdownEditorViewModelTests
     }
 
     [Fact]
-    public async Task LoadDirectAsync_VerwendetUebergebenenTextUndSetztIsLockedTrue()
+    public async Task LoadDirectAsync_UsesProvidedTextAndSetsIsLockedTrue()
     {
         FakeFileSystem fs = new();
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);

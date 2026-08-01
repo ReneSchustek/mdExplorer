@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels.Settings;
 using MdExplorer.Core.Models;
@@ -108,6 +108,80 @@ public sealed class SettingsViewModelsTests
         Assert.Contains("**/tmp/**", sut.ExclusionPatterns);
         Assert.Equal(string.Empty, sut.NewExclusionPattern);
         Assert.False(sut.AddExclusionCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void IndexingTab_AddRoot_WhenAlreadyPresent_AddsNoDuplicate()
+    {
+        // Denselben Ordner zweimal zu indizieren würde jede Datei doppelt in der
+        // Trefferliste erscheinen lassen.
+        FakeDialogService dialog = new() { DirectoryToReturn = @"C:\Vault" };
+        IndexingTabViewModel sut = new(
+            new IndexingSettings([@"c:\vault"], [], [], AutoExtractHashtags: true),
+            dialog);
+
+        sut.AddRootCommand.Execute(null);
+
+        _ = Assert.Single(sut.Roots);
+    }
+
+    [Fact]
+    public void IndexingTab_AddExclusion_WhenBlank_AddsNothing()
+    {
+        IndexingTabViewModel sut = new(IndexingSettings.Default, new FakeDialogService())
+        {
+            NewExclusionPattern = "   ",
+        };
+        int vorher = sut.ExclusionPatterns.Count;
+
+        sut.AddExclusionCommand.Execute(null);
+
+        Assert.Equal(vorher, sut.ExclusionPatterns.Count);
+    }
+
+    [Fact]
+    public void IndexingTab_AddExclusion_WhenAlreadyPresent_AddsNoDuplicate()
+    {
+        IndexingTabViewModel sut = new(
+            new IndexingSettings([], ["**/bin/**"], [], AutoExtractHashtags: true),
+            new FakeDialogService())
+        {
+            NewExclusionPattern = "**/bin/**",
+        };
+
+        sut.AddExclusionCommand.Execute(null);
+
+        _ = Assert.Single(sut.ExclusionPatterns);
+    }
+
+    [Fact]
+    public void IndexingTab_RemoveExclusion_RemovesSelectedAndUpdatesCanExecute()
+    {
+        IndexingTabViewModel sut = new(
+            new IndexingSettings([], ["**/bin/**", "**/obj/**"], [], AutoExtractHashtags: true),
+            new FakeDialogService());
+        Assert.False(sut.RemoveExclusionCommand.CanExecute(null));
+
+        sut.SelectedExclusion = "**/bin/**";
+        Assert.True(sut.RemoveExclusionCommand.CanExecute(null));
+        sut.RemoveExclusionCommand.Execute(null);
+
+        _ = Assert.Single(sut.ExclusionPatterns);
+        Assert.DoesNotContain("**/bin/**", sut.ExclusionPatterns, StringComparer.Ordinal);
+        Assert.Null(sut.SelectedExclusion);
+        Assert.False(sut.RemoveExclusionCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void IndexingTab_RemoveExclusion_WithoutSelection_ChangesNothing()
+    {
+        IndexingTabViewModel sut = new(
+            new IndexingSettings([], ["**/bin/**"], [], AutoExtractHashtags: true),
+            new FakeDialogService());
+
+        sut.RemoveExclusionCommand.Execute(null);
+
+        _ = Assert.Single(sut.ExclusionPatterns);
     }
 
     [Fact]

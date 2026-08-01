@@ -79,6 +79,7 @@ public sealed class TagStatisticsServiceTests
     }
 
     [Fact]
+    [Trait("Category", "Performance")]
     public async Task TagStatisticsService_OnLargeDataset_RespondsWithinP95Budget()
     {
         // Budget-Strategie: Der Test soll nur eine *Regression* der Query-Pipeline

@@ -41,6 +41,72 @@ public sealed class FileSystemSettingsHistoryStoreTests : IDisposable
     }
 
     [Fact]
+    public void Constructor_WithNonPositiveRetention_Throws()
+    {
+        // Retention 0 würde jeden gerade geschriebenen Schnappschuss sofort wieder löschen —
+        // die Historie wäre dauerhaft leer, ohne dass es auffiele.
+        _ = Assert.Throws<ArgumentOutOfRangeException>(() => new FileSystemSettingsHistoryStore(
+            _historyDir,
+            _auditPath,
+            retention: 0,
+            NullLogger<FileSystemSettingsHistoryStore>.Instance));
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_DoesNotThrow()
+    {
+        FileSystemSettingsHistoryStore sut = new(
+            _historyDir,
+            _auditPath,
+            FileSystemSettingsHistoryStore.DefaultRetention,
+            NullLogger<FileSystemSettingsHistoryStore>.Instance);
+
+        sut.Dispose();
+        sut.Dispose();
+    }
+
+    [Fact]
+    public async Task RecordAsync_WhenAnOldSnapshotIsLocked_KeepsWritingTheNewOne()
+    {
+        // Ein Virenscanner oder ein offener Editor kann einen alten Schnappschuss halten.
+        // Das Aufräumen ist Nebensache — das Schreiben des neuen Standes darf nicht scheitern.
+        using FileSystemSettingsHistoryStore sut = new(
+            _historyDir,
+            _auditPath,
+            retention: 1,
+            NullLogger<FileSystemSettingsHistoryStore>.Instance);
+
+        AppSettings vorher = AppSettings.Default;
+        AppSettings ersterStand = vorher with { Behavior = vorher.Behavior with { SearchDebounceMs = 111 } };
+        await sut.RecordAsync(
+                vorher,
+                ersterStand,
+                JsonSerializer.Serialize(vorher, SerializerOptions),
+                JsonSerializer.Serialize(ersterStand, SerializerOptions),
+                new DateTimeOffset(2026, 06, 10, 12, 00, 00, TimeSpan.Zero),
+                CancellationToken.None)
+            .ConfigureAwait(true);
+
+        string alterSchnappschuss = Assert.Single(Directory.GetFiles(_historyDir, "settings.*.json"));
+        FileStream sperre = new(alterSchnappschuss, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using (sperre.ConfigureAwait(true))
+        {
+            AppSettings zweiterStand = vorher with { Behavior = vorher.Behavior with { SearchDebounceMs = 222 } };
+            await sut.RecordAsync(
+                    ersterStand,
+                    zweiterStand,
+                    JsonSerializer.Serialize(ersterStand, SerializerOptions),
+                    JsonSerializer.Serialize(zweiterStand, SerializerOptions),
+                    new DateTimeOffset(2026, 06, 10, 12, 05, 00, TimeSpan.Zero),
+                    CancellationToken.None)
+                .ConfigureAwait(true);
+        }
+
+        // Der gesperrte Alt-Stand bleibt liegen, der neue ist trotzdem geschrieben.
+        Assert.Equal(2, Directory.GetFiles(_historyDir, "settings.*.json").Length);
+    }
+
+    [Fact]
     public async Task RecordAsync_WritesSnapshotAndAuditLine()
     {
         using FileSystemSettingsHistoryStore sut = new(

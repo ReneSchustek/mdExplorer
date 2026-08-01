@@ -17,7 +17,7 @@ public sealed class UpdateSectionViewModelTests
     private static readonly Uri AssetUrl = new("https://example.invalid/setup.exe");
 
     [Fact]
-    public async Task CheckCommand_UsesForce_SoDerNutzerNichtDieGedrosselteAuskunftBekommt()
+    public async Task CheckCommand_UsesForce_SoUserDoesNotGetThrottledResult()
     {
         FakeUpdateChecker checker = new(UpdateCheckResult.UpToDate(Current, Current));
         using UpdateSectionViewModel sut = Build(checker, out _);
@@ -28,7 +28,7 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task CheckCommand_MitInstallierbaremUpdate_SchaltetInstallationFrei()
+    public async Task CheckCommand_WithInstallableUpdate_EnablesInstallation()
     {
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
@@ -41,7 +41,7 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task CheckCommand_OhnePruefsumme_BietetKeineInstallationAn()
+    public async Task CheckCommand_WithoutChecksum_DoesNotOfferInstallation()
     {
         // Genau der Fall, den die Prüfsumme absichert: Es gibt eine neuere Fassung, aber
         // keinen Beleg für die Datei. Dann bleibt nur der Weg über die Release-Seite.
@@ -56,7 +56,7 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task CheckCommand_OhneUpdate_MeldetAktuellUndBietetNichtsAn()
+    public async Task CheckCommand_WithoutUpdate_ReportsCurrentAndOffersNothing()
     {
         FakeUpdateChecker checker = new(UpdateCheckResult.UpToDate(Current, Current));
         using UpdateSectionViewModel sut = Build(checker, out _);
@@ -68,7 +68,7 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task InstallCommand_NachErfolgreicherPruefung_StartetDenInstaller()
+    public async Task InstallCommand_AfterSuccessfulVerification_StartsInstaller()
     {
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
@@ -85,7 +85,7 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task InstallCommand_BeiAbweichenderPruefsumme_StartetNichts()
+    public async Task InstallCommand_OnChecksumMismatch_StartsNothing()
     {
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
@@ -103,7 +103,7 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task InstallCommand_OhneVorherigePruefung_TutNichts()
+    public async Task InstallCommand_WithoutPriorVerification_DoesNothing()
     {
         FakeUpdateChecker checker = new(UpdateCheckResult.UpToDate(Current, Current));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
@@ -115,7 +115,7 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task Dispose_WaehrendDerDialogSchliesst_StartetKeinenInstaller()
+    public async Task Dispose_WhileDialogCloses_StartsNoInstaller()
     {
         // Wird der Dialog während des Downloads geschlossen, darf das
         // Installationsprogramm nicht mehr anlaufen: Die Anwendung würde dann nicht
@@ -136,7 +136,7 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task Dispose_MehrfachAufgerufen_WirftNicht()
+    public async Task Dispose_CalledMultipleTimes_DoesNotThrow()
     {
         // Das Fenster meldet sich beim Schließen ab; ein zweiter Aufruf darf nicht
         // über die bereits entsorgte Abbruchquelle stolpern.

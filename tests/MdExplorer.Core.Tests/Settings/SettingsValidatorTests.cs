@@ -159,6 +159,88 @@ public sealed class SettingsValidatorTests
         Assert.Contains(result.Errors, e => e.Field == SettingsField.ResultsPerPage);
     }
 
+    [Fact]
+    public void Validate_OnBlankRoot_ReportsError()
+    {
+        // Ein leerer Eintrag entsteht, wenn im Einstellungsdialog eine Zeile stehen bleibt.
+        // Ohne Befund liefe der Indexer gegen einen leeren Pfad.
+        StubFileSystem fs = new();
+        SettingsValidator sut = new(fs);
+
+        SettingsValidationResult result = sut.Validate(new AppSettings(
+            AppSettings.CurrentSchemaVersion,
+            new IndexingSettings(["   "], [], [], true),
+            AppearanceSettings.Default,
+            BehaviorSettings.Default));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Field == SettingsField.Roots && e.Index == 0);
+    }
+
+    [Fact]
+    public void Validate_OnNegationWithoutPattern_ReportsError()
+    {
+        // "!" allein ist eine Ausnahme ohne Gegenstand — sie würde stillschweigend nichts tun.
+        StubFileSystem fs = new();
+        SettingsValidator sut = new(fs);
+
+        SettingsValidationResult result = sut.Validate(new AppSettings(
+            AppSettings.CurrentSchemaVersion,
+            new IndexingSettings([], ["!"], [], true),
+            AppearanceSettings.Default,
+            BehaviorSettings.Default));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Field == SettingsField.ExclusionPatterns && e.Index == 0);
+    }
+
+    [Fact]
+    public void Validate_OnResyncIntervalOutOfRange_ReportsError()
+    {
+        StubFileSystem fs = new();
+        SettingsValidator sut = new(fs);
+
+        SettingsValidationResult result = sut.Validate(new AppSettings(
+            AppSettings.CurrentSchemaVersion,
+            new IndexingSettings([], [], [], true),
+            AppearanceSettings.Default,
+            BehaviorSettings.Default with { IndexerResyncIntervalSeconds = 99_999 }));
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Field == SettingsField.IndexerResyncIntervalSeconds);
+    }
+
+    [Fact]
+    public void Validate_OnANegatedPattern_AcceptsIt()
+    {
+        // Die Negation ist gültige Syntax und darf keinen Befund erzeugen.
+        StubFileSystem fs = new();
+        SettingsValidator sut = new(fs);
+
+        SettingsValidationResult result = sut.Validate(new AppSettings(
+            AppSettings.CurrentSchemaVersion,
+            new IndexingSettings([], ["!wichtig/**"], [], true),
+            AppearanceSettings.Default,
+            BehaviorSettings.Default));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_WithoutSettings_Throws()
+    {
+        StubFileSystem fs = new();
+        SettingsValidator sut = new(fs);
+
+        _ = Assert.Throws<ArgumentNullException>(() => sut.Validate(null!));
+    }
+
+    [Fact]
+    public void Constructor_WithoutFileSystem_Throws()
+    {
+        _ = Assert.Throws<ArgumentNullException>(() => new SettingsValidator(null!));
+    }
+
     private sealed class StubFileSystem : IFileSystem
     {
         public HashSet<string> Directories { get; } = new(StringComparer.OrdinalIgnoreCase);

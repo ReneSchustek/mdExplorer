@@ -238,6 +238,122 @@ public sealed class TagManagementViewModelTests
             new FakeDialogService(),
             NullLogger<TagManagementViewModel>.Instance);
 
+    [Fact]
+    public async Task RefreshCommand_WhenTheDatabaseIsBusy_KeepsTheListAndReportsIt()
+    {
+        // Die zuvor geladene Liste muss stehen bleiben — ein leeres Fenster sähe so aus,
+        // als gäbe es gar keine Tags mehr.
+        FakeStatisticsService statsService = new();
+        statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
+        FakeManagementService managementService = new();
+        TagManagementViewModel sut = new(statsService, managementService, new FakeDialogService(), NullLogger<TagManagementViewModel>.Instance);
+        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        statsService.Failure = new TestDbException("Datenbank belegt");
+
+        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+
+        _ = Assert.Single(sut.Items);
+        Assert.Contains("konnte nicht geladen werden", sut.StatusMessage, StringComparison.Ordinal);
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public async Task RefreshCommand_WhenCancelled_LeavesNoFailureMessage()
+    {
+        FakeStatisticsService statsService = new()
+        {
+            Failure = new OperationCanceledException(),
+        };
+        FakeManagementService managementService = new();
+        TagManagementViewModel sut = new(statsService, managementService, new FakeDialogService(), NullLogger<TagManagementViewModel>.Instance);
+
+        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+
+        Assert.DoesNotContain("konnte nicht geladen werden", sut.StatusMessage, StringComparison.Ordinal);
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public async Task DeleteCommand_WhenTheDatabaseIsBusy_ReportsTheFailureAndStaysUsable()
+    {
+        // Ohne Rückmeldung sieht der Nutzer nur, dass sich nichts tut — und löscht erneut.
+        FakeStatisticsService statsService = new();
+        FakeManagementService managementService = new()
+        {
+            DeleteFailure = new TestDbException("Datenbank belegt"),
+        };
+        FakeDialogService dialogService = new() { ShouldConfirm = true };
+        TagManagementViewModel sut = new(statsService, managementService, dialogService, NullLogger<TagManagementViewModel>.Instance)
+        {
+            SelectedItem = new TagManagementItem("Docs", "docs", 3),
+        };
+
+        await sut.DeleteCommand.ExecuteAsync(null).ConfigureAwait(true);
+
+        Assert.Contains("fehlgeschlagen", sut.StatusMessage, StringComparison.Ordinal);
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public async Task DeleteCommand_WhenTheReloadFails_StillReportsTheResult()
+    {
+        // Der Schreibvorgang war erfolgreich. Scheitert danach nur das Nachladen der Liste,
+        // darf die Erfolgsmeldung nicht verloren gehen — sonst hält der Nutzer den
+        // Löschvorgang fälschlich für gescheitert und wiederholt ihn.
+        FakeStatisticsService statsService = new();
+        FakeManagementService managementService = new();
+        managementService.SetDeleteResult(new TagRewriteResult("docs", 4, 5, new Dictionary<string, string>()));
+        FakeDialogService dialogService = new() { ShouldConfirm = true };
+        TagManagementViewModel sut = new(statsService, managementService, dialogService, NullLogger<TagManagementViewModel>.Instance)
+        {
+            SelectedItem = new TagManagementItem("Docs", "docs", 3),
+        };
+        statsService.Failure = new TestDbException("Datenbank belegt");
+
+        await sut.DeleteCommand.ExecuteAsync(null).ConfigureAwait(true);
+
+        Assert.Contains("4 von 5", sut.StatusMessage, StringComparison.Ordinal);
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public async Task DeleteCommand_WhenCancelled_LeavesNoFailureMessage()
+    {
+        FakeStatisticsService statsService = new();
+        FakeManagementService managementService = new()
+        {
+            DeleteFailure = new OperationCanceledException(),
+        };
+        FakeDialogService dialogService = new() { ShouldConfirm = true };
+        TagManagementViewModel sut = new(statsService, managementService, dialogService, NullLogger<TagManagementViewModel>.Instance)
+        {
+            SelectedItem = new TagManagementItem("Docs", "docs", 3),
+        };
+
+        await sut.DeleteCommand.ExecuteAsync(null).ConfigureAwait(true);
+
+        Assert.DoesNotContain("fehlgeschlagen", sut.StatusMessage, StringComparison.Ordinal);
+        Assert.False(sut.IsBusy);
+    }
+
+    /// <summary><see cref="System.Data.Common.DbException"/> ist abstrakt — der Fehlerpfad braucht eine eigene Ausprägung.</summary>
+    private sealed class TestDbException : System.Data.Common.DbException
+    {
+        public TestDbException()
+        {
+        }
+
+        public TestDbException(string message)
+            : base(message)
+        {
+        }
+
+        public TestDbException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+
     private sealed class FakeStatisticsService : ITagStatisticsService
     {
         private IReadOnlyList<TagStatistic> _snapshot = [];
@@ -247,10 +363,15 @@ public sealed class TagManagementViewModelTests
 
         public void SetSnapshot(params TagStatistic[] tags) => _snapshot = tags;
 
+        /// <summary>Fehler, den der nächste Abruf liefert — für den Ausweichpfad beim Nachladen.</summary>
+        public Exception? Failure { get; set; }
+
         public Task<IReadOnlyList<TagStatistic>> GetTopTagsAsync(int topN, CancellationToken cancellationToken)
         {
             _callCount++;
-            return Task.FromResult(_snapshot);
+            return Failure is not null
+                ? Task.FromException<IReadOnlyList<TagStatistic>>(Failure)
+                : Task.FromResult(_snapshot);
         }
     }
 
@@ -300,10 +421,15 @@ public sealed class TagManagementViewModelTests
             return Task.FromResult(_mergeResult);
         }
 
+        /// <summary>Fehler, den <see cref="DeleteAsync"/> statt eines Ergebnisses liefert.</summary>
+        public Exception? DeleteFailure { get; set; }
+
         public Task<TagRewriteResult> DeleteAsync(string slug, CancellationToken cancellationToken)
         {
             DeleteCount++;
-            return Task.FromResult(_deleteResult);
+            return DeleteFailure is not null
+                ? Task.FromException<TagRewriteResult>(DeleteFailure)
+                : Task.FromResult(_deleteResult);
         }
     }
 

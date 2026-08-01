@@ -8,6 +8,13 @@ internal sealed class FakeMarkdownDocumentRepository : IMarkdownDocumentReposito
 {
     private readonly Dictionary<Guid, MarkdownDocument> _byFileId = [];
 
+    /// <summary>
+    /// Fehler, den <see cref="GetByMarkdownFileIdAsync"/> statt eines Ergebnisses liefert.
+    /// Nötig, um die Ausweichpfade der Vorschau zu prüfen — eine Datenbank-Spitze lässt sich
+    /// mit einem In-Memory-Bestand sonst nicht nachstellen.
+    /// </summary>
+    public Exception? FailOnGet { get; set; }
+
     public void Put(Guid markdownFileId, MarkdownDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
@@ -15,7 +22,9 @@ internal sealed class FakeMarkdownDocumentRepository : IMarkdownDocumentReposito
     }
 
     public Task<MarkdownDocument?> GetByMarkdownFileIdAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
-        Task.FromResult(_byFileId.TryGetValue(markdownFileId, out MarkdownDocument? doc) ? doc : null);
+        FailOnGet is not null
+            ? Task.FromException<MarkdownDocument?>(FailOnGet)
+            : Task.FromResult(_byFileId.TryGetValue(markdownFileId, out MarkdownDocument? doc) ? doc : null);
 
     public Task<IReadOnlyDictionary<Guid, MarkdownDocument>> GetByMarkdownFileIdsAsync(
         IReadOnlyCollection<Guid> markdownFileIds,

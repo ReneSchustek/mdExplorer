@@ -82,6 +82,72 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         _ = Assert.Single(results);
     }
 
+    [Fact]
+    public async Task SearchAsync_RegexMode_WithTakeLimit_StopsAtTheRequestedCount()
+    {
+        // Ohne die Abbruchbedingung liefe der Postfilter durch alle Kandidaten, obwohl die
+        // Trefferliste längst voll ist — bei weichen Mustern sind das Tausende Dokumente.
+        FakeSearchIndexStorage storage = new();
+        storage.AddHit(IdAlpha, "alpha.md", "Alpha", "Text mit API123Main.");
+        storage.AddHit(IdBeta, "beta.md", "Beta", "Auch hier API456Main.");
+        Fts5SearchService sut = NewService(storage);
+
+        IReadOnlyList<SearchResult> results = await sut
+            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex, Take: 1), CancellationToken.None)
+            .ConfigureAwait(true);
+
+        _ = Assert.Single(results);
+    }
+
+    [Fact]
+    public async Task SearchAsync_RegexMode_WithSkip_SkipsTheLeadingMatches()
+    {
+        FakeSearchIndexStorage storage = new();
+        storage.AddHit(IdAlpha, "alpha.md", "Alpha", "Text mit API123Main.");
+        storage.AddHit(IdBeta, "beta.md", "Beta", "Auch hier API456Main.");
+        Fts5SearchService sut = NewService(storage);
+
+        IReadOnlyList<SearchResult> results = await sut
+            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex, Skip: 1, Take: 5), CancellationToken.None)
+            .ConfigureAwait(true);
+
+        SearchResult single = Assert.Single(results);
+        Assert.Equal(IdBeta, single.MarkdownFileId);
+    }
+
+    [Fact]
+    public async Task SearchAsync_RegexMode_WithoutAStoredBody_SkipsTheCandidate()
+    {
+        // Ein Kandidat ohne Fließtext kann nicht gegen das Muster geprüft werden — etwa
+        // wenn die Quelldatei beim Indizieren gesperrt war.
+        FakeSearchIndexStorage storage = new();
+        storage.AddHit(IdAlpha, "alpha.md", "Alpha", string.Empty);
+        storage.AddHit(IdBeta, "beta.md", "Beta", "Hier steht API456Main.");
+        Fts5SearchService sut = NewService(storage);
+
+        IReadOnlyList<SearchResult> results = await sut
+            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex), CancellationToken.None)
+            .ConfigureAwait(true);
+
+        SearchResult single = Assert.Single(results);
+        Assert.Equal(IdBeta, single.MarkdownFileId);
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithoutATakeValue_FallsBackToTheConfiguredDefault()
+    {
+        FakeSearchIndexStorage storage = new();
+        storage.AddHit(IdAlpha, "alpha.md", "Alpha", "egal");
+        Fts5SearchService sut = NewService(storage);
+
+        IReadOnlyList<SearchResult> results = await sut
+            .SearchAsync(new SearchQuery("alpha", Take: 0), CancellationToken.None)
+            .ConfigureAwait(true);
+
+        _ = Assert.Single(results);
+        Assert.Equal(new SearchOptions().DefaultTake, storage.QueryCalls[0].Take);
+    }
+
     private static Fts5SearchService NewService(ISearchIndexStorage storage)
     {
         SearchOptions options = new();

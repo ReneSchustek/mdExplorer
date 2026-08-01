@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 using CommunityToolkit.Mvvm.Messaging;
+using MdExplorer.App.Messaging;
 using MdExplorer.App.Services;
 using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels;
@@ -218,6 +219,165 @@ public sealed class MainViewModelTests
         return output.ToArray();
     }
 
+    [Fact]
+    public void Receive_OnUpdateAvailable_ShowsTheHintBarOverTheDispatcher()
+    {
+        // Die Nachricht kommt aus dem Hintergrunddienst und damit von einem fremden Thread.
+        // Ohne den Umweg über den Dispatcher würde das Setzen der Bindungen die Oberfläche werfen.
+        using TestHarness harness = new();
+        Uri releaseUrl = new("https://example.invalid/release");
+
+        harness.Main.Receive(new UpdateAvailableMessage("1.2.3", releaseUrl));
+
+        Assert.True(harness.Main.IsUpdateAvailable);
+        Assert.Equal("1.2.3", harness.Main.UpdateVersion, StringComparer.Ordinal);
+        Assert.Equal(releaseUrl, harness.Main.UpdateReleaseUrl);
+        Assert.True(harness.UiDispatcher.InvokeCount > 0);
+    }
+
+    [Fact]
+    public void Receive_ViaMessenger_ReachesTheViewModel()
+    {
+        using TestHarness harness = new();
+
+        _ = harness.Messenger.Send(new UpdateAvailableMessage("2.0.0", new Uri("https://example.invalid/r")));
+
+        Assert.True(harness.Main.IsUpdateAvailable);
+    }
+
+    [Fact]
+    public void Receive_WithoutMessage_Throws()
+    {
+        using TestHarness harness = new();
+
+        _ = Assert.Throws<ArgumentNullException>(() => harness.Main.Receive(null!));
+    }
+
+    [Fact]
+    public void DismissUpdate_HidesTheHintBar()
+    {
+        using TestHarness harness = new();
+        harness.Main.Receive(new UpdateAvailableMessage("1.2.3", new Uri("https://example.invalid/r")));
+
+        harness.Main.DismissUpdateCommand.Execute(null);
+
+        Assert.False(harness.Main.IsUpdateAvailable);
+    }
+
+    [Fact]
+    public void Title_AndStorageLocation_AreAvailableForTheStatusBar()
+    {
+        using TestHarness harness = new();
+
+        Assert.Equal("MdExplorer", harness.Main.Title, StringComparer.Ordinal);
+        Assert.Equal(harness.SettingsStore.StorageLocation, harness.Main.StorageLocation, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task NavigateToDocumentAsync_WithoutAFile_ReportsFailure()
+    {
+        using TestHarness harness = new();
+
+        bool ergebnis = await harness.Main.NavigateToDocumentAsync(Guid.Empty, CancellationToken.None).ConfigureAwait(true);
+
+        Assert.False(ergebnis);
+    }
+
+    [Fact]
+    public void SelectedResult_ClearedAgain_DoesNotReloadTheDocument()
+    {
+        using TestHarness harness = new();
+
+        harness.Search.SelectedResult = null;
+
+        Assert.Null(harness.Preview.CurrentDocumentId);
+    }
+
+    [Fact]
+    public async Task SelectingAFileInTheAllFilesTab_LoadsTheIndexedDocument()
+    {
+        using TestHarness harness = new();
+        Guid fileId = Guid.NewGuid();
+        const string Pfad = @"C:\notizen\bericht.md";
+        harness.Locator.SetAbsolutePath(Pfad, fileId);
+        harness.DocRepo.Put(fileId, CreateDocument(fileId, "<h1>Bericht</h1>"));
+
+        harness.AllFiles.SelectedItem = new AllFilesItemViewModel(
+            new AllFilesRow(fileId, "Bericht", @"notizen\bericht.md", Pfad, FixedUtc, []));
+
+        Assert.True(
+            await WaitForAsync(() => harness.Preview.CurrentDocumentId == fileId).ConfigureAwait(true),
+            "Die ausgewählte Datei wurde nicht geladen.");
+    }
+
+    [Fact]
+    public async Task SelectingAFileThatIsNotIndexedYet_FallsBackToTheDirectLoad()
+    {
+        // Direkt nach dem Anlegen kennt der Indexer die Datei noch nicht. Ohne diesen
+        // Ausweichpfad bliebe die Vorschau leer, bis der nächste Scan durchgelaufen ist.
+        using TestHarness harness = new();
+        const string Pfad = @"C:\notizen\ganz-neu.md";
+        harness.FileSystem.Files[Pfad] = Encoding.UTF8.GetBytes("# Ganz neu");
+
+        harness.AllFiles.SelectedItem = new AllFilesItemViewModel(
+            new AllFilesRow(Guid.NewGuid(), "Ganz neu", @"notizen\ganz-neu.md", Pfad, FixedUtc, []));
+
+        Assert.True(
+            await WaitForAsync(() => harness.Locator.AbsolutePathCallCount > 0).ConfigureAwait(true),
+            "Die Pfad-Auflösung wurde nicht versucht.");
+    }
+
+    [Fact]
+    public async Task SelectingAFileWhenTheDatabaseIsBusy_DoesNotCrashTheApplication()
+    {
+        using TestHarness harness = new();
+        harness.Locator.FailOnAbsolutePath = new TestDbException("Datenbank belegt");
+
+        harness.AllFiles.SelectedItem = new AllFilesItemViewModel(
+            new AllFilesRow(Guid.NewGuid(), "Bericht", @"notizen\b.md", @"C:\notizen\b.md", FixedUtc, []));
+
+        Assert.True(
+            await WaitForAsync(() => harness.Locator.AbsolutePathCallCount > 0).ConfigureAwait(true),
+            "Die Pfad-Auflösung wurde nicht versucht.");
+        Assert.Null(harness.Preview.CurrentDocumentId);
+    }
+
+    /// <summary>
+    /// Wartet begrenzt auf eine Bedingung. Die Navigation nach einem Klick läuft absichtlich
+    /// ohne Rückgabewert los, deshalb gibt es keinen Task, auf den der Test warten könnte.
+    /// </summary>
+    private static async Task<bool> WaitForAsync(Func<bool> bedingung)
+    {
+        DateTimeOffset ende = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(5);
+        while (DateTimeOffset.UtcNow < ende)
+        {
+            if (bedingung())
+            {
+                return true;
+            }
+            await Task.Delay(5).ConfigureAwait(false);
+        }
+        return bedingung();
+    }
+
+    /// <summary><see cref="System.Data.Common.DbException"/> ist abstrakt — der Fehlerpfad braucht eine eigene Ausprägung.</summary>
+    private sealed class TestDbException : System.Data.Common.DbException
+    {
+        public TestDbException()
+        {
+        }
+
+        public TestDbException(string message)
+            : base(message)
+        {
+        }
+
+        public TestDbException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+
     private sealed class TestHarness : IDisposable
     {
         public StrongReferenceMessenger Messenger { get; } = new();
@@ -319,6 +479,15 @@ public sealed class MainViewModelTests
         private readonly Dictionary<string, Guid> _absolutePaths = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<Guid, string> _idToPath = [];
 
+        /// <summary>
+        /// Fehler, den die Pfad-Auflösung statt eines Ergebnisses liefert. Nötig, um den
+        /// Ausweichpfad bei einer Datenbank-Spitze zu prüfen.
+        /// </summary>
+        public Exception? FailOnAbsolutePath { get; set; }
+
+        /// <summary>Zählt die Pfad-Auflösungen — die Navigation läuft ohne Rückgabewert.</summary>
+        public int AbsolutePathCallCount { get; private set; }
+
         public void SetWikiLink(string target, Guid id) => _wikiLinks[target] = id;
 
         public void SetAbsolutePath(string absolutePath, Guid id)
@@ -330,8 +499,14 @@ public sealed class MainViewModelTests
         public Task<Guid?> FindByWikiLinkAsync(string wikiLinkTarget, CancellationToken cancellationToken) =>
             Task.FromResult<Guid?>(_wikiLinks.TryGetValue(wikiLinkTarget, out Guid id) ? id : null);
 
-        public Task<Guid?> FindByAbsolutePathAsync(string absoluteFilePath, CancellationToken cancellationToken) =>
-            Task.FromResult<Guid?>(_absolutePaths.TryGetValue(absoluteFilePath, out Guid id) ? id : null);
+        public Task<Guid?> FindByAbsolutePathAsync(string absoluteFilePath, CancellationToken cancellationToken)
+        {
+            AbsolutePathCallCount++;
+            return FailOnAbsolutePath is not null
+                ? Task.FromException<Guid?>(FailOnAbsolutePath)
+                : Task.FromResult<Guid?>(_absolutePaths.TryGetValue(absoluteFilePath, out Guid id) ? id : null);
+        }
+
 
         public Task<string?> GetAbsolutePathAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
             Task.FromResult<string?>(_idToPath.TryGetValue(markdownFileId, out string? path) ? path : null);

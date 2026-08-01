@@ -5,7 +5,7 @@ namespace MdExplorer.App.Tests.Services;
 public sealed class TagDocumentEditorTests
 {
     [Fact]
-    public void Add_OhneBestehendenBlock_FuegtVerwaltetenKommentarAmEndeAn()
+    public void Add_WithoutExistingBlock_AppendsManagedCommentAtEnd()
     {
         string source = "# Titel\n\nText";
 
@@ -16,7 +16,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Add_MitBestehendemBlock_HaengtTagInBlockAn()
+    public void Add_WithExistingBlock_AppendsTagToBlock()
     {
         string source = "Text\n<!-- mdexplorer-tags: #alt -->\n";
 
@@ -26,7 +26,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Add_BereitsImBodyVorhanden_BleibtUnveraendert()
+    public void Add_AlreadyPresentInBody_LeavesDocumentUnchanged()
     {
         string source = "Text mit #vorhanden inline.";
 
@@ -36,7 +36,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Remove_EntferntAlleVorkommenIgnoreCase()
+    public void Remove_RemovesAllOccurrencesIgnoringCase()
     {
         string source = "Eins #Tag zwei #tag drei";
 
@@ -47,7 +47,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Remove_LeerenVerwaltetenBlock_WirdEntfernt()
+    public void Remove_EmptyManagedBlock_IsRemoved()
     {
         string source = "Body\n<!-- mdexplorer-tags: #weg -->\n";
 
@@ -57,7 +57,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Remove_PartiellesPrefixMatchVermeiden_BleibtErhalten()
+    public void Remove_PartialPrefixMatch_IsPreserved()
     {
         string source = "#tagging soll bleiben";
 
@@ -67,7 +67,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Rename_ErsetztAlleVorkommen()
+    public void Rename_ReplacesAllOccurrences()
     {
         string source = "Eins #alt und #alt nochmal.";
 
@@ -78,7 +78,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Rename_GleicheNamen_KeineAenderung()
+    public void Rename_SameNames_NoChange()
     {
         string source = "Text #foo";
 

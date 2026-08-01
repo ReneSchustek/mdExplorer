@@ -38,8 +38,19 @@ internal sealed class FakeFileSystem : IFileSystem
 
     public Dictionary<string, byte[]> WrittenFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Fehler, den <see cref="WriteAllBytesAtomicAsync"/> statt des Schreibens liefert.
+    /// Bildet eine schreibgeschützte oder belegte Zieldatei nach — anders lässt sich der
+    /// Fehlerpfad des Editors gegen ein In-Memory-Dateisystem nicht auslösen.
+    /// </summary>
+    public Exception? FailOnWrite { get; set; }
+
     public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
     {
+        if (FailOnWrite is not null)
+        {
+            return Task.FromException(FailOnWrite);
+        }
         WrittenFiles[path] = content.ToArray();
         return Task.CompletedTask;
     }

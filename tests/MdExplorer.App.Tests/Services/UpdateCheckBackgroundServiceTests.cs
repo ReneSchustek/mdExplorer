@@ -66,6 +66,60 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
         Assert.False(received);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_AfterTheStartupDelay_RunsTheCheck()
+    {
+        // Der Versatz beim Start gibt Hauptfenster und erstem Indexer-Lauf Vorrang. Die
+        // Prüfung muss danach aber tatsächlich laufen — sonst fände der Nutzer nie
+        // heraus, dass eine neue Fassung bereitsteht.
+        FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl));
+        StrongReferenceMessenger messenger = new();
+        Microsoft.Extensions.Time.Testing.FakeTimeProvider zeit = new();
+        using UpdateCheckBackgroundService service = CreateService(checker, messenger, updatesEnabled: true, zeit);
+
+        await service.StartAsync(CancellationToken.None);
+        bool gelaufen = await WarteAufAsync(zeit, () => checker.CallCount > 0);
+        await service.StopAsync(CancellationToken.None);
+
+        Assert.True(gelaufen, "Die Update-Prüfung ist nach dem Startversatz nicht gelaufen.");
+        Assert.False(service.ExecuteTask!.IsFaulted);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenStoppedDuringTheStartupDelay_EndsWithoutFault()
+    {
+        // Wer die Anwendung sofort wieder schließt, darf keinen Fehler im Protokoll finden.
+        FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl));
+        StrongReferenceMessenger messenger = new();
+        Microsoft.Extensions.Time.Testing.FakeTimeProvider zeit = new();
+        using UpdateCheckBackgroundService service = CreateService(checker, messenger, updatesEnabled: true, zeit);
+
+        await service.StartAsync(CancellationToken.None);
+        await service.StopAsync(CancellationToken.None);
+
+        Assert.Equal(0, checker.CallCount);
+        Assert.True(service.ExecuteTask!.IsCompleted);
+        Assert.False(service.ExecuteTask.IsFaulted);
+    }
+
+    /// <summary>Stellt die Uhr schrittweise vor, bis die Bedingung erfüllt ist.</summary>
+    private static async Task<bool> WarteAufAsync(
+        Microsoft.Extensions.Time.Testing.FakeTimeProvider zeit,
+        Func<bool> bedingung)
+    {
+        DateTimeOffset ende = DateTimeOffset.UtcNow + TimeSpan.FromSeconds(5);
+        while (DateTimeOffset.UtcNow < ende)
+        {
+            if (bedingung())
+            {
+                return true;
+            }
+            zeit.Advance(TimeSpan.FromSeconds(5));
+            await Task.Delay(5).ConfigureAwait(false);
+        }
+        return bedingung();
+    }
+
     /// <summary>Gibt die erzeugten ServiceProvider frei.</summary>
     public void Dispose()
     {
@@ -78,7 +132,8 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
     private UpdateCheckBackgroundService CreateService(
         FakeUpdateChecker checker,
         IMessenger messenger,
-        bool updatesEnabled)
+        bool updatesEnabled,
+        TimeProvider? timeProvider = null)
     {
         ServiceCollection services = new();
         _ = services.AddScoped<IUpdateChecker>(_ => checker);
@@ -89,7 +144,7 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
             provider.GetRequiredService<IServiceScopeFactory>(),
             settings,
             messenger,
-            TimeProvider.System,
+            timeProvider ?? TimeProvider.System,
             NullLogger<UpdateCheckBackgroundService>.Instance);
     }
 

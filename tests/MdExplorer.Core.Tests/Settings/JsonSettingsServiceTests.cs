@@ -45,6 +45,36 @@ public sealed class JsonSettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadAsync_OnJsonNull_ReturnsDefaults()
+    {
+        // "null" ist gültiges JSON, ergibt aber keine Einstellungen. Ohne die Absicherung
+        // liefe die Anwendung mit einem Nullwert weiter und fällt beim ersten Zugriff um.
+        string path = Path.Combine(_tempDir, "null.json");
+        await File.WriteAllTextAsync(path, "null", CancellationToken.None).ConfigureAwait(true);
+        using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
+
+        AppSettings result = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
+        Assert.Empty(result.Indexing.Roots);
+    }
+
+    [Fact]
+    public async Task LoadAsync_WhenThePathIsADirectory_ReturnsDefaults()
+    {
+        // Ein Verzeichnis an Stelle der Datei löst beim Öffnen einen E/A-Fehler aus.
+        // Der Programmstart darf daran nicht scheitern.
+        string path = Path.Combine(_tempDir, "als-ordner.json");
+        _ = Directory.CreateDirectory(path);
+        using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
+
+        AppSettings result = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
+        Assert.Empty(result.Indexing.Roots);
+    }
+
+    [Fact]
     public async Task LoadAsync_OnInvalidJson_ReturnsDefaultsAndDoesNotThrow()
     {
         string path = Path.Combine(_tempDir, "broken.json");

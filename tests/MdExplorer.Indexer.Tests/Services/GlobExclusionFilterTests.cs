@@ -106,6 +106,47 @@ public sealed class GlobExclusionFilterTests
         Assert.False(sut.IsExcluded(@"C:\Wurzel\paused\note.md", Root));
     }
 
+    [Fact]
+    public void IsExcluded_OnAFileOutsideTheRoot_DoesNotExclude()
+    {
+        // Ein Pfad außerhalb der Wurzel erlaubt keine Aussage — die Muster sind
+        // wurzelrelativ. "Nicht ausgeschlossen" ist hier die sichere Antwort.
+        using GlobExclusionFilter sut = Build(["**/*.md"]);
+
+        bool ausgeschlossen = sut.IsExcluded(@"C:\a.md", @"C:\Wurzel\tief");
+
+        Assert.False(ausgeschlossen);
+    }
+
+    [Fact]
+    public void IsExcluded_WithBlankPatterns_IgnoresThem()
+    {
+        // Leerzeilen entstehen leicht in einer handgepflegten Musterliste. Ein leeres
+        // Muster darf nicht als "passt auf alles" durchgehen.
+        using GlobExclusionFilter sut = Build(["   ", string.Empty, "!", "**/node_modules/**"]);
+
+        Assert.False(sut.IsExcluded(@"C:\Wurzel\readme.md", Root));
+        Assert.True(sut.IsExcluded(@"C:\Wurzel\node_modules\dep.md", Root));
+    }
+
+    [Fact]
+    public void IsExcluded_WithBlankUiExcludedFolders_IgnoresThem()
+    {
+        FakeSettingsService settings = BuildSettings(["**/node_modules/**"], ["   ", string.Empty]);
+        using GlobExclusionFilter sut = Build(settings);
+
+        Assert.False(sut.IsExcluded(@"C:\Wurzel\readme.md", Root));
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_DoesNotThrow()
+    {
+        GlobExclusionFilter sut = Build(["**/node_modules/**"]);
+
+        sut.Dispose();
+        sut.Dispose();
+    }
+
     private static GlobExclusionFilter Build(IReadOnlyList<string> patterns)
     {
         FakeSettingsService settings = BuildSettings(patterns);

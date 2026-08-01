@@ -44,6 +44,55 @@ public sealed class NavigationAndLocatorTests
     }
 
     [Fact]
+    public async Task GetAbsolutePathAsync_ResolvesIdToItsPath()
+    {
+        // Rückweg der Auflösung: Das Graph-Fenster kennt nur die Kennung und braucht
+        // den Pfad, um die Datei zu öffnen.
+        FakeMarkdownFileRepository repo = new();
+        Guid kennung = Guid.NewGuid();
+        repo.Add(new MarkdownFile
+        {
+            Id = kennung,
+            AbsolutePath = @"C:\notizen\Ziel.md",
+            RelativePath = "Ziel.md",
+            FileNameWithoutExtension = "Ziel",
+            ContentHash = "h",
+        });
+
+        using ServiceProvider provider = BuildProvider(repo);
+        MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
+
+        string? ergebnis = await locator.GetAbsolutePathAsync(kennung, CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Equal(@"C:\notizen\Ziel.md", ergebnis, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetAbsolutePathAsync_OnAnUnknownId_ReturnsNull()
+    {
+        FakeMarkdownFileRepository repo = new();
+        using ServiceProvider provider = BuildProvider(repo);
+        MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
+
+        string? ergebnis = await locator.GetAbsolutePathAsync(Guid.NewGuid(), CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Null(ergebnis);
+    }
+
+    [Fact]
+    public async Task GetAbsolutePathAsync_WithoutAnId_ReturnsNullWithoutTouchingTheDatabase()
+    {
+        // Guid.Empty bedeutet "nichts ausgewählt" — dafür lohnt kein Datenbank-Zugriff.
+        FakeMarkdownFileRepository repo = new();
+        using ServiceProvider provider = BuildProvider(repo);
+        MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
+
+        string? ergebnis = await locator.GetAbsolutePathAsync(Guid.Empty, CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Null(ergebnis);
+    }
+
+    [Fact]
     public async Task FindByAbsolutePathAsync_ResolvesIndexedFileToId()
     {
         FakeMarkdownFileRepository repo = new();

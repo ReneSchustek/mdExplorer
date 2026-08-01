@@ -11,6 +11,7 @@ internal sealed class FakeFileSystem : IFileSystem
     private readonly Dictionary<string, FileEntry> _files = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _directories = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _symlinks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _openReadFailures = new(StringComparer.OrdinalIgnoreCase);
 
     public void AddDirectory(string path)
     {
@@ -161,10 +162,28 @@ internal sealed class FakeFileSystem : IFileSystem
         return _files[NormalizePath(path)].Content;
     }
 
+    /// <summary>
+    /// Lässt die nächsten <paramref name="times"/> Lesezugriffe auf <paramref name="path"/>
+    /// mit einem E/A-Fehler scheitern. Bildet die kurzzeitige Sperre nach, die entsteht,
+    /// wenn ein anderes Programm die Datei gerade schreibt — der Indexer muss das durch
+    /// Wiederholen überbrücken statt die Datei zu verlieren.
+    /// </summary>
+    public void FailOpenRead(string path, int times)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        _openReadFailures[NormalizePath(path)] = times;
+    }
+
     public Stream OpenRead(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return new MemoryStream(_files[NormalizePath(path)].Content, writable: false);
+        string normalized = NormalizePath(path);
+        if (_openReadFailures.TryGetValue(normalized, out int verbleibend) && verbleibend > 0)
+        {
+            _openReadFailures[normalized] = verbleibend - 1;
+            throw new IOException($"Datei ist belegt: {path}");
+        }
+        return new MemoryStream(_files[normalized].Content, writable: false);
     }
 
     public DateTime GetLastWriteTimeUtc(string path)

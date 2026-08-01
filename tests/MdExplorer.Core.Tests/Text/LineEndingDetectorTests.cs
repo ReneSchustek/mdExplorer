@@ -26,7 +26,7 @@ public sealed class LineEndingDetectorTests
     }
 
     [Fact]
-    public void Detect_OhneZeilenumbruch_ReturnsDefault()
+    public void Detect_WithoutLineBreak_ReturnsDefault()
     {
         LineEndingStyle result = LineEndingDetector.Detect("kein umbruch");
         Assert.Equal(LineEndingDetector.Default, result);
@@ -40,14 +40,14 @@ public sealed class LineEndingDetectorTests
     }
 
     [Fact]
-    public void Normalize_CrlfNachLf_TauschtAlleUmbrueche()
+    public void Normalize_CrlfToLf_ReplacesAllLineBreaks()
     {
         string normalized = LineEndingDetector.Normalize("a\r\nb\r\nc", LineEndingStyle.Lf);
         Assert.Equal("a\nb\nc", normalized);
     }
 
     [Fact]
-    public void Normalize_LfNachCrlf_TauschtAlleUmbrueche()
+    public void Normalize_LfToCrlf_ReplacesAllLineBreaks()
     {
         string normalized = LineEndingDetector.Normalize("a\nb\nc", LineEndingStyle.Crlf);
         Assert.Equal("a\r\nb\r\nc", normalized);
@@ -57,7 +57,7 @@ public sealed class LineEndingDetectorTests
     [InlineData(LineEndingStyle.Crlf, "\r\n")]
     [InlineData(LineEndingStyle.Lf, "\n")]
     [InlineData(LineEndingStyle.Cr, "\r")]
-    public void ToToken_LiefertErwarteteTokens(LineEndingStyle style, string expected)
+    public void ToToken_ReturnsExpectedTokens(LineEndingStyle style, string expected)
     {
         Assert.Equal(expected, LineEndingDetector.ToToken(style));
     }
