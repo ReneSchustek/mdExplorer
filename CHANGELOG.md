@@ -7,6 +7,22 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.13.0] - 2026-08-01
+
+Diese Fassung enthält keine Änderung am Funktionsumfang. Sie markiert den
+Abschluss der Qualitätssicherung.
+
+### Geändert
+- Die Testabdeckung liegt jetzt bei 95 Prozent statt bei 86. Abgesichert sind
+  vor allem die Wege, die im Betrieb still fehlschlagen: abgebrochene
+  Ladevorgänge, eine kurzzeitig belegte Datenbank, gesperrte oder inzwischen
+  gelöschte Dateien sowie eine nicht schreibbare Einstellungsdatei. In all
+  diesen Fällen bleibt der zuletzt angezeigte Stand stehen, statt zu leeren.
+- Der periodische Abgleich des Indexers und das Wiederholen beim Lesen sind
+  jetzt durch Tests abgesichert. Beide sorgen dafür, dass eine Datei auch dann
+  im Bestand landet, wenn die Dateisystem-Überwachung ihr Entstehen nicht
+  gemeldet hat — etwa bei einem zwischenzeitlich getrennten Netzlaufwerk.
+
 ## [0.12.1] - 2026-08-01
 
 ### Behoben
@@ -71,7 +87,8 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.12.1...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.13.0
 [0.12.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.12.1
 [0.12.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.12.0
 [0.11.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.11.0
