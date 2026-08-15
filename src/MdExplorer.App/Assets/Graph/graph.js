@@ -14,6 +14,24 @@
     const NODE_RADIUS_BASE = 5;
     const NODE_RADIUS_SCALE = 4;
 
+    // Die Zeichenfläche kennt kein CSS — sie bekommt jede Farbe als Wert übergeben.
+    // Deshalb werden die Variablen des Stylesheets einmal ausgelesen; so steht die
+    // Belegung an einer Stelle und gilt für Fläche, Kanten, Knoten und Beschriftung.
+    function readPalette() {
+        const style = getComputedStyle(document.documentElement);
+        function value(name, fallback) {
+            const read = style.getPropertyValue(name).trim();
+            return read.length > 0 ? read : fallback;
+        }
+        return {
+            canvas: value("--graph-canvas", "#ffffff"),
+            edge: value("--graph-edge", "rgba(90, 100, 120, 0.45)"),
+            node: value("--graph-node", "#2f6fa8"),
+            nodeOutline: value("--graph-node-outline", "#ffffff"),
+            label: value("--graph-label", "#1c1c1c"),
+        };
+    }
+
     function render(payload) {
         const canvas = document.getElementById("graph");
         const ctx = canvas.getContext("2d");
@@ -37,6 +55,7 @@
 
         legendCount.textContent = nodes.length + " Knoten / " + edges.length + " Kanten";
 
+        const palette = readPalette();
         const view = { scale: 1, translateX: 0, translateY: 0 };
         let dragNode = null;
         let lastPointer = null;
@@ -44,6 +63,10 @@
         function resize() {
             canvas.width = canvas.clientWidth;
             canvas.height = canvas.clientHeight;
+            // Das Setzen der Größe leert die Fläche. Solange die Simulation läuft, füllt sie
+            // der nächste Durchlauf wieder — danach nicht mehr: Wer das Fenster später
+            // vergrößerte, sah einen leeren Graphen. Deshalb hier neu zeichnen.
+            draw();
         }
         resize();
         window.addEventListener("resize", resize);
@@ -110,13 +133,13 @@
         }
 
         function draw() {
-            ctx.fillStyle = "#1e1e1e";
+            ctx.fillStyle = palette.canvas;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.save();
             ctx.translate(view.translateX, view.translateY);
             ctx.scale(view.scale, view.scale);
 
-            ctx.strokeStyle = "rgba(180, 180, 200, 0.4)";
+            ctx.strokeStyle = palette.edge;
             ctx.lineWidth = 1 / view.scale;
             for (let i = 0; i < edges.length; i++) {
                 const edge = edges[i];
@@ -131,14 +154,14 @@
                 const r = nodeRadius(n);
                 ctx.beginPath();
                 ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
-                ctx.fillStyle = "#5aa9e6";
+                ctx.fillStyle = palette.node;
                 ctx.fill();
-                ctx.strokeStyle = "#1e1e1e";
+                ctx.strokeStyle = palette.nodeOutline;
                 ctx.lineWidth = 1.5 / view.scale;
                 ctx.stroke();
             }
 
-            ctx.fillStyle = "#e6e6e6";
+            ctx.fillStyle = palette.label;
             ctx.font = (10 / view.scale) + "px 'Segoe UI', sans-serif";
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];

@@ -11,12 +11,17 @@ namespace MdExplorer.App.ViewModels.Help;
 internal sealed class AboutViewModel
 {
     /// <summary>Erzeugt das ViewModel und füllt es mit den aktuellen Werten.</summary>
-    public AboutViewModel(IAboutInfoProvider provider)
+    public AboutViewModel(IAboutInfoProvider provider, TimeProvider timeProvider)
     {
         ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(timeProvider);
         AboutInfo info = provider.Read();
         Version = info.Version;
-        BuildDateDisplay = info.BuildDateUtc.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture);
+
+        // Gespeichert wird in UTC, gezeigt wird die Uhr des Rechners: Der Dialog soll
+        // sich mit dem Datum im Explorer vergleichen lassen, nicht mit Greenwich.
+        DateTime buildDateLocal = TimeZoneInfo.ConvertTimeFromUtc(info.BuildDateUtc, timeProvider.LocalTimeZone);
+        BuildDateDisplay = buildDateLocal.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
         Libraries = info.Libraries;
         DonationUrl = SupportDonation.PayPalUrl;
         IsDonationVisible = SupportDonation.IsConfigured;

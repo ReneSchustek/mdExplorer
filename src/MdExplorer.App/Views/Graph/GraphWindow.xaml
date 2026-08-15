@@ -15,7 +15,7 @@
         WindowStartupLocation="CenterOwner"
         d:DataContext="{d:DesignInstance Type=vm:GraphViewModel}">
     <DockPanel LastChildFill="True">
-        <Border DockPanel.Dock="Top" BorderBrush="#FFD0D7DE" BorderThickness="0,0,0,1" Padding="8,6">
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="8,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -33,7 +33,7 @@
                          ToolTip="Optionaler Pfad-Filter (relativ zum Root, Trennzeichen / oder \). Leer = alle Pfade." />
             </Grid>
         </Border>
-        <Border DockPanel.Dock="Bottom" BorderBrush="#FFD0D7DE" BorderThickness="0,1,0,0" Padding="8,4">
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="8,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -57,13 +57,13 @@
         </Border>
         <Grid>
             <wv2:WebView2 x:Name="GraphView" />
-            <Border Background="#FFFFFFFF"
+            <Border Background="{DynamicResource SurfaceBrush}"
                     Opacity="0.92"
                     Padding="24"
                     CornerRadius="6"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Center"
-                    BorderBrush="#FFD0D7DE"
+                    BorderBrush="{DynamicResource DividerBrush}"
                     BorderThickness="1"
                     MaxWidth="520">
                 <Border.Style>
@@ -82,7 +82,7 @@
                                Margin="0,0,0,8"
                                Text="Noch keine Graph-Daten verfügbar" />
                     <TextBlock TextWrapping="Wrap"
-                               Foreground="#FF4B5563"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                Text="Mögliche Ursachen: der Indexer ist gerade noch dabei, deine Workspaces einzulesen, oder die Markdown-Dateien enthalten noch keine [[WikiLinks]]. Schließe das Fenster nicht — der Klick auf „Neu laden“ aktualisiert die Anzeige." />
                 </StackPanel>
             </Border>

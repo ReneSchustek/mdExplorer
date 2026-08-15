@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows;
+using MdExplorer.App.Services;
 using MdExplorer.App.Services.Help;
 using MdExplorer.App.ViewModels.Graph;
 using MdExplorer.Core;
@@ -26,6 +27,7 @@ internal sealed partial class GraphWindow : Window
     private const string JsPlaceholder = "__INLINE_JS__";
     private const string JsonPlaceholder = "__GRAPH_JSON__";
     private const string NoncePlaceholder = "__SCRIPT_NONCE__";
+    private const string ThemePlaceholder = "__THEME__";
     private const int NonceByteLength = 16;
     private const string SnapshotFileName = "graph-snapshot.html";
 
@@ -33,17 +35,23 @@ internal sealed partial class GraphWindow : Window
 
     private readonly GraphViewModel _viewModel;
     private readonly IHelpContextProvider _helpContextProvider;
+    private readonly IEffectiveThemeProvider _themeProvider;
     private readonly string _snapshotFilePath;
     private bool _isInitialized;
 
     /// <summary>Erzeugt das Fenster und verdrahtet das ViewModel.</summary>
-    public GraphWindow(GraphViewModel viewModel, IHelpContextProvider helpContextProvider)
+    public GraphWindow(
+        GraphViewModel viewModel,
+        IHelpContextProvider helpContextProvider,
+        IEffectiveThemeProvider themeProvider)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         ArgumentNullException.ThrowIfNull(helpContextProvider);
+        ArgumentNullException.ThrowIfNull(themeProvider);
         InitializeComponent();
         _viewModel = viewModel;
         _helpContextProvider = helpContextProvider;
+        _themeProvider = themeProvider;
         _snapshotFilePath = Path.Combine(AppPaths.GetApplicationDataDirectory(), "webview2", SnapshotFileName);
         DataContext = viewModel;
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -52,7 +60,11 @@ internal sealed partial class GraphWindow : Window
         Closed += OnWindowClosed;
     }
 
-    internal static string BuildHtml(string snapshotJson)
+    /// <summary>
+    /// Baut das Dokument für die Zeichenfläche. Die Belegung wird als Kennzeichen am
+    /// Wurzelelement mitgegeben — die Farben stehen im Stylesheet, nicht im Zeichencode.
+    /// </summary>
+    internal static string BuildHtml(string snapshotJson, bool isDarkMode)
     {
         ArgumentNullException.ThrowIfNull(snapshotJson);
         string htmlTemplate = ReadEmbeddedResource("graph.html");
@@ -65,6 +77,7 @@ internal sealed partial class GraphWindow : Window
             .Replace(CssPlaceholder, css, StringComparison.Ordinal)
             .Replace(JsPlaceholder, js, StringComparison.Ordinal)
             .Replace(NoncePlaceholder, nonce, StringComparison.Ordinal)
+            .Replace(ThemePlaceholder, isDarkMode ? "dark" : "light", StringComparison.Ordinal)
             .Replace(JsonPlaceholder, snapshotJson, StringComparison.Ordinal);
     }
 
@@ -111,7 +124,7 @@ internal sealed partial class GraphWindow : Window
         {
             return;
         }
-        string html = BuildHtml(json);
+        string html = BuildHtml(json, _themeProvider.IsDarkMode);
         string? directory = Path.GetDirectoryName(_snapshotFilePath);
         if (!string.IsNullOrEmpty(directory))
         {

@@ -16,7 +16,7 @@
         WindowStartupLocation="Manual"
         d:DataContext="{d:DesignInstance Type=vm:HelpViewModel}">
     <DockPanel LastChildFill="True">
-        <Border DockPanel.Dock="Top" Padding="8,6" BorderThickness="0,0,0,1" BorderBrush="#FFD0D7DE">
+        <Border DockPanel.Dock="Top" Padding="8,6" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource DividerBrush}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -33,7 +33,7 @@
                            Grid.Column="1"
                            Margin="10,0"
                            VerticalAlignment="Center"
-                           Foreground="#FF57606A"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            Text="0 / 0" />
                 <Button Grid.Column="2"
                         Content="◀"
@@ -59,7 +59,7 @@
                      BorderThickness="0"
                      SelectionChanged="OnTocSelectionChanged"
                      DisplayMemberPath="Title" />
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="#FFE5E7EB" />
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="{DynamicResource SplitterBrush}" />
             <wv2:WebView2 x:Name="HelpView" Grid.Column="2" />
         </Grid>
     </DockPanel>

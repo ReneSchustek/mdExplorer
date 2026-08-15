@@ -1,10 +1,40 @@
+/*
+    Die Farben stehen als Variablen, nicht als feste Werte im Zeichencode: Das Fenster
+    zeigte sonst unabhängig vom Erscheinungsbild eine dunkle Fläche — im hellen Bild ein
+    schwarzes Loch neben lauter weißen Flächen. Die helle Belegung steht am Wurzelelement,
+    die dunkle wird gesetzt, wenn die Anwendung sie meldet.
+*/
+:root {
+    --graph-canvas: #ffffff;
+    --graph-label: #1c1c1c;
+    --graph-edge: rgba(90, 100, 120, 0.45);
+    --graph-node: #2f6fa8;
+    --graph-node-outline: #ffffff;
+    --graph-overlay: rgba(255, 255, 255, 0.85);
+    --graph-overlay-text: #1c1c1c;
+    --graph-tooltip: rgba(30, 30, 30, 0.9);
+    --graph-tooltip-text: #f5f5f5;
+}
+
+:root[data-theme="dark"] {
+    --graph-canvas: #1e1e1e;
+    --graph-label: #e6e6e6;
+    --graph-edge: rgba(180, 180, 200, 0.4);
+    --graph-node: #5aa9e6;
+    --graph-node-outline: #1e1e1e;
+    --graph-overlay: rgba(0, 0, 0, 0.5);
+    --graph-overlay-text: #e6e6e6;
+    --graph-tooltip: rgba(0, 0, 0, 0.85);
+    --graph-tooltip-text: #ffffff;
+}
+
 html, body {
     margin: 0;
     padding: 0;
     height: 100%;
     overflow: hidden;
-    background: #1e1e1e;
-    color: #e6e6e6;
+    background: var(--graph-canvas);
+    color: var(--graph-label);
     font-family: "Segoe UI", system-ui, sans-serif;
     font-size: 12px;
 }
@@ -25,7 +55,8 @@ canvas:active {
     top: 8px;
     left: 12px;
     padding: 4px 10px;
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--graph-overlay);
+    color: var(--graph-overlay-text);
     border-radius: 4px;
     pointer-events: none;
 }
@@ -33,8 +64,8 @@ canvas:active {
 #tooltip {
     position: absolute;
     padding: 6px 10px;
-    background: rgba(0, 0, 0, 0.85);
-    color: #fff;
+    background: var(--graph-tooltip);
+    color: var(--graph-tooltip-text);
     border-radius: 4px;
     pointer-events: none;
     display: none;

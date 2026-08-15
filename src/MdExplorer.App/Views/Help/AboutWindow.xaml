@@ -17,11 +17,11 @@
     <DockPanel LastChildFill="True" Margin="16">
         <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="MdExplorer" FontSize="22" FontWeight="SemiBold" />
-            <TextBlock Margin="0,2,0,0" Foreground="#FF57606A">
+            <TextBlock Margin="0,2,0,0" Foreground="{DynamicResource TextSecondaryBrush}">
                 <Run Text="Version " />
                 <Run Text="{Binding Version, Mode=OneWay}" FontWeight="SemiBold" />
             </TextBlock>
-            <TextBlock Margin="0,2,0,12" Foreground="#FF57606A">
+            <TextBlock Margin="0,2,0,12" Foreground="{DynamicResource TextSecondaryBrush}">
                 <Run Text="Build " />
                 <Run Text="{Binding BuildDateDisplay, Mode=OneWay}" />
             </TextBlock>
@@ -37,7 +37,7 @@
                     Visibility="{Binding IsDonationVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
             <Separator Margin="0,0,0,8" />
             <TextBlock Text="Gefällt dir MdExplorer? Über einen Kaffee freue ich mich – ganz freiwillig."
-                       Foreground="#FF57606A"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"
                        TextAlignment="Center" />
             <Button Content="☕ Kaffee spendieren"

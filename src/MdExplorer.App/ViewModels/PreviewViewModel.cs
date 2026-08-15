@@ -19,14 +19,15 @@ namespace MdExplorer.App.ViewModels;
 /// </summary>
 internal sealed partial class PreviewViewModel : ObservableObject
 {
-    private const string EmptyPreviewHtml = "<!doctype html><html><body></body></html>";
-
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly PreviewHtmlBuilder _htmlBuilder;
     private readonly ILogger<PreviewViewModel> _logger;
 
+    /// <summary>Der zuletzt angezeigte Inhalt — Grundlage für einen Neuaufbau.</summary>
+    private string _body = string.Empty;
+
     [ObservableProperty]
-    private string _html = EmptyPreviewHtml;
+    private string _html;
 
     [ObservableProperty]
     private Guid? _currentDocumentId;
@@ -44,6 +45,22 @@ internal sealed partial class PreviewViewModel : ObservableObject
         _scopeFactory = scopeFactory;
         _htmlBuilder = htmlBuilder;
         _logger = logger;
+        // Auch die leere Vorschau trägt die Farben des Erscheinungsbilds. Vorher stand hier
+        // ein blankes HTML-Gerüst — im Dunkeln eine weiße Fläche über die halbe Anwendung.
+        _html = htmlBuilder.BuildEmpty();
+    }
+
+    /// <summary>
+    /// Baut die Anzeige mit der geltenden Belegung neu auf.
+    /// </summary>
+    /// <remarks>
+    /// Der Wechsel des Erscheinungsbilds tauscht die Wörterbücher der Oberfläche; die
+    /// Vorschau ist aber ein fertiges HTML-Dokument und bliebe sonst in der alten Belegung
+    /// stehen, bis das Dokument erneut geladen wird.
+    /// </remarks>
+    public void RebuildForTheme()
+    {
+        Html = _htmlBuilder.Build(_body);
     }
 
     /// <summary>
@@ -61,7 +78,8 @@ internal sealed partial class PreviewViewModel : ObservableObject
     {
         if (markdownFileId == Guid.Empty)
         {
-            Html = EmptyPreviewHtml;
+            _body = string.Empty;
+            Html = _htmlBuilder.BuildEmpty();
             CurrentDocumentId = null;
             return;
         }
@@ -79,6 +97,7 @@ internal sealed partial class PreviewViewModel : ObservableObject
         {
             // SQLite-Spitze beim Preview-Lookup — leeres Dokument anzeigen.
             LogPreviewLoadFailed(_logger, markdownFileId, exception);
+            _body = string.Empty;
             Html = _htmlBuilder.BuildEmpty();
             CurrentDocumentId = markdownFileId;
             return;
@@ -87,13 +106,14 @@ internal sealed partial class PreviewViewModel : ObservableObject
         if (document is null)
         {
             LogDocumentMissing(_logger, markdownFileId);
+            _body = string.Empty;
             Html = _htmlBuilder.BuildEmpty();
             CurrentDocumentId = markdownFileId;
             return;
         }
 
-        string body = DecompressHtml(document.RenderedHtmlGz);
-        Html = _htmlBuilder.Build(body);
+        _body = DecompressHtml(document.RenderedHtmlGz);
+        Html = _htmlBuilder.Build(_body);
         CurrentDocumentId = markdownFileId;
     }
 

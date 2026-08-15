@@ -108,7 +108,7 @@
                                 <Style TargetType="TextBlock">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsMarkdownFile}" Value="True">
-                                            <Setter Property="Foreground" Value="#FF1F2937" />
+                                            <Setter Property="Foreground" Value="{DynamicResource StateNeutralBrush}" />
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding IsMarkdownFile}" Value="False">
                                             <Setter Property="FontWeight" Value="SemiBold" />

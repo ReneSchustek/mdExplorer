@@ -14,7 +14,7 @@
         WindowStartupLocation="CenterOwner"
         d:DataContext="{d:DesignInstance Type=vm:LogViewerViewModel}">
     <DockPanel LastChildFill="True">
-        <Border DockPanel.Dock="Top" BorderBrush="#FFD0D7DE" BorderThickness="0,0,0,1" Padding="8">
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -48,7 +48,7 @@
                 </StackPanel>
             </Grid>
         </Border>
-        <Border DockPanel.Dock="Bottom" BorderBrush="#FFD0D7DE" BorderThickness="0,1,0,0" Padding="8,4">
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="8,4">
             <TextBlock>
                 <Run Text="Sichtbare Einträge: " />
                 <Run Text="{Binding VisibleCount, Mode=OneWay}" FontWeight="SemiBold" />

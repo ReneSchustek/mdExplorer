@@ -22,8 +22,8 @@
          Hintergrund und saß auf der früheren dunklen Fläche als helle Kachel auf.
          Auf Weiß verschwindet der Rahmen, und es wirkt als eigenes Zeichen. -->
     <Border CornerRadius="12"
-            Background="#FFFFFFFF"
-            BorderBrush="#FF105776"
+            Background="{StaticResource BrandSurfaceBrush}"
+            BorderBrush="{StaticResource BrandPrimaryBrush}"
             BorderThickness="1">
         <Grid Margin="24">
             <Grid.RowDefinitions>
@@ -44,21 +44,21 @@
                        Text="MdExplorer"
                        FontSize="22"
                        FontWeight="SemiBold"
-                       Foreground="#FF105776"
+                       Foreground="{StaticResource BrandPrimaryBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,16,0,0" />
 
             <TextBlock Grid.Row="2"
                        Text="{Binding VersionText}"
                        FontSize="11"
-                       Foreground="#FF6B7C88"
+                       Foreground="{StaticResource BrandMutedBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,4,0,0" />
 
             <TextBlock Grid.Row="3"
                        Text="{Binding StatusText}"
                        FontSize="12"
-                       Foreground="#FF44636F"
+                       Foreground="{StaticResource BrandMutedBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,16,0,0" />
         </Grid>

@@ -90,6 +90,59 @@ public sealed partial class GraphService : IGraphService
         return new GraphSnapshot(nodes, filteredEdges, originalNodeCount, originalEdgeCount);
     }
 
+    /// <inheritdoc />
+    public async Task<DocumentRelations> GetRelationsAsync(Guid markdownFileId, CancellationToken cancellationToken)
+    {
+        if (markdownFileId == Guid.Empty)
+        {
+            return DocumentRelations.Empty;
+        }
+
+        GraphSourceData source = await _sourceProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
+        if (source.Files.Count == 0)
+        {
+            return DocumentRelations.Empty;
+        }
+
+        Dictionary<string, Guid> slugIndex = BuildSlugIndex(source.Files);
+        List<GraphEdge> edges = BuildAllEdges(source.Documents, slugIndex, cancellationToken);
+        Dictionary<Guid, GraphSourceFile> filesById = source.Files.ToDictionary(file => file.Id);
+
+        List<RelatedDocument> outgoing = RelatedFrom(edges, filesById, markdownFileId, incoming: false);
+        List<RelatedDocument> incoming = RelatedFrom(edges, filesById, markdownFileId, incoming: true);
+
+        return new DocumentRelations(outgoing, incoming);
+    }
+
+    /// <summary>
+    /// Sammelt die Gegenstellen eines Knotens in einer Richtung.
+    /// </summary>
+    /// <remarks>
+    /// Doppelte Verweise auf dasselbe Ziel zählen einmal: Wer eine Datei dreimal im Text
+    /// erwähnt, hat sie einmal verknüpft. Sortiert nach Pfad, damit die Reihenfolge nicht von
+    /// der Reihenfolge im Text abhängt.
+    /// </remarks>
+    private static List<RelatedDocument> RelatedFrom(
+        List<GraphEdge> edges,
+        Dictionary<Guid, GraphSourceFile> filesById,
+        Guid markdownFileId,
+        bool incoming)
+    {
+        IEnumerable<Guid> partners = edges
+            .Where(edge => (incoming ? edge.TargetId : edge.SourceId) == markdownFileId)
+            .Select(edge => incoming ? edge.SourceId : edge.TargetId)
+            .Distinct();
+
+        return
+        [
+            .. partners
+                .Where(filesById.ContainsKey)
+                .Select(id => filesById[id])
+                .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
+                .Select(file => new RelatedDocument(file.Id, file.FileNameWithoutExtension, file.RelativePath))
+        ];
+    }
+
     /// <summary>Behält nur Kanten, deren beide Endpunkte in <paramref name="retainedIds"/> liegen.</summary>
     private static List<GraphEdge> FilterEdges(List<GraphEdge> edges, HashSet<Guid> retainedIds) =>
         edges.Where(edge => retainedIds.Contains(edge.SourceId) && retainedIds.Contains(edge.TargetId)).ToList();

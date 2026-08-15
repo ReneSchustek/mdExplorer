@@ -26,6 +26,9 @@ internal sealed partial class MainWindow : Window
 {
     private const double DefaultTagCloudColumnWidth = 260.0;
     private const double DefaultTagCloudSplitterWidth = 6.0;
+
+    /// <summary>Schmalste sinnvolle Breite der Tag-Cloud, solange sie sichtbar ist.</summary>
+    private const double DefaultTagCloudMinWidth = 180.0;
     private const int SearchTabIndex = 2;
 
     private readonly MainViewModel _viewModel;
@@ -311,6 +314,10 @@ internal sealed partial class MainWindow : Window
         TagCloudColumn.Width = visible
             ? new GridLength(_restoredTagCloudColumnWidth, GridUnitType.Pixel)
             : new GridLength(0.0);
+        // Die Mindestbreite schlägt die Breite: Ohne diese Zeile bleibt die Spalte trotz
+        // Breite 0 stehen — beim Ausblenden blieb ein 180 px breiter leerer Streifen am
+        // rechten Rand, der im dunklen Erscheinungsbild hell aufleuchtete.
+        TagCloudColumn.MinWidth = visible ? DefaultTagCloudMinWidth : 0.0;
         TagCloudSplitter.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         TagCloudHost.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }

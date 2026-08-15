@@ -1,0 +1,132 @@
+<!--
+    Helle Belegung der Gestaltungslinie. Die Farbwerte stammen aus der Marke und nicht
+    aus diesem Projekt — wer sie ändert, ändert sie zuerst dort.
+
+    Light.xaml und Dark.xaml führen denselben Satz Schlüssel, nur mit anderen Farben.
+    Nur so lässt sich das Erscheinungsbild zur Laufzeit tauschen, ohne dass eine Bindung
+    ins Leere greift. Wer hier einen Schlüssel ergänzt, ergänzt ihn auch in Dark.xaml —
+    ein Test hält das fest.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ── Flächen ──────────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="AppBackgroundBrush"      Color="#F5F5F5" />
+    <SolidColorBrush x:Key="SurfaceBrush"            Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SurfaceElevatedBrush"    Color="#EBEBEB" />
+    <SolidColorBrush x:Key="SurfaceHoverBrush"       Color="#E4E4E4" />
+
+    <!-- ── Text ─────────────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="TextPrimaryBrush"        Color="#1A1A1A" />
+    <SolidColorBrush x:Key="TextSecondaryBrush"      Color="#5A5A5A" />
+    <SolidColorBrush x:Key="TextTertiaryBrush"       Color="#8A8A8A" />
+    <SolidColorBrush x:Key="TextDisabledBrush"       Color="#B4B4B4" />
+
+    <!--
+        Text auf einer Primärfläche. Eigener Schlüssel, weil er mit der Belegung kippt:
+        Im Hellen ist die Primärfläche dunkel und trägt weiße Schrift, im Dunklen ist sie
+        hell und trägt dunkle. Ein gemeinsamer „Invers"-Wert ergäbe dort Weiß auf Hellgrau.
+    -->
+    <SolidColorBrush x:Key="TextOnAccentBrush"       Color="#FFFFFF" />
+
+    <!-- ── Akzent (Marke: Petrol des Logos) ─────────────────────────────── -->
+    <SolidColorBrush x:Key="AccentPrimaryBrush"         Color="#105776" />
+    <SolidColorBrush x:Key="AccentPrimaryHoverBrush"    Color="#166F96" />
+    <SolidColorBrush x:Key="AccentPrimaryPressedBrush"  Color="#0B3D53" />
+    <SolidColorBrush x:Key="AccentPrimaryDisabledBrush" Color="#A8B8C2" />
+    <SolidColorBrush x:Key="AccentSoftBrush"            Color="#2D7FA8" />
+
+    <!-- ── Schaltflächen ────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="ButtonBackgroundBrush"         Color="#105776" />
+    <SolidColorBrush x:Key="ButtonBackgroundHoverBrush"    Color="#166F96" />
+    <SolidColorBrush x:Key="ButtonBackgroundPressedBrush"  Color="#0B3D53" />
+    <SolidColorBrush x:Key="ButtonBackgroundDisabledBrush" Color="#E0E0E0" />
+    <SolidColorBrush x:Key="ButtonForegroundBrush"         Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ButtonForegroundDisabledBrush" Color="#9A9A9A" />
+
+    <!-- Zweitrangige Schaltflächen: Umriss statt Fläche, damit auf einer Seite klar
+         bleibt, welche Aktion die vorgesehene ist. -->
+    <SolidColorBrush x:Key="ButtonSecondaryBackgroundBrush"      Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ButtonSecondaryBackgroundHoverBrush" Color="#EBEBEB" />
+    <SolidColorBrush x:Key="ButtonSecondaryForegroundBrush"      Color="#1A1A1A" />
+    <SolidColorBrush x:Key="ButtonSecondaryBorderBrush"          Color="#D0D7DE" />
+
+    <!-- ── Karten und Kacheln ───────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="CardBackgroundBrush"      Color="#FFFFFF" />
+    <SolidColorBrush x:Key="CardBackgroundHoverBrush" Color="#F2F2F2" />
+    <SolidColorBrush x:Key="CardBorderBrush"          Color="#D0D7DE" />
+    <SolidColorBrush x:Key="CardBorderHoverBrush"     Color="#105776" />
+
+    <!-- ── Werkzeug- und Statusleiste ───────────────────────────────────── -->
+    <SolidColorBrush x:Key="ToolBarBackgroundBrush"   Color="#F6F8FA" />
+    <SolidColorBrush x:Key="StatusBarBackgroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="StatusBarForegroundBrush" Color="#5A5A5A" />
+    <SolidColorBrush x:Key="StatusBarErrorBrush"      Color="#96332F" />
+
+    <!-- ── Eingabefelder ────────────────────────────────────────────────── -->
+    <SolidColorBrush x:Key="InputBackgroundBrush"         Color="#FFFFFF" />
+    <SolidColorBrush x:Key="InputBackgroundHoverBrush"    Color="#FAFAFA" />
+    <SolidColorBrush x:Key="InputBackgroundFocusBrush"    Color="#FFFFFF" />
+    <SolidColorBrush x:Key="InputBackgroundDisabledBrush" Color="#EBEBEB" />
+    <SolidColorBrush x:Key="InputBorderBrush"             Color="#8A8A8A" />
+    <SolidColorBrush x:Key="InputBorderHoverBrush"        Color="#A8A8A8" />
+    <SolidColorBrush x:Key="InputBorderFocusBrush"        Color="#105776" />
+
+    <!-- ── Auswahl, Linien, Fokus ───────────────────────────────────────── -->
+    <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="#EDF1F7" />
+    <SolidColorBrush x:Key="SelectionBorderBrush"     Color="#105776" />
+    <SolidColorBrush x:Key="DividerBrush"             Color="#D0D7DE" />
+    <SolidColorBrush x:Key="SplitterBrush"            Color="#E5E7EB" />
+    <SolidColorBrush x:Key="FocusVisualBrush"         Color="#2D7FA8" />
+
+    <!-- ── Hinweise ─────────────────────────────────────────────────────── -->
+    <!--
+        Fläche, Rand und Text sind getrennt, weil der Text auf der Fläche lesbar bleiben
+        muss. Die Farbe allein trägt die Aussage nie — daneben steht immer ein Wort oder
+        ein Zeichen.
+    -->
+    <SolidColorBrush x:Key="NoticeWarningBackgroundBrush" Color="#FFF8E1" />
+    <SolidColorBrush x:Key="NoticeWarningBorderBrush"     Color="#FFE082" />
+    <SolidColorBrush x:Key="NoticeWarningForegroundBrush" Color="#8A5A17" />
+
+    <SolidColorBrush x:Key="NoticeInfoBackgroundBrush"    Color="#EFF6FF" />
+    <SolidColorBrush x:Key="NoticeInfoBorderBrush"        Color="#BFDBFE" />
+    <SolidColorBrush x:Key="NoticeInfoForegroundBrush"    Color="#1D4ED8" />
+
+    <!-- ── Zustände (Protokoll, Indizierung) ────────────────────────────── -->
+    <!-- Gedeckt gehalten, damit sie neben dem Petrol der Marke nicht schreien. -->
+    <SolidColorBrush x:Key="StateSuccessBrush" Color="#2C6B3F" />
+    <SolidColorBrush x:Key="StateWarningBrush" Color="#8A5A17" />
+    <SolidColorBrush x:Key="StateErrorBrush"   Color="#96332F" />
+    <SolidColorBrush x:Key="StateNeutralBrush" Color="#1F2937" />
+
+    <!-- ── Treffer und Auszeichnungen ───────────────────────────────────── -->
+    <SolidColorBrush x:Key="SearchHighlightBackgroundBrush" Color="#FFF3C4" />
+    <SolidColorBrush x:Key="SearchHighlightForegroundBrush" Color="#1A1A1A" />
+    <SolidColorBrush x:Key="TagBackgroundBrush"             Color="#EDF1F7" />
+    <SolidColorBrush x:Key="TagForegroundBrush"             Color="#44636F" />
+    <SolidColorBrush x:Key="TagBorderBrush"                 Color="#B8C2D9" />
+
+
+    <!--
+        Die Fläche des Aufklappmenüs kommt aus den Systemfarben: WPF zeichnet es in einem
+        eigenen Fenster und fragt dort nicht den Style des Eintrags. Ohne diese Werte stand
+        im dunklen Erscheinungsbild helle Schrift auf weißem Grund.
+    -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBarBrushKey}" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlLightBrushKey}" Color="#E0E0E0" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#1A1A1A" />
+
+
+    <!--
+        Auch die Auswahl in Baum und Liste kommt aus den Systemfarben: Das mitgelieferte
+        Muster zeichnet sie im Blau des Systems, nicht in der Farbe der Anwendung.
+    -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#D6E4EC" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#1A1A1A" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#EBEBEB" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#1A1A1A" />
+
+</ResourceDictionary>

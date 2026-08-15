@@ -30,6 +30,10 @@ public sealed class MainViewModelTests
 {
     private static readonly DateTime FixedUtc = new(2026, 6, 12, 8, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>Zone der Prüfung: zwei Stunden vor UTC, ohne Sommerzeitsprünge.</summary>
+    private static readonly TimeZoneInfo TestZone =
+        TimeZoneInfo.CreateCustomTimeZone("MdExplorer-TestZone", TimeSpan.FromHours(2), "TestZone", "TestZone");
+
     [Fact]
     public void Construction_SubscribesToChildEvents()
     {
@@ -114,6 +118,23 @@ public sealed class MainViewModelTests
     }
 
     [Fact]
+    public void LastIndexerRun_IsShownInTheLocalTimeZone()
+    {
+        // In der Statusleiste stand bisher UTC. Wer nachsieht, wann zuletzt indiziert
+        // wurde, vergleicht das aber mit seiner eigenen Uhr.
+        using TestHarness harness = new();
+        List<string> changed = [];
+        harness.Main.PropertyChanged += (_, args) => changed.Add(args.PropertyName ?? string.Empty);
+        Assert.Null(harness.Main.LastIndexerRun);
+
+        harness.Indexer.RaiseProgress("F:/root-a", 3, isCompleted: true);
+
+        Assert.Equal(TimeZoneInfo.ConvertTimeFromUtc(FixedUtc, TestZone), harness.Main.LastIndexerRun);
+        Assert.NotEqual(harness.Main.LastIndexerRunUtc, harness.Main.LastIndexerRun);
+        Assert.Contains(nameof(MainViewModel.LastIndexerRun), changed, StringComparer.Ordinal);
+    }
+
+    [Fact]
     public void OnHealthChanged_PropagatesToObservableProperties_OverDispatcher()
     {
         using TestHarness harness = new();
@@ -167,13 +188,13 @@ public sealed class MainViewModelTests
             .AddScoped<IMarkdownDocumentRepository>(_ => harness.DocRepo)
             .BuildServiceProvider(validateScopes: true);
         FolderTreeViewModel folderTree = new(harness.SettingsService, harness.FileSystem);
-        AllFilesViewModel allFiles = new(freshProvider.GetRequiredService<IServiceScopeFactory>(), NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel allFiles = new(freshProvider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
         SearchViewModel search = new(freshProvider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, harness.Messenger, NullLogger<SearchViewModel>.Instance);
         TagCloudViewModel tagCloud = new(harness.TagStats, harness.Messenger, MicrosoftOptions.Create(new TagCloudOptions()), NullLogger<TagCloudViewModel>.Instance);
         PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false));
         PreviewViewModel preview = new(freshProvider.GetRequiredService<IServiceScopeFactory>(), builder, NullLogger<PreviewViewModel>.Instance);
         MarkdownEditorViewModel editor = new(harness.FileSystem, new TagExtractor(harness.SettingsService), TimeProvider.System, NullLogger<MarkdownEditorViewModel>.Instance);
-        DocumentPanelViewModel documentPanel = new(preview, editor, harness.Parser, builder, harness.Locator, harness.FileSystem, NullLogger<DocumentPanelViewModel>.Instance);
+        DocumentPanelViewModel documentPanel = new(preview, editor, NoRelations(), harness.Parser, builder, harness.Locator, harness.FileSystem, NullLogger<DocumentPanelViewModel>.Instance);
         using MainViewModel restored = new(folderTree, allFiles, search, documentPanel, tagCloud, harness.Locator, harness.SettingsStore, harness.HealthProvider, harness.UiDispatcher, harness.Indexer, harness.Messenger, harness.FixedTime, NullLogger<MainViewModel>.Instance);
 
         Assert.Equal(2, restored.LeftTabIndex);
@@ -303,7 +324,7 @@ public sealed class MainViewModelTests
         harness.DocRepo.Put(fileId, CreateDocument(fileId, "<h1>Bericht</h1>"));
 
         harness.AllFiles.SelectedItem = new AllFilesItemViewModel(
-            new AllFilesRow(fileId, "Bericht", @"notizen\bericht.md", Pfad, FixedUtc, []));
+            new AllFilesRow(fileId, "Bericht", @"notizen\bericht.md", Pfad, FixedUtc, []), TimeZoneInfo.Utc);
 
         Assert.True(
             await WaitForAsync(() => harness.Preview.CurrentDocumentId == fileId).ConfigureAwait(true),
@@ -320,7 +341,7 @@ public sealed class MainViewModelTests
         harness.FileSystem.Files[Pfad] = Encoding.UTF8.GetBytes("# Ganz neu");
 
         harness.AllFiles.SelectedItem = new AllFilesItemViewModel(
-            new AllFilesRow(Guid.NewGuid(), "Ganz neu", @"notizen\ganz-neu.md", Pfad, FixedUtc, []));
+            new AllFilesRow(Guid.NewGuid(), "Ganz neu", @"notizen\ganz-neu.md", Pfad, FixedUtc, []), TimeZoneInfo.Utc);
 
         Assert.True(
             await WaitForAsync(() => harness.Locator.AbsolutePathCallCount > 0).ConfigureAwait(true),
@@ -334,7 +355,7 @@ public sealed class MainViewModelTests
         harness.Locator.FailOnAbsolutePath = new TestDbException("Datenbank belegt");
 
         harness.AllFiles.SelectedItem = new AllFilesItemViewModel(
-            new AllFilesRow(Guid.NewGuid(), "Bericht", @"notizen\b.md", @"C:\notizen\b.md", FixedUtc, []));
+            new AllFilesRow(Guid.NewGuid(), "Bericht", @"notizen\b.md", @"C:\notizen\b.md", FixedUtc, []), TimeZoneInfo.Utc);
 
         Assert.True(
             await WaitForAsync(() => harness.Locator.AbsolutePathCallCount > 0).ConfigureAwait(true),
@@ -418,6 +439,7 @@ public sealed class MainViewModelTests
             FolderTree = new FolderTreeViewModel(SettingsService, FileSystem);
             AllFiles = new AllFilesViewModel(
                 Provider.GetRequiredService<IServiceScopeFactory>(),
+                TimeProvider.System,
                 NullLogger<AllFilesViewModel>.Instance);
             Search = new SearchViewModel(
                 Provider.GetRequiredService<IServiceScopeFactory>(),
@@ -442,6 +464,7 @@ public sealed class MainViewModelTests
             DocumentPanel = new DocumentPanelViewModel(
                 Preview,
                 Editor,
+                NoRelations(),
                 Parser,
                 builder,
                 Locator,
@@ -526,6 +549,12 @@ public sealed class MainViewModelTests
     {
         private DateTimeOffset _now = new(DateTime.SpecifyKind(initialUtc, DateTimeKind.Utc), TimeSpan.Zero);
 
+        /// <summary>
+        /// Feste Zone statt der des Prüfrechners — sonst hinge das Ergebnis davon ab,
+        /// wo die Suite läuft.
+        /// </summary>
+        public override TimeZoneInfo LocalTimeZone => TestZone;
+
         public override DateTimeOffset GetUtcNow() => _now;
 
         public void Advance(TimeSpan delta) => _now = _now.Add(delta);
@@ -594,5 +623,20 @@ public sealed class MainViewModelTests
             SettingsChanged?.Invoke(this, new SettingsChangedEventArgs(previous, settings));
             return Task.CompletedTask;
         }
+    }
+
+    /// <summary>
+    /// Ein Zusammenhangs-Bereich ohne Datenquelle: Diese Tests prüfen die Verdrahtung der
+    /// Spalten, nicht die Verbindungen eines Dokuments — die haben eigene Tests.
+    /// </summary>
+    private static DocumentRelationsViewModel NoRelations()
+    {
+        ServiceCollection services = new();
+        ServiceProvider provider = services.BuildServiceProvider();
+        return new DocumentRelationsViewModel(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            new StubDocumentFileService(),
+            new FakeDialogService(),
+            NullLogger<DocumentRelationsViewModel>.Instance);
     }
 }

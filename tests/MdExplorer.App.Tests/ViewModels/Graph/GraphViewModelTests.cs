@@ -136,5 +136,9 @@ public sealed class GraphViewModelTests : IDisposable
                 ? Task.FromException<GraphSnapshot>(Failure)
                 : Task.FromResult(Snapshot);
         }
+
+        /// <summary>Für diese Tests ohne Belang — das Bild kennt keine Einzelverbindungen.</summary>
+        public Task<DocumentRelations> GetRelationsAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
+            Task.FromResult(DocumentRelations.Empty);
     }
 }

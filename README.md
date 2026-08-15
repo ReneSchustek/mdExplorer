@@ -8,6 +8,24 @@ Windows-Desktop-Werkzeug (WPF / .NET 10) zum Erkunden und Verarbeiten
 von Markdown-Beständen. Drei-Panel-UI mit Datei-Browser, Volltext-Suche
 und HTML-Vorschau auf Basis von WebView2.
 
+## Oberfläche
+
+Volltextsuche mit Trefferstellen und Vorschau:
+
+![Suche über den gesamten Bestand](docs/screenshots/suche.png)
+
+Alle Dateien mit Kennzeichnung, Zeitraum-Filter und Änderungsdatum:
+
+![Liste aller Dateien](docs/screenshots/dateiliste.png)
+
+Verweise zwischen den Notizen als Graph:
+
+![Graph der Verweise](docs/screenshots/graph.png)
+
+Kennzeichnungen umbenennen, zusammenführen oder löschen:
+
+![Verwaltung der Kennzeichnungen](docs/screenshots/tag-verwaltung.png)
+
 ## Voraussetzungen
 
 - .NET 10 SDK
@@ -98,6 +116,11 @@ Dialog mit drei Tabs:
 Speichern erfolgt atomar (`.tmp` + `File.Move`). Detailliertes Schema
 und Beispiele: [`docs/SETTINGS.md`](docs/SETTINGS.md).
 
+Die Wahl unter **Darstellung** gilt für die gesamte Anwendung, auch für
+die Dokument-Vorschau: Wer „Dunkel" wählt, während Windows hell steht,
+bekommt eine durchgehend dunkle Oberfläche. Der Wechsel wirkt sofort,
+ohne Neustart.
+
 ### Folder-Tree und Indexierung pausieren
 
 Im Tab „Ordner" zeigt das Folder-Tree die konfigurierten Index-Wurzeln.
@@ -150,6 +173,43 @@ ohne Haken (Default) wird global über alle Index-Wurzeln gesucht; mit
 Haken werden die Treffer auf den im Ordnerbaum gewählten Pfad und
 dessen Unterordner beschränkt. Die Wurzel selbst zu wählen hebt die
 Einschränkung wieder auf. Umschalten löst die Suche sofort neu aus.
+
+Bleibt die Trefferliste leer, benennt sie den Grund: „Noch nichts
+gesucht" vor der ersten Eingabe, „Nichts gefunden" bei einer Anfrage
+ohne Treffer und „Die Suche ist gescheitert", wenn die Abfrage selbst
+fehlgeschlagen ist. Die drei Lagen sehen gleich aus und brauchen
+verschiedene Antworten.
+
+### Alle Dateien — Suchfeld, Filter und Sprungleiste
+
+Der Tab „Alle Dateien" filtert beim Tippen über Titel, Pfad und
+Kennzeichnungen; `Escape` leert das Feld. Über die Umschalter „Alle",
+„Heute", „7 Tage" und „30 Tage" lässt sich nach der letzten Änderung
+einschränken. Ein Klick auf den Pfad eines Eintrags schränkt auf
+dessen Ordner ein, ein Klick auf eine Kennzeichnung auf diese; mehrere
+Einschränkungen wirken zusammen. Jede aktive Einschränkung steht als
+Merkzettel über der Liste und ist dort einzeln abnehmbar.
+
+Nach Titel oder Pfad sortiert erscheint ab 50 sichtbaren Einträgen die
+Sprungleiste `A B C … Z #`. Sie rollt zur jeweiligen Gruppe, ohne zu
+filtern; Buchstaben ohne Einträge bleiben stehen und sind abgeblendet.
+Die Liste ist nach denselben Buchstaben sichtbar gruppiert. Nach Datum
+sortiert entfallen Gruppen und Leiste.
+
+### Zusammenhänge am Dokument
+
+Unter dem geöffneten Dokument steht, was daran hängt: auf welche Dokumente
+es verweist, welche auf **es** verweisen, in welchem Ordner es liegt und
+welche Kennzeichnungen es trägt. Jeder Eintrag führt weiter — ein
+verwandtes Dokument wird geöffnet, Ordner und Kennzeichnung führen in die
+Suche mit der passenden Einschränkung.
+
+Im selben Bereich lässt sich die Datei **umbenennen, verschieben und
+löschen**, ohne den Zusammenhang zu verlassen. Vor dem Löschen und vor
+einer Umbenennung, die Verweise bricht, nennt die Rückfrage die Folgen:
+wie viele Dokumente danach ins Leere zeigen. Ein Verschieben lässt die
+Verweise unberührt, weil ein WikiLink auf den Dateinamen zeigt und nicht
+auf den Pfad — dort wird deshalb nicht gefragt.
 
 ### Markdown-Editor
 

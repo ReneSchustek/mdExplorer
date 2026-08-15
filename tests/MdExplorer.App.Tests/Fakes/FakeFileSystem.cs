@@ -54,4 +54,36 @@ internal sealed class FakeFileSystem : IFileSystem
         WrittenFiles[path] = content.ToArray();
         return Task.CompletedTask;
     }
+
+    /// <summary>Wenn gesetzt, wirft <see cref="MoveFile"/> diese Ausnahme.</summary>
+    public Exception? FailOnMove { get; set; }
+
+    /// <summary>Pfade, die über <see cref="DeleteFile"/> entfernt wurden.</summary>
+    public List<string> DeletedFiles { get; } = [];
+
+    /// <inheritdoc />
+    public void MoveFile(string sourcePath, string destinationPath)
+    {
+        if (FailOnMove is not null)
+        {
+            throw FailOnMove;
+        }
+        if (Files.ContainsKey(destinationPath))
+        {
+            throw new IOException($"Ziel existiert bereits: {destinationPath}");
+        }
+        if (!Files.TryGetValue(sourcePath, out byte[]? content))
+        {
+            throw new FileNotFoundException("Quelle fehlt", sourcePath);
+        }
+        Files[destinationPath] = content;
+        _ = Files.Remove(sourcePath);
+    }
+
+    /// <inheritdoc />
+    public void DeleteFile(string path)
+    {
+        DeletedFiles.Add(path);
+        _ = Files.Remove(path);
+    }
 }

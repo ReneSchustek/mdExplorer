@@ -143,6 +143,32 @@ public sealed class LocalFileSystem : IFileSystem
         }
     }
 
+    /// <inheritdoc />
+    public void MoveFile(string sourcePath, string destinationPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+
+        string? targetDirectory = Path.GetDirectoryName(destinationPath);
+        if (!string.IsNullOrEmpty(targetDirectory))
+        {
+            _ = Directory.CreateDirectory(targetDirectory);
+        }
+
+        // overwrite: false — ein vorhandenes Ziel wirft, statt eine fremde Datei zu verschlucken.
+        File.Move(sourcePath, destinationPath, overwrite: false);
+    }
+
+    /// <inheritdoc />
+    public void DeleteFile(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        // File.Delete schweigt bei einer fehlenden Datei bereits — das ist hier das gewünschte
+        // Verhalten: Wer löschen will, was schon weg ist, hat sein Ziel erreicht.
+        File.Delete(path);
+    }
+
     private static async Task WriteContentAsync(string tempPath, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
     {
         FileStreamOptions options = new()

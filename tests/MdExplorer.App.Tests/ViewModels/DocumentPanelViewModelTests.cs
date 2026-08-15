@@ -186,6 +186,7 @@ public sealed class DocumentPanelViewModelTests
         return new DocumentPanelViewModel(
             preview,
             editor,
+            NoRelations(),
             parser,
             builder,
             locator,
@@ -227,6 +228,21 @@ public sealed class DocumentPanelViewModelTests
     }
 
     private static byte[] GzipBytes(string text) => Gzip(text);
+
+    /// <summary>
+    /// Ein Zusammenhangs-Bereich ohne Datenquelle — diese Tests prüfen den Ladeweg des
+    /// Dokuments, nicht seine Verbindungen. Die haben eigene Tests.
+    /// </summary>
+    private static DocumentRelationsViewModel NoRelations()
+    {
+        ServiceCollection services = new();
+        ServiceProvider provider = services.BuildServiceProvider();
+        return new DocumentRelationsViewModel(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            new StubDocumentFileService(),
+            new FakeDialogService(),
+            NullLogger<DocumentRelationsViewModel>.Instance);
+    }
 
     private sealed class FakeDocumentLocator : IDocumentLocator
     {

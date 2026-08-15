@@ -1,0 +1,34 @@
+<UserControl x:Class="MdExplorer.App.Controls.EmptyState"
+             x:ClassModifier="internal"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        Leerzustand der Linie. Er trennt zwei Lagen, die gleich aussehen und verschiedene
+        Ursachen haben: „hier ist noch nichts" und „die Suche findet nichts". Wer beides
+        gleich beschriftet, schickt den Nutzer in die falsche Richtung — im zweiten Fall
+        gehört eine Schaltfläche zum Zurücksetzen daneben.
+    -->
+    <Border Padding="{StaticResource PagePadding}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Headline, ElementName=Root}"
+                       HorizontalAlignment="Center"
+                       FontSize="{StaticResource FontSizeSubtitle}"
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
+
+            <TextBlock Text="{Binding Hint, ElementName=Root}"
+                       HorizontalAlignment="Center"
+                       Margin="{StaticResource StackGapS}"
+                       TextWrapping="Wrap"
+                       MaxWidth="360"
+                       TextAlignment="Center"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <Button Content="{Binding ResetLabel, ElementName=Root}"
+                    HorizontalAlignment="Center"
+                    Margin="0,8,0,0"
+                    Command="{Binding ResetCommand, ElementName=Root}"
+                    Visibility="{Binding ShowsReset, ElementName=Root, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+    </Border>
+</UserControl>

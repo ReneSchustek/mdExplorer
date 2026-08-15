@@ -27,6 +27,13 @@ internal sealed class FakeDialogService : IDialogService
     /// <inheritdoc />
     public void ShowError(string title, string message) => LastError = (title, message);
 
+    /// <summary>Der Text der letzten Rückfrage — dort steht, was der Nutzer erfahren hat.</summary>
+    public string LastConfirmMessage { get; private set; } = string.Empty;
+
     /// <inheritdoc />
-    public bool Confirm(string title, string message) => ConfirmResult;
+    public bool Confirm(string title, string message)
+    {
+        LastConfirmMessage = message;
+        return ConfirmResult;
+    }
 }

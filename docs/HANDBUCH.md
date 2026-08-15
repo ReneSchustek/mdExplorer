@@ -118,6 +118,29 @@ demgegenüber eine flache Liste aller indizierten Dateien ohne Baum-
 Struktur; das hilft, wenn man weiß, wonach man sucht, sich aber den
 genauen Ablageort nicht merken möchte.
 
+Diese Liste bringt drei Hilfen mit. Das **Suchfeld** darüber filtert
+beim Tippen über Titel, Pfad und Kennzeichnungen; `Escape` leert es.
+Darunter stehen die **Zeitraum-Umschalter** „Alle", „Heute", „7 Tage"
+und „30 Tage", die auf die letzte Änderung sehen. Ein Klick auf den
+Pfad eines Eintrags schränkt auf dessen **Ordner** ein, ein Klick auf
+eine Kennzeichnung auf diese **Kennzeichnung**; mehrere davon wirken
+zusammen. Jeder gesetzte Filter erscheint als Merkzettel über der
+Liste und lässt sich dort einzeln wieder abnehmen — ein Filter, der
+wirkt, aber nicht zu sehen ist, sieht aus wie ein leerer Bestand.
+
+Ist die Liste nach Titel oder Pfad sortiert und lang genug, erscheint
+zusätzlich die **Sprungleiste** `A B C … Z #`. Sie springt, sie
+filtert nicht: Ein Klick auf „M" rollt zur Gruppe M, der übrige
+Bestand bleibt sichtbar. Buchstaben ohne Einträge bleiben stehen und
+sind abgeblendet. Die Liste ist nach denselben Buchstaben sichtbar
+gruppiert; nach Datum sortiert entfallen Gruppen und Leiste, weil ein
+Sprung auf „M" dann an beliebiger Stelle landen würde.
+
+Bleibt die Liste leer, sagt sie, warum: „Noch nichts indiziert" bei
+leerem Bestand, „Nichts gefunden" bei zu enger Suche — dort mit einer
+Schaltfläche, die Suche und Filter zurücknimmt — und „Die Liste konnte
+nicht geladen werden", wenn der Abruf gescheitert ist.
+
 Die **mittlere Spalte** ist die Trefferliste der Suche. Solange das
 Suchfeld leer ist, listet sie alle Dateien, die der aktive linke
 Reiter beisteuert — eingeschränkt auf eine konfigurierbare Treffer-
@@ -137,6 +160,16 @@ umbenennen; `Strg+S` speichert die Änderungen atomar zurück in die
 Datei. Wer eine Datei extern verändert während sie im Bearbeiten-
 Modus offen ist, bekommt vor dem Speichern eine Warnung und kann den
 Konflikt manuell auflösen.
+
+Unter dem Dokument steht der Bereich **Zusammenhänge**. Er zeigt, worauf
+das Dokument verweist, welche Dokumente auf es verweisen, in welchem
+Ordner es liegt und welche Kennzeichnungen es trägt; jeder Eintrag führt
+weiter. Dort wird die Datei auch **umbenannt, verschoben oder gelöscht** —
+im Zusammenhang, nicht in einer getrennten Verwaltungsseite. Vor dem
+Löschen und vor einer Umbenennung, die Verweise bricht, nennt die
+Rückfrage vorher, wie viele Dokumente danach ins Leere zeigen. Beim
+Verschieben entfällt die Rückfrage, weil ein WikiLink auf den Dateinamen
+zeigt und nicht auf den Pfad.
 
 Die **optionale vierte Spalte** ist die Tag-Cloud. Über das Menü
 „Ansicht → Tag-Cloud" lässt sie sich ein- und ausblenden. Sie zeigt

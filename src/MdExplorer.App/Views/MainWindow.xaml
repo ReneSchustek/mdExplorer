@@ -42,8 +42,8 @@
             </MenuItem>
         </Menu>
         <Border DockPanel.Dock="Top"
-                Background="#FFFFF8E1"
-                BorderBrush="#FFFFE082"
+                Background="{DynamicResource NoticeWarningBackgroundBrush}"
+                BorderBrush="{DynamicResource NoticeWarningBorderBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="12,6"
                 Visibility="{Binding IsUpdateAvailable, Converter={StaticResource BoolToVisibility}}">
@@ -71,7 +71,7 @@
                         Command="{Binding DismissUpdateCommand}" />
             </Grid>
         </Border>
-        <Border DockPanel.Dock="Bottom" BorderBrush="#FFD0D7DE" BorderThickness="0,1,0,0" Padding="8,4">
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="8,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -89,13 +89,13 @@
                          ToolTip="{Binding HealthDetail, Mode=OneWay}">
                     <Ellipse.Style>
                         <Style TargetType="Ellipse">
-                            <Setter Property="Fill" Value="#FF22C55E" />
+                            <Setter Property="Fill" Value="{DynamicResource StateSuccessBrush}" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Health}" Value="Warning">
-                                    <Setter Property="Fill" Value="#FFFACC15" />
+                                    <Setter Property="Fill" Value="{DynamicResource StateWarningBrush}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Health}" Value="Error">
-                                    <Setter Property="Fill" Value="#FFEF4444" />
+                                    <Setter Property="Fill" Value="{DynamicResource StateErrorBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -107,10 +107,10 @@
                 </TextBlock>
                 <TextBlock Grid.Column="2"
                            HorizontalAlignment="Center"
-                           Text="{Binding LastIndexerRunUtc, Mode=OneWay, StringFormat='Letzter Indexer-Lauf: {0:yyyy-MM-dd HH:mm} UTC', TargetNullValue='Letzter Indexer-Lauf: —'}" />
+                           Text="{Binding LastIndexerRun, Mode=OneWay, StringFormat='Letzter Indexer-Lauf: {0:yyyy-MM-dd HH:mm}', TargetNullValue='Letzter Indexer-Lauf: —'}" />
                 <TextBlock Grid.Column="3"
                            Text="{Binding StorageLocation, Mode=OneWay}"
-                           Foreground="#FF6C7086" />
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
             </Grid>
         </Border>
         <Grid>
@@ -137,9 +137,9 @@
                     <panels:SearchPanel x:Name="SearchPanelControl" DataContext="{Binding Search}" />
                 </TabItem>
             </TabControl>
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="#FFE5E7EB" />
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="{DynamicResource SplitterBrush}" />
             <ContentControl x:Name="DocumentHost" Grid.Column="2" DataContext="{Binding DocumentPanel}" />
-            <GridSplitter x:Name="TagCloudSplitter" Grid.Column="3" Width="6" HorizontalAlignment="Stretch" Background="#FFE5E7EB" />
+            <GridSplitter x:Name="TagCloudSplitter" Grid.Column="3" Width="6" HorizontalAlignment="Stretch" Background="{DynamicResource SplitterBrush}" />
             <ContentControl x:Name="TagCloudHost" Grid.Column="4" DataContext="{Binding TagCloud}" />
         </Grid>
     </DockPanel>

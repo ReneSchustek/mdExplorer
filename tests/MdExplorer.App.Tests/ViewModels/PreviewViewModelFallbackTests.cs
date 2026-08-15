@@ -34,7 +34,10 @@ public sealed class PreviewViewModelFallbackTests
         await sut.LoadAsync(Guid.Empty, CancellationToken.None).ConfigureAwait(true);
 
         Assert.Null(sut.CurrentDocumentId);
-        Assert.DoesNotContain("Content-Security-Policy", sut.Html, StringComparison.Ordinal);
+        // Auch ohne Inhalt trägt die Anzeige die Belegung: Ein blankes HTML-Gerüst stand im
+        // dunklen Erscheinungsbild als weiße Fläche über der halben Anwendung.
+        Assert.Contains("Content-Security-Policy", sut.Html, StringComparison.Ordinal);
+        Assert.Contains("<body></body>", sut.Html, StringComparison.Ordinal);
     }
 
     [Fact]

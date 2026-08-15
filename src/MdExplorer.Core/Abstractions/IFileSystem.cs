@@ -64,4 +64,20 @@ public interface IFileSystem
     /// <param name="content">Roher Inhalt, der geschrieben werden soll.</param>
     /// <param name="cancellationToken">Token für kooperativen Abbruch.</param>
     Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Verschiebt eine Datei; das Zielverzeichnis wird bei Bedarf angelegt.
+    /// </summary>
+    /// <remarks>
+    /// Überschreibt <b>nicht</b>: Ein vorhandenes Ziel ist ein Fehler und keine stille
+    /// Ersetzung — sonst verschwindet beim Umbenennen eine fremde Datei, und niemand erfährt
+    /// davon. Umbenennen und Verschieben sind derselbe Vorgang, nur mit anderem Zielpfad.
+    /// </remarks>
+    /// <param name="sourcePath">Bisheriger Pfad.</param>
+    /// <param name="destinationPath">Künftiger Pfad.</param>
+    void MoveFile(string sourcePath, string destinationPath);
+
+    /// <summary>Löscht eine Datei. Eine bereits fehlende Datei ist kein Fehler.</summary>
+    /// <param name="path">Pfad der Datei.</param>
+    void DeleteFile(string path);
 }

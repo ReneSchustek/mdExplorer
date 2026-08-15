@@ -25,16 +25,10 @@ internal sealed class PreviewHtmlBuilder
 
     private readonly Lazy<string> _lightCss;
     private readonly Lazy<string> _darkCss;
-    private readonly ISystemThemeProvider _themeProvider;
-
-    /// <summary>Standard-Konstruktor: verwendet das Windows-Systemtheme.</summary>
-    public PreviewHtmlBuilder()
-        : this(new SystemThemeProvider())
-    {
-    }
+    private readonly IEffectiveThemeProvider _themeProvider;
 
     /// <summary>Konstruktor mit injizierbarem Theme-Provider — für Tests.</summary>
-    public PreviewHtmlBuilder(ISystemThemeProvider themeProvider)
+    public PreviewHtmlBuilder(IEffectiveThemeProvider themeProvider)
     {
         ArgumentNullException.ThrowIfNull(themeProvider);
         _themeProvider = themeProvider;

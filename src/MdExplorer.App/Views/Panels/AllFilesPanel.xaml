@@ -3,80 +3,231 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:MdExplorer.App.ViewModels"
+             xmlns:controls="clr-namespace:MdExplorer.App.Controls"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              d:DataContext="{d:DesignInstance Type=vm:AllFilesViewModel}"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
     <DockPanel LastChildFill="True">
+        <!--
+            Die Anordnung der Linie, von oben nach unten: Suchfeld, Filter, Sprungleiste,
+            dann der Inhalt. Wer sie umstellt, nimmt die Wiedererkennung weg, um die es geht.
+        -->
         <Grid DockPanel.Dock="Top" Margin="8,8,8,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBox x:Name="SearchTextBox"
-                     Grid.Column="0"
-                     Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Padding="4"
-                     ToolTip="Filtert Titel, Pfad und Tags (case-insensitive Teilstring)." />
+            <controls:SearchBox Grid.Column="0"
+                                Text="{Binding SearchText, Mode=TwoWay}"
+                                Placeholder="Titel, Pfad und Kennzeichnungen durchsuchen" />
             <ComboBox Grid.Column="1"
                       Margin="6,0,0,0"
-                      Padding="4"
                       SelectedValue="{Binding SortMode, Mode=TwoWay}"
                       SelectedValuePath="Tag"
-                      Width="140">
+                      Width="140"
+                      AutomationProperties.Name="Sortierung">
                 <ComboBoxItem Content="Zuletzt geändert" Tag="{x:Static vm:AllFilesSortMode.LastModified}" />
                 <ComboBoxItem Content="Titel A→Z" Tag="{x:Static vm:AllFilesSortMode.Title}" />
                 <ComboBoxItem Content="Pfad A→Z" Tag="{x:Static vm:AllFilesSortMode.RelativePath}" />
             </ComboBox>
         </Grid>
+
+        <!--
+            Zeitraum als Chips zum Umschalten statt als Aufklappliste: Was gewählt ist, sieht
+            man ohne zu klicken. Der gewählte Zeitraum ist zusätzlich fett — nie allein über
+            die Farbe erkennbar.
+        -->
+        <ItemsControl DockPanel.Dock="Top"
+                      Margin="8,0,8,4"
+                      ItemsSource="{Binding PeriodFilters}"
+                      AutomationProperties.Name="Änderungszeitraum">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <ToggleButton Content="{Binding Label}"
+                                  IsChecked="{Binding IsActive, Mode=OneWay}"
+                                  Command="{Binding DataContext.SelectPeriodCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                  CommandParameter="{Binding Period}"
+                                  Margin="0,0,4,0"
+                                  AutomationProperties.Name="{Binding Label}" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!--
+            Aktive Filter bleiben sichtbar und einzeln entfernbar. Ein Filter, der wirkt, aber
+            nicht zu sehen ist, erzeugt den Eindruck fehlender Daten — und man sucht den
+            Fehler in den Daten.
+        -->
+        <ItemsControl DockPanel.Dock="Top"
+                      Margin="8,0,8,4"
+                      ItemsSource="{Binding ActiveFilters}"
+                      AutomationProperties.Name="Aktive Filter">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{DynamicResource SelectionBackgroundBrush}"
+                            BorderBrush="{DynamicResource SelectionBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{StaticResource BadgeCornerRadius}"
+                            Padding="6,1"
+                            Margin="0,0,4,2">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Label}"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       FontSize="{StaticResource FontSizeCaption}" />
+                            <Button Content="✕"
+                                    Margin="4,0,0,0"
+                                    Padding="2,0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    FontSize="{StaticResource FontSizeCaption}"
+                                    Command="{Binding DataContext.RemoveFilterCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip="{Binding RemoveHint}"
+                                    AutomationProperties.Name="{Binding RemoveHint}" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <controls:AlphabetJumpBar DockPanel.Dock="Top"
+                                  Margin="8,0,8,4"
+                                  Letters="{Binding JumpLetters}"
+                                  JumpCommand="{Binding JumpToLetterCommand}"
+                                  Visibility="{Binding IsJumpBarVisible, Converter={StaticResource BoolToVisibility}}" />
+
         <Border DockPanel.Dock="Top" Padding="8,0,8,4">
-            <TextBlock Foreground="#FF6C7086" FontSize="11">
+            <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="{StaticResource FontSizeCaption}">
                 <Run Text="Einträge: " />
                 <Run Text="{Binding Items.Count, Mode=OneWay}" FontWeight="SemiBold" />
             </TextBlock>
         </Border>
-        <ListBox ItemsSource="{Binding Items}"
-                 SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                 BorderThickness="0"
-                 VirtualizingStackPanel.IsVirtualizing="True"
-                 VirtualizingStackPanel.VirtualizationMode="Recycling"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-            <ListBox.ItemContainerStyle>
-                <Style TargetType="ListBoxItem">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                </Style>
-            </ListBox.ItemContainerStyle>
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Margin="4">
-                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding RelativePath}" Foreground="#FF6C7086" FontSize="11" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding LastWriteTimeUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm} UTC'}"
-                                   Foreground="#FF9CA3AF"
-                                   FontSize="10" />
-                        <ItemsControl ItemsSource="{Binding TagSlugs}" Margin="0,4,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#FFEFF6FF"
-                                            BorderBrush="#FFBFDBFE"
-                                            BorderThickness="1"
-                                            CornerRadius="3"
-                                            Padding="4,1"
-                                            Margin="0,0,4,2">
-                                        <TextBlock Text="{Binding}" FontSize="10" Foreground="#FF1D4ED8" />
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+
+        <!--
+            Liste und Leerzustand liegen übereinander: Die Liste ist im Leerfall ohnehin leer,
+            und der Leerzustand sagt, welche der beiden Lagen vorliegt.
+        -->
+        <Grid>
+            <ListBox x:Name="ItemsList"
+                     ItemsSource="{Binding Items}"
+                     SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                     BorderThickness="0"
+                     VirtualizingStackPanel.IsVirtualizing="True"
+                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <!--
+                                    Ohne sichtbare Gruppen führt ein Sprung ins Nichts. Nach Datum
+                                    sortiert bleibt die Beschriftung leer — dann darf auch kein
+                                    Kopf erscheinen, sonst steht dort eine leere Zeile je Eintrag.
+                                -->
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource SectionHeadingStyle}" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="GroupItem">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Name}" Value="">
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="GroupItem">
+                                                    <ItemsPresenter />
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </GroupStyle.ContainerStyle>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="4">
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <!-- Der Pfad ist zugleich der Weg in den Ordner-Filter: ein Klick engt ein. -->
+                            <Button Content="{Binding RelativePath}"
+                                    HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Left"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="0"
+                                    Foreground="{DynamicResource TextSecondaryBrush}"
+                                    FontSize="{StaticResource FontSizeCaption}"
+                                    Command="{Binding DataContext.FilterByFolderCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                    CommandParameter="{Binding FolderPath}"
+                                    ToolTip="{Binding FolderPath, StringFormat='Auf den Ordner {0} einschränken'}"
+                                    AutomationProperties.Name="{Binding FolderPath, StringFormat='Auf den Ordner {0} einschränken'}" />
+                            <TextBlock Text="{Binding LastWriteTime, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                       FontSize="{StaticResource FontSizeCaption}" />
+                            <ItemsControl ItemsSource="{Binding TagSlugs}" Margin="0,4,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- Ebenso die Kennzeichnung: sichtbar, und ein Klick filtert danach. -->
+                                        <Button Background="{DynamicResource NoticeInfoBackgroundBrush}"
+                                                BorderBrush="{DynamicResource NoticeInfoBorderBrush}"
+                                                BorderThickness="1"
+                                                Padding="4,1"
+                                                Margin="0,0,4,2"
+                                                Content="{Binding}"
+                                                Foreground="{DynamicResource NoticeInfoForegroundBrush}"
+                                                FontSize="{StaticResource FontSizeCaption}"
+                                                Command="{Binding DataContext.FilterByTagCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="{Binding StringFormat='Auf die Kennzeichnung {0} einschränken'}"
+                                                AutomationProperties.Name="{Binding StringFormat='Auf die Kennzeichnung {0} einschränken'}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <controls:EmptyState Headline="Noch nichts indiziert"
+                                 Hint="Sobald ein Ordner als Wurzel eingetragen und durchlaufen ist, stehen die Dateien hier."
+                                 Visibility="{Binding ShowsNothingAtAll, Converter={StaticResource BoolToVisibility}}" />
+
+            <controls:EmptyState Headline="Nichts gefunden"
+                                 Hint="Zu dieser Eingabe und den gesetzten Filtern gibt es keinen Eintrag."
+                                 ShowsReset="True"
+                                 ResetLabel="Suche und Filter zurücksetzen"
+                                 ResetCommand="{Binding ResetSearchAndFiltersCommand}"
+                                 Visibility="{Binding ShowsNoMatches, Converter={StaticResource BoolToVisibility}}" />
+
+            <controls:EmptyState Headline="Die Liste konnte nicht geladen werden"
+                                 Hint="Der Bestand ließ sich nicht abrufen. Einzelheiten stehen im Protokoll unter Ansicht → Logs…; ein erneuter Versuch lohnt sich."
+                                 ShowsReset="True"
+                                 ResetLabel="Erneut laden"
+                                 ResetCommand="{Binding RefreshCommand}"
+                                 Visibility="{Binding ShowsLoadFailure, Converter={StaticResource BoolToVisibility}}" />
+        </Grid>
     </DockPanel>
 </UserControl>

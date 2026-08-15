@@ -139,7 +139,7 @@ public sealed class IndexerProgressBridgeTests
         ServiceCollection services = new();
         _ = services.AddScoped(_ => query);
         ServiceProvider provider = services.BuildServiceProvider(validateScopes: true);
-        return new AllFilesViewModel(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<AllFilesViewModel>.Instance);
+        return new AllFilesViewModel(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
     }
 
     private static async Task WaitForIdleAsync(AllFilesViewModel allFiles)

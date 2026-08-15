@@ -37,6 +37,7 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     public DocumentPanelViewModel(
         PreviewViewModel preview,
         MarkdownEditorViewModel editor,
+        DocumentRelationsViewModel relations,
         IMarkdownParser markdownParser,
         PreviewHtmlBuilder htmlBuilder,
         IDocumentLocator documentLocator,
@@ -45,6 +46,7 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     {
         ArgumentNullException.ThrowIfNull(preview);
         ArgumentNullException.ThrowIfNull(editor);
+        ArgumentNullException.ThrowIfNull(relations);
         ArgumentNullException.ThrowIfNull(markdownParser);
         ArgumentNullException.ThrowIfNull(htmlBuilder);
         ArgumentNullException.ThrowIfNull(documentLocator);
@@ -53,6 +55,7 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
 
         Preview = preview;
         Editor = editor;
+        Relations = relations;
         _markdownParser = markdownParser;
         _htmlBuilder = htmlBuilder;
         _documentLocator = documentLocator;
@@ -67,6 +70,9 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
 
     /// <summary>Liefert den Editor im Edit-Modus.</summary>
     public MarkdownEditorViewModel Editor { get; }
+
+    /// <summary>Zeigt, was am geöffneten Dokument hängt.</summary>
+    public DocumentRelationsViewModel Relations { get; }
 
     /// <summary>Wahr, solange das Panel im Lese-Modus ist (Binding-Helfer für Visibility).</summary>
     public bool IsReadMode => Mode == DocumentPanelMode.Read;
@@ -91,6 +97,8 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
                 return;
             }
             await Editor.LoadAsync(markdownFileId, absolutePath, cancellationToken).ConfigureAwait(true);
+            // Erst nach dem Editor: Die Kennzeichnungen stehen im Text, nicht im Graphen.
+            await Relations.LoadAsync(markdownFileId, [.. Editor.Tags], cancellationToken).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {

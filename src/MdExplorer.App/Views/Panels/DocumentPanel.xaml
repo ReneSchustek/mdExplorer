@@ -11,8 +11,14 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </UserControl.Resources>
     <DockPanel LastChildFill="True">
+        <!--
+            Mit eigener Fläche, nicht durchsichtig: Eine Leiste ohne Hintergrund zeigt, was
+            zufällig dahinter liegt — hier der eingebettete Browser, der seine eigene weiße
+            Grundfarbe mitbringt und sie über die Leiste zog.
+        -->
         <Border DockPanel.Dock="Top"
-                BorderBrush="#FFD0D7DE"
+                Background="{DynamicResource ToolBarBackgroundBrush}"
+                BorderBrush="{DynamicResource DividerBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="6,4">
             <Grid>
@@ -62,14 +68,14 @@
                 <TextBlock Grid.Column="2"
                            Margin="12,0,0,0"
                            VerticalAlignment="Center"
-                           Foreground="#FF6C7086"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
                            Text="{Binding Editor.StatusMessage, Mode=OneWay, FallbackValue=''}"
                            TextTrimming="CharacterEllipsis" />
             </Grid>
         </Border>
         <Border DockPanel.Dock="Top"
                 Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"
-                BorderBrush="#FFE5E7EB"
+                BorderBrush="{DynamicResource DividerBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="6,4">
             <DockPanel LastChildFill="True">
@@ -101,8 +107,8 @@
                         <DataTemplate>
                             <Border Margin="2"
                                     Padding="6,1"
-                                    Background="#FFEDF1F7"
-                                    BorderBrush="#FFB8C2D9"
+                                    Background="{DynamicResource TagBackgroundBrush}"
+                                    BorderBrush="{DynamicResource TagBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="8">
                                 <StackPanel Orientation="Horizontal">
@@ -128,12 +134,13 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Border x:Name="FindBar"
                     Grid.Row="0"
                     Visibility="Collapsed"
-                    Background="#FFF6F8FA"
-                    BorderBrush="#FFD0D7DE"
+                    Background="{DynamicResource ToolBarBackgroundBrush}"
+                    BorderBrush="{DynamicResource DividerBrush}"
                     BorderThickness="0,0,0,1"
                     Padding="6,4">
                 <StackPanel Orientation="Horizontal">
@@ -156,7 +163,7 @@
                     <TextBlock x:Name="FindStatus"
                                VerticalAlignment="Center"
                                Margin="12,0,0,0"
-                               Foreground="#FF6C7086" />
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
                     <Button Margin="12,0,0,0"
                             Padding="6,2"
                             Content="x"
@@ -164,6 +171,154 @@
                             ToolTip="Suche schließen (Esc)" />
                 </StackPanel>
             </Border>
+            <!--
+                Zusammenhänge unter dem Dokument: wohin es verweist, wer auf es verweist, wo
+                es liegt und was es trägt. Jeder Eintrag ist ein Weg — wer eine Zeile liest
+                und danach doch suchen muss, hat nichts gewonnen.
+            -->
+            <Expander Grid.Row="2"
+                      DataContext="{Binding Relations}"
+                      Header="Zusammenhänge"
+                      MaxHeight="220"
+                      Background="{DynamicResource SurfaceBrush}"
+                      BorderBrush="{DynamicResource DividerBrush}"
+                      BorderThickness="0,1,0,0"
+                      Visibility="{Binding HasDocument, Converter={StaticResource BoolToVis}}">
+                <!--
+                    Eigene Fläche, wie die Leiste darüber: Ohne sie scheint der eingebettete
+                    Browser mit seiner weißen Grundfarbe durch, und die helle Schrift steht
+                    auf Weiß.
+                -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              Padding="8,4"
+                              Background="{DynamicResource SurfaceBrush}">
+                    <StackPanel>
+                        <TextBlock Text="Wird ermittelt …"
+                                   Style="{StaticResource SectionHeadingStyle}"
+                                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
+
+                        <TextBlock Text="Dieses Dokument steht für sich — keine Verweise, keine Kennzeichnungen."
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Visibility="{Binding ShowsNothingRelated, Converter={StaticResource BoolToVis}}" />
+
+                        <StackPanel Visibility="{Binding ShowsRelations, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="VERWEIST AUF"
+                                       Style="{StaticResource SectionHeadingStyle}"
+                                       Margin="0,0,0,2"
+                                       Visibility="{Binding HasOutgoing, Converter={StaticResource BoolToVis}}" />
+                            <ItemsControl ItemsSource="{Binding Outgoing}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button HorizontalAlignment="Left"
+                                                HorizontalContentAlignment="Left"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0,1"
+                                                Content="{Binding Title}"
+                                                ToolTip="{Binding RelativePath}"
+                                                Command="{Binding DataContext.OpenRelatedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"
+                                                AutomationProperties.Name="{Binding Title, StringFormat='{}{0} öffnen'}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="VERWIESEN VON"
+                                       Style="{StaticResource SectionHeadingStyle}"
+                                       Margin="0,8,0,2"
+                                       Visibility="{Binding HasIncoming, Converter={StaticResource BoolToVis}}" />
+                            <ItemsControl ItemsSource="{Binding Incoming}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button HorizontalAlignment="Left"
+                                                HorizontalContentAlignment="Left"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="0,1"
+                                                Content="{Binding Title}"
+                                                ToolTip="{Binding RelativePath}"
+                                                Command="{Binding DataContext.OpenRelatedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"
+                                                AutomationProperties.Name="{Binding Title, StringFormat='{}{0} öffnen'}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="ORDNER" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
+                            <Button HorizontalAlignment="Left"
+                                    HorizontalContentAlignment="Left"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="0,1"
+                                    Content="{Binding FolderPath}"
+                                    Command="{Binding ShowFolderCommand}"
+                                    ToolTip="Zeigt, was sonst noch in diesem Ordner liegt"
+                                    AutomationProperties.Name="Ordner anzeigen" />
+
+                            <!--
+                                Bearbeiten geschieht im Zusammenhang: Wer zum Umbenennen erst
+                                in eine Verwaltungsseite wechseln muss, verliert genau den
+                                Zusammenhang, den er vor sich hatte.
+                            -->
+                            <TextBlock Text="DIESE DATEI" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBox Width="180"
+                                         VerticalAlignment="Center"
+                                         Text="{Binding NewName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Neuer Dateiname — die Erweiterung .md wird ergänzt"
+                                         AutomationProperties.Name="Neuer Dateiname">
+                                    <TextBox.InputBindings>
+                                        <KeyBinding Key="Return" Command="{Binding RenameCommand}" />
+                                    </TextBox.InputBindings>
+                                </TextBox>
+                                <Button Margin="4,0,0,0"
+                                        Content="Umbenennen"
+                                        Command="{Binding RenameCommand}"
+                                        ToolTip="Benennt die Datei um; der Ordner bleibt derselbe" />
+                                <Button Margin="4,0,0,0"
+                                        Content="Verschieben …"
+                                        Command="{Binding MoveCommand}"
+                                        ToolTip="Verschiebt die Datei in ein anderes Verzeichnis" />
+                                <Button Margin="4,0,0,0"
+                                        Content="Löschen …"
+                                        Command="{Binding DeleteCommand}"
+                                        ToolTip="Löscht die Datei — die Rückfrage nennt vorher die Folgen" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding OperationMessage}"
+                                       Margin="0,4,0,0"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                            <TextBlock Text="KENNZEICHNUNGEN" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
+                            <ItemsControl ItemsSource="{Binding Tags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Margin="0,0,4,2"
+                                                Padding="4,1"
+                                                Content="{Binding}"
+                                                Background="{DynamicResource TagBackgroundBrush}"
+                                                Foreground="{DynamicResource TagForegroundBrush}"
+                                                BorderBrush="{DynamicResource TagBorderBrush}"
+                                                BorderThickness="1"
+                                                FontSize="{StaticResource FontSizeCaption}"
+                                                Command="{Binding DataContext.ShowTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="{Binding StringFormat='Zeigt, was sonst noch {0} trägt'}"
+                                                AutomationProperties.Name="{Binding StringFormat='Kennzeichnung {0} anzeigen'}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Expander>
+
             <Grid Grid.Row="1">
                 <ContentControl x:Name="PreviewHost"
                                 Visibility="{Binding IsReadMode, Converter={StaticResource BoolToVis}}" />

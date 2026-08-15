@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using MdExplorer.Search.Abstractions;
 using MdExplorer.Search.Models;
@@ -10,6 +11,30 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.ViewModels;
+
+/// <summary>Was die Trefferliste gerade zeigt.</summary>
+/// <remarks>
+/// Vier Lagen, die eine leere Liste alle gleich aussehen lässt: noch nichts eingegeben,
+/// gerade unterwegs, ohne Treffer zurück, oder gescheitert. Ein Zustand statt mehrerer
+/// Merker hält sie auseinander; die Anzeige-Eigenschaften leiten sich hieraus ab.
+/// </remarks>
+internal enum SearchListState
+{
+    /// <summary>Es steht keine Anfrage im Feld.</summary>
+    Idle = 0,
+
+    /// <summary>Eine Anfrage ist gestellt, die Antwort steht aus.</summary>
+    Searching = 1,
+
+    /// <summary>Die Antwort ist da und enthält nichts.</summary>
+    NoMatches = 2,
+
+    /// <summary>Es gibt Treffer.</summary>
+    Results = 3,
+
+    /// <summary>Die Suche selbst ist gescheitert.</summary>
+    Failed = 4,
+}
 
 /// <summary>
 /// ViewModel der mittleren Spalte. Debouncing der Eingabe, asynchrone Suche und
@@ -44,8 +69,9 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     [ObservableProperty]
     private SearchResultItemViewModel? _selectedResult;
 
+    /// <summary>Der Zustand, auf den die Ansicht reagiert — die einzige Quelle dafür.</summary>
     [ObservableProperty]
-    private bool _isSearching;
+    private SearchListState _state = SearchListState.Idle;
 
     [ObservableProperty]
     private SearchMode _mode = SearchMode.Fts5;
@@ -85,8 +111,46 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
         // Thread"), die aus dem RunSearchAsync-Catch herausfällt (NotSupportedException ist
         // keine InvalidOperationException) und die Trefferliste leer bleiben lässt.
         BindingOperations.EnableCollectionSynchronization(Results, _resultsGate);
+        ClearSearchCommand = new RelayCommand(Clear);
         _messenger.RegisterAll(this);
     }
+
+    /// <summary>Leert Eingabe und Trefferliste.</summary>
+    public RelayCommand ClearSearchCommand { get; }
+
+    /// <summary>
+    /// Es wurde noch gar nicht gesucht.
+    /// </summary>
+    /// <remarks>
+    /// Der Fall, den eine Dateiliste nicht kennt: „noch nichts eingegeben" ist etwas anderes
+    /// als „nichts gefunden". Wer beides gleich beschriftet, lässt den Nutzer glauben, sein
+    /// Bestand sei leer.
+    /// </remarks>
+    public bool ShowsNothingSearchedYet => State == SearchListState.Idle;
+
+    /// <summary>Es wurde gesucht, und die Anfrage hat nichts getroffen.</summary>
+    /// <remarks>
+    /// Erst nach einer Antwort, nicht schon beim Tippen: Sonst stünde zwischen Anschlag und
+    /// Ergebnis für einen Wimpernschlag „nichts gefunden" auf dem Schirm.
+    /// </remarks>
+    public bool ShowsNoMatches => State == SearchListState.NoMatches;
+
+    /// <summary>Die Suche selbst ist gescheitert.</summary>
+    /// <remarks>
+    /// Bis hierher endete ein Fehlschlag still im Protokoll, und auf dem Schirm stand
+    /// „nichts gefunden" — dieselbe Aussage wie bei einer Anfrage ohne Treffer, obwohl
+    /// niemand gesucht hat.
+    /// </remarks>
+    public bool ShowsSearchFailure => State == SearchListState.Failed;
+
+    /// <summary>Eine Anfrage ist unterwegs — trägt die Fortschrittsanzeige.</summary>
+    /// <remarks>
+    /// Bewusst abgeleitet und nicht als eigener Merker geführt: Sonst gäbe es zwei Stellen,
+    /// die dasselbe behaupten, und die eine läuft irgendwann der anderen davon. Der Zustand
+    /// beginnt schon mit dem Anschlag, nicht erst mit der Abfrage — die kurze Wartezeit bis
+    /// dahin gehört aus Sicht des Nutzers zur Suche.
+    /// </remarks>
+    public bool IsSearching => State == SearchListState.Searching;
 
     /// <summary>Optionaler Pfad-Prefix-Filter, der vom <see cref="FolderTreeViewModel"/> gespeist wird.</summary>
     public string? PathPrefixFilter { get; set; }
@@ -198,17 +262,37 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
 
     private void ScheduleDebouncedSearch(string queryText)
     {
+        bool isBlank = string.IsNullOrWhiteSpace(queryText);
+
         lock (_gate)
         {
             DisposeTimer();
             CancelInFlight();
-            if (string.IsNullOrWhiteSpace(queryText))
+            if (isBlank)
             {
-                Results.Clear();
-                return;
+                lock (_resultsGate)
+                {
+                    Results.Clear();
+                }
             }
-            _debounceTimer = _timeProvider.CreateTimer(OnDebounceElapsed, queryText, _debounce, Timeout.InfiniteTimeSpan);
+            else
+            {
+                _debounceTimer = _timeProvider.CreateTimer(OnDebounceElapsed, queryText, _debounce, Timeout.InfiniteTimeSpan);
+            }
         }
+
+        // Bewusst außerhalb der Sperre: Ein Empfänger von PropertyChanged darf zurückrufen,
+        // ohne dass daraus ein Verklemmen wird. Und bis die Antwort da ist, wird über die
+        // neue Eingabe nichts behauptet — die vorige Antwort galt der vorigen Anfrage.
+        State = isBlank ? SearchListState.Idle : SearchListState.Searching;
+    }
+
+    partial void OnStateChanged(SearchListState value)
+    {
+        OnPropertyChanged(nameof(ShowsNothingSearchedYet));
+        OnPropertyChanged(nameof(ShowsNoMatches));
+        OnPropertyChanged(nameof(ShowsSearchFailure));
+        OnPropertyChanged(nameof(IsSearching));
     }
 
     private void OnDebounceElapsed(object? state)
@@ -232,7 +316,6 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
 
     private async Task RunSearchAsync(string queryText, CancellationToken cancellationToken)
     {
-        IsSearching = true;
         try
         {
             SearchQuery query = new(queryText, Mode: Mode, Similarity: Similarity);
@@ -250,10 +333,10 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
         catch (InvalidOperationException exception)
         {
             LogSearchFailure(_logger, exception, queryText);
+            State = SearchListState.Failed;
         }
         finally
         {
-            IsSearching = false;
             SearchCompleted?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -287,6 +370,10 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
                 Results.Add(new SearchResultItemViewModel(result));
             }
         }
+
+        // Ab hier steht eine Antwort zur aktuellen Eingabe — erst jetzt darf der Leerzustand
+        // „nichts gefunden" sagen.
+        State = Results.Count == 0 ? SearchListState.NoMatches : SearchListState.Results;
     }
 
     private void DisposeTimer()

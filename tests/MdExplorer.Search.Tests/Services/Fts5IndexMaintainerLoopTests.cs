@@ -492,6 +492,14 @@ public sealed class Fts5IndexMaintainerLoopTests
         public long GetFileSize(string path) => 0;
 
         public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        /// <inheritdoc />
+        public void MoveFile(string sourcePath, string destinationPath) =>
+            throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
+
+        /// <inheritdoc />
+        public void DeleteFile(string path) =>
+            throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
     }
 
     /// <summary><see cref="DbException"/> ist abstrakt — für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>

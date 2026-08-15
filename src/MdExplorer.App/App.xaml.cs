@@ -8,8 +8,11 @@ using System.Windows;
 using System.Windows.Threading;
 using MdExplorer.App.Hosting;
 using MdExplorer.App.Logging;
+using MdExplorer.App.Services;
 using MdExplorer.App.ViewModels;
 using MdExplorer.App.Views;
+using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Models;
 using MdExplorer.Core.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -122,12 +125,73 @@ internal sealed partial class App : System.Windows.Application
 
         await _host.StartAsync(stoppingToken).ConfigureAwait(true);
 
+        ApplyThemeAndFollowChanges();
+
         MainWindow mainWindow = _host.Services.GetRequiredService<MainWindow>();
         MainWindow = mainWindow;
         mainWindow.Show();
 
         _splashWindow.Close();
         _splashWindow = null;
+    }
+
+    /// <summary>
+    /// Setzt die gewählte Farbbelegung und hält sie bei späteren Änderungen nach.
+    /// </summary>
+    /// <remarks>
+    /// Erst nach dem Start des Wirts, weil vorher weder Einstellungen noch Dienste
+    /// bereitstehen. Das Startbild trägt deshalb Markenfarben statt Belegungsfarben —
+    /// es ist zu diesem Zeitpunkt bereits sichtbar.
+    /// </remarks>
+    private void ApplyThemeAndFollowChanges()
+    {
+        ISettingsService settings = _host!.Services.GetRequiredService<ISettingsService>();
+        ThemeApplier applier = _host.Services.GetRequiredService<ThemeApplier>();
+
+        PreviewViewModel preview = _host.Services.GetRequiredService<PreviewViewModel>();
+        IEffectiveThemeProvider effectiveTheme = _host.Services.GetRequiredService<IEffectiveThemeProvider>();
+
+        applier.Apply(Resources.MergedDictionaries);
+
+        // Jedes Fenster, sobald es steht: Die Titelleiste zeichnet Windows, und es fragt
+        // dafür nicht die Anwendung. Ein Klassen-Ereignis erspart, jedes Fenster einzeln
+        // anzufassen — auch die, die es künftig gibt.
+        EventManager.RegisterClassHandler(
+            typeof(Window),
+            FrameworkElement.LoadedEvent,
+            new RoutedEventHandler((sender, _) =>
+            {
+                if (sender is Window fenster)
+                {
+                    WindowTitleBarTheme.Apply(fenster, effectiveTheme.IsDarkMode);
+                }
+            }));
+
+        settings.SettingsChanged += (_, args) =>
+        {
+            AppTheme previous = args.Previous.Appearance.Theme;
+            AppTheme current = args.Current.Appearance.Theme;
+            if (previous == current)
+            {
+                return;
+            }
+
+            // Der Wechsel muss auf den Oberflächen-Thread: Das Ereignis kommt von dort,
+            // wo gespeichert wurde, und das ist nicht zwingend derselbe Thread. Der
+            // Austausch ist ein Wörterbuch-Tausch und damit kurz genug, um darauf zu warten.
+            Dispatcher.Invoke(() =>
+            {
+                applier.Apply(Resources.MergedDictionaries);
+                // Die Vorschau ist ein fertiges HTML-Dokument und hört auf keinen
+                // Wörterbuch-Tausch — sie wird ausdrücklich neu aufgebaut.
+                preview.RebuildForTheme();
+                // Ebenso die Titelleisten der bereits offenen Fenster.
+                foreach (Window offen in Windows)
+                {
+                    WindowTitleBarTheme.Apply(offen, effectiveTheme.IsDarkMode);
+                }
+            });
+        };
     }
 
     private void HandleStartupFailure(Exception exception, string userFacingHint)

@@ -116,7 +116,11 @@ internal static class AppHostBuilder
         _ = builder.Services.AddUpdate();
 
         _ = builder.Services.AddSingleton<ISystemThemeProvider>(sp => new SystemThemeProvider());
-        _ = builder.Services.AddSingleton(sp => new PreviewHtmlBuilder(sp.GetRequiredService<ISystemThemeProvider>()));
+        _ = builder.Services.AddSingleton<IEffectiveThemeProvider>(sp => new EffectiveThemeProvider(
+            sp.GetRequiredService<ISettingsService>(),
+            sp.GetRequiredService<ISystemThemeProvider>()));
+        _ = builder.Services.AddSingleton(sp => new PreviewHtmlBuilder(sp.GetRequiredService<IEffectiveThemeProvider>()));
+        _ = builder.Services.AddSingleton(sp => new ThemeApplier(sp.GetRequiredService<IEffectiveThemeProvider>()));
         _ = builder.Services.AddSingleton(sp => new UiSettingsStore(sp.GetRequiredService<ILogger<UiSettingsStore>>()));
         _ = builder.Services.AddSingleton<IDocumentLocator>(sp =>
             new MarkdownFileDocumentLocator(sp.GetRequiredService<IServiceScopeFactory>()));
@@ -133,6 +137,7 @@ internal static class AppHostBuilder
             sp.GetRequiredService<IExclusionFilter>()));
         _ = builder.Services.AddSingleton(sp => new AllFilesViewModel(
             sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<ILogger<AllFilesViewModel>>()));
         _ = builder.Services.AddSingleton(sp => new SearchViewModel(
             sp.GetRequiredService<IServiceScopeFactory>(),
@@ -155,9 +160,19 @@ internal static class AppHostBuilder
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<IEditorConfirmationDialogService>(),
             sp.GetRequiredService<ILogger<MarkdownEditorViewModel>>()));
+        _ = builder.Services.AddSingleton<IDocumentFileService>(sp => new DocumentFileService(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IFileSystem>(),
+            sp.GetRequiredService<ILogger<DocumentFileService>>()));
+        _ = builder.Services.AddSingleton(sp => new DocumentRelationsViewModel(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IDocumentFileService>(),
+            sp.GetRequiredService<IDialogService>(),
+            sp.GetRequiredService<ILogger<DocumentRelationsViewModel>>()));
         _ = builder.Services.AddSingleton(sp => new DocumentPanelViewModel(
             sp.GetRequiredService<PreviewViewModel>(),
             sp.GetRequiredService<MarkdownEditorViewModel>(),
+            sp.GetRequiredService<DocumentRelationsViewModel>(),
             sp.GetRequiredService<IMarkdownParser>(),
             sp.GetRequiredService<PreviewHtmlBuilder>(),
             sp.GetRequiredService<IDocumentLocator>(),
@@ -205,7 +220,8 @@ internal static class AppHostBuilder
             sp.GetRequiredService<ILogger<GraphViewModel>>()));
         _ = builder.Services.AddTransient(sp => new GraphWindow(
             sp.GetRequiredService<GraphViewModel>(),
-            sp.GetRequiredService<IHelpContextProvider>()));
+            sp.GetRequiredService<IHelpContextProvider>(),
+            sp.GetRequiredService<IEffectiveThemeProvider>()));
         _ = builder.Services.AddSingleton<Func<GraphWindow>>(sp => () => sp.GetRequiredService<GraphWindow>());
 
         _ = builder.Services.AddSingleton<ITagManagementDialogService>(sp => new TagManagementDialogService());
@@ -234,7 +250,9 @@ internal static class AppHostBuilder
             sp.GetRequiredService<HelpWindowGeometryStore>(),
             sp.GetRequiredService<ILogger<HelpWindow>>()));
         _ = builder.Services.AddSingleton<Func<HelpWindow>>(sp => () => sp.GetRequiredService<HelpWindow>());
-        _ = builder.Services.AddTransient(sp => new AboutViewModel(sp.GetRequiredService<IAboutInfoProvider>()));
+        _ = builder.Services.AddTransient(sp => new AboutViewModel(
+            sp.GetRequiredService<IAboutInfoProvider>(),
+            sp.GetRequiredService<TimeProvider>()));
         _ = builder.Services.AddTransient(sp => new AboutWindow(sp.GetRequiredService<AboutViewModel>()));
         _ = builder.Services.AddSingleton<Func<AboutWindow>>(sp => () => sp.GetRequiredService<AboutWindow>());
 

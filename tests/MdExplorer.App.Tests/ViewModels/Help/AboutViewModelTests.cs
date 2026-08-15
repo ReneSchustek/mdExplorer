@@ -10,29 +10,42 @@ namespace MdExplorer.App.Tests.ViewModels.Help;
 /// </summary>
 public sealed class AboutViewModelTests
 {
+    /// <summary>Feste Zone für die Prüfung — zwei Stunden vor UTC, ohne Sommerzeitsprünge.</summary>
+    private static readonly TimeZoneInfo TestZone =
+        TimeZoneInfo.CreateCustomTimeZone("MdExplorer-TestZone", TimeSpan.FromHours(2), "TestZone", "TestZone");
+
     [Fact]
     public void Constructor_WithoutProvider_Throws() =>
-        Assert.Throws<ArgumentNullException>(() => new AboutViewModel(null!));
+        Assert.Throws<ArgumentNullException>(() => new AboutViewModel(null!, new StubTimeProvider(TestZone)));
+
+    [Fact]
+    public void Constructor_WithoutTimeProvider_Throws()
+    {
+        StubAboutInfoProvider provider = new("1.0.0", new DateTime(2026, 5, 17, 8, 30, 0, DateTimeKind.Utc));
+
+        _ = Assert.Throws<ArgumentNullException>(() => new AboutViewModel(provider, null!));
+    }
 
     [Fact]
     public void Constructor_TakesVersionFromProviderUnchanged()
     {
         StubAboutInfoProvider provider = new("1.2.3+abcdef", new DateTime(2026, 5, 17, 8, 30, 0, DateTimeKind.Utc));
 
-        AboutViewModel sut = new(provider);
+        AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
         Assert.Equal("1.2.3+abcdef", sut.Version, StringComparer.Ordinal);
     }
 
     [Fact]
-    public void Constructor_FormatsBuildDateAsInvariantUtc()
+    public void Constructor_ShowsBuildDateInTheLocalTimeZone()
     {
         StubAboutInfoProvider provider = new("1.0.0", new DateTime(2026, 5, 17, 8, 30, 0, DateTimeKind.Utc));
 
-        AboutViewModel sut = new(provider);
+        AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
-        // Fest formatiert und kulturunabhängig: Der Dialog soll überall dasselbe zeigen.
-        Assert.Equal("2026-05-17 08:30 UTC", sut.BuildDateDisplay, StringComparer.Ordinal);
+        // Aufgezeichnet wird in UTC, abgelesen an der Uhr des Rechners: 08:30 UTC sind hier 10:30.
+        Assert.Equal("2026-05-17 10:30", sut.BuildDateDisplay, StringComparer.Ordinal);
+        Assert.DoesNotContain("UTC", sut.BuildDateDisplay, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -41,7 +54,7 @@ public sealed class AboutViewModelTests
         LibraryInfo[] bibliotheken = [new("Alpha", "MIT"), new("Beta", "Apache-2.0")];
         StubAboutInfoProvider provider = new("1.0.0", DateTime.UtcNow, bibliotheken);
 
-        AboutViewModel sut = new(provider);
+        AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
         Assert.Equal(2, sut.Libraries.Count);
         Assert.Equal("Alpha", sut.Libraries[0].Name, StringComparer.Ordinal);
@@ -53,7 +66,7 @@ public sealed class AboutViewModelTests
     {
         StubAboutInfoProvider provider = new("1.0.0", DateTime.UtcNow);
 
-        AboutViewModel sut = new(provider);
+        AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
         Assert.Equal(1, provider.ReadCount);
         // Wiederholtes Lesen der Eigenschaften darf den Lieferanten nicht erneut befragen.
@@ -67,7 +80,7 @@ public sealed class AboutViewModelTests
     {
         StubAboutInfoProvider provider = new("1.0.0", DateTime.UtcNow);
 
-        AboutViewModel sut = new(provider);
+        AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
         // Der Eintrag darf nur sichtbar sein, wenn eine echte Adresse hinterlegt ist —
         // ein toter Link im Dialog wäre schlimmer als gar keiner.
@@ -87,8 +100,8 @@ public sealed class AboutViewModelTests
         try
         {
             CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
-            AboutViewModel sut = new(provider);
-            Assert.Equal("2026-12-24 18:05 UTC", sut.BuildDateDisplay, StringComparer.Ordinal);
+            AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
+            Assert.Equal("2026-12-24 20:05", sut.BuildDateDisplay, StringComparer.Ordinal);
         }
         finally
         {
@@ -106,5 +119,10 @@ public sealed class AboutViewModelTests
             ReadCount++;
             return new AboutInfo(version, buildDateUtc, libraries ?? [new LibraryInfo("Beispiel", "MIT")]);
         }
+    }
+
+    private sealed class StubTimeProvider(TimeZoneInfo zone) : TimeProvider
+    {
+        public override TimeZoneInfo LocalTimeZone => zone;
     }
 }

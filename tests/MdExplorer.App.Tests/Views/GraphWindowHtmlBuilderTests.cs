@@ -15,7 +15,7 @@ public sealed class GraphWindowHtmlBuilderTests
     [Fact]
     public void BuildHtml_ProducesScriptSrcWithNonceAndWithoutUnsafeInline()
     {
-        string html = GraphWindow.BuildHtml(MinimalSnapshot);
+        string html = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode: false);
 
         Match cspMatch = Regex.Match(
             html,
@@ -43,8 +43,8 @@ public sealed class GraphWindowHtmlBuilderTests
     [Fact]
     public void BuildHtml_EveryCallGeneratesFreshNonce()
     {
-        string first = GraphWindow.BuildHtml(MinimalSnapshot);
-        string second = GraphWindow.BuildHtml(MinimalSnapshot);
+        string first = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode: false);
+        string second = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode: false);
 
         string firstNonce = ExtractNonce(first);
         string secondNonce = ExtractNonce(second);
@@ -57,7 +57,7 @@ public sealed class GraphWindowHtmlBuilderTests
     [Fact]
     public void BuildHtml_EmbedsPayloadInsideJsonDataBlock()
     {
-        string html = GraphWindow.BuildHtml(MinimalSnapshot);
+        string html = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode: false);
 
         Assert.Contains("<script type=\"application/json\" id=\"graph-payload\">", html, StringComparison.Ordinal);
         Assert.Contains(MinimalSnapshot, html, StringComparison.Ordinal);
@@ -66,16 +66,55 @@ public sealed class GraphWindowHtmlBuilderTests
     [Fact]
     public void BuildHtml_OnNullSnapshot_Throws()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => GraphWindow.BuildHtml(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => GraphWindow.BuildHtml(null!, isDarkMode: false));
     }
 
     [Fact]
     public void BuildHtml_ScriptTagsCarryNonceAttribute()
     {
-        string html = GraphWindow.BuildHtml(MinimalSnapshot);
+        string html = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode: false);
 
         string nonce = ExtractNonce(html);
         Assert.Contains($"<script nonce=\"{nonce}\">", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(false, "light")]
+    [InlineData(true, "dark")]
+    public void BuildHtml_MarksTheRequestedAppearance(bool isDarkMode, string erwartet)
+    {
+        // Die Zeichenfläche stand fest auf Dunkel — im hellen Erscheinungsbild ein
+        // schwarzes Feld neben lauter hellen Flächen. Jetzt trägt das Dokument selbst,
+        // welche Belegung gilt, und das Stylesheet setzt die Farben dazu.
+        string html = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode);
+
+        Assert.Contains($"data-theme=\"{erwartet}\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("__THEME__", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildHtml_LeavesNoColourFixedInTheDrawingCode()
+    {
+        // Wer eine Farbe wieder fest in das Zeichnen schreibt, hebelt die Belegung aus.
+        string html = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode: false);
+
+        Assert.Contains("--graph-canvas", html, StringComparison.Ordinal);
+        Assert.Contains("palette.canvas", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ctx.fillStyle = \"#", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("ctx.strokeStyle = \"#", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildHtml_RedrawsAfterAResize()
+    {
+        // Ohne diesen Aufruf blieb die Fläche leer, sobald das Fenster nach dem Auslaufen
+        // der Simulation vergrößert wurde — das Setzen der Größe leert sie.
+        string html = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode: false);
+
+        int resizeStart = html.IndexOf("function resize()", StringComparison.Ordinal);
+        Assert.True(resizeStart > 0, "Der Größenwechsel wird nicht mehr behandelt.");
+        int resizeEnd = html.IndexOf('}', resizeStart);
+        Assert.Contains("draw();", html[resizeStart..resizeEnd], StringComparison.Ordinal);
     }
 
     private static string ExtractNonce(string html)

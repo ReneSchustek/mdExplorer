@@ -68,4 +68,12 @@ internal sealed class FakeFileSystem : IFileSystem
         _files[path] = content.ToArray();
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc />
+    public void MoveFile(string sourcePath, string destinationPath) =>
+        throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
+
+    /// <inheritdoc />
+    public void DeleteFile(string path) =>
+        throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
 }

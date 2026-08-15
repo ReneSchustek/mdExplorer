@@ -18,6 +18,9 @@ namespace MdExplorer.App.ViewModels;
 internal sealed partial class MainViewModel : ObservableObject, INavigationService, IDisposable,
     IRecipient<UpdateAvailableMessage>
 {
+    /// <summary>Stelle des Registers „Suche" in der linken Spalte.</summary>
+    private const int SearchTabIndex = 2;
+
     private readonly IDocumentLocator _documentLocator;
     private readonly UiSettingsStore _settingsStore;
     private readonly IOperationHealthProvider _healthProvider;
@@ -43,6 +46,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     private int _indexedFileCount;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LastIndexerRun))]
     private DateTime? _lastIndexerRunUtc;
 
     [ObservableProperty]
@@ -125,6 +129,10 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         FolderTree.PropertyChanged += OnFolderTreeChanged;
         FolderTree.FileSelected += OnFolderTreeFileSelected;
         AllFiles.FileSelected += OnAllFilesFileSelected;
+        DocumentPanel.Relations.OpenRequested += OnRelatedDocumentRequested;
+        DocumentPanel.Relations.FolderRequested += OnFolderRequested;
+        DocumentPanel.Relations.TagRequested += OnTagRequested;
+        DocumentPanel.Relations.DocumentChanged += OnDocumentChanged;
         Search.PropertyChanged += OnSearchChanged;
 
         _messenger.RegisterAll(this);
@@ -174,6 +182,14 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
 
     /// <summary>Pfad-Anzeige in der Statusleiste — Speicherort der Settings/Datenbank.</summary>
     public string StorageLocation { get; }
+
+    /// <summary>
+    /// Der letzte Indexer-Lauf in der Zeitzone des Rechners. Intern wird in UTC gerechnet,
+    /// abgelesen wird aber an der Uhr, die neben dem Bildschirm hängt.
+    /// </summary>
+    public DateTime? LastIndexerRun => LastIndexerRunUtc is DateTime utc
+        ? TimeZoneInfo.ConvertTimeFromUtc(utc, _timeProvider.LocalTimeZone)
+        : null;
 
     /// <summary>Persistiert die aktuellen Spaltenbreiten, Tag-Cloud-Sichtbarkeit und Left-Tab-Index.</summary>
     public void PersistColumnLayout()
@@ -233,6 +249,10 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         FolderTree.PropertyChanged -= OnFolderTreeChanged;
         FolderTree.FileSelected -= OnFolderTreeFileSelected;
         AllFiles.FileSelected -= OnAllFilesFileSelected;
+        DocumentPanel.Relations.OpenRequested -= OnRelatedDocumentRequested;
+        DocumentPanel.Relations.FolderRequested -= OnFolderRequested;
+        DocumentPanel.Relations.TagRequested -= OnTagRequested;
+        DocumentPanel.Relations.DocumentChanged -= OnDocumentChanged;
         Search.PropertyChanged -= OnSearchChanged;
         _healthProvider.Changed -= OnHealthChanged;
         _indexer.InitialScanProgress -= OnIndexerProgress;
@@ -322,6 +342,58 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     private void OnAllFilesFileSelected(string absolutePath)
     {
         _ = NavigateToPathAsync(absolutePath);
+    }
+
+    /// <summary>Öffnet ein Dokument, das am geöffneten hängt.</summary>
+    private void OnRelatedDocumentRequested(Guid markdownFileId)
+    {
+        _ = NavigateToDocumentAsync(markdownFileId, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Zeigt, was sonst noch im selben Ordner liegt.
+    /// </summary>
+    /// <remarks>
+    /// Über die vorhandene Suche mit ihrem Pfad-Filter statt über einen zweiten Weg: Der
+    /// Nutzer sieht damit dieselbe Trefferliste wie bei einer getippten Anfrage, und es gibt
+    /// nur eine Stelle, an der eine Einschränkung wirkt.
+    /// </remarks>
+    private void OnFolderRequested(string folderPath)
+    {
+        ShowInSearch($"path:{folderPath}");
+    }
+
+    /// <summary>Zeigt, was dieselbe Kennzeichnung trägt.</summary>
+    private void OnTagRequested(string tagSlug)
+    {
+        ShowInSearch($"tag:{tagSlug}");
+    }
+
+    /// <summary>
+    /// Zieht die Ansicht nach, wenn ein Vorgang die Datei verändert hat.
+    /// </summary>
+    /// <remarks>
+    /// Nach dem Umbenennen oder Verschieben zeigt die Ansicht dieselbe Datei unter ihrem
+    /// neuen Pfad; nach dem Löschen gibt es nichts mehr zu zeigen. Die Liste wird neu
+    /// geladen, weil ihr Eintrag sonst auf einen Pfad zeigt, den es nicht mehr gibt.
+    /// </remarks>
+    private void OnDocumentChanged(string? newAbsolutePath)
+    {
+        _ = AllFiles.RefreshAsync();
+
+        if (newAbsolutePath is null)
+        {
+            DocumentPanel.Relations.Clear();
+            return;
+        }
+
+        _ = NavigateToPathAsync(newAbsolutePath);
+    }
+
+    private void ShowInSearch(string query)
+    {
+        Search.QueryText = query;
+        LeftTabIndex = SearchTabIndex;
     }
 
     private async Task NavigateToPathAsync(string absolutePath)

@@ -12,6 +12,15 @@
         MinHeight="360"
         WindowStartupLocation="CenterOwner"
         d:DataContext="{d:DesignInstance Type=vm:TagManagementViewModel}">
+    <!--
+        Die Ressourcen stehen vorn, nicht am Ende: WPF löst einen StaticResource-Verweis
+        beim Lesen auf. Stand der Block hinter dem Inhalt, war der Schlüssel an der
+        Verwendungsstelle noch unbekannt — das Fenster ließ sich gar nicht öffnen.
+    -->
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Window.Resources>
+
     <DockPanel LastChildFill="True" Margin="12">
         <TextBlock DockPanel.Dock="Top"
                    FontWeight="SemiBold"
@@ -27,7 +36,7 @@
                        VerticalAlignment="Center"
                        TextWrapping="Wrap"
                        Text="{Binding StatusMessage}"
-                       Foreground="#FF4F5560" />
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
             <Button Grid.Column="1"
                     Content="Schließen"
                     IsCancel="True"
@@ -60,8 +69,8 @@
                           IsReadOnly="True"
                           HeadersVisibility="Column"
                           GridLinesVisibility="None"
-                          AlternatingRowBackground="#FFF7F8FA"
-                          BorderBrush="#FFD0D7DE"
+                          AlternatingRowBackground="{DynamicResource SurfaceElevatedBrush}"
+                          BorderBrush="{DynamicResource DividerBrush}"
                           BorderThickness="1">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Name"
@@ -77,7 +86,7 @@
                 </DataGrid>
             </DockPanel>
 
-            <Border Grid.Column="1" Width="1" Margin="12,0" Background="#FFD0D7DE" />
+            <Border Grid.Column="1" Width="1" Margin="12,0" Background="{DynamicResource DividerBrush}" />
 
             <StackPanel Grid.Column="2">
                 <TextBlock Text="Aktion" FontWeight="SemiBold" Margin="0,0,0,4" />
@@ -112,7 +121,4 @@
             </StackPanel>
         </Grid>
     </DockPanel>
-    <Window.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
-    </Window.Resources>
 </Window>

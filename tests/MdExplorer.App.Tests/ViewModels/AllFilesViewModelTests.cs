@@ -21,13 +21,35 @@ public sealed class AllFilesViewModelTests
             new AllFilesRow(FileBId, "Beta", "Beta.md", @"C:\notes\Beta.md", NewerUtc, ["projekt", "wichtig"]),
         ]);
         using ServiceProvider provider = BuildProvider(query);
-        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
 
         await sut.RefreshAsync().ConfigureAwait(true);
 
         Assert.Equal(2, sut.Items.Count);
         Assert.Equal("Beta", sut.Items[0].Title);
         Assert.Equal("Alpha", sut.Items[1].Title);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_ConvertsTheModificationTimeIntoTheLocalZone()
+    {
+        // Gespeichert ist UTC; in der Liste soll die Uhrzeit des Rechners stehen.
+        TimeZoneInfo zone = TimeZoneInfo.CreateCustomTimeZone(
+            "MdExplorer-TestZone", TimeSpan.FromHours(2), "TestZone", "TestZone");
+        FakeAllFilesQuery query = new([
+            new AllFilesRow(FileAId, "Alpha", "Alpha.md", @"C:\notes\Alpha.md", OlderUtc, []),
+        ]);
+        using ServiceProvider provider = BuildProvider(query);
+        AllFilesViewModel sut = new(
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            new ZonedTimeProvider(zone),
+            NullLogger<AllFilesViewModel>.Instance);
+
+        await sut.RefreshAsync().ConfigureAwait(true);
+
+        AllFilesItemViewModel item = Assert.Single(sut.Items);
+        Assert.Equal(OlderUtc, item.LastWriteTimeUtc);
+        Assert.Equal(TimeZoneInfo.ConvertTimeFromUtc(OlderUtc, zone), item.LastWriteTime);
     }
 
     [Fact]
@@ -38,7 +60,7 @@ public sealed class AllFilesViewModelTests
             new AllFilesRow(FileBId, "Beta", "Beta.md", @"C:\notes\Beta.md", NewerUtc, ["wichtig"]),
         ]);
         using ServiceProvider provider = BuildProvider(query);
-        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
         await sut.RefreshAsync().ConfigureAwait(true);
 
         sut.SearchText = "alpha";
@@ -65,7 +87,7 @@ public sealed class AllFilesViewModelTests
             new AllFilesRow(FileBId, "Alpha", "a/alpha.md", @"C:\notes\a\alpha.md", NewerUtc, []),
         ]);
         using ServiceProvider provider = BuildProvider(query);
-        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
         await sut.RefreshAsync().ConfigureAwait(true);
 
         sut.SortMode = AllFilesSortMode.Title;
@@ -82,7 +104,7 @@ public sealed class AllFilesViewModelTests
             new AllFilesRow(FileAId, "Alpha", "Alpha.md", @"C:\notes\Alpha.md", OlderUtc, []),
         ]);
         using ServiceProvider provider = BuildProvider(query);
-        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
         await sut.RefreshAsync().ConfigureAwait(true);
 
         string? raised = null;
@@ -97,6 +119,12 @@ public sealed class AllFilesViewModelTests
         ServiceCollection services = new();
         _ = services.AddScoped(_ => query);
         return services.BuildServiceProvider(validateScopes: true);
+    }
+
+    /// <summary>Liefert eine feste Zone, damit das Ergebnis nicht vom Prüfrechner abhängt.</summary>
+    private sealed class ZonedTimeProvider(TimeZoneInfo zone) : TimeProvider
+    {
+        public override TimeZoneInfo LocalTimeZone => zone;
     }
 
     private sealed class FakeAllFilesQuery(IReadOnlyList<AllFilesRow> rows) : IAllFilesQuery
