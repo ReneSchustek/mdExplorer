@@ -50,19 +50,21 @@ Vollständige Anleitung: [`docs/HANDBUCH.md`](docs/HANDBUCH.md).
 
 ## Projektstruktur
 
-Flat-Layout: alle Module liegen direkt unter dem Repo-Wurzelverzeichnis.
+Produktivcode liegt unter `src/`, die Tests spiegeln ihn unter `tests/`.
 
 | Projekt | Inhalt |
 |---------|--------|
-| `MdExplorer.App` | WPF-Frontend (MVVM, WebView2-Preview, Settings-Dialog) |
-| `MdExplorer.Core` | Abstraktionen, Pfade, `IFileSystem`, Settings-Modell |
-| `MdExplorer.Data` | EF Core / SQLite, Repositories, Migrations |
-| `MdExplorer.Indexer` | Datei-Scan, `FileSystemWatcher`, Hash-Pipeline |
-| `MdExplorer.Parser` | Markdig-basierter Parser mit WikiLink-Erweiterung |
-| `MdExplorer.Search` | FTS5-Suche über SQLite |
-| `MdExplorer.Graph` | WikiLink-Graph (Snapshot + Canvas-Renderer) |
-| `MdExplorer.TagCloud` | Tag-Cloud-UserControl + Hintergrund-Refresh |
-| `*.Tests` | xUnit-Tests pro Modul |
+| `src/MdExplorer.App` | WPF-Frontend (MVVM, WebView2-Preview, Settings-Dialog) |
+| `src/MdExplorer.Core` | Abstraktionen, Pfade, `IFileSystem`, Settings-Modell |
+| `src/MdExplorer.Data` | EF Core / SQLite, Repositories, Migrations |
+| `src/MdExplorer.Indexer` | Datei-Scan, `FileSystemWatcher`, Hash-Pipeline |
+| `src/MdExplorer.Parser` | Markdig-basierter Parser mit WikiLink-Erweiterung |
+| `src/MdExplorer.Search` | FTS5-Suche über SQLite |
+| `src/MdExplorer.Graph` | WikiLink-Graph (Snapshot + Canvas-Renderer) |
+| `src/MdExplorer.TagCloud` | Tag-Cloud-UserControl + Hintergrund-Refresh |
+| `src/MdExplorer.Update` | Prüfung auf neue Fassungen und deren Installation |
+| `tests/*.Tests` | xUnit-Tests pro Modul |
+| `installer/` | Inno-Setup-Skript für das Installationsprogramm |
 | `tools/` | Build- und Sicherheits-Tooling (`gitleaks`, Secret-Scan) |
 | `docs/` | Architektur- und Settings-Dokumentation |
 
