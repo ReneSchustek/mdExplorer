@@ -1,4 +1,4 @@
-﻿using MdExplorer.App.Tests.Fakes;
+using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels.Settings;
 using MdExplorer.Update.Models;
 

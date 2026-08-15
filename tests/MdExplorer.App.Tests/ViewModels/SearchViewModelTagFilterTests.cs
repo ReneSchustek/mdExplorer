@@ -20,7 +20,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Clear_EmptiesTheQuery()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "irgendetwas";
 
         u.ViewModel.Clear();
@@ -31,7 +31,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_WithoutMessage_Throws()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
 
         _ = Assert.Throws<ArgumentNullException>(() => u.ViewModel.Receive(null!));
     }
@@ -39,7 +39,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_WithBlankSlug_LeavesQueryUntouched()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "unberuehrt";
 
         u.ViewModel.Receive(new TagClickedMessage("   ", "Anzeige", TagFilterMode.Replace));
@@ -50,7 +50,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_InReplaceMode_ReplacesTheWholeQuery()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "alter text";
 
         u.ViewModel.Receive(new TagClickedMessage("notizen", "Notizen", TagFilterMode.Replace));
@@ -61,7 +61,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_InAddMode_AppendsToTheExistingQuery()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "bericht";
 
         u.ViewModel.Receive(new TagClickedMessage("notizen", "Notizen", TagFilterMode.Add));
@@ -72,7 +72,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_InAddMode_OnEmptyQuery_UsesTheTokenAlone()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
 
         u.ViewModel.Receive(new TagClickedMessage("notizen", "Notizen", TagFilterMode.Add));
 
@@ -82,7 +82,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_InAddMode_DoesNotDuplicateAnExistingToken()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "bericht tag:notizen";
 
         u.ViewModel.Receive(new TagClickedMessage("notizen", "Notizen", TagFilterMode.Add));
@@ -94,7 +94,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_InExcludeMode_AppendsTheNegatedToken()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "bericht";
 
         u.ViewModel.Receive(new TagClickedMessage("entwurf", "Entwurf", TagFilterMode.Exclude));
@@ -105,7 +105,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_InExcludeMode_DoesNotDuplicateAnExistingToken()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "-tag:entwurf";
 
         u.ViewModel.Receive(new TagClickedMessage("entwurf", "Entwurf", TagFilterMode.Exclude));
@@ -116,7 +116,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Receive_TrimsSurroundingWhitespaceOfTheExistingQuery()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "   bericht   ";
 
         u.ViewModel.Receive(new TagClickedMessage("notizen", "Notizen", TagFilterMode.Add));
@@ -129,7 +129,7 @@ public sealed class SearchViewModelTagFilterTests
     {
         // Die Registrierung beim Nachrichtenverteiler ist Teil des Vertrags: Ohne sie käme
         // ein Klick in der Tag-Cloud nie an, ohne dass ein Test es merken würde.
-        using Umgebung u = new();
+        using TestEnvironment u = new();
 
         _ = u.Messenger.Send(new TagClickedMessage("cloud", "Cloud", TagFilterMode.Replace));
 
@@ -139,7 +139,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Dispose_UnregistersFromTheMessenger()
     {
-        Umgebung u = new();
+        TestEnvironment u = new();
         u.ViewModel.Dispose();
 
         _ = u.Messenger.Send(new TagClickedMessage("danach", "Danach", TagFilterMode.Replace));
@@ -151,7 +151,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public void Dispose_CalledTwice_DoesNotThrow()
     {
-        Umgebung u = new();
+        TestEnvironment u = new();
 
         u.ViewModel.Dispose();
         u.ViewModel.Dispose();
@@ -162,7 +162,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public async Task ChangingMode_TriggersANewSearch()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "bericht";
         await u.WarteAufLaufAsync().ConfigureAwait(true);
         int vorher = u.SearchService.CallCount;
@@ -176,7 +176,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public async Task ChangingSimilarity_TriggersANewSearch()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "bericht";
         await u.WarteAufLaufAsync().ConfigureAwait(true);
         int vorher = u.SearchService.CallCount;
@@ -190,7 +190,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public async Task ChangingScope_TriggersANewSearch()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
         u.ViewModel.QueryText = "bericht";
         await u.WarteAufLaufAsync().ConfigureAwait(true);
         int vorher = u.SearchService.CallCount;
@@ -204,7 +204,7 @@ public sealed class SearchViewModelTagFilterTests
     [Fact]
     public async Task ChangingMode_WithEmptyQuery_DoesNotSearch()
     {
-        using Umgebung u = new();
+        using TestEnvironment u = new();
 
         u.ViewModel.Mode = MdExplorer.Search.Models.SearchMode.Regex;
         await Task.Delay(150).ConfigureAwait(true);
@@ -213,11 +213,11 @@ public sealed class SearchViewModelTagFilterTests
     }
 
     /// <summary>Hält Dienstanbieter, Nachrichtenverteiler und ViewModel für einen Testlauf zusammen.</summary>
-    private sealed class Umgebung : IDisposable
+    private sealed class TestEnvironment : IDisposable
     {
         private readonly ServiceProvider _provider;
 
-        public Umgebung()
+        public TestEnvironment()
         {
             SearchService = new FakeSearchService();
             SearchService.SetNextResults([]);

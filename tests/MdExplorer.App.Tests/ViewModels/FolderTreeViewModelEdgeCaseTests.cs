@@ -21,7 +21,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
     {
         string wurzel = ErzeugeOrdner("wurzel");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         FolderTreeViewModel sut = new(einstellungen, fs);
 
         sut.Dispose();
@@ -36,7 +36,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string wurzel = ErzeugeOrdner("wurzel");
         _ = ErzeugeOrdner("wurzel", "Unterordner");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
         TreeNodeViewModel root = sut.Roots[0];
         root.IsExpanded = true;
@@ -55,7 +55,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string wurzel = ErzeugeOrdner("wurzel");
         string fremd = ErzeugeOrdner("fremd");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel, fremd);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
 
         sut.SelectedNode = new TreeNodeViewModel(
@@ -74,7 +74,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
     {
         string wurzel = ErzeugeOrdner("wurzel");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
 
         await sut.ResumeIndexingCommand.ExecuteAsync(null).ConfigureAwait(true);
@@ -89,7 +89,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string wurzel = ErzeugeOrdner("wurzel");
         _ = ErzeugeOrdner("wurzel", "Aktiv");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
         TreeNodeViewModel root = sut.Roots[0];
         root.IsExpanded = true;
@@ -104,7 +104,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
     {
         string wurzel = ErzeugeOrdner("wurzel");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
 
         await sut.PauseIndexingCommand.ExecuteAsync(null).ConfigureAwait(true);
@@ -120,7 +120,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string wurzel = ErzeugeOrdner("wurzel");
         _ = ErzeugeOrdner("wurzel", "Pausieren");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel))
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel))
         {
             SpeicherFehler = new IOException("Datei schreibgeschuetzt"),
         };
@@ -140,7 +140,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string wurzelA = ErzeugeOrdner("a");
         string wurzelB = ErzeugeOrdner("b");
         FakeFileSystem fs = ErzeugeDateisystem(wurzelA, wurzelB);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzelA));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzelA));
         using FolderTreeViewModel sut = new(einstellungen, fs);
         _ = Assert.Single(sut.Roots);
 
@@ -157,7 +157,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string wurzelA = ErzeugeOrdner("a");
         string wurzelB = ErzeugeOrdner("b");
         FakeFileSystem fs = ErzeugeDateisystem(wurzelA, wurzelB);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzelA));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzelA));
         using FolderTreeViewModel sut = new(einstellungen, fs);
 
         await einstellungen.SaveAsync(BaueEinstellungen(wurzelB), CancellationToken.None).ConfigureAwait(true);
@@ -174,7 +174,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string unterordner = ErzeugeOrdner("wurzel", "Unterordner");
         await File.WriteAllTextAsync(Path.Combine(wurzel, "notiz.md"), "# Notiz").ConfigureAwait(true);
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
         TreeNodeViewModel root = sut.Roots[0];
         root.IsExpanded = true;
@@ -197,7 +197,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string wurzel = ErzeugeOrdner("wurzel");
         _ = ErzeugeOrdner("wurzel", "Aktiv");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen([wurzel], ["   ", string.Empty]));
+        StubSettings einstellungen = new(BaueEinstellungen([wurzel], ["   ", string.Empty]));
         using FolderTreeViewModel sut = new(einstellungen, fs);
         TreeNodeViewModel root = sut.Roots[0];
 
@@ -214,7 +214,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         // einem getrennten Netzlaufwerk. Das Aufklappen darf dann nicht werfen.
         string wurzel = Path.Combine(_basis, "verschwunden");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
         TreeNodeViewModel root = Assert.Single(sut.Roots);
 
@@ -229,7 +229,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         string wurzel = ErzeugeOrdner("wurzel");
         string unbekannt = ErzeugeOrdner("wurzel", "Unbekannt");
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
         TreeNodeViewModel root = sut.Roots[0];
         root.IsExpanded = true;
@@ -249,7 +249,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(wurzel, "sichtbar.md"), "# Sichtbar").ConfigureAwait(true);
         await File.WriteAllTextAsync(Path.Combine(wurzel, "entwurf.md"), "# Entwurf").ConfigureAwait(true);
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
-        StubEinstellungen einstellungen = new(BaueEinstellungen(wurzel));
+        StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs, new EntwurfsFilter());
         TreeNodeViewModel root = sut.Roots[0];
 
@@ -304,9 +304,9 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
     }
 
     /// <summary>Einstellungsdienst, der Schreibvorgänge zählt und wahlweise scheitern lässt.</summary>
-    private sealed class StubEinstellungen : ISettingsService
+    private sealed class StubSettings : ISettingsService
     {
-        public StubEinstellungen(AppSettings initial) => Current = initial;
+        public StubSettings(AppSettings initial) => Current = initial;
 
         public AppSettings Current { get; private set; }
 

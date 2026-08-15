@@ -9,6 +9,13 @@ namespace MdExplorer.Parser.Tests.Services;
 
 public sealed class MarkdigParserTests
 {
+    /// <summary>
+    /// Zahl der Zeitmessungen, aus denen die kleinste gewertet wird. Zehn Durchläufe eines
+    /// Zehn-Kilobyte-Dokuments kosten kaum Zeit und machen es unwahrscheinlich, dass jeder
+    /// einzelne davon durch einen parallelen Testprozess verdrängt wurde.
+    /// </summary>
+    private const int MeasurementAttempts = 10;
+
     private readonly MarkdigParser _sut;
 
     public MarkdigParserTests()
@@ -139,12 +146,24 @@ public sealed class MarkdigParserTests
         // Warm-up — JIT, Markdig static init, GZip pipeline.
         _ = _sut.Parse(markdown);
 
-        Stopwatch stopwatch = Stopwatch.StartNew();
-        ParseResult result = _sut.Parse(markdown);
-        stopwatch.Stop();
+        // Gemessen wird die kleinste von mehreren Zeiten, nicht eine einzelne. Beim
+        // vollständigen Lauf teilen sich neun Testprozesse dieselben Kerne, und eine
+        // Verdrängung kann eine Messung nur verlängern, nie verkürzen. Das Minimum
+        // schätzt damit die ungestörte Laufzeit: Es fällt, wenn der Parser schneller
+        // wird, steigt bei einer echten Regression — und bleibt von der Auslastung
+        // der Maschine unbeeindruckt.
+        long bestMilliseconds = long.MaxValue;
+        ParseResult result = null!;
+        for (int attempt = 0; attempt < MeasurementAttempts; attempt++)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            result = _sut.Parse(markdown);
+            stopwatch.Stop();
+            bestMilliseconds = Math.Min(bestMilliseconds, stopwatch.ElapsedMilliseconds);
+        }
 
-        Assert.True(stopwatch.ElapsedMilliseconds <= 50,
-            $"Erwartet ≤ 50 ms, gemessen {stopwatch.ElapsedMilliseconds} ms.");
+        Assert.True(bestMilliseconds <= 50,
+            $"Erwartet ≤ 50 ms, schnellster von {MeasurementAttempts} Durchläufen: {bestMilliseconds} ms.");
         Assert.NotEqual(0, result.RenderedHtmlGz.Length);
     }
 

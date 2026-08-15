@@ -223,9 +223,9 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
         using MarkdownEditorViewModel sut = new(
             fs,
-            new TagExtractor(new StubEinstellungen()),
+            new TagExtractor(new StubSettings()),
             TimeProvider.System,
-            new ImmerBestaetigen(),
+            new AlwaysConfirms(),
             NullLogger<MarkdownEditorViewModel>.Instance);
 
         await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
@@ -243,17 +243,17 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
 
     private static MarkdownEditorViewModel Erzeuge(FakeFileSystem fs) =>
         new(fs,
-            new TagExtractor(new StubEinstellungen()),
+            new TagExtractor(new StubSettings()),
             TimeProvider.System,
             NullLogger<MarkdownEditorViewModel>.Instance,
             TimeSpan.Zero);
 
-    private sealed class ImmerBestaetigen : IEditorConfirmationDialogService
+    private sealed class AlwaysConfirms : IEditorConfirmationDialogService
     {
         public bool ConfirmSave() => true;
     }
 
-    private sealed class StubEinstellungen : ISettingsService
+    private sealed class StubSettings : ISettingsService
     {
         public AppSettings Current { get; private set; } = AppSettings.Default;
 

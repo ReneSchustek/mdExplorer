@@ -322,8 +322,8 @@ public sealed class Fts5IndexMaintainerLoopTests
 
         public Schleifenumgebung(Exception? fehler)
         {
-            Quelle = new ZaehlendeQuelle(fehler);
-            Speicher = new MitschreibenderSpeicher();
+            Quelle = new CountingSource(fehler);
+            Speicher = new RecordingStorage();
             Dateien = new SteuerbaresDateisystem();
 
             ServiceCollection dienste = new();
@@ -340,9 +340,9 @@ public sealed class Fts5IndexMaintainerLoopTests
                 NullLogger<Fts5IndexMaintainer>.Instance);
         }
 
-        public ZaehlendeQuelle Quelle { get; }
+        public CountingSource Quelle { get; }
 
-        public MitschreibenderSpeicher Speicher { get; }
+        public RecordingStorage Speicher { get; }
 
         public SteuerbaresDateisystem Dateien { get; }
 
@@ -387,12 +387,12 @@ public sealed class Fts5IndexMaintainerLoopTests
     }
 
     /// <summary>Quelle, die ihre Aufrufe zählt und wahlweise immer denselben Fehler wirft.</summary>
-    private sealed class ZaehlendeQuelle : ISearchSourceProvider
+    private sealed class CountingSource : ISearchSourceProvider
     {
         private readonly Exception? _fehler;
         private int _aufrufe;
 
-        public ZaehlendeQuelle(Exception? fehler) => _fehler = fehler;
+        public CountingSource(Exception? fehler) => _fehler = fehler;
 
         public List<SearchSourceDocument> Dokumente { get; } = [];
 
@@ -412,7 +412,7 @@ public sealed class Fts5IndexMaintainerLoopTests
     }
 
     /// <summary>Index-Speicher, der Schreibvorgänge mitschreibt statt sie auszuführen.</summary>
-    private sealed class MitschreibenderSpeicher : ISearchIndexStorage
+    private sealed class RecordingStorage : ISearchIndexStorage
     {
         public Dictionary<Guid, string> Indiziert { get; } = [];
 

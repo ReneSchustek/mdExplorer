@@ -195,7 +195,7 @@ public sealed class ParseOrchestratorLoopTests
 
         public Schleifenumgebung(Exception? fehler)
         {
-            Quelle = new ZaehlendeQuelle(fehler);
+            Quelle = new CountingSource(fehler);
             DocRepo.OnSaveChangesAsync = ct => TagRepo.SaveChangesAsync(ct);
 
             ServiceCollection dienste = new();
@@ -226,7 +226,7 @@ public sealed class ParseOrchestratorLoopTests
 
         public FakeFileSystem FileSystem { get; } = new();
 
-        public ZaehlendeQuelle Quelle { get; }
+        public CountingSource Quelle { get; }
 
         public FakeMarkdownDocumentRepository DocRepo { get; } = new();
 
@@ -293,12 +293,12 @@ public sealed class ParseOrchestratorLoopTests
     /// denselben Fehler bei jedem Durchlauf wirft. Genau das braucht der Test der Schleife:
     /// ein einmaliger Fehler würde nicht zeigen, ob sie dauerhaft weiterläuft.
     /// </summary>
-    private sealed class ZaehlendeQuelle : IMarkdownSourceProvider
+    private sealed class CountingSource : IMarkdownSourceProvider
     {
         private readonly Exception? _fehler;
         private int _aufrufe;
 
-        public ZaehlendeQuelle(Exception? fehler) => _fehler = fehler;
+        public CountingSource(Exception? fehler) => _fehler = fehler;
 
         public List<MarkdownSourceSnapshot> Sources { get; } = [];
 

@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using MdExplorer.Update.Abstractions;
 using MdExplorer.Update.Models;

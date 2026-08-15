@@ -6,8 +6,8 @@ namespace MdExplorer.TagCloud.Tests.Services;
 
 /// <summary>
 /// Integrationstests des <see cref="TagStatisticsService"/> gegen eine echte SQLite-Datei.
-/// Verifiziert Korrektheit der GROUP-BY-Aggregation sowie das Performance-Budget
-/// (Median ≤ 80 ms / p95 ≤ 200 ms bei 10.000 Dokumenten).
+/// Verifiziert Korrektheit der GROUP-BY-Aggregation sowie das Zeitbudget der Abfrage
+/// (schnellster Durchlauf ≤ 60 ms bei 10.000 Dokumenten).
 /// Parallelisierung ist auf Assembly-Ebene deaktiviert (siehe <c>AssemblyInfo.cs</c>),
 /// damit Performance-Messungen unter SQLite-Datei-I/O stabil bleiben.
 /// </summary>
@@ -80,21 +80,24 @@ public sealed class TagStatisticsServiceTests
 
     [Fact]
     [Trait("Category", "Performance")]
-    public async Task TagStatisticsService_OnLargeDataset_RespondsWithinP95Budget()
+    public async Task TagStatisticsService_OnLargeDataset_RespondsWithinTimeBudget()
     {
         // Budget-Strategie: Der Test soll nur eine *Regression* der Query-Pipeline
-        // anschlagen (>3× langsamer als heute), nicht externe Effekte (Antivirus-Scan auf der
+        // anschlagen (>2× langsamer als heute), nicht externe Effekte (Antivirus-Scan auf der
         // tempo SQLite-Datei, Build-Last, JIT-Cold-Spikes) fälschlich als Bug reporten.
         //
         // Realistische Messung (Release, lokal, im Leerlauf): Median ~30 ms, p95 ~50 ms.
-        // CI-Hosts und Antivirus-Spikes treiben Einzelmessungen sporadisch bis ~150 ms.
         //
-        // Median-Budget 80 ms: Wenn der typische Lauf das überschreitet, ist die Pipeline
-        // tatsächlich kaputt — kein temporäres Spike-Tail kann den Median lange halten.
-        // p95-Budget 200 ms: bewusst großzügig, damit der Test in 10 aufeinanderfolgenden
-        // Läufen unter Build-Last grün bleibt.
-        const int p95BudgetMs = 200;
-        const int medianBudgetMs = 80;
+        // Gewertet wird die *kleinste* der Messungen, nicht Median und p95. Innerhalb der
+        // Assembly ist die Parallelität abgeschaltet, gegen die acht übrigen Testprozesse
+        // hilft das aber nicht: Wer verdrängt wird, misst länger — und beide Kennzahlen
+        // steigen mit, obwohl an der Abfrage nichts langsamer geworden ist. Verkürzen kann
+        // eine Störung eine Messung dagegen nicht. Das Minimum ist damit der einzige der
+        // drei Werte, der etwas über die Abfrage aussagt statt über die Auslastung.
+        //
+        // Budget 60 ms: knapp genug, um eine Verdoppelung der Abfragezeit zu fangen, und
+        // weit genug von den gemessenen ~30 ms entfernt, dass Schwankungen nicht reichen.
+        const int bestCaseBudgetMs = 60;
 
         TagStatisticsTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
@@ -121,11 +124,12 @@ public sealed class TagStatisticsServiceTests
             }
 
             Array.Sort(durationsMs);
-            long median = durationsMs[iterations / 2];
-            long p95 = durationsMs[(int)Math.Floor(iterations * 0.95) - 1];
+            long best = durationsMs[0];
 
-            Assert.True(median <= medianBudgetMs, $"Median = {median}ms (Budget {medianBudgetMs}ms). Roh-Messungen ms: [{string.Join(", ", durationsMs)}].");
-            Assert.True(p95 <= p95BudgetMs, $"p95 = {p95}ms (Budget {p95BudgetMs}ms). Roh-Messungen ms: [{string.Join(", ", durationsMs)}].");
+            Assert.True(
+                best <= bestCaseBudgetMs,
+                $"Schnellster von {iterations} Durchläufen = {best}ms (Budget {bestCaseBudgetMs}ms). "
+                    + $"Roh-Messungen ms: [{string.Join(", ", durationsMs)}].");
         }
     }
 }

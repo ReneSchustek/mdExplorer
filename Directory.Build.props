@@ -25,6 +25,12 @@
     <NoWarn>$(NoWarn);CA1707</NoWarn>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <IsPackable>false</IsPackable>
+    <!--
+      Laufzeit-Grenzen aus tests.runsettings. Hier verdrahtet statt auf der Kommandozeile,
+      damit sie in jedem Lauf greifen und nicht davon abhängen, ob jemand das passende
+      Flag mitgibt. Begründung der Werte steht in der Datei selbst.
+    -->
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)tests.runsettings</RunSettingsFilePath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

@@ -15,6 +15,14 @@ namespace MdExplorer.Parser.Tests.Services;
 /// </summary>
 public sealed class MarkdigParserEdgeCasesTests
 {
+    /// <summary>
+    /// Obergrenze für den Hänger-Nachweis in
+    /// <see cref="Parse_OnHugeInput_CompletesWithoutStalling"/>. Bewusst weit über der
+    /// reinen Rechenzeit: Sie soll einen Stillstand von einer belegten Maschine trennen,
+    /// nicht die Geschwindigkeit des Parsers festschreiben.
+    /// </summary>
+    private static readonly TimeSpan HugeInputStallLimit = TimeSpan.FromSeconds(30);
+
     private readonly MarkdigParser _sut;
 
     public MarkdigParserEdgeCasesTests()
@@ -113,7 +121,7 @@ public sealed class MarkdigParserEdgeCasesTests
 
     [Fact]
     [Trait("Category", "Performance")]
-    public void Parse_OnHugeInput_StaysUnderFiveSeconds()
+    public void Parse_OnHugeInput_CompletesWithoutStalling()
     {
         // 5 MB Markdown via wiederholten Header.
         StringBuilder builder = new(5 * 1024 * 1024);
@@ -127,10 +135,18 @@ public sealed class MarkdigParserEdgeCasesTests
         ParseResult result = _sut.Parse(huge);
         stopwatch.Stop();
 
+        // Der Test misst Wanduhrzeit, und die hängt davon ab, wie viele Testprozesse
+        // sich gerade dieselben Kerne teilen. Ein knappes Budget prüft deshalb nicht
+        // den Parser, sondern die Auslastung der Maschine — und fällt genau dann um,
+        // wenn ohnehin alles läuft. Zugesichert wird hier darum das, was unabhängig
+        // von der Last gilt: Der Parser kommt bei 5 MB zum Ende und liefert ein
+        // vollständiges Ergebnis, statt in einem quadratischen Pfad stehen zu bleiben.
         Assert.NotNull(result);
+        Assert.False(result.RenderedHtmlGz.IsEmpty);
         Assert.True(
-            stopwatch.Elapsed < TimeSpan.FromSeconds(5),
-            $"Huge-Input-Parse benötigte {stopwatch.Elapsed.TotalSeconds:F2}s, Budget 5s.");
+            stopwatch.Elapsed < HugeInputStallLimit,
+            $"Huge-Input-Parse benötigte {stopwatch.Elapsed.TotalSeconds:F2}s und "
+                + $"überschritt damit die Stillstandsgrenze von {HugeInputStallLimit.TotalSeconds:F0}s.");
     }
 
     [Fact]

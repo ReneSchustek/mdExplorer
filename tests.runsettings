@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Laufzeit-Grenzen für die Testläufe. Eingebunden über RunSettingsFilePath in der
+    Directory.Build.props, damit sie in jedem Lauf gelten — lokal, im Quality-Gate und
+    im Fließband — und nicht nur dann, wenn jemand an das passende Kommandozeilen-Flag
+    denkt.
+
+    Anlass: Am 11.08.2026 blieb der Testprozess einer Suite dreizehn Minuten stehen,
+    ohne Fortschritt und ohne Abbruch. Alle Tests waren durch; beendet hat sich der
+    Prozess trotzdem nicht. Ein Lauf, der nicht endet, ist schlimmer als ein roter:
+    Er bindet die Maschine, bis jemand hinsieht — und beim unbeaufsichtigten Durchlauf
+    fehlt genau dieser Jemand.
+-->
+<RunSettings>
+  <RunConfiguration>
+    <!--
+        Harte Obergrenze für die gesamte Sitzung. Der vollständige Lauf braucht rund eine
+        Minute; zehn sind großzügig genug für eine belegte Maschine und knapp genug, dass
+        ein Stillstand auffällt, statt unbemerkt weiterzulaufen.
+    -->
+    <TestSessionTimeout>600000</TestSessionTimeout>
+  </RunConfiguration>
+
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <!--
+          Meldet einen Stillstand mit Namen, statt ihn nur abzubrechen: Bleibt fünf
+          Minuten lang jede Rückmeldung aus, wird ein Speicherabbild gezogen und der Lauf
+          beendet. Der längste echte Test dauert eine halbe Minute — fünf Minuten ohne
+          jedes Lebenszeichen sind deshalb kein langsamer Test, sondern ein Hänger.
+      -->
+      <DataCollector friendlyName="blame" enabled="True">
+        <Configuration>
+          <CollectDumpOnTestSessionHang TestTimeout="300000" HangDumpType="Mini" />
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

@@ -16,6 +16,7 @@ tools/gitleaks.exe detect --source . --config .gitleaks.toml            # Arbeit
 tools/gitleaks.exe detect --source . --config .gitleaks.toml --no-git   # nur Arbeitsbaum
 ```
 
-In der CI läuft der Scan über die offizielle `gitleaks-action`
-(siehe `.github/workflows/security.yml`) — über die vollständige Historie und
-zusätzlich nach Zeitplan. Das lokale Binary wird dafür nicht gebraucht.
+In der CI wird `gitleaks` direkt aufgerufen statt über die Action
+(siehe `.github/workflows/security.yml`, dort steht die Begründung) — über die
+vollständige Historie und zusätzlich nach Zeitplan. Das lokale Binary wird dafür
+nicht gebraucht.

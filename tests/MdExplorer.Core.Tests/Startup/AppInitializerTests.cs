@@ -9,6 +9,20 @@ namespace MdExplorer.Core.Tests.Startup;
 
 public sealed class AppInitializerTests
 {
+    /// <summary>
+    /// Schrittweite, in der die Testuhr vorgestellt wird, bis der beobachtete Ablauf endet.
+    /// </summary>
+    private static readonly TimeSpan AdvanceStep = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>
+    /// Echtes Zeitbudget als Notausstieg. Läuft es ab, scheitert der Test mit einer
+    /// Zeitüberschreitung — statt den ganzen Lauf anzuhalten.
+    /// </summary>
+    private static readonly TimeSpan RealTimeBudget = TimeSpan.FromSeconds(10);
+
+    /// <summary>Obergrenze der Vorstell-Schritte, damit die Schleife immer endet.</summary>
+    private const int MaxAdvanceAttempts = 40;
+
     [Fact]
     public async Task InitializeAsync_WhenMigrationIsFastAndMinimumDurationNotReached_WaitsRemainingTime()
     {
@@ -19,10 +33,8 @@ public sealed class AppInitializerTests
 
         Task initialization = sut.InitializeAsync(TimeSpan.FromMilliseconds(1500), CancellationToken.None);
 
-        timeProvider.Advance(TimeSpan.FromMilliseconds(100));
-        await migrator.WaitUntilCompletedAsync().ConfigureAwait(true);
-        timeProvider.Advance(TimeSpan.FromMilliseconds(1400));
-        await initialization.ConfigureAwait(true);
+        await AdvanceUntilCompletedAsync(timeProvider, migrator.WaitUntilCompletedAsync()).ConfigureAwait(true);
+        await AdvanceUntilCompletedAsync(timeProvider, initialization).ConfigureAwait(true);
 
         Assert.True(migrator.WasCalled);
     }
@@ -37,11 +49,36 @@ public sealed class AppInitializerTests
 
         Task initialization = sut.InitializeAsync(TimeSpan.FromMilliseconds(1500), CancellationToken.None);
 
-        timeProvider.Advance(TimeSpan.FromSeconds(3));
-        await migrator.WaitUntilCompletedAsync().ConfigureAwait(true);
-        await initialization.ConfigureAwait(true);
+        await AdvanceUntilCompletedAsync(timeProvider, migrator.WaitUntilCompletedAsync()).ConfigureAwait(true);
+
+        // Ohne weiteres Vorstellen der Uhr fertig werden — das ist die Aussage dieses Tests:
+        // Die Migration hat die Mindestdauer bereits überschritten, es wird nicht mehr gewartet.
+        await initialization.WaitAsync(RealTimeBudget).ConfigureAwait(true);
 
         Assert.True(migrator.WasCalled);
+    }
+
+    /// <summary>
+    /// Stellt die Testuhr schrittweise vor, bis <paramref name="task"/> abgeschlossen ist.
+    /// </summary>
+    /// <remarks>
+    /// Ein einzelnes Vorstellen an einer geratenen Stelle genügt nicht: Wer die Uhr
+    /// vorstellt, bevor der Wartende seinen Timer angemeldet hat, stellt an ihm vorbei —
+    /// der Timer beginnt danach von vorn, und die Zeit, auf die er wartet, kommt nie.
+    /// Genau daran blieb am 11.08.2026 ein vollständiger Testlauf dreizehn Minuten stehen,
+    /// während die Zusammenfassung daneben „bestanden" für die übrigen Tests meldete.
+    /// Das <see cref="Task.Yield"/> vor jedem Schritt gibt den Fortsetzungen Gelegenheit,
+    /// ihre Timer zu setzen.
+    /// </remarks>
+    private static async Task AdvanceUntilCompletedAsync(FakeTimeProvider timeProvider, Task task)
+    {
+        for (int attempt = 0; attempt < MaxAdvanceAttempts && !task.IsCompleted; attempt++)
+        {
+            await Task.Yield();
+            timeProvider.Advance(AdvanceStep);
+        }
+
+        await task.WaitAsync(RealTimeBudget).ConfigureAwait(true);
     }
 
     [Fact]
