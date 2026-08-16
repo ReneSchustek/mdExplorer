@@ -4,9 +4,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4.svg)](https://dotnet.microsoft.com/)
 
-Windows-Desktop-Werkzeug (WPF / .NET 10) zum Erkunden und Verarbeiten
-von Markdown-Beständen. Drei-Panel-UI mit Datei-Browser, Volltext-Suche
-und HTML-Vorschau auf Basis von WebView2.
+Ein Ordner voller Markdown-Notizen wird ab einer gewissen Größe unübersichtlich:
+Man weiß noch, dass etwas notiert wurde, aber nicht mehr, wo — und schon gar nicht,
+welche Notiz mit welcher zusammenhängt. MdExplorer indexiert solche Bestände und
+macht sie erkundbar: Volltextsuche über alles, Schlagwörter projektweit pflegbar,
+die Verweise zwischen den Notizen als Graph und eine Vorschau, in der sich jede
+Datei direkt bearbeiten lässt.
+
+Alles läuft lokal. Kein Konto, kein Server, keine Cloud: Der Suchindex liegt in einer
+SQLite-Datenbank im Anwendungsordner, die Notizen bleiben, wo sie sind, und ohne
+Internetverbindung funktioniert die Anwendung vollständig.
+
+Windows-Desktop-Anwendung, gebaut mit WPF auf .NET 10, Drei-Panel-Oberfläche mit
+Datei-Browser, Suche und HTML-Vorschau auf Basis von WebView2. MIT-Lizenz.
 
 ## Oberfläche
 
@@ -28,16 +38,32 @@ Kennzeichnungen umbenennen, zusammenführen oder löschen:
 
 ## Voraussetzungen
 
-- .NET 10 SDK
-- [WebView2-Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
-  (auf modernen Windows-Installationen vorinstalliert)
-- SQLite — wird über das `Microsoft.Data.Sqlite`-Paket bezogen, keine
-  separate Installation nötig
+**Zum Benutzen:** Windows und die
+[WebView2-Runtime](https://developer.microsoft.com/microsoft-edge/webview2/), die auf
+aktuellen Windows-Installationen bereits vorhanden ist. Sonst nichts — SQLite bringt die
+Anwendung über das Paket `Microsoft.Data.Sqlite` selbst mit.
+
+**Zum Bauen:** zusätzlich das .NET 10 SDK.
 
 ## Installation
 
+Fertige Fassungen liegen auf der
+[Releases-Seite](https://github.com/ReneSchustek/mdExplorer/releases/latest): ein
+Windows-Installer samt SHA-256-Prüfsumme und ein Archiv zum Entpacken. Das Archiv
+läuft aus jedem beliebigen Ordner, ohne Installation.
+
+Der Installer ist **nicht signiert** — Windows zeigt beim ersten Start deshalb eine
+Warnung, die sich über „Weitere Informationen" übergehen lässt.
+
+Die Fassung trägt noch eine **Null vor dem Punkt**, und das ist eine Aussage: Die
+Anwendung tut, was sie soll, und ist täglich im Einsatz, aber Einstellungen,
+Datenbankformat und Bedienung sind nicht eingefroren. Eine spätere Fassung darf
+Dinge anders machen.
+
+### Aus dem Quelltext bauen
+
 ```powershell
-git clone <repository-url> MdExplorer
+git clone https://github.com/ReneSchustek/mdExplorer.git MdExplorer
 cd MdExplorer
 dotnet restore MdExplorer.slnx
 ```
