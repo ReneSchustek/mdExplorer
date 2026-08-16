@@ -32,6 +32,17 @@ internal sealed partial class PreviewViewModel : ObservableObject
     [ObservableProperty]
     private Guid? _currentDocumentId;
 
+    /// <summary>
+    /// Der Ordner, in dem das angezeigte Dokument liegt — oder <see langword="null"/>.
+    /// </summary>
+    /// <remarks>
+    /// Die Ansicht bildet ihn auf den virtuellen Ordner der Vorschau ab. Ohne ihn bleibt
+    /// jedes Bild einer Notiz leer, denn ein relativer Pfad hat in einem per Zeichenkette
+    /// geladenen Dokument keine Basis, auf die er sich beziehen könnte.
+    /// </remarks>
+    [ObservableProperty]
+    private string? _documentFolder;
+
     /// <summary>Erzeugt das ViewModel.</summary>
     public PreviewViewModel(
         IServiceScopeFactory scopeFactory,
@@ -113,6 +124,9 @@ internal sealed partial class PreviewViewModel : ObservableObject
         }
 
         _body = DecompressHtml(document.RenderedHtmlGz);
+        // Erst der Ordner, dann das HTML: Die Ansicht hängt am Wechsel von Html und richtet
+        // den virtuellen Ordner vor dem Anzeigen ein.
+        DocumentFolder = await LoadDocumentFolderAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
         Html = _htmlBuilder.Build(_body);
         CurrentDocumentId = markdownFileId;
     }
@@ -135,6 +149,37 @@ internal sealed partial class PreviewViewModel : ObservableObject
 
     [LoggerMessage(EventId = 311, Level = LogLevel.Warning, Message = "Preview-Lookup für Datei {MarkdownFileId} fehlgeschlagen — Datenbank-Spitze.")]
     private static partial void LogPreviewLoadFailed(ILogger logger, Guid markdownFileId, Exception exception);
+
+    /// <summary>
+    /// Liest den Ordner der Datei — ein Fehlschlag kostet die Bilder, nicht die Vorschau.
+    /// </summary>
+    /// <remarks>
+    /// Bewusst <c>GetService</c> statt <c>GetRequiredService</c>: Der Ordner ist für relative
+    /// Bildpfade da, nicht fürs Anzeigen. Wer ihn nicht auflösen kann, soll ein Dokument ohne
+    /// Bilder sehen und nicht eine leere Fläche.
+    /// </remarks>
+    private async Task<string?> LoadDocumentFolderAsync(Guid markdownFileId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+            await using (scope.ConfigureAwait(true))
+            {
+                IMarkdownFileRepository? repository = scope.ServiceProvider.GetService<IMarkdownFileRepository>();
+                if (repository is null)
+                {
+                    return null;
+                }
+                MarkdownFile? file = await repository.GetByIdAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
+                return file is null ? null : Path.GetDirectoryName(file.AbsolutePath);
+            }
+        }
+        catch (DbException exception)
+        {
+            LogPreviewLoadFailed(_logger, markdownFileId, exception);
+            return null;
+        }
+    }
 
     private async Task<MarkdownDocument?> LoadDocumentAsync(Guid markdownFileId, CancellationToken cancellationToken)
     {

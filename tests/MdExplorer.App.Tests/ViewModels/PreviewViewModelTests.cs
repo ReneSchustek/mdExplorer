@@ -33,7 +33,7 @@ public sealed class PreviewViewModelTests
         document.SetRenderedHtmlGz(Gzip("<h1>Titel</h1>"));
         repo.Put(fileId, document);
 
-        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false));
+        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
         using ServiceProvider provider = BuildProvider(repo);
         PreviewViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), builder, NullLogger<PreviewViewModel>.Instance);
 
@@ -49,7 +49,7 @@ public sealed class PreviewViewModelTests
     public async Task LoadAsync_MissingDocument_StillReturnsEmptyHtmlWithCsp()
     {
         FakeMarkdownDocumentRepository repo = new();
-        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: true));
+        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: true), new FakeSettingsService(AppSettings.Default));
         using ServiceProvider provider = BuildProvider(repo);
         PreviewViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), builder, NullLogger<PreviewViewModel>.Instance);
 
@@ -75,7 +75,7 @@ public sealed class PreviewViewModelTests
     [Fact]
     public void Build_OnScriptPayload_KeepsScriptSrcNoneIntact()
     {
-        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false));
+        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
 
         string html = builder.Build("<script>alert(1)</script>");
 

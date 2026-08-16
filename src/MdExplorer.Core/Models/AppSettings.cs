@@ -93,10 +93,26 @@ public sealed record AppearanceSettings(
 /// <param name="SearchDebounceMs">Wartezeit nach letztem Tastendruck, bevor die Suche feuert.</param>
 /// <param name="IndexerResyncIntervalSeconds">Soll/Ist-Abgleich des Indexers in Sekunden (<c>0</c> deaktiviert).</param>
 /// <param name="CheckForUpdatesAtStartup">Wenn <see langword="true"/>, prüft die Anwendung beim Start auf neue Versionen.</param>
+/// <param name="LoadRemoteImagesInPreview">
+/// Wenn <see langword="true"/>, lädt die Vorschau auch Bilder aus dem Netz.
+/// </param>
+/// <remarks>
+/// <para>
+/// Ab Werk <see langword="false"/>, und das ist eine Zusage, keine Vorsichtsmaßnahme: Die
+/// Anwendung arbeitet vollständig ohne Internetverbindung. Ein Bild aus dem Netz in einer
+/// Notiz würde beim Öffnen der Vorschau einen fremden Server aufrufen — und ihm damit
+/// verraten, wann welche Notiz angesehen wurde.
+/// </para>
+/// <para>
+/// Wer die Abzeichen eines README sehen will, schaltet es ein. Dann steht in der Vorschau,
+/// was im Dokument steht — samt der Anfragen, die dazugehören.
+/// </para>
+/// </remarks>
 public sealed record BehaviorSettings(
     [property: Range(50, 5_000)] int SearchDebounceMs,
     [property: Range(0, 3_600)] int IndexerResyncIntervalSeconds,
-    bool CheckForUpdatesAtStartup = true)
+    bool CheckForUpdatesAtStartup = true,
+    bool LoadRemoteImagesInPreview = false)
 {
     /// <summary>Default-Wartezeit nach letztem Tastendruck in Millisekunden.</summary>
     private const int DefaultSearchDebounceMs = 300;

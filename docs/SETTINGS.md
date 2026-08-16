@@ -39,7 +39,8 @@ Aktuelle Version: `3`.
   "behavior": {
     "searchDebounceMs": 300,
     "indexerResyncIntervalSeconds": 300,
-    "checkForUpdatesAtStartup": true
+    "checkForUpdatesAtStartup": true,
+    "loadRemoteImagesInPreview": false
   }
 }
 ```
@@ -89,6 +90,7 @@ fehlende Felder mit Defaults aufgefüllt.
 | `searchDebounceMs` | `int` | `300` | 50–5000 | Wartezeit nach letztem Tastendruck, bevor die Suche feuert |
 | `indexerResyncIntervalSeconds` | `int` | `300` | 0–3600 | Intervall für den Soll/Ist-Abgleich des Indexers (`0` deaktiviert) |
 | `checkForUpdatesAtStartup` | `bool` | `true` | — | Prüft beim Start auf neue Fassungen. Die Drossel von 24 Stunden liegt im Update-Modul; die manuelle Prüfung im Einstellungs-Dialog übergeht sie |
+| `loadRemoteImagesInPreview` | `bool` | `false` | — | Lässt die Vorschau Bilder von fremden Servern laden. **Ab Werk aus**, und das ist eine Zusage: Die Anwendung arbeitet vollständig ohne Internetverbindung. Eingeschaltet erscheinen Abzeichen und Netzbilder — die aufgerufenen Server erfahren dann, wann welche Notiz geöffnet wurde. Geöffnet wird ausschließlich `img-src` und nur für `https`; Skripte bleiben gesperrt |
 
 ## Glob-Muster und Negation
 

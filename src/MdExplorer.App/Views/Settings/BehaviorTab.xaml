@@ -17,6 +17,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid.Resources>
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -36,6 +37,18 @@
                   Content="Beim Start nach Updates suchen"
                   IsChecked="{Binding CheckForUpdatesAtStartup, Mode=TwoWay}"
                   Margin="0,4,0,0" />
+
+        <!-- Ab Werk aus, und das ist eine Zusage: Die Anwendung arbeitet ohne
+             Internetverbindung. Ein Bild aus dem Netz ruft beim Anzeigen einen fremden
+             Server auf und verrät ihm, wann welche Notiz geöffnet wurde. -->
+        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,8,0,0">
+            <CheckBox Content="Bilder aus dem Netz in der Vorschau laden"
+                      IsChecked="{Binding LoadRemoteImagesInPreview, Mode=TwoWay}" />
+            <TextBlock Text="Aus. Damit bleibt die Vorschau ohne Internetverbindung vollständig. Eingeschaltet werden auch Abzeichen und Bilder von fremden Servern geladen — die erfahren dann, wann Sie welche Notiz ansehen."
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       Margin="24,2,0,0" />
+        </StackPanel>
 
         <!-- Update-Abschnitt: Prüfen und Installieren. Bewusst zweistufig — installiert
              wird erst auf ausdrücklichen zweiten Klick. -->

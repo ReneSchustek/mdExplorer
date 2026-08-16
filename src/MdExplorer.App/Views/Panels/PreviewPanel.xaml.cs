@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using MdExplorer.App.Services;
 using MdExplorer.App.ViewModels;
 using MdExplorer.Core;
 using MdExplorer.Core.Abstractions;
@@ -119,7 +120,40 @@ internal sealed partial class PreviewPanel : UserControl
             _pendingHtml = html;
             return;
         }
+        MapDocumentFolder();
         Browser.NavigateToString(html);
+    }
+
+    /// <summary>
+    /// Bildet den Ordner des angezeigten Dokuments auf den virtuellen Ordner der Vorschau ab.
+    /// </summary>
+    /// <remarks>
+    /// Nur lesend und ohne fremde Herkunft (<c>DenyCors</c>): Die Vorschau soll Bilder
+    /// anzeigen, nicht mit dem Dateisystem sprechen. Eine frühere Abbildung wird jedes Mal
+    /// gelöst — sonst zeigte das nächste Dokument die Bilder des vorigen.
+    /// </remarks>
+    private void MapDocumentFolder()
+    {
+        try
+        {
+            Browser.CoreWebView2.ClearVirtualHostNameToFolderMapping(PreviewHtmlBuilder.ImageHost);
+        }
+        catch (ArgumentException)
+        {
+            // Es gab noch keine Abbildung — kein Grund, etwas zu melden.
+        }
+
+        if (DataContext is not PreviewViewModel viewModel
+            || string.IsNullOrWhiteSpace(viewModel.DocumentFolder)
+            || !Directory.Exists(viewModel.DocumentFolder))
+        {
+            return;
+        }
+
+        Browser.CoreWebView2.SetVirtualHostNameToFolderMapping(
+            PreviewHtmlBuilder.ImageHost,
+            viewModel.DocumentFolder,
+            CoreWebView2HostResourceAccessKind.DenyCors);
     }
 
     private void FlushPendingHtml()

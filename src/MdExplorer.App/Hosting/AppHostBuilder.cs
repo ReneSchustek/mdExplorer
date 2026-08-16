@@ -119,7 +119,9 @@ internal static class AppHostBuilder
         _ = builder.Services.AddSingleton<IEffectiveThemeProvider>(sp => new EffectiveThemeProvider(
             sp.GetRequiredService<ISettingsService>(),
             sp.GetRequiredService<ISystemThemeProvider>()));
-        _ = builder.Services.AddSingleton(sp => new PreviewHtmlBuilder(sp.GetRequiredService<IEffectiveThemeProvider>()));
+        _ = builder.Services.AddSingleton(sp => new PreviewHtmlBuilder(
+            sp.GetRequiredService<IEffectiveThemeProvider>(),
+            sp.GetRequiredService<ISettingsService>()));
         _ = builder.Services.AddSingleton(sp => new ThemeApplier(sp.GetRequiredService<IEffectiveThemeProvider>()));
         _ = builder.Services.AddSingleton(sp => new UiSettingsStore(sp.GetRequiredService<ILogger<UiSettingsStore>>()));
         _ = builder.Services.AddSingleton<IDocumentLocator>(sp =>

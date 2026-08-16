@@ -190,12 +190,13 @@ public sealed class MainViewModelTests
             .AddScoped<IAllFilesQuery>(_ => harness.AllFilesQuery)
             .AddScoped<ISearchService>(_ => harness.SearchService)
             .AddScoped<IMarkdownDocumentRepository>(_ => harness.DocRepo)
+            .AddScoped<IMarkdownFileRepository>(_ => harness.FileRepo)
             .BuildServiceProvider(validateScopes: true);
         FolderTreeViewModel folderTree = new(harness.SettingsService, harness.FileSystem);
         AllFilesViewModel allFiles = new(freshProvider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
         SearchViewModel search = new(freshProvider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, harness.Messenger, NullLogger<SearchViewModel>.Instance);
         TagCloudViewModel tagCloud = new(harness.TagStats, harness.Messenger, MicrosoftOptions.Create(new TagCloudOptions()), NullLogger<TagCloudViewModel>.Instance);
-        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false));
+        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
         PreviewViewModel preview = new(freshProvider.GetRequiredService<IServiceScopeFactory>(), builder, NullLogger<PreviewViewModel>.Instance);
         MarkdownEditorViewModel editor = new(harness.FileSystem, new TagExtractor(harness.SettingsService), TimeProvider.System, NullLogger<MarkdownEditorViewModel>.Instance);
         DocumentPanelViewModel documentPanel = new(preview, editor, NoRelations(), harness.Parser, builder, harness.Locator, harness.FileSystem, NullLogger<DocumentPanelViewModel>.Instance);
@@ -396,6 +397,7 @@ public sealed class MainViewModelTests
         public FakeAllFilesQuery AllFilesQuery { get; } = new();
         public FakeSearchService SearchService { get; } = new();
         public FakeMarkdownDocumentRepository DocRepo { get; } = new();
+        public FakeMarkdownFileRepository FileRepo { get; } = new();
         public FakeTagStatistics TagStats { get; } = new();
         public FakeMarkdownParser Parser { get; } = new();
         public FakeIndexer Indexer { get; } = new();
@@ -420,6 +422,9 @@ public sealed class MainViewModelTests
             _ = services.AddScoped<IAllFilesQuery>(_ => AllFilesQuery);
             _ = services.AddScoped<ISearchService>(_ => SearchService);
             _ = services.AddScoped<IMarkdownDocumentRepository>(_ => DocRepo);
+            // Die Vorschau schlägt den Ordner der Datei nach, damit relative Bildpfade
+            // ein Zuhause haben. Ohne das Repository bliebe die Vorschau leer.
+            _ = services.AddScoped<IMarkdownFileRepository>(_ => FileRepo);
             Provider = services.BuildServiceProvider(validateScopes: true);
 
             FolderTree = new FolderTreeViewModel(SettingsService, FileSystem);
@@ -437,7 +442,7 @@ public sealed class MainViewModelTests
                 Messenger,
                 MicrosoftOptions.Create(new TagCloudOptions()),
                 NullLogger<TagCloudViewModel>.Instance);
-            PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false));
+            PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
             Preview = new PreviewViewModel(
                 Provider.GetRequiredService<IServiceScopeFactory>(),
                 builder,

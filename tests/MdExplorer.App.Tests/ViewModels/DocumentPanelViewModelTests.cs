@@ -172,7 +172,7 @@ public sealed class DocumentPanelViewModelTests
         FakeDocumentLocator locator,
         FakeMarkdownParser parser)
     {
-        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false));
+        PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
         ServiceProvider provider = BuildProvider(repo);
         PreviewViewModel preview = new(
             provider.GetRequiredService<IServiceScopeFactory>(),

@@ -124,7 +124,7 @@ public sealed class PreviewViewModelFallbackTests
 
     private static PreviewViewModel Erzeuge(ServiceProvider provider) =>
         new(provider.GetRequiredService<IServiceScopeFactory>(),
-            new PreviewHtmlBuilder(new FakeThemeProvider(isDarkMode: false)),
+            new PreviewHtmlBuilder(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default)),
             NullLogger<PreviewViewModel>.Instance);
 
     private static ServiceProvider ErzeugeAnbieter(FakeMarkdownDocumentRepository repository)

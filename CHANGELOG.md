@@ -7,6 +7,22 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.15.1] - 2026-08-16
+
+### Behoben
+- **Bilder in Notizen waren in der Vorschau nie zu sehen.** Ein Bild mit
+  relativem Pfad — also praktisch jedes — hatte nichts, worauf es sich beziehen
+  konnte: Die Vorschau bekommt ihr HTML als Zeichenkette, und darin gibt es keinen
+  Ordner. Jetzt zeigen relative Pfade auf den Ordner des angezeigten Dokuments.
+
+### Hinzugefügt
+- Einstellungen → Verhalten: „Bilder aus dem Netz in der Vorschau laden".
+  **Ab Werk aus**, damit die Zusage stimmt, dass die Anwendung ohne
+  Internetverbindung vollständig arbeitet — ein Bild von einem fremden Server
+  verrät ihm, wann Sie welche Notiz geöffnet haben. Eingeschaltet erscheinen auch
+  Abzeichen und Bilder aus dem Netz; geöffnet wird dabei ausschließlich die
+  Bildquelle, Skripte bleiben in jedem Fall gesperrt.
+
 ## [0.15.0] - 2026-08-16
 
 ### Geändert
@@ -176,6 +192,7 @@ Abschluss der Qualitätssicherung.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
 [Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.14.0...HEAD
+[0.15.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.1
 [0.15.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.0
 [0.14.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.1
 [0.14.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.0

@@ -1,5 +1,6 @@
 using MdExplorer.App.Services;
 using MdExplorer.App.Tests.Fakes;
+using MdExplorer.Core.Models;
 
 namespace MdExplorer.App.Tests.Services;
 
@@ -9,7 +10,7 @@ public sealed class PreviewHtmlBuilderTests
     [Fact]
     public void Build_OnNonEmptyBody_ReturnsDoctypeAndCsp()
     {
-        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: false));
+        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
 
         string html = sut.Build("<p>Hallo Welt</p>");
 
@@ -22,7 +23,7 @@ public sealed class PreviewHtmlBuilderTests
     [Fact]
     public void Build_OnLightTheme_EmbedsLightCss()
     {
-        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: false));
+        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
 
         string html = sut.Build("<p>Body</p>");
 
@@ -33,7 +34,7 @@ public sealed class PreviewHtmlBuilderTests
     [Fact]
     public void Build_OnDarkTheme_EmbedsDarkCss()
     {
-        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: true));
+        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: true), new FakeSettingsService(AppSettings.Default));
 
         string html = sut.Build("<p>Body</p>");
 
@@ -44,7 +45,7 @@ public sealed class PreviewHtmlBuilderTests
     [Fact]
     public void BuildEmpty_ProducesValidDocumentWithEmptyBody()
     {
-        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: false));
+        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
 
         string html = sut.BuildEmpty();
 
@@ -56,7 +57,7 @@ public sealed class PreviewHtmlBuilderTests
     [Fact]
     public void Build_ContainsExpectedCspDirectives()
     {
-        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: false));
+        PreviewHtmlBuilder sut = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
 
         string html = sut.Build("<p>Body</p>");
 
