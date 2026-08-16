@@ -84,7 +84,7 @@ public sealed class FileSystemSettingsHistoryStoreTests : IDisposable
                 JsonSerializer.Serialize(vorher, SerializerOptions),
                 JsonSerializer.Serialize(ersterStand, SerializerOptions),
                 new DateTimeOffset(2026, 06, 10, 12, 00, 00, TimeSpan.Zero),
-                CancellationToken.None)
+                TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         string alterSchnappschuss = Assert.Single(Directory.GetFiles(_historyDir, "settings.*.json"));
@@ -98,7 +98,7 @@ public sealed class FileSystemSettingsHistoryStoreTests : IDisposable
                     JsonSerializer.Serialize(ersterStand, SerializerOptions),
                     JsonSerializer.Serialize(zweiterStand, SerializerOptions),
                     new DateTimeOffset(2026, 06, 10, 12, 05, 00, TimeSpan.Zero),
-                    CancellationToken.None)
+                    TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
         }
 
@@ -127,7 +127,7 @@ public sealed class FileSystemSettingsHistoryStoreTests : IDisposable
                 JsonSerializer.Serialize(previous, SerializerOptions),
                 JsonSerializer.Serialize(current, SerializerOptions),
                 timestamp,
-                CancellationToken.None)
+                TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         string[] snapshots = Directory.GetFiles(_historyDir, "settings.*.json");
@@ -135,7 +135,7 @@ public sealed class FileSystemSettingsHistoryStoreTests : IDisposable
         Assert.EndsWith(".json", snapshot, StringComparison.Ordinal);
         Assert.Contains("20260610T123456789", Path.GetFileName(snapshot), StringComparison.Ordinal);
 
-        string[] auditLines = await File.ReadAllLinesAsync(_auditPath).ConfigureAwait(true);
+        string[] auditLines = await File.ReadAllLinesAsync(_auditPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         string line = Assert.Single(auditLines);
         Assert.Contains("\"behavior.searchDebounceMs\"", line, StringComparison.Ordinal);
         Assert.Contains("\"300\"", line, StringComparison.Ordinal);
@@ -166,7 +166,7 @@ public sealed class FileSystemSettingsHistoryStoreTests : IDisposable
                     JsonSerializer.Serialize(previous, SerializerOptions),
                     JsonSerializer.Serialize(current, SerializerOptions),
                     timestamp,
-                    CancellationToken.None)
+                    TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
             previous = current;
         }

@@ -15,8 +15,8 @@ public sealed class HashCalculatorTests
         fs.AddFile(@"C:\b.md", "Inhalt", FixedWrite);
         HashCalculator sut = new(fs);
 
-        string hashA = await sut.ComputeAsync(@"C:\a.md", CancellationToken.None).ConfigureAwait(true);
-        string hashB = await sut.ComputeAsync(@"C:\b.md", CancellationToken.None).ConfigureAwait(true);
+        string hashA = await sut.ComputeAsync(@"C:\a.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
+        string hashB = await sut.ComputeAsync(@"C:\b.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(hashA, hashB);
         Assert.Equal(64, hashA.Length);
@@ -30,8 +30,8 @@ public sealed class HashCalculatorTests
         fs.AddFile(@"C:\b.md", "Inhalt B", FixedWrite);
         HashCalculator sut = new(fs);
 
-        string hashA = await sut.ComputeAsync(@"C:\a.md", CancellationToken.None).ConfigureAwait(true);
-        string hashB = await sut.ComputeAsync(@"C:\b.md", CancellationToken.None).ConfigureAwait(true);
+        string hashA = await sut.ComputeAsync(@"C:\a.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
+        string hashB = await sut.ComputeAsync(@"C:\b.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.NotEqual(hashA, hashB);
     }
@@ -43,7 +43,7 @@ public sealed class HashCalculatorTests
         fs.AddFile(@"C:\test.md", "abc", FixedWrite);
         HashCalculator sut = new(fs);
 
-        string hash = await sut.ComputeAsync(@"C:\test.md", CancellationToken.None).ConfigureAwait(true);
+        string hash = await sut.ComputeAsync(@"C:\test.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", hash);
     }

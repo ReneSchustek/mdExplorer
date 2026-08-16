@@ -21,7 +21,7 @@ public sealed class GraphServiceTests
         FakeGraphSourceProvider provider = new(new GraphSourceData([], []));
         GraphService sut = Build(provider);
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(snapshot.Nodes);
         Assert.Empty(snapshot.Edges);
@@ -43,7 +43,7 @@ public sealed class GraphServiceTests
             ]));
         GraphService sut = Build(provider);
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(3, snapshot.Nodes.Count);
         Assert.Equal(3, snapshot.Edges.Count);
@@ -63,7 +63,7 @@ public sealed class GraphServiceTests
             [new GraphSourceDocument(IndexId, """["does-not-exist"]""")]));
         GraphService sut = Build(provider);
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(snapshot.Edges);
     }
@@ -76,7 +76,7 @@ public sealed class GraphServiceTests
             [new GraphSourceDocument(IndexId, """["index"]""")]));
         GraphService sut = Build(provider);
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(snapshot.Edges);
     }
@@ -89,7 +89,7 @@ public sealed class GraphServiceTests
             [new GraphSourceDocument(IndexId, "{ broken json")]));
         GraphService sut = Build(provider);
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(snapshot.Edges);
         _ = Assert.Single(snapshot.Nodes);
@@ -126,7 +126,7 @@ public sealed class GraphServiceTests
             ]));
         GraphService sut = Build(provider, new GraphOptions { IncludeIsolatedNodes = false });
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, snapshot.Nodes.Count);
         Assert.Contains(snapshot.Nodes, n => n.Id == IndexId);
@@ -155,7 +155,7 @@ public sealed class GraphServiceTests
             ]));
         GraphService sut = Build(provider, new GraphOptions { IncludeIsolatedNodes = true, MaxNodes = 2 });
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, snapshot.Nodes.Count);
         Assert.Contains(snapshot.Nodes, n => n.Id == hubId);
@@ -184,7 +184,7 @@ public sealed class GraphServiceTests
         options.PathExclusions.Add("vendor/**");
         GraphService sut = Build(provider, options);
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.DoesNotContain(snapshot.Nodes, n => n.Id == AlphaId);
         Assert.Contains(snapshot.Nodes, n => n.Id == IndexId);
@@ -210,7 +210,7 @@ public sealed class GraphServiceTests
             ]));
         GraphService sut = Build(provider, new GraphOptions { IncludeIsolatedNodes = true });
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(new GraphFilter("notizen/"), CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(new GraphFilter("notizen/"), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(snapshot.Nodes);
         Assert.Equal(notizId, snapshot.Nodes[0].Id);
@@ -237,7 +237,7 @@ public sealed class GraphServiceTests
             ]));
         GraphService sut = Build(provider);
 
-        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Kein Absturz; die nicht-slugfähige Datei bleibt Knoten, ist aber nicht über ihren Namen verlinkbar.
         Assert.Contains(snapshot.Nodes, n => n.Id == symbolId);

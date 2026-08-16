@@ -111,7 +111,7 @@ public sealed class TagExtractorTests
         {
             Indexing = AppSettings.Default.Indexing with { AutoExtractHashtags = false },
         };
-        await _settings.SaveAsync(disabled, CancellationToken.None).ConfigureAwait(true);
+        await _settings.SaveAsync(disabled, TestContext.Current.CancellationToken).ConfigureAwait(true);
         MarkdownDocument ast = TestPipelineFactory.Parse("Body mit #foo und #bar.");
 
         IReadOnlyList<string> result = _sut.ExtractFromAst(ast);
@@ -126,7 +126,7 @@ public sealed class TagExtractorTests
         {
             Indexing = AppSettings.Default.Indexing with { AutoExtractHashtags = false },
         };
-        await _settings.SaveAsync(disabled, CancellationToken.None).ConfigureAwait(true);
+        await _settings.SaveAsync(disabled, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         IReadOnlyList<string> result = _sut.ExtractFromText("Body mit #foo und #bar.");
 

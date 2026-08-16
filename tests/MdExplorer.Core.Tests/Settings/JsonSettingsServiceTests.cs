@@ -35,7 +35,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
         string path = Path.Combine(_tempDir, "missing.json");
         using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
 
-        AppSettings result = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+        AppSettings result = await sut.LoadAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
         Assert.Empty(result.Indexing.Roots);
@@ -50,10 +50,10 @@ public sealed class JsonSettingsServiceTests : IDisposable
         // "null" ist gültiges JSON, ergibt aber keine Einstellungen. Ohne die Absicherung
         // liefe die Anwendung mit einem Nullwert weiter und fällt beim ersten Zugriff um.
         string path = Path.Combine(_tempDir, "null.json");
-        await File.WriteAllTextAsync(path, "null", CancellationToken.None).ConfigureAwait(true);
+        await File.WriteAllTextAsync(path, "null", TestContext.Current.CancellationToken).ConfigureAwait(true);
         using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
 
-        AppSettings result = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+        AppSettings result = await sut.LoadAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
         Assert.Empty(result.Indexing.Roots);
@@ -68,7 +68,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
         _ = Directory.CreateDirectory(path);
         using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
 
-        AppSettings result = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+        AppSettings result = await sut.LoadAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
         Assert.Empty(result.Indexing.Roots);
@@ -78,10 +78,10 @@ public sealed class JsonSettingsServiceTests : IDisposable
     public async Task LoadAsync_OnInvalidJson_ReturnsDefaultsAndDoesNotThrow()
     {
         string path = Path.Combine(_tempDir, "broken.json");
-        await File.WriteAllTextAsync(path, "{ this is not valid json", Encoding.UTF8).ConfigureAwait(true);
+        await File.WriteAllTextAsync(path, "{ this is not valid json", Encoding.UTF8, TestContext.Current.CancellationToken).ConfigureAwait(true);
         using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
 
-        AppSettings result = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+        AppSettings result = await sut.LoadAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
     }
@@ -97,10 +97,10 @@ public sealed class JsonSettingsServiceTests : IDisposable
             new BehaviorSettings(450, 900));
 
         using JsonSettingsService writer = new(path, NullLogger<JsonSettingsService>.Instance);
-        await writer.SaveAsync(input, CancellationToken.None).ConfigureAwait(true);
+        await writer.SaveAsync(input, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         using JsonSettingsService reader = new(path, NullLogger<JsonSettingsService>.Instance);
-        AppSettings result = await reader.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+        AppSettings result = await reader.LoadAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(input.Indexing.Roots, result.Indexing.Roots);
         Assert.Equal(input.Indexing.ExclusionPatterns, result.Indexing.ExclusionPatterns);
@@ -126,9 +126,9 @@ public sealed class JsonSettingsServiceTests : IDisposable
             Behavior = AppSettings.Default.Behavior with { SearchDebounceMs = 1000 },
         };
 
-        await sut.SaveAsync(target, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(target, TestContext.Current.CancellationToken).ConfigureAwait(true);
         SettingsChangedEventArgs delivered = await received.Task
-            .WaitAsync(TimeSpan.FromSeconds(5))
+            .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Equal(300, delivered.Previous.Behavior.SearchDebounceMs);
@@ -141,15 +141,15 @@ public sealed class JsonSettingsServiceTests : IDisposable
         string path = Path.Combine(_tempDir, "noop.json");
         using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
         AppSettings target = AppSettings.Default;
-        await sut.SaveAsync(target, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(target, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         int handlerCount = 0;
         sut.SettingsChanged += (_, _) => Interlocked.Increment(ref handlerCount);
 
-        await sut.SaveAsync(target, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(target, TestContext.Current.CancellationToken).ConfigureAwait(true);
         // Falls die Implementierung das Event versehentlich dennoch asynchron postet,
         // braucht der ThreadPool/Sync-Context eine kurze Karenzzeit, um es zuzustellen.
-        await Task.Delay(50).ConfigureAwait(true);
+        await Task.Delay(50, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(0, handlerCount);
     }
@@ -176,13 +176,13 @@ public sealed class JsonSettingsServiceTests : IDisposable
             SynchronizationContext.SetSynchronizationContext(context);
             try
             {
-                await sut.SaveAsync(target, CancellationToken.None).ConfigureAwait(false);
+                await sut.SaveAsync(target, TestContext.Current.CancellationToken).ConfigureAwait(false);
             }
             finally
             {
                 SynchronizationContext.SetSynchronizationContext(null);
             }
-        }).ConfigureAwait(true);
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, context.PostCount);
         Assert.Equal(0, handlerInvocations);
@@ -214,26 +214,26 @@ public sealed class JsonSettingsServiceTests : IDisposable
         {
             Behavior = AppSettings.Default.Behavior with { SearchDebounceMs = 400 },
         };
-        await sut.SaveAsync(stand1, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(stand1, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         clock.Advance(TimeSpan.FromSeconds(2));
         AppSettings stand2 = stand1 with
         {
             Appearance = stand1.Appearance with { Theme = AppTheme.Dark },
         };
-        await sut.SaveAsync(stand2, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(stand2, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         clock.Advance(TimeSpan.FromSeconds(3));
         AppSettings stand3 = stand2 with
         {
             Indexing = stand2.Indexing with { Roots = [@"C:\Notes"] },
         };
-        await sut.SaveAsync(stand3, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(stand3, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         string[] snapshots = Directory.GetFiles(historyDir, "settings.*.json");
         Assert.Equal(3, snapshots.Length);
 
-        string[] auditLines = await File.ReadAllLinesAsync(auditLog).ConfigureAwait(true);
+        string[] auditLines = await File.ReadAllLinesAsync(auditLog, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(3, auditLines.Length);
         Assert.Contains("\"behavior.searchDebounceMs\"", auditLines[0], StringComparison.Ordinal);
         Assert.Contains("\"appearance.theme\"", auditLines[1], StringComparison.Ordinal);
@@ -269,7 +269,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
         {
             Indexing = AppSettings.Default.Indexing with { Roots = [@"F:\Notes"] },
         };
-        await sut.SaveAsync(first, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(first, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         int eventCount = 0;
         sut.SettingsChanged += (_, _) => Interlocked.Increment(ref eventCount);
@@ -278,11 +278,11 @@ public sealed class JsonSettingsServiceTests : IDisposable
         {
             Indexing = AppSettings.Default.Indexing with { Roots = [@"F:\Notes"] },
         };
-        await sut.SaveAsync(second, CancellationToken.None).ConfigureAwait(true);
-        await Task.Delay(50).ConfigureAwait(true);
+        await sut.SaveAsync(second, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(50, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(Directory.GetFiles(historyDir, "settings.*.json"));
-        string[] auditLines = await File.ReadAllLinesAsync(auditLog).ConfigureAwait(true);
+        string[] auditLines = await File.ReadAllLinesAsync(auditLog, TestContext.Current.CancellationToken).ConfigureAwait(true);
         _ = Assert.Single(auditLines);
         Assert.Equal(0, eventCount);
     }
@@ -308,8 +308,8 @@ public sealed class JsonSettingsServiceTests : IDisposable
             clock);
 
         AppSettings target = AppSettings.Default;
-        await sut.SaveAsync(target, CancellationToken.None).ConfigureAwait(true);
-        await sut.SaveAsync(target, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(target, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await sut.SaveAsync(target, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(Directory.GetFiles(historyDir, "settings.*.json"));
         Assert.False(File.Exists(auditLog));
@@ -333,11 +333,11 @@ public sealed class JsonSettingsServiceTests : IDisposable
         await Task.Run(async () =>
         {
             Assert.Null(SynchronizationContext.Current);
-            await sut.SaveAsync(target, CancellationToken.None).ConfigureAwait(false);
-        }).ConfigureAwait(true);
+            await sut.SaveAsync(target, TestContext.Current.CancellationToken).ConfigureAwait(false);
+        }, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         int handlerThreadId = await handlerCalled.Task
-            .WaitAsync(TimeSpan.FromSeconds(5))
+            .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
         Assert.True(handlerThreadId > 0);
     }
@@ -429,14 +429,14 @@ public sealed class JsonSettingsServiceTests : IDisposable
     public async Task LoadAsync_WhenTheFileIsLockedByAnother_ReturnsDefaults()
     {
         string path = Path.Combine(_tempDir, "gesperrt.json");
-        await File.WriteAllTextAsync(path, "{}", CancellationToken.None).ConfigureAwait(true);
+        await File.WriteAllTextAsync(path, "{}", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         FileStream sperre = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         await using (sperre.ConfigureAwait(true))
         {
             using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
 
-            AppSettings result = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+            AppSettings result = await sut.LoadAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
             Assert.Empty(result.Indexing.Roots);
@@ -452,13 +452,13 @@ public sealed class JsonSettingsServiceTests : IDisposable
     {
         string path = Path.Combine(_tempDir, "ohne-beobachter.json");
         using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
-        _ = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+        _ = await sut.LoadAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         AppSettings dunkel = AppSettings.Default with
         {
             Appearance = AppearanceSettings.Default with { Theme = AppTheme.Dark },
         };
-        await sut.SaveAsync(dunkel, CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(dunkel, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(File.Exists(path));
         Assert.Equal(AppTheme.Dark, sut.Current.Appearance.Theme);
@@ -493,6 +493,6 @@ public sealed class JsonSettingsServiceTests : IDisposable
         sut.Dispose();
 
         _ = await Assert.ThrowsAsync<ObjectDisposedException>(
-            () => sut.SaveAsync(AppSettings.Default, CancellationToken.None)).ConfigureAwait(true);
+            () => sut.SaveAsync(AppSettings.Default, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 }

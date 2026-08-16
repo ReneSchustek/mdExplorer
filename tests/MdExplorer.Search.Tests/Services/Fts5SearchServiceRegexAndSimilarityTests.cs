@@ -28,7 +28,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex), CancellationToken.None)
+            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         SearchResult single = Assert.Single(results);
@@ -44,7 +44,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery(".+", Mode: SearchMode.Regex), CancellationToken.None)
+            .SearchAsync(new SearchQuery(".+", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(results);
@@ -59,7 +59,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
 
         // Ungültige RegEx-Syntax — der Compiler-Pfad fängt ArgumentException und liefert leere Trefferliste.
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("(unclosed", Mode: SearchMode.Regex), CancellationToken.None)
+            .SearchAsync(new SearchQuery("(unclosed", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(results);
@@ -73,7 +73,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("laufen", Similarity: SimilarityMode.Stemmed), CancellationToken.None)
+            .SearchAsync(new SearchQuery("laufen", Similarity: SimilarityMode.Stemmed), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         // Service hat die Stemming-Variante an die Storage gereicht.
@@ -93,7 +93,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex, Take: 1), CancellationToken.None)
+            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex, Take: 1), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         _ = Assert.Single(results);
@@ -108,7 +108,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex, Skip: 1, Take: 5), CancellationToken.None)
+            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex, Skip: 1, Take: 5), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         SearchResult single = Assert.Single(results);
@@ -126,7 +126,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex), CancellationToken.None)
+            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         SearchResult single = Assert.Single(results);
@@ -141,7 +141,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("alpha", Take: 0), CancellationToken.None)
+            .SearchAsync(new SearchQuery("alpha", Take: 0), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         _ = Assert.Single(results);

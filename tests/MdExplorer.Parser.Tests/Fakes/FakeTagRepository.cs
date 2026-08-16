@@ -46,6 +46,26 @@ internal sealed class FakeTagRepository : ITagRepository
         return Task.CompletedTask;
     }
 
+    public Task<int> RemoveOrphanedTagsAsync(CancellationToken cancellationToken)
+    {
+        HashSet<Guid> linked = [];
+        foreach (List<Guid> tagIds in _fileTagLinks.Values)
+        {
+            linked.UnionWith(tagIds);
+        }
+
+        List<string> orphans = [.. _tagsBySlug
+            .Where(entry => !linked.Contains(entry.Value.Id))
+            .Select(entry => entry.Key)];
+
+        foreach (string slug in orphans)
+        {
+            _ = _tagsBySlug.Remove(slug);
+        }
+
+        return Task.FromResult(orphans.Count);
+    }
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
     {
         HashSet<string> pendingSlugs = new(StringComparer.Ordinal);

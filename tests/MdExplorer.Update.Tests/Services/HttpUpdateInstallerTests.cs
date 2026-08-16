@@ -49,7 +49,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         HttpUpdateInstaller sut = CreateSut(handler);
         UpdateAsset asset = new("setup.exe", new Uri("https://example.invalid/setup.exe"), ExpectedSha256: null);
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.NoChecksumPublished, result.Status);
         Assert.Null(result.InstallerPath);
@@ -64,13 +64,13 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         HttpUpdateInstaller sut = CreateSut(WithPayload(inhalt));
         UpdateAsset asset = new("setup.exe", new Uri("https://example.invalid/setup.exe"), Sha256Of(inhalt));
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.Verified, result.Status);
         Assert.True(result.IsVerified);
         Assert.NotNull(result.InstallerPath);
         Assert.True(File.Exists(result.InstallerPath));
-        Assert.Equal(inhalt, await File.ReadAllBytesAsync(result.InstallerPath!));
+        Assert.Equal(inhalt, await File.ReadAllBytesAsync(result.InstallerPath!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         // Prüfwert eines anderen Inhalts: genau der Fall, gegen den die Prüfung schützt.
         UpdateAsset asset = new("setup.exe", new Uri("https://example.invalid/setup.exe"), Sha256Of("Das Original."u8.ToArray()));
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.ChecksumMismatch, result.Status);
         Assert.Null(result.InstallerPath);
@@ -100,7 +100,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         string kleingeschrieben = Convert.ToHexStringLower(SHA256.HashData(inhalt));
         UpdateAsset asset = new("setup.exe", new Uri("https://example.invalid/setup.exe"), kleingeschrieben);
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.Verified, result.Status);
     }
@@ -111,7 +111,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         HttpUpdateInstaller sut = CreateSut(StubHttpMessageHandler.WithStatus(HttpStatusCode.NotFound));
         UpdateAsset asset = new("setup.exe", new Uri("https://example.invalid/setup.exe"), Sha256Of("egal"u8.ToArray()));
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.DownloadFailed, result.Status);
         Assert.Null(result.InstallerPath);
@@ -124,7 +124,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         HttpUpdateInstaller sut = CreateSut(StubHttpMessageHandler.Throwing(new HttpRequestException("kein Netz")));
         UpdateAsset asset = new("setup.exe", new Uri("https://example.invalid/setup.exe"), Sha256Of("egal"u8.ToArray()));
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.DownloadFailed, result.Status);
         Assert.Empty(Directory.GetFiles(_downloadDirectory));
@@ -156,12 +156,12 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         List<int> gemeldet = [];
         Progress<int> progress = new(gemeldet.Add);
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress, CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.Verified, result.Status);
         // Progress<T> meldet über den Synchronisationskontext; kurz nachfassen, damit die
         // Rückrufe eingetroffen sind, bevor gezählt wird.
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.Current.CancellationToken);
         Assert.NotEmpty(gemeldet);
         Assert.True(gemeldet.Count <= 101, $"Erwartet höchstens 101 Meldungen, waren {gemeldet.Count}.");
         Assert.Equal(gemeldet.Count, gemeldet.Distinct().Count());
@@ -179,7 +179,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         UpdateAsset asset = new("setup.exe", new Uri("https://example.invalid/setup.exe"), Sha256Of(inhalt));
         List<int> gemeldet = [];
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, new Progress<int>(gemeldet.Add), CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, new Progress<int>(gemeldet.Add), TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.Verified, result.Status);
         Assert.Empty(gemeldet);
@@ -194,7 +194,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         HttpUpdateInstaller sut = CreateSut(WithPayload(inhalt));
         UpdateAsset asset = new(Path.Combine("..", "..", "setup.exe"), new Uri("https://example.invalid/setup.exe"), Sha256Of(inhalt));
 
-        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, CancellationToken.None);
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(asset, progress: null, TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateDownloadStatus.Verified, result.Status);
         Assert.Equal(_downloadDirectory, Path.GetDirectoryName(result.InstallerPath));
@@ -234,7 +234,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         HttpUpdateInstaller sut = CreateSut(StubHttpMessageHandler.WithStatus(HttpStatusCode.OK));
 
         _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => sut.DownloadAndVerifyAsync(null!, progress: null, CancellationToken.None));
+            () => sut.DownloadAndVerifyAsync(null!, progress: null, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -244,7 +244,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         // oder eine Richtlinie blockiert sein. Dann darf nichts geladen und erst recht nichts
         // ausgeführt werden — die Meldung muss den Grund benennen.
         string blockierterPfad = Path.Combine(Path.GetTempPath(), "MdExplorerInstallerTests-blockiert-" + Guid.NewGuid().ToString("N"));
-        await File.WriteAllTextAsync(blockierterPfad, "keine Mappe").ConfigureAwait(true);
+        await File.WriteAllTextAsync(blockierterPfad, "keine Mappe", TestContext.Current.CancellationToken).ConfigureAwait(true);
         try
         {
             StubHttpMessageHandler handler = StubHttpMessageHandler.WithStatus(HttpStatusCode.OK);
@@ -259,7 +259,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
                     new Uri("https://example.invalid/setup.exe"),
                     "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08"),
                 progress: null,
-                CancellationToken.None).ConfigureAwait(true);
+                TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(UpdateDownloadStatus.StorageFailed, ergebnis.Status);
             Assert.Null(ergebnis.InstallerPath);

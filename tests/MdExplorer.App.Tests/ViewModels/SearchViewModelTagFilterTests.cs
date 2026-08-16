@@ -207,7 +207,7 @@ public sealed class SearchViewModelTagFilterTests
         using TestEnvironment u = new();
 
         u.ViewModel.Mode = MdExplorer.Search.Models.SearchMode.Regex;
-        await Task.Delay(150).ConfigureAwait(true);
+        await Task.Delay(150, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(0, u.SearchService.CallCount);
     }

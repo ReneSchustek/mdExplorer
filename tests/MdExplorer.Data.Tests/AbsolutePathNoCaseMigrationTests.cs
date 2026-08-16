@@ -20,6 +20,10 @@ public sealed class AbsolutePathNoCaseMigrationTests : IAsyncDisposable
     private const string PreviousMigration = "20260609172327_RestoreFtsCleanupTriggersAfterRebuild";
     private const string FileTriggerName = "trg_MarkdownFiles_AD_FtsCleanup";
 
+    // Der Stand, auf dem der Auslöser zuletzt existierte. Danach fällt er weg — die
+    // Begründung steht in der Migration DropFtsCleanupTriggers.
+    private const string TriggerRestoredMigration = "20260722051331_RestoreFileTriggerAfterNoCaseRebuild";
+
     private readonly SqliteConnection _connection;
     private readonly MdExplorerDbContext _dbContext;
 
@@ -48,19 +52,25 @@ public sealed class AbsolutePathNoCaseMigrationTests : IAsyncDisposable
         IMigrator migrator = _dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
 
         // 1. Bestehende DB bis zur Vorgänger-Migration aufbauen und mit einer Zeile befüllen.
-        await migrator.MigrateAsync(PreviousMigration).ConfigureAwait(true);
+        await migrator.MigrateAsync(PreviousMigration, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Guid fileId = Guid.Parse("aaaaaaaa-1111-2222-3333-444444444444");
         await InsertMarkdownFileAsync(fileId, @"C:\Notes\MixedCase.md").ConfigureAwait(true);
 
-        // 2. Auf den neuen Stand migrieren.
-        await migrator.MigrateAsync().ConfigureAwait(true);
+        // 2. Bis zu dem Stand migrieren, auf dem der Auslöser zuletzt existierte.
+        await migrator.MigrateAsync(TriggerRestoredMigration, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // 3. Zeile blieb erhalten und ist per abweichender Casing auffindbar (NOCASE-Spalte).
         Guid? foundByLowerCase = await FindIdByPathAsync(@"c:\notes\mixedcase.md").ConfigureAwait(true);
         Assert.Equal(fileId, foundByLowerCase);
 
-        // 4. Der beim Rebuild gedroppte File-Cleanup-Trigger ist wiederhergestellt.
+        // 4. Der beim Rebuild gedroppte File-Cleanup-Auslöser war dort wiederhergestellt.
         Assert.True(await TriggerExistsAsync(FileTriggerName).ConfigureAwait(true));
+
+        // 5. Auf den neuesten Stand: Der Auslöser ist weg, die Zeile bleibt. Erstes Argument
+        // ist das Ziel der Migration — null heißt „bis zum neuesten Stand".
+        await migrator.MigrateAsync(null, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.False(await TriggerExistsAsync(FileTriggerName).ConfigureAwait(true));
+        Assert.Equal(fileId, await FindIdByPathAsync(@"c:\notes\mixedcase.md").ConfigureAwait(true));
     }
 
     private async Task InsertMarkdownFileAsync(Guid id, string absolutePath)

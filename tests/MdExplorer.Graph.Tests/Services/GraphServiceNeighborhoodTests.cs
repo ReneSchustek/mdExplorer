@@ -28,7 +28,7 @@ public sealed class GraphServiceNeighborhoodTests
         foreach (GraphSourceFile file in data.Files)
         {
             DocumentRelations viaNeighborhood = await Build(data)
-                .GetRelationsAsync(file.Id, CancellationToken.None)
+                .GetRelationsAsync(file.Id, TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
             DocumentRelations viaFullSnapshot = FromFullSnapshot(data, file.Id);
 
@@ -52,7 +52,7 @@ public sealed class GraphServiceNeighborhoodTests
         FakeGraphSourceProvider provider = new(data);
         GraphService sut = Build(provider);
 
-        _ = await sut.GetRelationsAsync(data.Files[7].Id, CancellationToken.None).ConfigureAwait(true);
+        _ = await sut.GetRelationsAsync(data.Files[7].Id, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(0, provider.FullLoadCount);
         Assert.Equal(1, provider.NeighborhoodLoadCount);
@@ -69,7 +69,7 @@ public sealed class GraphServiceNeighborhoodTests
         FakeGraphSourceProvider provider = new(data);
         GraphService sut = Build(provider);
 
-        _ = await sut.GetRelationsAsync(data.Files[7].Id, CancellationToken.None).ConfigureAwait(true);
+        _ = await sut.GetRelationsAsync(data.Files[7].Id, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.InRange(provider.LastNeighborhoodSize, 1, 10);
         Assert.True(
@@ -100,7 +100,7 @@ public sealed class GraphServiceNeighborhoodTests
             ]);
 
         DocumentRelations relations = await Build(data)
-            .GetRelationsAsync(ziel, CancellationToken.None)
+            .GetRelationsAsync(ziel, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(relations.Incoming);
@@ -112,7 +112,7 @@ public sealed class GraphServiceNeighborhoodTests
         GraphSourceData data = Corpus(5);
 
         DocumentRelations relations = await Build(data)
-            .GetRelationsAsync(Guid.NewGuid(), CancellationToken.None)
+            .GetRelationsAsync(Guid.NewGuid(), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(relations.Outgoing);

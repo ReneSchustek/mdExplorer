@@ -7,6 +7,29 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.15.0] - 2026-08-16
+
+### Geändert
+- `vendor` und die Kernverzeichnisse fremder Systeme lassen sich über die
+  Ausschlussmuster aus der Indizierung nehmen — und was bereits im Bestand steht,
+  verschwindet jetzt beim nächsten Abgleich mit. In einem gewachsenen Bestand
+  sank die Zahl der Einträge damit von 29.889 auf 4.315; übrig bleibt, was
+  wirklich auf der Platte liegt und einem selbst gehört.
+
+### Behoben
+- Über einem großen Bestand wurde die Anwendung unbenutzbar: Die Dateiliste baute
+  **jede** Zeile auf, auch die zehntausend, die niemand sieht. Über 29.889 Dateien
+  belegte das mehr als 9 GB Arbeitsspeicher, und die Indizierung kam kaum voran.
+  Jetzt sind es rund 500 MB, und die Indizierung ist fünfzehnmal schneller.
+- Das Entfernen nicht mehr vorhandener Dateien aus der Volltextsuche brauchte rund
+  eine sechstel Sekunde **je Datei**. Für einen Bestand, aus dem 25.000 Einträge
+  wegfallen, war das über eine Stunde; jetzt sind es Sekunden. Als Folge davon
+  verschwindet eine gelöschte Datei nicht mehr im selben Augenblick aus der
+  Trefferliste, sondern mit dem nächsten Abgleich — dieselbe Frist von wenigen
+  Sekunden, die für neue Dateien ohnehin gilt.
+- Eine Kennzeichnung, an der keine Datei mehr hängt, blieb für immer im Bestand
+  stehen. Sie wird jetzt weggeräumt.
+
 ## [0.14.1] - 2026-08-16
 
 ### Behoben
@@ -153,6 +176,7 @@ Abschluss der Qualitätssicherung.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
 [Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.14.0...HEAD
+[0.15.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.0
 [0.14.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.1
 [0.14.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.0
 [0.13.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.13.0

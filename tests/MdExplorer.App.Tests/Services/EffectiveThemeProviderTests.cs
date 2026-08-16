@@ -45,7 +45,7 @@ public sealed class EffectiveThemeProviderTests
 
         // Die Einstellung ist die Quelle, nicht ein beim Erzeugen abgelesener Wert:
         // Sonst bliebe die Vorschau nach dem Umschalten in der alten Belegung.
-        await settings.SaveAsync(SettingsWith(AppTheme.Dark), CancellationToken.None).ConfigureAwait(true);
+        await settings.SaveAsync(SettingsWith(AppTheme.Dark), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(sut.IsDarkMode);
     }

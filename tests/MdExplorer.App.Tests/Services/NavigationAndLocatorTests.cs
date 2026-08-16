@@ -26,7 +26,7 @@ public sealed class NavigationAndLocatorTests
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
 
-        Guid? result = await locator.FindByWikiLinkAsync("projekt-x", CancellationToken.None).ConfigureAwait(true);
+        Guid? result = await locator.FindByWikiLinkAsync("projekt-x", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(expected, result);
     }
@@ -38,7 +38,7 @@ public sealed class NavigationAndLocatorTests
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
 
-        Guid? result = await locator.FindByWikiLinkAsync("unbekannt", CancellationToken.None).ConfigureAwait(true);
+        Guid? result = await locator.FindByWikiLinkAsync("unbekannt", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(result);
     }
@@ -62,7 +62,7 @@ public sealed class NavigationAndLocatorTests
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
 
-        string? ergebnis = await locator.GetAbsolutePathAsync(kennung, CancellationToken.None).ConfigureAwait(true);
+        string? ergebnis = await locator.GetAbsolutePathAsync(kennung, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(@"C:\notizen\Ziel.md", ergebnis, StringComparer.Ordinal);
     }
@@ -74,7 +74,7 @@ public sealed class NavigationAndLocatorTests
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
 
-        string? ergebnis = await locator.GetAbsolutePathAsync(Guid.NewGuid(), CancellationToken.None).ConfigureAwait(true);
+        string? ergebnis = await locator.GetAbsolutePathAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(ergebnis);
     }
@@ -87,7 +87,7 @@ public sealed class NavigationAndLocatorTests
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
 
-        string? ergebnis = await locator.GetAbsolutePathAsync(Guid.Empty, CancellationToken.None).ConfigureAwait(true);
+        string? ergebnis = await locator.GetAbsolutePathAsync(Guid.Empty, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(ergebnis);
     }
@@ -109,7 +109,7 @@ public sealed class NavigationAndLocatorTests
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
 
-        Guid? result = await locator.FindByAbsolutePathAsync(@"C:\notes\Pfad.md", CancellationToken.None).ConfigureAwait(true);
+        Guid? result = await locator.FindByAbsolutePathAsync(@"C:\notes\Pfad.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(expected, result);
     }
@@ -121,7 +121,7 @@ public sealed class NavigationAndLocatorTests
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
 
-        Guid? result = await locator.FindByAbsolutePathAsync(@"C:\notes\nicht-indiziert.md", CancellationToken.None).ConfigureAwait(true);
+        Guid? result = await locator.FindByAbsolutePathAsync(@"C:\notes\nicht-indiziert.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(result);
     }
@@ -133,7 +133,7 @@ public sealed class NavigationAndLocatorTests
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());
 
-        Guid? first = await locator.FindByWikiLinkAsync("erst-unbekannt", CancellationToken.None).ConfigureAwait(true);
+        Guid? first = await locator.FindByWikiLinkAsync("erst-unbekannt", TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Null(first);
 
         Guid expected = Guid.NewGuid();
@@ -146,7 +146,7 @@ public sealed class NavigationAndLocatorTests
             ContentHash = "h",
         });
 
-        Guid? second = await locator.FindByWikiLinkAsync("später", CancellationToken.None).ConfigureAwait(true);
+        Guid? second = await locator.FindByWikiLinkAsync("später", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(expected, second);
     }

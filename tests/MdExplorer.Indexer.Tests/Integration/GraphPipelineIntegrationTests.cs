@@ -59,7 +59,7 @@ public sealed class GraphPipelineIntegrationTests : IAsyncDisposable
             Microsoft.Extensions.Options.Options.Create(new MdExplorer.Graph.Options.GraphOptions { IncludeIsolatedNodes = true }),
             NullLogger<GraphService>.Instance);
 
-        GraphSnapshot snapshot = await graphService.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await graphService.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, snapshot.Nodes.Count);
         Assert.Equal(2, snapshot.Edges.Count);
@@ -76,7 +76,7 @@ public sealed class GraphPipelineIntegrationTests : IAsyncDisposable
             Microsoft.Extensions.Options.Options.Create(new MdExplorer.Graph.Options.GraphOptions { IncludeIsolatedNodes = true }),
             NullLogger<GraphService>.Instance);
 
-        GraphSnapshot snapshot = await graphService.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
+        GraphSnapshot snapshot = await graphService.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(snapshot.Nodes);
         Assert.Empty(snapshot.Edges);

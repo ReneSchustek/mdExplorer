@@ -21,7 +21,7 @@ public sealed class FileScannerTests
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter());
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, CancellationToken.None)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
 
         Assert.Equal(2, result.Count);
         Assert.Contains(@$"{Root}\a.md", result);
@@ -40,7 +40,7 @@ public sealed class FileScannerTests
 
         FileScanner sut = NewScanner(fs, new StubExclusionFilter(["node_modules", ".git", "bin"]));
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, CancellationToken.None)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
 
         _ = Assert.Single(result);
         Assert.Contains(@$"{Root}\readme.md", result);
@@ -52,7 +52,7 @@ public sealed class FileScannerTests
         FakeFileSystem fs = new();
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter());
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, CancellationToken.None)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
 
         Assert.Empty(result);
     }
@@ -87,7 +87,7 @@ public sealed class FileScannerTests
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: false);
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, CancellationToken.None)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
 
         Assert.Equal(2, result.Count);
         Assert.Contains(@$"{Root}\dir1\file1.md", result);
@@ -108,7 +108,7 @@ public sealed class FileScannerTests
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: true);
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, CancellationToken.None)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
 
         // Keine Datei doppelt — Zyklus über Besucher-Set unterbrochen.
         Assert.Equal(2, result.Count);
@@ -128,7 +128,7 @@ public sealed class FileScannerTests
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: false);
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, CancellationToken.None)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
 
         Assert.Empty(result);
     }

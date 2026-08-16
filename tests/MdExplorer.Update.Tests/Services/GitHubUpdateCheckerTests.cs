@@ -27,7 +27,7 @@ public sealed class GitHubUpdateCheckerTests
         FakeUpdateCheckJournal journal = new();
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(0, 9, 0), journal);
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
         Assert.True(result.IsUpdateAvailable);
@@ -47,7 +47,7 @@ public sealed class GitHubUpdateCheckerTests
         using HttpClient client = new(handler, disposeHandler: false) { BaseAddress = ApiBase };
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(1, 0, 0), new FakeUpdateCheckJournal());
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpToDate, result.Status);
         Assert.False(result.IsUpdateAvailable);
@@ -61,7 +61,7 @@ public sealed class GitHubUpdateCheckerTests
         FakeUpdateCheckJournal journal = new(Now.AddHours(-1));
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(0, 9, 0), journal);
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Skipped, result.Status);
         Assert.Null(handler.LastRequestUri);
@@ -76,7 +76,7 @@ public sealed class GitHubUpdateCheckerTests
         FakeUpdateCheckJournal journal = new(Now.AddHours(-25));
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(1, 0, 0), journal);
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
         Assert.NotNull(handler.LastRequestUri);
@@ -90,7 +90,7 @@ public sealed class GitHubUpdateCheckerTests
         FakeUpdateCheckJournal journal = new();
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(0, 9, 0), journal);
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Failed, result.Status);
         Assert.Equal(0, journal.WriteCount);
@@ -103,7 +103,7 @@ public sealed class GitHubUpdateCheckerTests
         using HttpClient client = new(handler, disposeHandler: false) { BaseAddress = ApiBase };
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(0, 9, 0), new FakeUpdateCheckJournal());
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Failed, result.Status);
     }
@@ -115,7 +115,7 @@ public sealed class GitHubUpdateCheckerTests
         using HttpClient client = new(handler, disposeHandler: false) { BaseAddress = ApiBase };
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(0, 9, 0), new FakeUpdateCheckJournal());
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.Failed, result.Status);
     }
@@ -127,7 +127,7 @@ public sealed class GitHubUpdateCheckerTests
         using HttpClient client = new(handler, disposeHandler: false) { BaseAddress = ApiBase };
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(0, 9, 0), new FakeUpdateCheckJournal());
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
         Assert.Equal("https://github.com/ReneSchustek/mdExplorer/releases/latest", result.ReleaseUrl?.AbsoluteUri);

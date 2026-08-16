@@ -29,22 +29,22 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
         string path = Path.Combine(_testRoot, "neu.md");
         byte[] payload = Encoding.UTF8.GetBytes("# Hallo\r\nText");
 
-        await _sut.WriteAllBytesAtomicAsync(path, payload, CancellationToken.None).ConfigureAwait(true);
+        await _sut.WriteAllBytesAtomicAsync(path, payload, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(File.Exists(path));
-        Assert.Equal(payload, await File.ReadAllBytesAsync(path, CancellationToken.None).ConfigureAwait(true));
+        Assert.Equal(payload, await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     [Fact]
     public async Task WriteAllBytesAtomicAsync_OnExistingFile_OverwritesContent()
     {
         string path = Path.Combine(_testRoot, "exists.md");
-        await File.WriteAllTextAsync(path, "alt", CancellationToken.None).ConfigureAwait(true);
+        await File.WriteAllTextAsync(path, "alt", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         byte[] payload = Encoding.UTF8.GetBytes("neu");
-        await _sut.WriteAllBytesAtomicAsync(path, payload, CancellationToken.None).ConfigureAwait(true);
+        await _sut.WriteAllBytesAtomicAsync(path, payload, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        string result = await File.ReadAllTextAsync(path, CancellationToken.None).ConfigureAwait(true);
+        string result = await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal("neu", result);
     }
 
@@ -54,7 +54,7 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
         string path = Path.Combine(_testRoot, "clean.md");
         byte[] payload = Encoding.UTF8.GetBytes("inhalt");
 
-        await _sut.WriteAllBytesAtomicAsync(path, payload, CancellationToken.None).ConfigureAwait(true);
+        await _sut.WriteAllBytesAtomicAsync(path, payload, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         string[] tempFiles = Directory.GetFiles(_testRoot, ".*.tmp");
         Assert.Empty(tempFiles);
@@ -66,9 +66,9 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
         string path = Path.Combine(_testRoot, "nobom.md");
         byte[] payload = Encoding.UTF8.GetBytes("ascii");
 
-        await _sut.WriteAllBytesAtomicAsync(path, payload, CancellationToken.None).ConfigureAwait(true);
+        await _sut.WriteAllBytesAtomicAsync(path, payload, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        byte[] disk = await File.ReadAllBytesAsync(path, CancellationToken.None).ConfigureAwait(true);
+        byte[] disk = await File.ReadAllBytesAsync(path, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.False(disk.Length >= 3 && disk[0] == 0xEF && disk[1] == 0xBB && disk[2] == 0xBF);
     }
 
@@ -84,7 +84,7 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
         // Windows meldet den blockierten Zielpfad je nach Zustand als E/A- oder als
         // Zugriffsfehler — für den Test zählt nur, dass er nicht verschluckt wird.
         _ = await Assert.ThrowsAnyAsync<SystemException>(
-            () => _sut.WriteAllBytesAtomicAsync(path, payload, CancellationToken.None)).ConfigureAwait(true);
+            () => _sut.WriteAllBytesAtomicAsync(path, payload, TestContext.Current.CancellationToken)).ConfigureAwait(true);
 
         Assert.Empty(Directory.GetFiles(_testRoot, ".*.tmp"));
     }
@@ -93,7 +93,7 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
     public async Task WriteAllBytesAtomicAsync_WithoutADirectoryInThePath_Throws()
     {
         _ = await Assert.ThrowsAnyAsync<Exception>(
-            () => _sut.WriteAllBytesAtomicAsync("relativ.md", Encoding.UTF8.GetBytes("x"), CancellationToken.None))
+            () => _sut.WriteAllBytesAtomicAsync("relativ.md", Encoding.UTF8.GetBytes("x"), TestContext.Current.CancellationToken))
             .ConfigureAwait(true);
     }
 
@@ -111,7 +111,7 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
         // Eine Datei ist kein Verzeichnis — die Auflösung scheitert und muss auf den
         // Ausgangspfad zurückfallen statt zu werfen.
         string datei = Path.Combine(_testRoot, "keine-mappe.md");
-        await File.WriteAllTextAsync(datei, "x", CancellationToken.None).ConfigureAwait(true);
+        await File.WriteAllTextAsync(datei, "x", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         string ergebnis = _sut.GetDirectoryFinalPath(datei);
 

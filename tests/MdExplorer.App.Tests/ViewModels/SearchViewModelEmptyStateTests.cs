@@ -54,7 +54,7 @@ public sealed class SearchViewModelEmptyStateTests
         sut.SearchCompleted += (_, _) => completion.TrySetResult();
 
         sut.QueryText = "wortohnetreffer";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(sut.ShowsNothingSearchedYet);
         Assert.True(sut.ShowsNoMatches);
@@ -71,7 +71,7 @@ public sealed class SearchViewModelEmptyStateTests
         sut.SearchCompleted += (_, _) => completion.TrySetResult();
 
         sut.QueryText = "treffer";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(sut.ShowsNothingSearchedYet);
         Assert.False(sut.ShowsNoMatches);
@@ -88,7 +88,7 @@ public sealed class SearchViewModelEmptyStateTests
         sut.SearchCompleted += (_, _) => completion.TrySetResult();
 
         sut.QueryText = "erste";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.True(sut.ShowsNoMatches);
 
         // Neue Eingabe: Die Antwort von eben gilt der vorigen Anfrage und sagt über diese
@@ -109,7 +109,7 @@ public sealed class SearchViewModelEmptyStateTests
         sut.SearchCompleted += (_, _) => completion.TrySetResult();
 
         sut.QueryText = "treffer";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         sut.ClearSearchCommand.Execute(null);
 
@@ -127,7 +127,7 @@ public sealed class SearchViewModelEmptyStateTests
         sut.SearchCompleted += (_, _) => completion.TrySetResult();
 
         sut.QueryText = "irgendwas";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(sut.ShowsSearchFailure);
         Assert.False(sut.ShowsNoMatches);
@@ -143,7 +143,7 @@ public sealed class SearchViewModelEmptyStateTests
         sut.SearchCompleted += (_, _) => completion.TrySetResult();
 
         sut.QueryText = "irgendwas";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.True(sut.ShowsSearchFailure);
 
         sut.ClearSearchCommand.Execute(null);

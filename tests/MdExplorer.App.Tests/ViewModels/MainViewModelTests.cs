@@ -77,7 +77,7 @@ public sealed class MainViewModelTests
         harness.Search.Results.Add(new SearchResultItemViewModel(
             new SearchResult(targetId, "ziel.md", "Ziel", 0.0, "<p>snippet</p>", Array.Empty<SearchHighlight>())));
 
-        bool result = await harness.Main.NavigateToWikiLinkAsync("ziel", CancellationToken.None).ConfigureAwait(true);
+        bool result = await harness.Main.NavigateToWikiLinkAsync("ziel", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(result);
         Assert.Equal(targetId, harness.Preview.CurrentDocumentId);
@@ -90,7 +90,7 @@ public sealed class MainViewModelTests
     {
         using TestHarness harness = new();
 
-        bool result = await harness.Main.NavigateToWikiLinkAsync("ungelöst", CancellationToken.None).ConfigureAwait(true);
+        bool result = await harness.Main.NavigateToWikiLinkAsync("ungelöst", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(result);
         Assert.Null(harness.Preview.CurrentDocumentId);
@@ -303,7 +303,7 @@ public sealed class MainViewModelTests
     {
         using TestHarness harness = new();
 
-        bool ergebnis = await harness.Main.NavigateToDocumentAsync(Guid.Empty, CancellationToken.None).ConfigureAwait(true);
+        bool ergebnis = await harness.Main.NavigateToDocumentAsync(Guid.Empty, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(ergebnis);
     }

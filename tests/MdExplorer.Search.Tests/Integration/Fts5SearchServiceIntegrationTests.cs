@@ -27,14 +27,14 @@ public sealed class Fts5SearchServiceIntegrationTests
                 FrontmatterJson: "{}",
                 Body: "Dies ist ein Markdown-Dokument.",
                 RawSource: "Dies ist ein Markdown-Dokument.",
-                Tags: []), CancellationToken.None).ConfigureAwait(true);
+                Tags: []), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
             IReadOnlyList<SearchResult> results = await service
-                .SearchAsync(new SearchQuery("markdown"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("markdown"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             _ = Assert.Single(results);
@@ -48,18 +48,18 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Alpha", "foo-bar.md", "foo bar baz"), CancellationToken.None).ConfigureAwait(true);
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Beta", "bar-foo.md", "bar foo baz"), CancellationToken.None).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Alpha", "foo-bar.md", "foo bar baz"), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Beta", "bar-foo.md", "bar foo baz"), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
             IReadOnlyList<SearchResult> phraseResults = await service
-                .SearchAsync(new SearchQuery("\"foo bar\""), CancellationToken.None)
+                .SearchAsync(new SearchQuery("\"foo bar\""), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
             IReadOnlyList<SearchResult> wordResults = await service
-                .SearchAsync(new SearchQuery("foo bar"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("foo bar"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             _ = Assert.Single(phraseResults);
@@ -78,13 +78,13 @@ public sealed class Fts5SearchServiceIntegrationTests
         await using (harness.ConfigureAwait(true))
         {
             Guid fileId = Guid.NewGuid();
-            await harness.SeedAsync(SeedFor(fileId, "München", "muenchen.md", "Spaziergang durch München im Sommer."), CancellationToken.None).ConfigureAwait(true);
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(fileId, "München", "muenchen.md", "Spaziergang durch München im Sommer."), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
             IReadOnlyList<SearchResult> results = await service
-                .SearchAsync(new SearchQuery("Munchen"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("Munchen"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             _ = Assert.Single(results);
@@ -108,15 +108,15 @@ public sealed class Fts5SearchServiceIntegrationTests
                 FrontmatterJson: "{}",
                 Body: "Inhalt zum Projekt.",
                 RawSource: "Inhalt zum Projekt.",
-                Tags: [("projekt", "Projekt")]), CancellationToken.None).ConfigureAwait(true);
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Andere", "andere.md", "Inhalt zum Projekt aber ohne Tag."), CancellationToken.None).ConfigureAwait(true);
+                Tags: [("projekt", "Projekt")]), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Andere", "andere.md", "Inhalt zum Projekt aber ohne Tag."), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
             IReadOnlyList<SearchResult> results = await service
-                .SearchAsync(new SearchQuery("tag:projekt"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("tag:projekt"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             _ = Assert.Single(results);
@@ -130,15 +130,15 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Notiz", @"C:\Wurzel\notes\eins.md", "Inhalt mit alpha.", "notes/eins.md"), CancellationToken.None).ConfigureAwait(true);
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Sonstig", @"C:\Wurzel\sonstig\zwei.md", "Inhalt mit alpha.", "sonstig/zwei.md"), CancellationToken.None).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Notiz", @"C:\Wurzel\notes\eins.md", "Inhalt mit alpha.", "notes/eins.md"), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Sonstig", @"C:\Wurzel\sonstig\zwei.md", "Inhalt mit alpha.", "sonstig/zwei.md"), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
             IReadOnlyList<SearchResult> results = await service
-                .SearchAsync(new SearchQuery("alpha path:notes/"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("alpha path:notes/"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             _ = Assert.Single(results);
@@ -152,19 +152,19 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Doku", "doku.md", "Eine harmlose Notiz."), CancellationToken.None).ConfigureAwait(true);
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Doku", "doku.md", "Eine harmlose Notiz."), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
             IReadOnlyList<SearchResult> results = await service
-                .SearchAsync(new SearchQuery("'; DROP TABLE MarkdownSearchIndex --"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("'; DROP TABLE MarkdownSearchIndex --"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             Assert.Empty(results);
 
             IReadOnlyList<SearchResult> sanityCheck = await service
-                .SearchAsync(new SearchQuery("notiz"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("notiz"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
             _ = Assert.Single(sanityCheck);
         }
@@ -177,13 +177,13 @@ public sealed class Fts5SearchServiceIntegrationTests
         await using (harness.ConfigureAwait(true))
         {
             Guid fileId = Guid.NewGuid();
-            await harness.SeedAsync(SeedFor(fileId, "Highlight", "highlight.md", "Treffer auf wort in einem Absatz."), CancellationToken.None).ConfigureAwait(true);
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(fileId, "Highlight", "highlight.md", "Treffer auf wort in einem Absatz."), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
             IReadOnlyList<SearchResult> results = await service
-                .SearchAsync(new SearchQuery("wort"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("wort"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             _ = Assert.Single(results);
@@ -193,30 +193,32 @@ public sealed class Fts5SearchServiceIntegrationTests
     }
 
     [Fact]
-    public async Task Maintainer_OnDocumentDeletion_ReflectsDeletionViaTrigger()
+    public async Task Maintainer_OnDocumentDeletion_RemovesTheHit()
     {
-        // Der <c>AFTER DELETE</c>-Trigger auf <c>MarkdownDocuments</c> entfernt die FTS5-Zeile sofort,
-        // ohne dass der Maintainer-Resync nötig ist (siehe <c>TriggerDiagnosticsTests</c>).
+        // Seit dem 16.08.2026 räumt der Abgleich auf statt eines Auslösers je Zeile — die
+        // Begründung steht in TriggerDiagnosticsTests. Für die Suche zählt das Ergebnis:
+        // Nach dem nächsten Abgleich ist der Treffer weg.
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
             Guid fileId = Guid.NewGuid();
-            await harness.SeedAsync(SeedFor(fileId, "Delete-Me", "delete.md", "Inhalt zum löschen."), CancellationToken.None).ConfigureAwait(true);
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(fileId, "Delete-Me", "delete.md", "Inhalt zum löschen."), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using (IServiceScope before = harness.Services.CreateScope())
             {
                 IReadOnlyList<SearchResult> before1 = await harness.CreateSearchService(before)
-                    .SearchAsync(new SearchQuery("löschen"), CancellationToken.None)
+                    .SearchAsync(new SearchQuery("löschen"), TestContext.Current.CancellationToken)
                     .ConfigureAwait(true);
                 _ = Assert.Single(before1);
             }
 
-            _ = await harness.DeleteDocumentAsync(fileId, CancellationToken.None).ConfigureAwait(true);
+            _ = await harness.DeleteDocumentAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope after = harness.Services.CreateScope();
             IReadOnlyList<SearchResult> afterResults = await harness.CreateSearchService(after)
-                .SearchAsync(new SearchQuery("löschen"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("löschen"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
             Assert.Empty(afterResults);
         }
@@ -229,13 +231,13 @@ public sealed class Fts5SearchServiceIntegrationTests
         await using (harness.ConfigureAwait(true))
         {
             Guid fileId = Guid.NewGuid();
-            await harness.SeedAsync(SeedFor(fileId, "Update", "update.md", "Erste Fassung mit alpha."), CancellationToken.None).ConfigureAwait(true);
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(fileId, "Update", "update.md", "Erste Fassung mit alpha."), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using (IServiceScope scopeOne = harness.Services.CreateScope())
             {
                 IReadOnlyList<SearchResult> firstHits = await harness.CreateSearchService(scopeOne)
-                    .SearchAsync(new SearchQuery("alpha"), CancellationToken.None)
+                    .SearchAsync(new SearchQuery("alpha"), TestContext.Current.CancellationToken)
                     .ConfigureAwait(true);
                 _ = Assert.Single(firstHits);
             }
@@ -247,18 +249,18 @@ public sealed class Fts5SearchServiceIntegrationTests
                     .Single(d => d.MarkdownFileId == fileId);
                 doc.SourceContentHash = "hash-updated";
                 doc.FrontmatterJson = "{}";
-                _ = await dbContext.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+                _ = await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
             }
 
             harness.FileSystem.AddFile(@"C:\Wurzel\update.md", "Zweite Fassung mit beta.");
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope afterUpdate = harness.Services.CreateScope();
             IReadOnlyList<SearchResult> alphaResults = await harness.CreateSearchService(afterUpdate)
-                .SearchAsync(new SearchQuery("alpha"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("alpha"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
             IReadOnlyList<SearchResult> betaResults = await harness.CreateSearchService(afterUpdate)
-                .SearchAsync(new SearchQuery("beta"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("beta"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             Assert.Empty(alphaResults);
@@ -280,17 +282,17 @@ public sealed class Fts5SearchServiceIntegrationTests
                     $"Dokument-{i}",
                     $@"C:\Wurzel\doc-{i}.md",
                     $"Inhalt {i} mit gemeinsamem wort und einem eigenen begriff-{i}."),
-                    CancellationToken.None).ConfigureAwait(true);
+                    TestContext.Current.CancellationToken).ConfigureAwait(true);
             }
 
-            _ = await harness.Maintainer.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
 
             // Warmup
             _ = await service
-                .SearchAsync(new SearchQuery("wort"), CancellationToken.None)
+                .SearchAsync(new SearchQuery("wort"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             // Gewertet wird die kleinste von mehreren Messungen. Im vollständigen Lauf
@@ -305,7 +307,7 @@ public sealed class Fts5SearchServiceIntegrationTests
             {
                 System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
                 results = await service
-                    .SearchAsync(new SearchQuery("wort"), CancellationToken.None)
+                    .SearchAsync(new SearchQuery("wort"), TestContext.Current.CancellationToken)
                     .ConfigureAwait(true);
                 stopwatch.Stop();
                 bestMilliseconds = Math.Min(bestMilliseconds, stopwatch.ElapsedMilliseconds);

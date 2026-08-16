@@ -53,7 +53,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
 
         // Sollte ohne SqliteException "too many SQL variables" zurückkommen — alle Ids fehlen in der leeren DB.
         IReadOnlyList<Guid> result = await _documentRepository
-            .GetStaleOrMissingAsync(hashes, CancellationToken.None)
+            .GetStaleOrMissingAsync(hashes, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Equal(BatchSize, result.Count);
@@ -71,7 +71,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
 
         // Alle Ids fehlen in der leeren DB — darf ohne SqliteException "too many SQL variables" zurückkommen.
         IReadOnlyDictionary<Guid, MarkdownDocument> result = await _documentRepository
-            .GetByMarkdownFileIdsAsync(ids, CancellationToken.None)
+            .GetByMarkdownFileIdsAsync(ids, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(result);
@@ -92,8 +92,8 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
             ContentHash = "file-hash",
             IndexedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
         };
-        _ = await _dbContext.Set<MarkdownFile>().AddAsync(parent).ConfigureAwait(true);
-        _ = await _dbContext.SaveChangesAsync().ConfigureAwait(true);
+        _ = await _dbContext.Set<MarkdownFile>().AddAsync(parent, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         MarkdownDocument seed = new()
         {
@@ -105,20 +105,20 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
             ParsedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
         };
         seed.SetRenderedHtmlGz([1, 2, 3]);
-        await _documentRepository.AddAsync(seed, CancellationToken.None).ConfigureAwait(true);
-        _ = await _documentRepository.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        await _documentRepository.AddAsync(seed, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _documentRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         IReadOnlyDictionary<Guid, MarkdownDocument> loaded = await _documentRepository
-            .GetByMarkdownFileIdsAsync([fileId], CancellationToken.None)
+            .GetByMarkdownFileIdsAsync([fileId], TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         MarkdownDocument tracked = loaded[fileId];
         tracked.SourceContentHash = "neu";
         _documentRepository.Update(tracked);
-        _ = await _documentRepository.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        _ = await _documentRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         MarkdownDocument? reloaded = await _documentRepository
-            .GetByMarkdownFileIdAsync(fileId, CancellationToken.None)
+            .GetByMarkdownFileIdAsync(fileId, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
         Assert.NotNull(reloaded);
         Assert.Equal("neu", reloaded.SourceContentHash);
@@ -135,7 +135,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
         }
 
         IReadOnlyList<Tag> result = await _tagRepository
-            .GetBySlugsAsync(slugs, CancellationToken.None)
+            .GetBySlugsAsync(slugs, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(result);

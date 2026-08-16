@@ -47,7 +47,7 @@ public sealed class MdExplorerDbContextTests : IDisposable
     {
         IDatabaseMigrator migrator = _services.GetRequiredService<IDatabaseMigrator>();
 
-        await migrator.MigrateAsync(CancellationToken.None).ConfigureAwait(true);
+        await migrator.MigrateAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(File.Exists(_dbPath));
     }
@@ -56,7 +56,7 @@ public sealed class MdExplorerDbContextTests : IDisposable
     public async Task DbContext_AfterMigration_PragmasAreApplied()
     {
         IDatabaseMigrator migrator = _services.GetRequiredService<IDatabaseMigrator>();
-        await migrator.MigrateAsync(CancellationToken.None).ConfigureAwait(true);
+        await migrator.MigrateAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         using IServiceScope scope = _services.CreateScope();
         MdExplorerDbContext dbContext = scope.ServiceProvider.GetRequiredService<MdExplorerDbContext>();
@@ -77,8 +77,8 @@ public sealed class MdExplorerDbContextTests : IDisposable
     {
         IDatabaseMigrator migrator = _services.GetRequiredService<IDatabaseMigrator>();
 
-        await migrator.MigrateAsync(CancellationToken.None).ConfigureAwait(true);
-        await migrator.MigrateAsync(CancellationToken.None).ConfigureAwait(true);
+        await migrator.MigrateAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await migrator.MigrateAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(File.Exists(_dbPath));
     }

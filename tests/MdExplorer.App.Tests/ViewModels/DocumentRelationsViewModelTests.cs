@@ -45,7 +45,7 @@ public sealed class DocumentRelationsViewModelTests
         using ServiceProvider provider = BuildProvider(new FakeGraphService(relations), files);
         DocumentRelationsViewModel sut = Create(provider);
 
-        await sut.LoadAsync(OpenId, ["projekt", "wichtig"], CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(OpenId, ["projekt", "wichtig"], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(sut.ShowsRelations);
         Assert.Equal("Ziel", Assert.Single(sut.Outgoing).Title);
@@ -62,7 +62,7 @@ public sealed class DocumentRelationsViewModelTests
         using ServiceProvider provider = BuildProvider(new FakeGraphService(DocumentRelations.Empty), files);
         DocumentRelationsViewModel sut = Create(provider);
 
-        await sut.LoadAsync(OpenId, [], CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(OpenId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(sut.FolderPath);
         Assert.False(sut.ShowFolderCommand.CanExecute(null));
@@ -77,7 +77,7 @@ public sealed class DocumentRelationsViewModelTests
         using ServiceProvider provider = BuildProvider(new FakeGraphService(DocumentRelations.Empty), files);
         DocumentRelationsViewModel sut = Create(provider);
 
-        await sut.LoadAsync(OpenId, ["zeta", "alpha", "ZETA"], CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(OpenId, ["zeta", "alpha", "ZETA"], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(["alpha", "zeta"], sut.Tags);
     }
@@ -90,7 +90,7 @@ public sealed class DocumentRelationsViewModelTests
         files.Add(FileWith(OpenId, "Offen.md"));
         using ServiceProvider provider = BuildProvider(new FakeGraphService(relations), files);
         DocumentRelationsViewModel sut = Create(provider);
-        await sut.LoadAsync(OpenId, [], CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(OpenId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
         Guid? requested = null;
         sut.OpenRequested += id => requested = id;
 
@@ -106,7 +106,7 @@ public sealed class DocumentRelationsViewModelTests
         files.Add(FileWith(OpenId, "notizen/Offen.md"));
         using ServiceProvider provider = BuildProvider(new FakeGraphService(DocumentRelations.Empty), files);
         DocumentRelationsViewModel sut = Create(provider);
-        await sut.LoadAsync(OpenId, ["projekt"], CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(OpenId, ["projekt"], TestContext.Current.CancellationToken).ConfigureAwait(true);
         string? folder = null;
         string? tag = null;
         sut.FolderRequested += value => folder = value;
@@ -127,9 +127,9 @@ public sealed class DocumentRelationsViewModelTests
         files.Add(FileWith(OpenId, "notizen/Offen.md"));
         using ServiceProvider provider = BuildProvider(new FakeGraphService(relations), files);
         DocumentRelationsViewModel sut = Create(provider);
-        await sut.LoadAsync(OpenId, ["projekt"], CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(OpenId, ["projekt"], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        await sut.LoadAsync(Guid.Empty, [], CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.Empty, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(sut.ShowsNoDocument);
         Assert.Empty(sut.Outgoing);
@@ -143,7 +143,7 @@ public sealed class DocumentRelationsViewModelTests
         using ServiceProvider provider = BuildProvider(new FailingGraphService(), new FakeMarkdownFileRepository());
         DocumentRelationsViewModel sut = Create(provider);
 
-        await sut.LoadAsync(OpenId, [], CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(OpenId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(sut.ShowsNothingRelated);
         Assert.False(sut.ShowsRelations);
@@ -309,7 +309,7 @@ public sealed class DocumentRelationsViewModelTests
         files.Add(FileWith(OpenId, "notizen/Offen.md"));
         ServiceProvider provider = BuildProvider(new FakeGraphService(DocumentRelations.Empty), files);
         DocumentRelationsViewModel viewModel = Create(provider, fileService, dialogService);
-        await viewModel.LoadAsync(OpenId, [], CancellationToken.None).ConfigureAwait(true);
+        await viewModel.LoadAsync(OpenId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         return viewModel;
     }

@@ -46,7 +46,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     [Fact]
     public async Task GetByIdAsync_WithEmptyGuid_ReturnsNullWithoutQuerying()
     {
-        MarkdownFile? treffer = await _sut.GetByIdAsync(Guid.Empty, CancellationToken.None);
+        MarkdownFile? treffer = await _sut.GetByIdAsync(Guid.Empty, TestContext.Current.CancellationToken);
 
         Assert.Null(treffer);
     }
@@ -54,7 +54,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     [Fact]
     public async Task GetByIdAsync_WithUnknownId_ReturnsNull()
     {
-        MarkdownFile? treffer = await _sut.GetByIdAsync(Guid.NewGuid(), CancellationToken.None);
+        MarkdownFile? treffer = await _sut.GetByIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         Assert.Null(treffer);
     }
@@ -64,7 +64,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     {
         MarkdownFile datei = await AnlegenAsync(@"C:\Notes\eins.md", "eins.md", "eins");
 
-        MarkdownFile? treffer = await _sut.GetByIdAsync(datei.Id, CancellationToken.None);
+        MarkdownFile? treffer = await _sut.GetByIdAsync(datei.Id, TestContext.Current.CancellationToken);
 
         Assert.NotNull(treffer);
         Assert.Equal(datei.AbsolutePath, treffer!.AbsolutePath, StringComparer.Ordinal);
@@ -75,7 +75,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     {
         _ = await AnlegenAsync(@"C:\Notes\Titel.md", "Titel.md", "Titel");
 
-        MarkdownFile? treffer = await _sut.GetByAbsolutePathAsync(@"c:\notes\titel.md", CancellationToken.None);
+        MarkdownFile? treffer = await _sut.GetByAbsolutePathAsync(@"c:\notes\titel.md", TestContext.Current.CancellationToken);
 
         Assert.NotNull(treffer);
     }
@@ -83,14 +83,14 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     [Fact]
     public async Task GetByAbsolutePathAsync_WithoutPath_Throws() =>
         await Assert.ThrowsAsync<ArgumentException>(
-            () => _sut.GetByAbsolutePathAsync("  ", CancellationToken.None));
+            () => _sut.GetByAbsolutePathAsync("  ", TestContext.Current.CancellationToken));
 
     [Fact]
     public async Task FindIdByFileNameAsync_IgnoresCase()
     {
         MarkdownFile datei = await AnlegenAsync(@"C:\Notes\Handbuch.md", "Handbuch.md", "Handbuch");
 
-        Guid? treffer = await _sut.FindIdByFileNameAsync("handbuch", CancellationToken.None);
+        Guid? treffer = await _sut.FindIdByFileNameAsync("handbuch", TestContext.Current.CancellationToken);
 
         Assert.Equal(datei.Id, treffer);
     }
@@ -100,7 +100,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     {
         _ = await AnlegenAsync(@"C:\Notes\vorhanden.md", "vorhanden.md", "vorhanden");
 
-        Guid? treffer = await _sut.FindIdByFileNameAsync("gibt-es-nicht", CancellationToken.None);
+        Guid? treffer = await _sut.FindIdByFileNameAsync("gibt-es-nicht", TestContext.Current.CancellationToken);
 
         Assert.Null(treffer);
     }
@@ -113,7 +113,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         _ = await AnlegenAsync(@"C:\Notes\zeta\doppelt.md", @"zeta\doppelt.md", "doppelt");
         MarkdownFile frueher = await AnlegenAsync(@"C:\Notes\alpha\doppelt.md", @"alpha\doppelt.md", "doppelt");
 
-        Guid? treffer = await _sut.FindIdByFileNameAsync("doppelt", CancellationToken.None);
+        Guid? treffer = await _sut.FindIdByFileNameAsync("doppelt", TestContext.Current.CancellationToken);
 
         Assert.Equal(frueher.Id, treffer);
     }
@@ -121,7 +121,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     [Fact]
     public async Task FindIdByFileNameAsync_WithoutName_Throws() =>
         await Assert.ThrowsAsync<ArgumentException>(
-            () => _sut.FindIdByFileNameAsync(string.Empty, CancellationToken.None));
+            () => _sut.FindIdByFileNameAsync(string.Empty, TestContext.Current.CancellationToken));
 
     [Fact]
     public async Task GetAllUnderRootAsync_DoesNotReachIntoSimilarlyNamedSibling()
@@ -129,7 +129,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         _ = await AnlegenAsync(@"C:\Notes\innen.md", "innen.md", "innen");
         _ = await AnlegenAsync(@"C:\Notes-evil\aussen.md", "aussen.md", "aussen");
 
-        IReadOnlyList<MarkdownFile> treffer = await _sut.GetAllUnderRootAsync(@"C:\Notes", CancellationToken.None);
+        IReadOnlyList<MarkdownFile> treffer = await _sut.GetAllUnderRootAsync(@"C:\Notes", TestContext.Current.CancellationToken);
 
         _ = Assert.Single(treffer);
         Assert.Equal(@"C:\Notes\innen.md", treffer[0].AbsolutePath, StringComparer.Ordinal);
@@ -140,8 +140,8 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     {
         _ = await AnlegenAsync(@"C:\Notes\eins.md", "eins.md", "eins");
 
-        IReadOnlyList<MarkdownFile> ohne = await _sut.GetAllUnderRootAsync(@"C:\Notes", CancellationToken.None);
-        IReadOnlyList<MarkdownFile> mit = await _sut.GetAllUnderRootAsync(@"C:\Notes\", CancellationToken.None);
+        IReadOnlyList<MarkdownFile> ohne = await _sut.GetAllUnderRootAsync(@"C:\Notes", TestContext.Current.CancellationToken);
+        IReadOnlyList<MarkdownFile> mit = await _sut.GetAllUnderRootAsync(@"C:\Notes\", TestContext.Current.CancellationToken);
 
         Assert.Equal(ohne.Count, mit.Count);
     }
@@ -149,23 +149,23 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     [Fact]
     public async Task GetAllUnderRootAsync_WithoutRoot_Throws() =>
         await Assert.ThrowsAsync<ArgumentException>(
-            () => _sut.GetAllUnderRootAsync("   ", CancellationToken.None));
+            () => _sut.GetAllUnderRootAsync("   ", TestContext.Current.CancellationToken));
 
     [Fact]
     public async Task CountAsync_CountsAllEntries()
     {
-        Assert.Equal(0, await _sut.CountAsync(CancellationToken.None));
+        Assert.Equal(0, await _sut.CountAsync(TestContext.Current.CancellationToken));
 
         _ = await AnlegenAsync(@"C:\Notes\a.md", "a.md", "a");
         _ = await AnlegenAsync(@"C:\Notes\b.md", "b.md", "b");
 
-        Assert.Equal(2, await _sut.CountAsync(CancellationToken.None));
+        Assert.Equal(2, await _sut.CountAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
     public async Task AddAsync_WithoutEntity_Throws() =>
         await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _sut.AddAsync(null!, CancellationToken.None));
+            () => _sut.AddAsync(null!, TestContext.Current.CancellationToken));
 
     [Fact]
     public void Update_WithoutEntity_Throws() =>
@@ -182,9 +182,9 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         datei.SizeBytes = 4711;
 
         _sut.Update(datei);
-        _ = await _sut.SaveChangesAsync(CancellationToken.None);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        MarkdownFile? neu = await _sut.GetByIdAsync(datei.Id, CancellationToken.None);
+        MarkdownFile? neu = await _sut.GetByIdAsync(datei.Id, TestContext.Current.CancellationToken);
         Assert.Equal(4711, neu!.SizeBytes);
     }
 
@@ -194,9 +194,9 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         MarkdownFile datei = await AnlegenAsync(@"C:\Notes\weg.md", "weg.md", "weg");
 
         _sut.Remove(datei);
-        _ = await _sut.SaveChangesAsync(CancellationToken.None);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, await _sut.CountAsync(CancellationToken.None));
+        Assert.Equal(0, await _sut.CountAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -207,14 +207,14 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         // sich um den Änderungsverfolger kümmern muss.
         MarkdownFile angelegt = await AnlegenAsync(@"C:\Notes\lose.md", "lose.md", "lose");
         _dbContext.ChangeTracker.Clear();
-        IReadOnlyList<MarkdownFile> geladen = await _sut.GetAllUnderRootAsync(@"C:\Notes", CancellationToken.None);
+        IReadOnlyList<MarkdownFile> geladen = await _sut.GetAllUnderRootAsync(@"C:\Notes", TestContext.Current.CancellationToken);
         MarkdownFile lose = Assert.Single(geladen);
         Assert.Equal(angelegt.Id, lose.Id);
 
         _sut.Remove(lose);
-        _ = await _sut.SaveChangesAsync(CancellationToken.None);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, await _sut.CountAsync(CancellationToken.None));
+        Assert.Equal(0, await _sut.CountAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -233,9 +233,9 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         };
 
         _sut.Remove(zweiteInstanz);
-        _ = await _sut.SaveChangesAsync(CancellationToken.None);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, await _sut.CountAsync(CancellationToken.None));
+        Assert.Equal(0, await _sut.CountAsync(TestContext.Current.CancellationToken));
     }
 
     private async Task<MarkdownFile> AnlegenAsync(string absoluterPfad, string relativerPfad, string nameOhneEndung)
@@ -250,8 +250,8 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
             IndexedAtUtc = DateTime.UtcNow,
             LastWriteTimeUtc = DateTime.UtcNow,
         };
-        await _sut.AddAsync(datei, CancellationToken.None).ConfigureAwait(false);
-        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        await _sut.AddAsync(datei, TestContext.Current.CancellationToken).ConfigureAwait(false);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
         return datei;
     }
     /// <summary>
@@ -283,22 +283,22 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         const int Anzahl = 3_000;
         for (int i = 0; i < Anzahl; i++)
         {
-            _ = await _dbContext.Set<MarkdownFile>().AddAsync(Datei(i)).ConfigureAwait(true);
+            _ = await _dbContext.Set<MarkdownFile>().AddAsync(Datei(i), TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
-        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         _dbContext.ChangeTracker.Clear();
 
         IReadOnlyList<MarkdownFile> gespeichert = await _sut
-            .GetAllUnderRootAsync(@"C:\bestand", CancellationToken.None).ConfigureAwait(true);
+            .GetAllUnderRootAsync(@"C:\bestand", TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(Anzahl, gespeichert.Count);
 
         foreach (MarkdownFile eintrag in gespeichert)
         {
             _sut.Remove(eintrag);
         }
-        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        Assert.Empty(await _sut.GetAllUnderRootAsync(@"C:\bestand", CancellationToken.None).ConfigureAwait(true));
+        Assert.Empty(await _sut.GetAllUnderRootAsync(@"C:\bestand", TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     private static MarkdownFile Datei(int index)
@@ -336,21 +336,21 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     {
         MarkdownFile bleibt = Datei(1);
         MarkdownFile geht = Datei(2);
-        _ = await _dbContext.Set<MarkdownFile>().AddAsync(bleibt).ConfigureAwait(true);
-        _ = await _dbContext.Set<MarkdownFile>().AddAsync(geht).ConfigureAwait(true);
-        _ = await _dbContext.Set<MarkdownDocument>().AddAsync(Dokument(geht.Id)).ConfigureAwait(true);
-        _ = await _dbContext.Set<MarkdownDocument>().AddAsync(Dokument(bleibt.Id)).ConfigureAwait(true);
-        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        _ = await _dbContext.Set<MarkdownFile>().AddAsync(bleibt, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _dbContext.Set<MarkdownFile>().AddAsync(geht, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _dbContext.Set<MarkdownDocument>().AddAsync(Dokument(geht.Id), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _dbContext.Set<MarkdownDocument>().AddAsync(Dokument(bleibt.Id), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         _dbContext.ChangeTracker.Clear();
 
-        int entfernt = await _sut.RemoveRangeAsync([geht.Id], CancellationToken.None).ConfigureAwait(true);
+        int entfernt = await _sut.RemoveRangeAsync([geht.Id], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, entfernt);
         MarkdownFile verblieben = Assert.Single(
-            await _sut.GetAllUnderRootAsync(@"C:\bestand", CancellationToken.None).ConfigureAwait(true));
+            await _sut.GetAllUnderRootAsync(@"C:\bestand", TestContext.Current.CancellationToken).ConfigureAwait(true));
         Assert.Equal(bleibt.Id, verblieben.Id);
         List<Guid> verbliebeneDokumente = await _dbContext.Set<MarkdownDocument>()
-            .AsNoTracking().Select(dokument => dokument.MarkdownFileId).ToListAsync(CancellationToken.None).ConfigureAwait(true);
+            .AsNoTracking().Select(dokument => dokument.MarkdownFileId).ToListAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(bleibt.Id, Assert.Single(verbliebeneDokumente));
     }
 
@@ -370,28 +370,28 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         {
             MarkdownFile datei = Datei(i);
             ids.Add(datei.Id);
-            _ = await _dbContext.Set<MarkdownFile>().AddAsync(datei).ConfigureAwait(true);
+            _ = await _dbContext.Set<MarkdownFile>().AddAsync(datei, TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
-        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         _dbContext.ChangeTracker.Clear();
 
-        int entfernt = await _sut.RemoveRangeAsync(ids, CancellationToken.None).ConfigureAwait(true);
+        int entfernt = await _sut.RemoveRangeAsync(ids, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(Anzahl, entfernt);
-        Assert.Empty(await _sut.GetAllUnderRootAsync(@"C:\bestand", CancellationToken.None).ConfigureAwait(true));
+        Assert.Empty(await _sut.GetAllUnderRootAsync(@"C:\bestand", TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     [Fact]
     public async Task RemoveRangeAsync_WithoutAnyKey_DoesNothing()
     {
-        Assert.Equal(0, await _sut.RemoveRangeAsync([], CancellationToken.None).ConfigureAwait(true));
+        Assert.Equal(0, await _sut.RemoveRangeAsync([], TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     [Fact]
     public async Task RemoveRangeAsync_WithoutAList_Throws()
     {
         _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _sut.RemoveRangeAsync(null!, CancellationToken.None)).ConfigureAwait(true);
+            () => _sut.RemoveRangeAsync(null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     private static MarkdownDocument Dokument(Guid dateiId) => new()

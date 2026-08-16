@@ -27,7 +27,7 @@ public sealed class IndexerProgressBridgeTests
         ImmediateUiDispatcher dispatcher = new();
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 5, isCompleted: false));
         await WaitForIdleAsync(allFiles).ConfigureAwait(true);
 
@@ -44,8 +44,8 @@ public sealed class IndexerProgressBridgeTests
         ImmediateUiDispatcher dispatcher = new();
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 5, isCompleted: false));
 
         Assert.Equal(0, dispatcher.InvokeCount);
@@ -61,7 +61,7 @@ public sealed class IndexerProgressBridgeTests
         ImmediateUiDispatcher dispatcher = new();
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.Dispose();
         indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 5, isCompleted: false));
 
@@ -77,7 +77,7 @@ public sealed class IndexerProgressBridgeTests
         ImmediateUiDispatcher dispatcher = new();
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.Dispose();
         sut.Dispose();
     }
@@ -91,7 +91,7 @@ public sealed class IndexerProgressBridgeTests
         ImmediateUiDispatcher dispatcher = new();
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 1, isCompleted: false));
         await WaitForIdleAsync(allFiles).ConfigureAwait(true);
 
@@ -114,7 +114,7 @@ public sealed class IndexerProgressBridgeTests
         ImmediateUiDispatcher dispatcher = new();
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 1, isCompleted: false));
         // Erster Refresh hängt am Gate → IsBusy=true; zweites Event muss durchfallen.
         Assert.True(allFiles.IsBusy);

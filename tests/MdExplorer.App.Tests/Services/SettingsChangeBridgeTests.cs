@@ -19,7 +19,7 @@ public sealed class SettingsChangeBridgeTests
         StrongReferenceMessenger messenger = new();
         SettingsChangeBridge sut = CreateSut(settings, indexer, messenger);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         try
         {
             int received = 0;
@@ -32,7 +32,7 @@ public sealed class SettingsChangeBridgeTests
         }
         finally
         {
-            await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
     }
 
@@ -44,8 +44,8 @@ public sealed class SettingsChangeBridgeTests
         StrongReferenceMessenger messenger = new();
         SettingsChangeBridge sut = CreateSut(settings, indexer, messenger);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         int received = 0;
         messenger.Register<SettingsChangedMessage>(this, (_, _) => received++);
@@ -64,7 +64,7 @@ public sealed class SettingsChangeBridgeTests
         StrongReferenceMessenger messenger = new();
         SettingsChangeBridge sut = CreateSut(settings, indexer, messenger);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         try
         {
             SettingsChangedMessage? received = null;
@@ -80,7 +80,7 @@ public sealed class SettingsChangeBridgeTests
         }
         finally
         {
-            await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
     }
 
@@ -92,7 +92,7 @@ public sealed class SettingsChangeBridgeTests
         StrongReferenceMessenger messenger = new();
         SettingsChangeBridge sut = CreateSut(settings, indexer, messenger);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         try
         {
             settings.RaiseChanged(AppSettings.Default, AppSettings.Default);
@@ -102,7 +102,7 @@ public sealed class SettingsChangeBridgeTests
         }
         finally
         {
-            await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
     }
 
@@ -114,7 +114,7 @@ public sealed class SettingsChangeBridgeTests
         StrongReferenceMessenger messenger = new();
         SettingsChangeBridge sut = CreateSut(settings, indexer, messenger);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         try
         {
             settings.RaiseChanged(AppSettings.Default, AppSettings.Default);
@@ -129,7 +129,7 @@ public sealed class SettingsChangeBridgeTests
         }
         finally
         {
-            await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
     }
 
@@ -141,7 +141,7 @@ public sealed class SettingsChangeBridgeTests
         StrongReferenceMessenger messenger = new();
         SettingsChangeBridge sut = CreateSut(settings, indexer, messenger);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         try
         {
             settings.RaiseChanged(AppSettings.Default, AppSettings.Default);
@@ -158,7 +158,7 @@ public sealed class SettingsChangeBridgeTests
         }
         finally
         {
-            await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
     }
 

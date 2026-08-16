@@ -20,7 +20,7 @@ public sealed class MarkdownIndexerResyncTests
         IndexerTestHarness harness = IndexerTestHarness.Create(resyncInterval: Abgleichintervall);
         await using (harness.ConfigureAwait(true))
         {
-            await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
             string pfad = Path.Combine(IndexerTestHarness.DefaultRoot, "still-entstanden.md");
 
             // Direkt am Dateisystem vorbei an der Überwachung — genau der Fall, den der
@@ -30,7 +30,7 @@ public sealed class MarkdownIndexerResyncTests
             Assert.True(
                 await AdvanceUntilAsync(harness, () => harness.Repository.Snapshot.ContainsKey(pfad)).ConfigureAwait(true),
                 "Der periodische Abgleich hat die Datei nicht aufgenommen.");
-            await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
     }
 
@@ -40,7 +40,7 @@ public sealed class MarkdownIndexerResyncTests
         IndexerTestHarness harness = IndexerTestHarness.Create(resyncInterval: Abgleichintervall);
         await using (harness.ConfigureAwait(true))
         {
-            await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
             string erste = Path.Combine(IndexerTestHarness.DefaultRoot, "erste.md");
             harness.FileSystem.AddFile(erste, "# Erste", FesteZeit);
             _ = await AdvanceUntilAsync(harness, () => harness.Repository.Snapshot.ContainsKey(erste)).ConfigureAwait(true);
@@ -51,7 +51,7 @@ public sealed class MarkdownIndexerResyncTests
             Assert.True(
                 await AdvanceUntilAsync(harness, () => harness.Repository.Snapshot.ContainsKey(zweite)).ConfigureAwait(true),
                 "Der Abgleich lief nur ein einziges Mal.");
-            await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
     }
 
@@ -61,9 +61,9 @@ public sealed class MarkdownIndexerResyncTests
         IndexerTestHarness harness = IndexerTestHarness.Create(resyncInterval: Abgleichintervall);
         await using (harness.ConfigureAwait(true))
         {
-            await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-            await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.NotNull(harness.Indexer.ExecuteTask);
             Assert.True(harness.Indexer.ExecuteTask!.IsCompleted);
@@ -84,7 +84,7 @@ public sealed class MarkdownIndexerResyncTests
             // Maschinenlast noch vom Erstlauf erfasst und der Test schlüge grundlos fehl.
             string vorher = Path.Combine(IndexerTestHarness.DefaultRoot, "vor-dem-start.md");
             harness.FileSystem.AddFile(vorher, "# Vor dem Start", FesteZeit);
-            await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
             Assert.True(
                 await AdvanceUntilAsync(harness, () => harness.Repository.Snapshot.ContainsKey(vorher)).ConfigureAwait(true),
                 "Der Erstlauf hat die vorhandene Datei nicht aufgenommen.");
@@ -95,11 +95,11 @@ public sealed class MarkdownIndexerResyncTests
             for (int schritt = 0; schritt < 20; schritt++)
             {
                 harness.TimeProvider.Advance(Abgleichintervall);
-                await Task.Delay(5).ConfigureAwait(true);
+                await Task.Delay(5, TestContext.Current.CancellationToken).ConfigureAwait(true);
             }
 
             Assert.False(harness.Repository.Snapshot.ContainsKey(pfad));
-            await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
     }
 
@@ -113,7 +113,7 @@ public sealed class MarkdownIndexerResyncTests
             harness.FileSystem.AddFile(pfad, "# Gesperrt", FesteZeit);
             harness.FileSystem.FailOpenRead(pfad, times: 2);
 
-            Task lauf = harness.Indexer.RunInitialScanAsync(CancellationToken.None);
+            Task lauf = harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken);
             await TreibeUhrBisFertigAsync(harness, lauf).ConfigureAwait(true);
 
             Assert.True(harness.Repository.Snapshot.ContainsKey(pfad), "Die kurzzeitig gesperrte Datei fehlt im Bestand.");
@@ -134,7 +134,7 @@ public sealed class MarkdownIndexerResyncTests
             harness.FileSystem.AddFile(offen, "# Lesbar", FesteZeit);
             harness.FileSystem.FailOpenRead(gesperrt, times: 99);
 
-            Task lauf = harness.Indexer.RunInitialScanAsync(CancellationToken.None);
+            Task lauf = harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken);
             await TreibeUhrBisFertigAsync(harness, lauf).ConfigureAwait(true);
 
             Assert.False(harness.Repository.Snapshot.ContainsKey(gesperrt));

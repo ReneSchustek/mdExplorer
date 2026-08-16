@@ -15,7 +15,7 @@ public sealed class JsonFileUpdateCheckJournalTests : IDisposable
     {
         JsonFileUpdateCheckJournal journal = Create();
 
-        DateTimeOffset? result = await journal.ReadLastCheckAsync(CancellationToken.None);
+        DateTimeOffset? result = await journal.ReadLastCheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }
@@ -26,8 +26,8 @@ public sealed class JsonFileUpdateCheckJournalTests : IDisposable
         JsonFileUpdateCheckJournal journal = Create();
         DateTimeOffset timestamp = new(2026, 6, 26, 8, 30, 0, TimeSpan.Zero);
 
-        await journal.WriteLastCheckAsync(timestamp, CancellationToken.None);
-        DateTimeOffset? result = await journal.ReadLastCheckAsync(CancellationToken.None);
+        await journal.WriteLastCheckAsync(timestamp, TestContext.Current.CancellationToken);
+        DateTimeOffset? result = await journal.ReadLastCheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(timestamp, result);
     }
@@ -35,10 +35,10 @@ public sealed class JsonFileUpdateCheckJournalTests : IDisposable
     [Fact]
     public async Task ReadLastCheck_WhenFileCorrupt_ReturnsNull()
     {
-        await File.WriteAllTextAsync(_filePath, "{ this is not valid json");
+        await File.WriteAllTextAsync(_filePath, "{ this is not valid json", TestContext.Current.CancellationToken);
         JsonFileUpdateCheckJournal journal = Create();
 
-        DateTimeOffset? result = await journal.ReadLastCheckAsync(CancellationToken.None);
+        DateTimeOffset? result = await journal.ReadLastCheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Null(result);
     }

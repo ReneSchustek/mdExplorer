@@ -48,7 +48,7 @@ public sealed class AllFilesQueryIntegrationTests : IAsyncDisposable
         await SeedAsync().ConfigureAwait(true);
         AllFilesQuery sut = new(_dbContext);
 
-        IReadOnlyList<AllFilesRow> rows = await sut.GetAllAsync(CancellationToken.None).ConfigureAwait(true);
+        IReadOnlyList<AllFilesRow> rows = await sut.GetAllAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, rows.Count);
         Assert.Equal(FileBId, rows[0].MarkdownFileId);
@@ -64,7 +64,7 @@ public sealed class AllFilesQueryIntegrationTests : IAsyncDisposable
     {
         AllFilesQuery sut = new(_dbContext);
 
-        IReadOnlyList<AllFilesRow> rows = await sut.GetAllAsync(CancellationToken.None).ConfigureAwait(true);
+        IReadOnlyList<AllFilesRow> rows = await sut.GetAllAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(rows);
     }

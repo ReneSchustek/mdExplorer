@@ -16,7 +16,7 @@ public sealed class MarkdownIndexerTests
         harness.FileSystem.AddFile(@"C:\Wurzel\a.md", "Inhalt A", FixedWrite);
         harness.FileSystem.AddFile(@"C:\Wurzel\sub\b.md", "Inhalt B", FixedWrite);
 
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, harness.Repository.Snapshot.Count);
         Assert.Contains(@"C:\Wurzel\a.md", harness.Repository.Snapshot.Keys);
@@ -29,9 +29,9 @@ public sealed class MarkdownIndexerTests
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\a.md", "Inhalt", FixedWrite);
 
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         int writesAfterFirstScan = harness.Repository.TotalWrites;
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(writesAfterFirstScan, harness.Repository.TotalWrites);
     }
@@ -41,10 +41,10 @@ public sealed class MarkdownIndexerTests
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\a.md", "Inhalt", FixedWrite);
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         harness.FileSystem.RemoveFile(@"C:\Wurzel\a.md");
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(harness.Repository.Snapshot);
     }
@@ -54,11 +54,11 @@ public sealed class MarkdownIndexerTests
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\a.md", "Original", FixedWrite);
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         string originalHash = harness.Repository.Snapshot[@"C:\Wurzel\a.md"].ContentHash;
 
         harness.FileSystem.UpdateFile(@"C:\Wurzel\a.md", "Neu", FixedWrite.AddMinutes(1));
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         MarkdownFile updated = harness.Repository.Snapshot[@"C:\Wurzel\a.md"];
         Assert.NotEqual(originalHash, updated.ContentHash);
@@ -69,19 +69,19 @@ public sealed class MarkdownIndexerTests
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         harness.FileSystem.AddFile(@"C:\Wurzel\neu.md", "Neu", FixedWrite);
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Created, @"C:\Wurzel\neu.md", OldPath: null, IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
 
-        bool persisted = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        bool persisted = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.True(persisted);
         Assert.Contains(@"C:\Wurzel\neu.md", harness.Repository.Snapshot.Keys);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -90,8 +90,8 @@ public sealed class MarkdownIndexerTests
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\a.md", "Inhalt", FixedWrite);
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         _ = Assert.Single(harness.Repository.Snapshot);
 
         harness.FileSystem.RemoveFile(@"C:\Wurzel\a.md");
@@ -99,11 +99,11 @@ public sealed class MarkdownIndexerTests
             new FileSystemEvent(FileSystemEventKind.Deleted, @"C:\Wurzel\a.md", OldPath: null, IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
 
-        bool persisted = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        bool persisted = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.True(persisted);
         Assert.Empty(harness.Repository.Snapshot);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -112,8 +112,8 @@ public sealed class MarkdownIndexerTests
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\alt.md", "Inhalt", FixedWrite);
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         harness.FileSystem.RemoveFile(@"C:\Wurzel\alt.md");
         harness.FileSystem.AddFile(@"C:\Wurzel\neu.md", "Inhalt", FixedWrite);
@@ -121,12 +121,12 @@ public sealed class MarkdownIndexerTests
             new FileSystemEvent(FileSystemEventKind.Renamed, @"C:\Wurzel\neu.md", @"C:\Wurzel\alt.md", IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
 
-        bool persisted = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        bool persisted = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.True(persisted);
         Assert.Contains(@"C:\Wurzel\neu.md", harness.Repository.Snapshot.Keys);
         Assert.DoesNotContain(@"C:\Wurzel\alt.md", harness.Repository.Snapshot.Keys);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     // Wenn ein Batch beim SaveChanges crasht (DbException / IO / InvalidOperation),
@@ -137,8 +137,8 @@ public sealed class MarkdownIndexerTests
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Erster Watcher-Event scheitert beim Save (kein Release, nur Throw).
         int saveCountBeforeBad = harness.Repository.SaveCallCount;
@@ -156,7 +156,7 @@ public sealed class MarkdownIndexerTests
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Created, @"C:\Wurzel\good.md", OldPath: null, IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        bool persisted = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        bool persisted = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(persisted);
         Assert.Contains(@"C:\Wurzel\good.md", harness.Repository.Snapshot.Values.Select(f => f.AbsolutePath));
@@ -174,7 +174,7 @@ public sealed class MarkdownIndexerTests
             {
                 return;
             }
-            await Task.Delay(10).ConfigureAwait(false);
+            await Task.Delay(10, TestContext.Current.CancellationToken).ConfigureAwait(false);
         }
         if (!condition())
         {
@@ -187,10 +187,10 @@ public sealed class MarkdownIndexerTests
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Task? executeTask = harness.Indexer.ExecuteTask;
         Assert.NotNull(executeTask);
@@ -202,7 +202,7 @@ public sealed class MarkdownIndexerTests
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: Array.Empty<string>());
 
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(harness.Repository.Snapshot);
         Assert.Equal(0, harness.Repository.SaveCallCount);
@@ -221,7 +221,7 @@ public sealed class MarkdownIndexerTests
         List<IndexerScanProgressEventArgs> events = [];
         harness.Indexer.InitialScanProgress += (_, args) => events.Add(args);
 
-        await harness.Indexer.RunInitialScanAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(5, harness.Repository.Snapshot.Count);
         // Mindestens 3 Saves: zwei Batches plus Abschluss-Commit.

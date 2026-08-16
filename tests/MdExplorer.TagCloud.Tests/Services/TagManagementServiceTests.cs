@@ -27,7 +27,7 @@ public sealed class TagManagementServiceTests
             new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\b.md", "b.md"));
         TagManagementService sut = CreateSut(query, fs);
 
-        TagRewriteResult result = await sut.RenameAsync("foo", "bar", CancellationToken.None).ConfigureAwait(true);
+        TagRewriteResult result = await sut.RenameAsync("foo", "bar", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("foo", result.Slug);
         Assert.Equal(2, result.FilesAffected);
@@ -47,7 +47,7 @@ public sealed class TagManagementServiceTests
         query.SetFiles("foo", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
         TagManagementService sut = CreateSut(query, fs);
 
-        TagRewriteResult result = await sut.RenameAsync("foo", "neu", CancellationToken.None).ConfigureAwait(true);
+        TagRewriteResult result = await sut.RenameAsync("foo", "neu", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, result.FilesAffected);
         Assert.Equal(
@@ -65,7 +65,7 @@ public sealed class TagManagementServiceTests
         query.SetFiles("source", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
         TagManagementService sut = CreateSut(query, fs);
 
-        TagRewriteResult result = await sut.MergeAsync("source", "target", CancellationToken.None).ConfigureAwait(true);
+        TagRewriteResult result = await sut.MergeAsync("source", "target", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, result.FilesAffected);
         Assert.Equal(
@@ -83,7 +83,7 @@ public sealed class TagManagementServiceTests
         query.SetFiles("kill", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
         TagManagementService sut = CreateSut(query, fs);
 
-        TagRewriteResult result = await sut.DeleteAsync("kill", CancellationToken.None).ConfigureAwait(true);
+        TagRewriteResult result = await sut.DeleteAsync("kill", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, result.FilesAffected);
         Assert.Equal(
@@ -104,7 +104,7 @@ public sealed class TagManagementServiceTests
         query.SetFiles("foo", rows);
         TagManagementService sut = CreateSut(query, fs);
 
-        TagPreview preview = await sut.GetPreviewAsync("foo", CancellationToken.None).ConfigureAwait(true);
+        TagPreview preview = await sut.GetPreviewAsync("foo", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(25, preview.FileCount);
         Assert.Equal(10, preview.SamplePaths.Count);
@@ -117,7 +117,7 @@ public sealed class TagManagementServiceTests
         FakeTagFileLookupQuery query = new();
         TagManagementService sut = CreateSut(query, fs);
 
-        TagRewriteResult result = await sut.RenameAsync("missing", "neu", CancellationToken.None).ConfigureAwait(true);
+        TagRewriteResult result = await sut.RenameAsync("missing", "neu", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(0, result.FilesAffected);
         Assert.Equal(0, result.FilesAttempted);
@@ -134,7 +134,7 @@ public sealed class TagManagementServiceTests
         query.SetFiles("foo", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
         TagManagementService sut = CreateSut(query, fs);
 
-        TagRewriteResult result = await sut.RenameAsync("foo", "bar", CancellationToken.None).ConfigureAwait(true);
+        TagRewriteResult result = await sut.RenameAsync("foo", "bar", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(0, result.FilesAffected);
         Assert.Equal(1, result.FilesAttempted);
@@ -161,7 +161,7 @@ public sealed class TagManagementServiceTests
         TagManagementService sut = CreateSut(query, fs);
 
         Stopwatch stopwatch = Stopwatch.StartNew();
-        TagRewriteResult result = await sut.RenameAsync("foo", "neu", CancellationToken.None).ConfigureAwait(true);
+        TagRewriteResult result = await sut.RenameAsync("foo", "neu", TestContext.Current.CancellationToken).ConfigureAwait(true);
         stopwatch.Stop();
 
         // Die Zusicherung liegt auf der Vollständigkeit: Alle hundert Dateien sind

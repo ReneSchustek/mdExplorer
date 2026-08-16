@@ -20,7 +20,7 @@ public sealed class TagStatisticsServiceTests
         await using (harness.ConfigureAwait(true))
         {
             IReadOnlyList<TagStatistic> result = await harness.Service
-                .GetTopTagsAsync(topN: 50, CancellationToken.None)
+                .GetTopTagsAsync(topN: 50, TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             Assert.Empty(result);
@@ -42,7 +42,7 @@ public sealed class TagStatisticsServiceTests
             ]).ConfigureAwait(true);
 
             IReadOnlyList<TagStatistic> result = await harness.Service
-                .GetTopTagsAsync(topN: 10, CancellationToken.None)
+                .GetTopTagsAsync(topN: 10, TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             Assert.Equal(3, result.Count);
@@ -71,7 +71,7 @@ public sealed class TagStatisticsServiceTests
             await harness.SeedAsync(seeds).ConfigureAwait(true);
 
             IReadOnlyList<TagStatistic> result = await harness.Service
-                .GetTopTagsAsync(topN: 5, CancellationToken.None)
+                .GetTopTagsAsync(topN: 5, TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             Assert.Equal(5, result.Count);
@@ -110,7 +110,7 @@ public sealed class TagStatisticsServiceTests
             // Iterationen praktisch eliminieren.
             for (int warm = 0; warm < 5; warm++)
             {
-                _ = await harness.Service.GetTopTagsAsync(topN: 50, CancellationToken.None).ConfigureAwait(true);
+                _ = await harness.Service.GetTopTagsAsync(topN: 50, TestContext.Current.CancellationToken).ConfigureAwait(true);
             }
 
             const int iterations = 60;
@@ -118,7 +118,7 @@ public sealed class TagStatisticsServiceTests
             for (int index = 0; index < iterations; index++)
             {
                 Stopwatch stopwatch = Stopwatch.StartNew();
-                _ = await harness.Service.GetTopTagsAsync(topN: 50, CancellationToken.None).ConfigureAwait(true);
+                _ = await harness.Service.GetTopTagsAsync(topN: 50, TestContext.Current.CancellationToken).ConfigureAwait(true);
                 stopwatch.Stop();
                 durationsMs[index] = stopwatch.ElapsedMilliseconds;
             }

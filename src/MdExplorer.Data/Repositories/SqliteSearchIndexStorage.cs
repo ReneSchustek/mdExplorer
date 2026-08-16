@@ -35,9 +35,11 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
         WHERE "MarkdownFileId" IN (
         """;
 
-    private const string DeleteByFileIdSql = """
+    // Wie oben bei den Bodies: Die IN-Platzhalter werden je Portion angehängt, der
+    // Wert-Pfad bleibt vollständig parametrisiert.
+    private const string DeleteByIdsPrefix = """
         DELETE FROM "MarkdownSearchIndex"
-        WHERE "MarkdownFileId" = $fileId;
+        WHERE "MarkdownFileId" IN (
         """;
 
     private const string InsertSql = """
@@ -133,14 +135,18 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
                 .ConfigureAwait(false);
             await using (transaction.ConfigureAwait(false))
             {
-                foreach (Guid orphan in deletes)
-                {
-                    await DeleteByFileIdAsync(connection, transaction, orphan, cancellationToken).ConfigureAwait(false);
-                }
+                // In einem Zug statt Zeile für Zeile. "MarkdownFileId" ist in der
+                // FTS5-Tabelle UNINDEXED — jede Bedingung darauf liest die ganze Tabelle.
+                // Einzeln gelöscht kostete das am 16.08.2026 rund 170 ms je Datei; über
+                // 25.000 verwaiste Einträge waren das mehr als eine Stunde. Eine Anweisung
+                // je Portion liest die Tabelle einmal für 500 Dateien statt 500-mal.
+                await DeleteByFileIdsAsync(connection, transaction, deletes, cancellationToken).ConfigureAwait(false);
+
+                Guid[] upsertIds = [.. upserts.Select(entry => entry.MarkdownFileId)];
+                await DeleteByFileIdsAsync(connection, transaction, upsertIds, cancellationToken).ConfigureAwait(false);
 
                 foreach (SearchIndexEntry entry in upserts)
                 {
-                    await DeleteByFileIdAsync(connection, transaction, entry.MarkdownFileId, cancellationToken).ConfigureAwait(false);
                     await InsertAsync(connection, transaction, entry, cancellationToken).ConfigureAwait(false);
                 }
 
@@ -314,17 +320,51 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
         return true;
     }
 
-    private static async Task DeleteByFileIdAsync(
+    /// <summary>Entfernt viele Einträge mit einer Anweisung je Portion.</summary>
+    private static async Task DeleteByFileIdsAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
-        Guid fileId,
+        IReadOnlyCollection<Guid> fileIds,
         CancellationToken cancellationToken)
     {
-        using SqliteCommand command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = DeleteByFileIdSql;
-        _ = command.Parameters.AddWithValue("$fileId", FormatGuid(fileId));
-        _ = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        if (fileIds.Count == 0)
+        {
+            return;
+        }
+
+        foreach (Guid[] portion in fileIds.Chunk(SqliteInListBatchSize))
+        {
+            using SqliteCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
+            // CA2100: gleiche Lage wie bei der Body-Sammelabfrage — konstante Basis plus
+            // generierte Platzhalter; die Werte reisen ausschließlich als Parameter.
+#pragma warning disable CA2100
+            command.CommandText = BuildDeleteByIdsSql(portion.Length);
+#pragma warning restore CA2100
+            for (int i = 0; i < portion.Length; i++)
+            {
+                _ = command.Parameters.AddWithValue(
+                    "$p" + i.ToString(CultureInfo.InvariantCulture),
+                    FormatGuid(portion[i]));
+            }
+            _ = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static string BuildDeleteByIdsSql(int parameterCount)
+    {
+        StringBuilder sql = new(DeleteByIdsPrefix.Length + (parameterCount * 6) + 4);
+        _ = sql.Append(DeleteByIdsPrefix);
+        for (int i = 0; i < parameterCount; i++)
+        {
+            if (i > 0)
+            {
+                _ = sql.Append(", ");
+            }
+            _ = sql.Append("$p").Append(i.ToString(CultureInfo.InvariantCulture));
+        }
+        _ = sql.Append(");");
+        return sql.ToString();
     }
 
     private static async Task InsertAsync(

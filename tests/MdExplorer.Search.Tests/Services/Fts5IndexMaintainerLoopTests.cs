@@ -78,7 +78,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             await u.StartAsync().ConfigureAwait(true);
             _ = await u.WarteAufLaeufeAsync(1).ConfigureAwait(true);
 
-            await u.Sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await u.Sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             // Ein Abbruch ist der Normalfall beim Herunterfahren und darf keinen Fehler hinterlassen.
             Assert.NotNull(u.Sut.ExecuteTask);
@@ -125,7 +125,7 @@ public sealed class Fts5IndexMaintainerLoopTests
         Schleifenumgebung u = new(new TestDbException("Datenbank belegt"));
         await using (u.ConfigureAwait(true))
         {
-            await u.Sut.TrySynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            await u.Sut.TrySynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(1, u.Quelle.CallCount);
         }
@@ -154,10 +154,10 @@ public sealed class Fts5IndexMaintainerLoopTests
         {
             u.Quelle.Dokumente.Add(Dokument(IdA, "hash-A", @"C:\notizen\a.md"));
             u.Dateien.Setze(@"C:\notizen\a.md", "Inhalt A");
-            _ = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
             int schreibvorgaenge = u.Speicher.ApplyCallCount;
 
-            int changed = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            int changed = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(0, changed);
             Assert.Equal(schreibvorgaenge, u.Speicher.ApplyCallCount);
@@ -173,7 +173,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             u.Quelle.Dokumente.Add(Dokument(IdA, "hash-A", @"C:\notizen\a.md"));
             u.Dateien.Setze(@"C:\notizen\a.md", "---\ntitle: Bericht\n---\nDer eigentliche Text.");
 
-            int changed = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            int changed = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(1, changed);
             SearchIndexEntry eintrag = Assert.Single(u.Speicher.Entries);
@@ -193,7 +193,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             u.Quelle.TagsNachId[IdA] = ["bericht", "quartal"];
             u.Dateien.Setze(@"C:\notizen\a.md", "Text");
 
-            _ = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             SearchIndexEntry eintrag = Assert.Single(u.Speicher.Entries);
             Assert.Equal("bericht quartal", eintrag.Tags, StringComparer.Ordinal);
@@ -209,7 +209,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             u.Quelle.Dokumente.Add(Dokument(IdA, "hash-A", @"C:\notizen\a.md"));
             u.Dateien.Setze(@"C:\notizen\a.md", "Text");
 
-            _ = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(string.Empty, Assert.Single(u.Speicher.Entries).Tags, StringComparer.Ordinal);
         }
@@ -225,7 +225,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             u.Quelle.TagsNachId[IdA] = [];
             u.Dateien.Setze(@"C:\notizen\a.md", "Text");
 
-            _ = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(string.Empty, Assert.Single(u.Speicher.Entries).Tags, StringComparer.Ordinal);
         }
@@ -240,7 +240,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             u.Quelle.Dokumente.Add(Dokument(IdA, "hash-A", @"C:\notizen\a.md", """{"title":"Bericht"}"""));
             u.Dateien.Setze(@"C:\notizen\a.md", "Text");
 
-            _ = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             SearchIndexEntry eintrag = Assert.Single(u.Speicher.Entries);
             Assert.Contains("Bericht", eintrag.Frontmatter, StringComparison.Ordinal);
@@ -258,7 +258,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             u.Quelle.Dokumente.Add(Dokument(IdA, "hash-A", @"C:\notizen\gesperrt.md"));
             u.Dateien.LasseScheitern(@"C:\notizen\gesperrt.md", new IOException("Datei gesperrt"));
 
-            int changed = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            int changed = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(1, changed);
             SearchIndexEntry eintrag = Assert.Single(u.Speicher.Entries);
@@ -276,7 +276,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             u.Quelle.Dokumente.Add(Dokument(IdA, "hash-A", @"C:\notizen\fehlt.md"));
             u.Dateien.LasseScheitern(@"C:\notizen\fehlt.md", new FileNotFoundException("weg"));
 
-            _ = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(string.Empty, Assert.Single(u.Speicher.Entries).Body, StringComparer.Ordinal);
         }
@@ -292,10 +292,10 @@ public sealed class Fts5IndexMaintainerLoopTests
             u.Quelle.Dokumente.Add(Dokument(IdB, "hash-B", @"C:\notizen\b.md"));
             u.Dateien.Setze(@"C:\notizen\a.md", "A");
             u.Dateien.Setze(@"C:\notizen\b.md", "B");
-            _ = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             _ = u.Quelle.Dokumente.RemoveAll(d => d.MarkdownFileId == IdB);
-            int changed = await u.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            int changed = await u.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(1, changed);
             Assert.Contains(IdA, u.Speicher.Indiziert.Keys);
@@ -351,7 +351,7 @@ public sealed class Fts5IndexMaintainerLoopTests
         public async Task StartAsync()
         {
             _gestartet = true;
-            await Sut.StartAsync(CancellationToken.None).ConfigureAwait(false);
+            await Sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -379,7 +379,7 @@ public sealed class Fts5IndexMaintainerLoopTests
         {
             if (_gestartet)
             {
-                await Sut.StopAsync(CancellationToken.None).ConfigureAwait(false);
+                await Sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
             }
             Sut.Dispose();
             await _provider.DisposeAsync().ConfigureAwait(false);

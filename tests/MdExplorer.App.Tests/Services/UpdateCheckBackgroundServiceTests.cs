@@ -28,7 +28,7 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
         messenger.Register<UpdateAvailableMessage>(this, (_, message) => received = message);
         using UpdateCheckBackgroundService service = CreateService(checker, messenger, updatesEnabled: true);
 
-        await service.RunOnceAsync(CancellationToken.None);
+        await service.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(1, checker.CallCount);
         Assert.NotNull(received);
@@ -45,7 +45,7 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
         messenger.Register<UpdateAvailableMessage>(this, (_, _) => received = true);
         using UpdateCheckBackgroundService service = CreateService(checker, messenger, updatesEnabled: false);
 
-        await service.RunOnceAsync(CancellationToken.None);
+        await service.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, checker.CallCount);
         Assert.False(received);
@@ -60,7 +60,7 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
         messenger.Register<UpdateAvailableMessage>(this, (_, _) => received = true);
         using UpdateCheckBackgroundService service = CreateService(checker, messenger, updatesEnabled: true);
 
-        await service.RunOnceAsync(CancellationToken.None);
+        await service.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(1, checker.CallCount);
         Assert.False(received);
@@ -77,9 +77,9 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
         Microsoft.Extensions.Time.Testing.FakeTimeProvider zeit = new();
         using UpdateCheckBackgroundService service = CreateService(checker, messenger, updatesEnabled: true, zeit);
 
-        await service.StartAsync(CancellationToken.None);
+        await service.StartAsync(TestContext.Current.CancellationToken);
         bool gelaufen = await WarteAufAsync(zeit, () => checker.CallCount > 0);
-        await service.StopAsync(CancellationToken.None);
+        await service.StopAsync(TestContext.Current.CancellationToken);
 
         Assert.True(gelaufen, "Die Update-Prüfung ist nach dem Startversatz nicht gelaufen.");
         Assert.False(service.ExecuteTask!.IsFaulted);
@@ -94,8 +94,8 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
         Microsoft.Extensions.Time.Testing.FakeTimeProvider zeit = new();
         using UpdateCheckBackgroundService service = CreateService(checker, messenger, updatesEnabled: true, zeit);
 
-        await service.StartAsync(CancellationToken.None);
-        await service.StopAsync(CancellationToken.None);
+        await service.StartAsync(TestContext.Current.CancellationToken);
+        await service.StopAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, checker.CallCount);
         Assert.True(service.ExecuteTask!.IsCompleted);

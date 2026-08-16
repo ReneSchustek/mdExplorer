@@ -32,7 +32,7 @@ public sealed class SearchViewModelTests
         vm.QueryText = "fo";
         vm.QueryText = "foo";
 
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, searchService.CallCount);
         Assert.Equal("foo", searchService.ReceivedQueries[0].Text);
@@ -56,7 +56,7 @@ public sealed class SearchViewModelTests
         vm.SearchCompleted += (_, _) => completion.TrySetResult();
 
         vm.QueryText = "foo";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, vm.Results.Count);
         Assert.Equal(first, vm.Results[0].MarkdownFileId);
@@ -83,7 +83,7 @@ public sealed class SearchViewModelTests
         vm.SearchCompleted += (_, _) => completion.TrySetResult();
 
         vm.QueryText = "foo";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(vm.Results);
         Assert.Equal(included, vm.Results[0].MarkdownFileId);
@@ -109,7 +109,7 @@ public sealed class SearchViewModelTests
         vm.SearchCompleted += (_, _) => completion.TrySetResult();
 
         vm.QueryText = "foo";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, vm.Results.Count);
     }

@@ -263,6 +263,49 @@ public sealed class GestaltungslinieGuardTests
             + Environment.NewLine + string.Join(Environment.NewLine, findings));
     }
 
+    /// <summary>
+    /// Wer sichtbare Gruppen einführt, muss die Virtualisierung ausdrücklich mitnehmen.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WPF schaltet die Virtualisierung ab, sobald eine Liste einen <c>GroupStyle</c> trägt —
+    /// es sei denn, <c>VirtualizingPanel.IsVirtualizingWhenGrouping</c> steht ausdrücklich auf
+    /// <c>True</c>. Das gilt auch dann, wenn <c>IsVirtualizing="True"</c> danebensteht; genau
+    /// diese Kombination sah in der Dateiliste richtig aus und war es nicht.
+    /// </para>
+    /// <para>
+    /// Am 16.08.2026 hieß das über 29.889 Einträge: 185.218 <c>TextBlock</c>, 2,4 Millionen
+    /// <c>GlyphRun</c> und über 5 GB im Speicherabbild — die Anwendung baute jede Zeile des
+    /// gesamten Bestands auf, auch die 29.870, die niemand sieht. Der Bau meldete nichts, die
+    /// Tests auch nicht: Es ist eine Voreinstellung, kein Fehler im Code.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void GroupedListsKeepVirtualization()
+    {
+        List<string> findings = [];
+
+        foreach (string file in ViewAndControlFiles())
+        {
+            string text = File.ReadAllText(file);
+            if (!text.Contains(".GroupStyle>", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!text.Contains("IsVirtualizingWhenGrouping=\"True\"", StringComparison.Ordinal))
+            {
+                findings.Add(Path.GetFileName(file));
+            }
+        }
+
+        Assert.True(
+            findings.Count == 0,
+            "Eine Liste mit Gruppen ohne IsVirtualizingWhenGrouping baut jede Zeile des gesamten "
+            + "Bestands auf — auch die, die niemand sieht:"
+            + Environment.NewLine + string.Join(Environment.NewLine, findings));
+    }
+
     private static List<string> ViewAndControlFiles()
     {
         List<string> files = [];

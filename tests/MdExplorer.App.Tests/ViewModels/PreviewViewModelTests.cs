@@ -37,7 +37,7 @@ public sealed class PreviewViewModelTests
         using ServiceProvider provider = BuildProvider(repo);
         PreviewViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), builder, NullLogger<PreviewViewModel>.Instance);
 
-        await vm.LoadAsync(fileId, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("<h1>Titel</h1>", vm.Html, StringComparison.Ordinal);
         Assert.Contains("Content-Security-Policy", vm.Html, StringComparison.Ordinal);
@@ -53,7 +53,7 @@ public sealed class PreviewViewModelTests
         using ServiceProvider provider = BuildProvider(repo);
         PreviewViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), builder, NullLogger<PreviewViewModel>.Instance);
 
-        await vm.LoadAsync(Guid.NewGuid(), CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("Content-Security-Policy", vm.Html, StringComparison.Ordinal);
     }

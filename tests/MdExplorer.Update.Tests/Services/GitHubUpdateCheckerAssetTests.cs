@@ -36,7 +36,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     {
         GitHubUpdateChecker checker = CreateChecker(ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: $"{GueltigerHash}  MdExplorer-1.0.0-setup.exe"));
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
         Assert.NotNull(result.Asset);
@@ -51,7 +51,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     {
         GitHubUpdateChecker checker = CreateChecker(ReleaseMitAssets(mitPruefsumme: false));
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
         Assert.NotNull(result.Asset);
@@ -66,7 +66,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     {
         GitHubUpdateChecker checker = CreateChecker(ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: "das ist kein hexwert"));
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result.Asset);
         Assert.Null(result.Asset!.ExpectedSha256);
@@ -79,7 +79,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
         // Zu kurzer Wert: sieht auf den ersten Blick nach Hex aus, ist aber kein SHA-256.
         GitHubUpdateChecker checker = CreateChecker(ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: "9F86D081"));
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Null(result.Asset!.ExpectedSha256);
     }
@@ -94,7 +94,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
         ]);
         GitHubUpdateChecker checker = CreateChecker(handler);
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.NotNull(result.Asset);
         Assert.Null(result.Asset!.ExpectedSha256);
@@ -110,7 +110,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
             """;
         GitHubUpdateChecker checker = CreateChecker(StubHttpMessageHandler.WithJson(OhneSetup));
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
         Assert.Null(result.Asset);
@@ -125,7 +125,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
             """;
         GitHubUpdateChecker checker = CreateChecker(StubHttpMessageHandler.WithJson(OhneAssets));
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Null(result.Asset);
     }
@@ -137,7 +137,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
         GitHubUpdateChecker checker = CreateChecker(
             ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: $"{GueltigerHash} *MdExplorer-1.0.0-setup.exe\n"));
 
-        UpdateCheckResult result = await checker.CheckForUpdateAsync(CancellationToken.None);
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(GueltigerHash, result.Asset!.ExpectedSha256, StringComparer.OrdinalIgnoreCase);
     }

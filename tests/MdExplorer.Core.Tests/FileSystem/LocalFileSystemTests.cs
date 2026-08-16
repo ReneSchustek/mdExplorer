@@ -60,9 +60,9 @@ public sealed class LocalFileSystemTests : IDisposable
     public async Task ReadAllBytesAsync_OnExistingFile_ReadsContent()
     {
         string path = Path.Combine(_testRoot, "datei.md");
-        await File.WriteAllTextAsync(path, "Hallo Welt", CancellationToken.None).ConfigureAwait(true);
+        await File.WriteAllTextAsync(path, "Hallo Welt", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        byte[] bytes = await _sut.ReadAllBytesAsync(path, CancellationToken.None).ConfigureAwait(true);
+        byte[] bytes = await _sut.ReadAllBytesAsync(path, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("Hallo Welt", System.Text.Encoding.UTF8.GetString(bytes));
     }
@@ -94,11 +94,11 @@ public sealed class LocalFileSystemTests : IDisposable
     public async Task OpenRead_OnExistingFile_ReturnsReadableStream()
     {
         string path = Path.Combine(_testRoot, "stream.md");
-        await File.WriteAllTextAsync(path, "Streamed", CancellationToken.None).ConfigureAwait(true);
+        await File.WriteAllTextAsync(path, "Streamed", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         await using Stream stream = _sut.OpenRead(path);
         using StreamReader reader = new(stream);
-        string content = await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(true);
+        string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("Streamed", content);
     }

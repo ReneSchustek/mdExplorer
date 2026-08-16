@@ -78,7 +78,7 @@ public sealed class ParseOrchestratorLoopTests
             await u.StartAsync().ConfigureAwait(true);
             _ = await u.WarteAufLaeufeAsync(1).ConfigureAwait(true);
 
-            await u.Sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await u.Sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             // Der Abbruch beim Herunterfahren ist der Normalfall und darf keinen Fehler hinterlassen.
             Assert.NotNull(u.Sut.ExecuteTask);
@@ -139,7 +139,7 @@ public sealed class ParseOrchestratorLoopTests
         Schleifenumgebung u = new(new TestDbException("Datenbank belegt"));
         await using (u.ConfigureAwait(true))
         {
-            await u.Sut.TryRunOnceAsync(CancellationToken.None).ConfigureAwait(true);
+            await u.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal(1, u.Quelle.CallCount);
         }
@@ -237,7 +237,7 @@ public sealed class ParseOrchestratorLoopTests
         public async Task StartAsync()
         {
             _gestartet = true;
-            await Sut.StartAsync(CancellationToken.None).ConfigureAwait(false);
+            await Sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
         }
 
         public Guid FuegeQuelleHinzu(string pfad, string inhaltsHash, string inhalt)
@@ -281,7 +281,7 @@ public sealed class ParseOrchestratorLoopTests
         {
             if (_gestartet)
             {
-                await Sut.StopAsync(CancellationToken.None).ConfigureAwait(false);
+                await Sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
             }
             Sut.Dispose();
             await _provider.DisposeAsync().ConfigureAwait(false);

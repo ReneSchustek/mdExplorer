@@ -26,7 +26,7 @@ public sealed class TagManagementViewModelTests
             dialogService,
             NullLogger<TagManagementViewModel>.Instance);
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, sut.Items.Count);
         Assert.Equal("docs", sut.Items[0].Slug);
@@ -104,7 +104,7 @@ public sealed class TagManagementViewModelTests
             NullLogger<TagManagementViewModel>.Instance);
         sut.SelectedItem = new TagManagementItem("Docs", "docs", 3);
 
-        await sut.DeleteAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.DeleteAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, managementService.GetPreviewCount);
         Assert.Equal(0, managementService.DeleteCount);
@@ -128,7 +128,7 @@ public sealed class TagManagementViewModelTests
         sut.SelectedItem = new TagManagementItem("Docs", "docs", 3);
         sut.NewTagName = "neu";
 
-        await sut.RenameAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RenameAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, managementService.RenameCount);
         Assert.Equal("docs", managementService.LastRenameSlug);
@@ -155,7 +155,7 @@ public sealed class TagManagementViewModelTests
         sut.SelectedItem = new TagManagementItem("Docs", "docs", 3);
         sut.NewTagName = string.Empty;
 
-        _ = await Assert.ThrowsAsync<ArgumentException>(() => sut.RenameAsync(CancellationToken.None)).ConfigureAwait(true);
+        _ = await Assert.ThrowsAsync<ArgumentException>(() => sut.RenameAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public sealed class TagManagementViewModelTests
         sut.SelectedItem = new TagManagementItem("Source", "source", 1);
         sut.NewTagName = "target";
 
-        await sut.MergeAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.MergeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, managementService.MergeCount);
         Assert.Equal("source", managementService.LastMergeSlug);
@@ -201,7 +201,7 @@ public sealed class TagManagementViewModelTests
         sut.SelectedItem = new TagManagementItem("Source", "source", 1);
         sut.NewTagName = "target";
 
-        await sut.MergeAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.MergeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("Tags zusammenführen: 1 von 1 Datei(en) geändert. Fehler: 0.", sut.StatusMessage);
         Assert.Equal(string.Empty, sut.NewTagName);
@@ -224,7 +224,7 @@ public sealed class TagManagementViewModelTests
             NullLogger<TagManagementViewModel>.Instance);
         sut.SelectedItem = new TagManagementItem("Kill", "kill", 1);
 
-        await sut.DeleteAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.DeleteAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, managementService.DeleteCount);
         Assert.Equal("Tag löschen: 1 von 1 Datei(en) geändert. Fehler: 0.", sut.StatusMessage);
@@ -247,10 +247,10 @@ public sealed class TagManagementViewModelTests
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
         FakeManagementService managementService = new();
         TagManagementViewModel sut = new(statsService, managementService, new FakeDialogService(), NullLogger<TagManagementViewModel>.Instance);
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         statsService.Failure = new TestDbException("Datenbank belegt");
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(sut.Items);
         Assert.Contains("konnte nicht geladen werden", sut.StatusMessage, StringComparison.Ordinal);
@@ -267,7 +267,7 @@ public sealed class TagManagementViewModelTests
         FakeManagementService managementService = new();
         TagManagementViewModel sut = new(statsService, managementService, new FakeDialogService(), NullLogger<TagManagementViewModel>.Instance);
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.DoesNotContain("konnte nicht geladen werden", sut.StatusMessage, StringComparison.Ordinal);
         Assert.False(sut.IsBusy);

@@ -85,7 +85,7 @@ public sealed class FileWatcherCoordinatorTests
         FileWatcherCoordinator sut = new(factory, options.ToOptions(), time, NullLogger<FileWatcherCoordinator>.Instance);
         sut.Start([Root]);
 
-        await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(factory.Watchers[Root].IsDisposed);
         Assert.True(sut.Events.Completion.IsCompleted);
@@ -204,7 +204,7 @@ public sealed class FileWatcherCoordinatorTests
             sut.Start([Root]);
             factory.Watchers[Root].TriggerEvent(new FileSystemEvent(FileSystemEventKind.Changed, FilePath, OldPath: null, Root));
 
-            await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
             time.Advance(TimeSpan.FromMilliseconds(300));
 
             Assert.False(sut.Events.TryRead(out _));
@@ -225,7 +225,7 @@ public sealed class FileWatcherCoordinatorTests
         await using (sut.ConfigureAwait(true))
         {
             sut.Start([Root]);
-            await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             factory.Watchers[Root].TriggerEvent(new FileSystemEvent(FileSystemEventKind.Changed, FilePath, OldPath: null, Root));
             time.Advance(TimeSpan.FromMilliseconds(300));

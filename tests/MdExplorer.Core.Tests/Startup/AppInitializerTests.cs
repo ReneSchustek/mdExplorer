@@ -31,7 +31,7 @@ public sealed class AppInitializerTests
         ILogger<AppInitializer> logger = NullLogger<AppInitializer>.Instance;
         AppInitializer sut = new(migrator, new FakeSettingsService(), logger, timeProvider);
 
-        Task initialization = sut.InitializeAsync(TimeSpan.FromMilliseconds(1500), CancellationToken.None);
+        Task initialization = sut.InitializeAsync(TimeSpan.FromMilliseconds(1500), TestContext.Current.CancellationToken);
 
         await AdvanceUntilCompletedAsync(timeProvider, migrator.WaitUntilCompletedAsync()).ConfigureAwait(true);
         await AdvanceUntilCompletedAsync(timeProvider, initialization).ConfigureAwait(true);
@@ -47,13 +47,13 @@ public sealed class AppInitializerTests
         ILogger<AppInitializer> logger = NullLogger<AppInitializer>.Instance;
         AppInitializer sut = new(migrator, new FakeSettingsService(), logger, timeProvider);
 
-        Task initialization = sut.InitializeAsync(TimeSpan.FromMilliseconds(1500), CancellationToken.None);
+        Task initialization = sut.InitializeAsync(TimeSpan.FromMilliseconds(1500), TestContext.Current.CancellationToken);
 
         await AdvanceUntilCompletedAsync(timeProvider, migrator.WaitUntilCompletedAsync()).ConfigureAwait(true);
 
         // Ohne weiteres Vorstellen der Uhr fertig werden — das ist die Aussage dieses Tests:
         // Die Migration hat die Mindestdauer bereits überschritten, es wird nicht mehr gewartet.
-        await initialization.WaitAsync(RealTimeBudget).ConfigureAwait(true);
+        await initialization.WaitAsync(RealTimeBudget, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(migrator.WasCalled);
     }
@@ -89,7 +89,7 @@ public sealed class AppInitializerTests
         AppInitializer sut = new(migrator, new FakeSettingsService(), NullLogger<AppInitializer>.Instance, timeProvider);
 
         _ = await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
-            () => sut.InitializeAsync(TimeSpan.FromMilliseconds(-1), CancellationToken.None)).ConfigureAwait(true);
+            () => sut.InitializeAsync(TimeSpan.FromMilliseconds(-1), TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     private sealed class FakeMigrator(TimeSpan migrationDuration, FakeTimeProvider timeProvider) : IDatabaseMigrator

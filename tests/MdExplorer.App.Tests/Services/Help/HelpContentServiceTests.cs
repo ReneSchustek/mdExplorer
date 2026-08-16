@@ -16,7 +16,7 @@ public sealed class HelpContentServiceTests
     {
         using HelpContentService service = new(NullLogger<HelpContentService>.Instance);
 
-        HelpContent content = await service.GetAsync(CancellationToken.None).ConfigureAwait(true);
+        HelpContent content = await service.GetAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(string.IsNullOrWhiteSpace(content.Html), "HTML darf nicht leer sein.");
         Assert.True(content.PlainText.Length > 1000, "Plaintext muss substanziell sein.");
@@ -31,7 +31,7 @@ public sealed class HelpContentServiceTests
     {
         using HelpContentService service = new(NullLogger<HelpContentService>.Instance);
 
-        HelpContent content = await service.GetAsync(CancellationToken.None).ConfigureAwait(true);
+        HelpContent content = await service.GetAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         foreach (HelpTocEntry entry in content.Toc)
         {
@@ -45,8 +45,8 @@ public sealed class HelpContentServiceTests
     {
         using HelpContentService service = new(NullLogger<HelpContentService>.Instance);
 
-        HelpContent first = await service.GetAsync(CancellationToken.None).ConfigureAwait(true);
-        HelpContent second = await service.GetAsync(CancellationToken.None).ConfigureAwait(true);
+        HelpContent first = await service.GetAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        HelpContent second = await service.GetAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Same(first, second);
     }
@@ -56,7 +56,7 @@ public sealed class HelpContentServiceTests
     {
         using HelpContentService service = new(NullLogger<HelpContentService>.Instance);
 
-        HelpContent content = await service.GetAsync(CancellationToken.None).ConfigureAwait(true);
+        HelpContent content = await service.GetAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         HelpTocEntry installEntry = content.Toc.First(entry => entry.Slug == HelpContext.Install);
         Assert.Contains("Installation", installEntry.Title, StringComparison.OrdinalIgnoreCase);

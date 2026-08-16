@@ -35,7 +35,7 @@ public sealed class DocumentPanelViewModelTests
         FakeMarkdownParser parser = new();
         using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
 
-        await sut.LoadAsync(fileId, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("<h1>Titel</h1>", sut.Preview.Html, StringComparison.Ordinal);
         Assert.Equal(fileId, sut.Preview.CurrentDocumentId);
@@ -57,7 +57,7 @@ public sealed class DocumentPanelViewModelTests
         FakeMarkdownParser parser = new();
         using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
 
-        await sut.LoadByPathAsync(TestPath, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadByPathAsync(TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(fileId, sut.Editor.MarkdownFileId);
         Assert.Equal(fileId, sut.Preview.CurrentDocumentId);
@@ -75,7 +75,7 @@ public sealed class DocumentPanelViewModelTests
         parser.SetParseResult("<p>Direct</p>");
         using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
 
-        await sut.LoadByPathAsync(TestPath, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadByPathAsync(TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("<p>Direct</p>", sut.Preview.Html, StringComparison.Ordinal);
         Assert.Equal(Guid.Empty, sut.Editor.MarkdownFileId);
@@ -91,7 +91,7 @@ public sealed class DocumentPanelViewModelTests
         FakeMarkdownParser parser = new();
         using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
 
-        await sut.LoadByPathAsync(TestPath, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadByPathAsync(TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(sut.Editor.FilePath);
         Assert.Equal(0, parser.ParseCount);
@@ -108,10 +108,10 @@ public sealed class DocumentPanelViewModelTests
         parser.SetParseResult("<p>nach Save</p>");
         using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
 
-        await sut.Editor.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await sut.Editor.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.Editor.EnterEditMode();
         sut.Editor.Text = "neuer Editor-Text";
-        await sut.Editor.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.Editor.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("<p>nach Save</p>", sut.Preview.Html, StringComparison.Ordinal);
         Assert.True(parser.ParseCount >= 1, "Parser muss nach Save mindestens einmal aufgerufen werden.");
@@ -146,10 +146,10 @@ public sealed class DocumentPanelViewModelTests
         FakeMarkdownParser parser = new();
         DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
 
-        await sut.Editor.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await sut.Editor.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.Editor.EnterEditMode();
         sut.Editor.Text = "geändert";
-        await sut.Editor.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.Editor.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         int parseCountAfterFirstSave = parser.ParseCount;
 
         sut.Dispose();
@@ -159,7 +159,7 @@ public sealed class DocumentPanelViewModelTests
         // darf den DocumentPanel.OnEditorSaved-Handler nicht mehr triggern.
         sut.Editor.EnterEditMode();
         sut.Editor.Text = "nochmal geändert";
-        await sut.Editor.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.Editor.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(parseCountAfterFirstSave, parser.ParseCount);
     }
@@ -326,7 +326,7 @@ public sealed class DocumentPanelViewModelTests
         FakeMarkdownParser parser = new();
         using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
 
-        await sut.LoadAsync(fileId, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(sut.Editor.FilePath);
     }
@@ -367,7 +367,7 @@ public sealed class DocumentPanelViewModelTests
         FakeMarkdownParser parser = new();
         using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
 
-        await sut.LoadByPathAsync(TestPath, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadByPathAsync(TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(sut.Editor.FilePath);
         Assert.Equal(0, parser.ParseCount);
@@ -389,12 +389,12 @@ public sealed class DocumentPanelViewModelTests
         FakeDocumentLocator locator = new();
         FakeMarkdownParser parser = new();
         using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
-        await sut.Editor.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await sut.Editor.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.Editor.EnterEditMode();
         sut.Editor.Text = "neuer Text";
 
         parser.FailOnParse = new InvalidOperationException("Zu tief verschachtelt.");
-        await sut.Editor.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.Editor.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(fs.WrittenFiles.ContainsKey(TestPath), "Die Datei muss trotz der abgewiesenen Vorschau geschrieben sein.");
         Assert.Equal("neuer Text", Encoding.UTF8.GetString(fs.WrittenFiles[TestPath]), StringComparer.Ordinal);

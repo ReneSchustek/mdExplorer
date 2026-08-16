@@ -19,7 +19,7 @@ public sealed class ParseOrchestratorTests
         TestHarness harness = new();
         Guid fileId = harness.AddSource("/r/foo.md", "abchash", "# Titel\n\nBody mit #foo.");
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(1, harness.DocRepo.SaveCallCount);
         Assert.True(harness.DocRepo.Snapshot.ContainsKey(fileId));
@@ -32,10 +32,10 @@ public sealed class ParseOrchestratorTests
         TestHarness harness = new();
         _ = harness.AddSource("/r/foo.md", "h1", "Body #foo");
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
         int writesAfterFirst = harness.DocRepo.ParseCount;
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(writesAfterFirst, harness.DocRepo.ParseCount);
     }
@@ -45,10 +45,10 @@ public sealed class ParseOrchestratorTests
     {
         TestHarness harness = new();
         Guid fileId = harness.AddSource("/r/foo.md", "h1", "Body #foo");
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         harness.UpdateSource(fileId, "h2", "Body #bar");
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal("h2", harness.DocRepo.Snapshot[fileId].SourceContentHash);
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("bar"));
@@ -63,7 +63,7 @@ public sealed class ParseOrchestratorTests
         Guid good = harness.AddSource("/r/good.md", "h1", "Body #good");
         _ = harness.FileSystem.FailOnRead.Add("/r/bad.md".Replace('/', Path.DirectorySeparatorChar));
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.False(harness.DocRepo.Snapshot.ContainsKey(bad));
         Assert.True(harness.DocRepo.Snapshot.ContainsKey(good));
@@ -80,7 +80,7 @@ public sealed class ParseOrchestratorTests
             Body mit #gamma.
             """);
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Contains("alpha", harness.TagRepo.TagsBySlug.Keys, StringComparer.Ordinal);
         Assert.Contains("beta", harness.TagRepo.TagsBySlug.Keys, StringComparer.Ordinal);
@@ -95,7 +95,7 @@ public sealed class ParseOrchestratorTests
         _ = harness.AddSource("/r/a.md", "h1", "#shared");
         _ = harness.AddSource("/r/b.md", "h1", "#shared");
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         _ = Assert.Single(harness.TagRepo.TagsBySlug);
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("shared"));
@@ -115,7 +115,7 @@ public sealed class ParseOrchestratorTests
         Guid badId = harness.AddSource("/r/bad.md", "h1", BadContent);
         Guid goodId = harness.AddSource("/r/good.md", "h1", "Body #ok.");
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.False(harness.DocRepo.Snapshot.ContainsKey(badId));
         Assert.True(harness.DocRepo.Snapshot.ContainsKey(goodId));
@@ -132,7 +132,7 @@ public sealed class ParseOrchestratorTests
         Guid badId = harness.AddSource("/r/bad.md", "h1", BadContent);
         Guid goodId = harness.AddSource("/r/good.md", "h1", "Body #ok2.");
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.False(harness.DocRepo.Snapshot.ContainsKey(badId));
         Assert.True(harness.DocRepo.Snapshot.ContainsKey(goodId));
@@ -149,11 +149,11 @@ public sealed class ParseOrchestratorTests
         harness.Source.ThrowOnNextEnumeration = new ArgumentException("simulated depth-limit-bubble");
 
         // Darf NICHT werfen — TryRunOnceAsync fasert das in den Defense-in-Depth-Catches ab.
-        await harness.Sut.TryRunOnceAsync(CancellationToken.None);
+        await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken);
 
         // Zweiter Tick läuft normal weiter.
         _ = harness.AddSource("/r/good.md", "h1", "#weiter");
-        await harness.Sut.TryRunOnceAsync(CancellationToken.None);
+        await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("weiter"));
     }
@@ -164,10 +164,10 @@ public sealed class ParseOrchestratorTests
         TestHarness harness = new();
         harness.Source.ThrowOnNextEnumeration = new InvalidOperationException("simulated parser state");
 
-        await harness.Sut.TryRunOnceAsync(CancellationToken.None);
+        await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken);
 
         _ = harness.AddSource("/r/good.md", "h1", "#weiter");
-        await harness.Sut.TryRunOnceAsync(CancellationToken.None);
+        await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("weiter"));
     }
@@ -182,7 +182,7 @@ public sealed class ParseOrchestratorTests
         Guid a = harness.AddSource("/r/a.md", "h1", "Body mit #shared.");
         Guid b = harness.AddSource("/r/b.md", "h1", "Anderes Body mit #shared!");
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         _ = Assert.Single(harness.TagRepo.TagsBySlug);
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("shared"));
@@ -202,7 +202,7 @@ public sealed class ParseOrchestratorTests
         _ = harness.AddSource("/r/b.md", "h1", "Body #b");
         _ = harness.AddSource("/r/c.md", "h1", "Body #c");
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, harness.DocRepo.PointLookupCallCount);
         Assert.Equal(1, harness.DocRepo.BatchLookupCallCount);
@@ -216,10 +216,10 @@ public sealed class ParseOrchestratorTests
     {
         TestHarness harness = new();
         Guid fileId = harness.AddSource("/r/foo.md", "h1", "Body #foo");
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         harness.UpdateSource(fileId, "h2", "Body #bar");
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(0, harness.DocRepo.PointLookupCallCount);
         _ = Assert.Single(harness.DocRepo.Snapshot);
@@ -232,7 +232,7 @@ public sealed class ParseOrchestratorTests
         TestHarness harness = new();
         Guid fileId = harness.AddSource("/r/f.md", "h1", "# Titel\n\nText.");
 
-        await harness.Sut.RunOnceAsync(CancellationToken.None);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         ReadOnlyMemory<byte> blob = harness.DocRepo.Snapshot[fileId].RenderedHtmlGz;
         string html = GzipHelper.Decompress(blob);

@@ -71,7 +71,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
         }
 
         IReadOnlyList<GraphSourceDocument> result =
-            await _sut.LoadNeighborhoodDocumentsAsync(mitte, "mitte", CancellationToken.None).ConfigureAwait(true);
+            await _sut.LoadNeighborhoodDocumentsAsync(mitte, "mitte", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, document => document.MarkdownFileId == mitte);
@@ -91,7 +91,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
         await SeedDocumentAsync(IdOf(2), "anderer", ["nicht-allein"]).ConfigureAwait(true);
 
         IReadOnlyList<GraphSourceDocument> result =
-            await _sut.LoadNeighborhoodDocumentsAsync(allein, "allein", CancellationToken.None).ConfigureAwait(true);
+            await _sut.LoadNeighborhoodDocumentsAsync(allein, "allein", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         GraphSourceDocument single = Assert.Single(result);
         Assert.Equal(allein, single.MarkdownFileId);
@@ -121,7 +121,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
         await SeedDocumentAsync(falscherTreffer, "sonst", ["a-b-und-mehr"]).ConfigureAwait(true);
 
         IReadOnlyList<GraphSourceDocument> result =
-            await _sut.LoadNeighborhoodDocumentsAsync(gesucht, "a-b", CancellationToken.None).ConfigureAwait(true);
+            await _sut.LoadNeighborhoodDocumentsAsync(gesucht, "a-b", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Das eigene Dokument ist immer dabei; der Nachbar mit dem längeren Ziel nicht,
         // weil die Anführungszeichen im Suchmuster das Ziel begrenzen.
@@ -133,7 +133,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
     public async Task LoadNeighborhoodDocumentsAsync_OnBlankSlug_Throws()
     {
         _ = await Assert.ThrowsAsync<ArgumentException>(
-            () => _sut.LoadNeighborhoodDocumentsAsync(IdOf(1), "   ", CancellationToken.None)).ConfigureAwait(true);
+            () => _sut.LoadNeighborhoodDocumentsAsync(IdOf(1), "   ", TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     /// <remarks>
@@ -147,7 +147,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
         await SeedDocumentAsync(IdOf(2), "zweite", []).ConfigureAwait(true);
         await SeedDocumentAsync(IdOf(1), "erste", []).ConfigureAwait(true);
 
-        IReadOnlyList<GraphSourceFile> result = await _sut.LoadFilesAsync(CancellationToken.None).ConfigureAwait(true);
+        IReadOnlyList<GraphSourceFile> result = await _sut.LoadFilesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, result.Count);
         Assert.Equal(IdOf(1), result[0].Id);

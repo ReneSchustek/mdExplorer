@@ -66,6 +66,16 @@ public sealed class TagRepository(MdExplorerDbContext dbContext) : ITagRepositor
     }
 
     /// <inheritdoc />
+    public Task<int> RemoveOrphanedTagsAsync(CancellationToken cancellationToken)
+    {
+        // Als Anweisung, nicht über den Änderungsverfolger: Es geht um eine Aufräumfrage über
+        // die ganze Tabelle, nicht um einzelne bekannte Zeilen.
+        return _dbContext.Set<Tag>()
+            .Where(tag => !_dbContext.Set<MarkdownFileTag>().Any(link => link.TagId == tag.Id))
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _dbContext.SaveChangesAsync(cancellationToken);
 }

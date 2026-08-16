@@ -27,7 +27,7 @@ public sealed class GraphServiceRelationsTests
     {
         GraphService sut = Build(Sample());
 
-        DocumentRelations relations = await sut.GetRelationsAsync(AlphaId, CancellationToken.None).ConfigureAwait(true);
+        DocumentRelations relations = await sut.GetRelationsAsync(AlphaId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         RelatedDocument outgoing = Assert.Single(relations.Outgoing);
         Assert.Equal(BetaId, outgoing.MarkdownFileId);
@@ -40,7 +40,7 @@ public sealed class GraphServiceRelationsTests
     {
         GraphService sut = Build(Sample());
 
-        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, CancellationToken.None).ConfigureAwait(true);
+        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, relations.Outgoing.Count);
         Assert.Empty(relations.Incoming);
@@ -61,7 +61,7 @@ public sealed class GraphServiceRelationsTests
             ]);
         GraphService sut = Build(data);
 
-        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, CancellationToken.None).ConfigureAwait(true);
+        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(relations.Outgoing);
     }
@@ -74,7 +74,7 @@ public sealed class GraphServiceRelationsTests
             [new GraphSourceDocument(IndexId, """["gibt-es-nicht"]""")]);
         GraphService sut = Build(data);
 
-        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, CancellationToken.None).ConfigureAwait(true);
+        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(relations.Outgoing);
     }
@@ -87,7 +87,7 @@ public sealed class GraphServiceRelationsTests
             [new GraphSourceDocument(IndexId, """["index"]""")]);
         GraphService sut = Build(data);
 
-        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, CancellationToken.None).ConfigureAwait(true);
+        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(relations.Outgoing);
         Assert.Empty(relations.Incoming);
@@ -98,7 +98,7 @@ public sealed class GraphServiceRelationsTests
     {
         GraphService sut = Build(Sample());
 
-        DocumentRelations relations = await sut.GetRelationsAsync(Guid.Empty, CancellationToken.None).ConfigureAwait(true);
+        DocumentRelations relations = await sut.GetRelationsAsync(Guid.Empty, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(relations.Outgoing);
         Assert.Empty(relations.Incoming);
@@ -111,7 +111,7 @@ public sealed class GraphServiceRelationsTests
         // darf sie nicht beschneiden — sonst fehlte ein Weg, ohne dass jemand es merkt.
         GraphService sut = Build(Sample(), new GraphOptions { IncludeIsolatedNodes = true, MaxNodes = 1 });
 
-        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, CancellationToken.None).ConfigureAwait(true);
+        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, relations.Outgoing.Count);
     }
@@ -128,7 +128,7 @@ public sealed class GraphServiceRelationsTests
             [new GraphSourceDocument(IndexId, """["alpha","beta"]""")]);
         GraphService sut = Build(data);
 
-        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, CancellationToken.None).ConfigureAwait(true);
+        DocumentRelations relations = await sut.GetRelationsAsync(IndexId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("a/Beta.md", relations.Outgoing[0].RelativePath);
         Assert.Equal("z/Alpha.md", relations.Outgoing[1].RelativePath);

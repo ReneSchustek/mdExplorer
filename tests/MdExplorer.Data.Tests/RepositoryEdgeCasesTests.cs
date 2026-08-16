@@ -49,7 +49,7 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     public async Task TagRepo_GetBySlugsAsync_OnEmptyCollection_ReturnsEmpty()
     {
         IReadOnlyList<Tag> result = await _tagRepository
-            .GetBySlugsAsync([], CancellationToken.None)
+            .GetBySlugsAsync([], TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(result);
@@ -59,28 +59,28 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     public async Task TagRepo_GetBySlugsAsync_OnNullArgument_Throws()
     {
         _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _tagRepository.GetBySlugsAsync(null!, CancellationToken.None)).ConfigureAwait(true);
+            () => _tagRepository.GetBySlugsAsync(null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     [Fact]
     public async Task TagRepo_AddAsync_OnNullArgument_Throws()
     {
         _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _tagRepository.AddAsync(null!, CancellationToken.None)).ConfigureAwait(true);
+            () => _tagRepository.AddAsync(null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     [Fact]
     public async Task TagRepo_ReplaceFileTagsAsync_OnNullArgument_Throws()
     {
         _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _tagRepository.ReplaceFileTagsAsync(Guid.NewGuid(), null!, CancellationToken.None)).ConfigureAwait(true);
+            () => _tagRepository.ReplaceFileTagsAsync(Guid.NewGuid(), null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     [Fact]
     public async Task DocRepo_GetStaleOrMissingAsync_OnEmptyMap_ReturnsEmpty()
     {
         IReadOnlyList<Guid> result = await _documentRepository
-            .GetStaleOrMissingAsync(new Dictionary<Guid, string>(), CancellationToken.None)
+            .GetStaleOrMissingAsync(new Dictionary<Guid, string>(), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(result);
@@ -90,7 +90,7 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     public async Task DocRepo_GetStaleOrMissingAsync_OnNullArgument_Throws()
     {
         _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _documentRepository.GetStaleOrMissingAsync(null!, CancellationToken.None)).ConfigureAwait(true);
+            () => _documentRepository.GetStaleOrMissingAsync(null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     // ============ Duplicate Detection ============
@@ -99,14 +99,14 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     public async Task TagRepo_AddAsync_OnDuplicateSlug_ThrowsOnSaveChanges()
     {
         Tag first = new() { Id = Guid.NewGuid(), Name = "Foo", Slug = "foo" };
-        await _tagRepository.AddAsync(first, CancellationToken.None).ConfigureAwait(true);
-        _ = await _tagRepository.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        await _tagRepository.AddAsync(first, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Tag duplicate = new() { Id = Guid.NewGuid(), Name = "Foo-2", Slug = "foo" };
-        await _tagRepository.AddAsync(duplicate, CancellationToken.None).ConfigureAwait(true);
+        await _tagRepository.AddAsync(duplicate, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         DbUpdateException ex = await Assert.ThrowsAsync<DbUpdateException>(
-            () => _tagRepository.SaveChangesAsync(CancellationToken.None)).ConfigureAwait(true);
+            () => _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
         Assert.NotNull(ex.InnerException);
         _ = Assert.IsType<SqliteException>(ex.InnerException);
     }
@@ -118,11 +118,11 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
         Tag a = new() { Id = Guid.NewGuid(), Name = "Foo", Slug = "duplicate-pending" };
         Tag b = new() { Id = Guid.NewGuid(), Name = "Foo-2", Slug = "duplicate-pending" };
 
-        await _tagRepository.AddAsync(a, CancellationToken.None).ConfigureAwait(true);
-        await _tagRepository.AddAsync(b, CancellationToken.None).ConfigureAwait(true);
+        await _tagRepository.AddAsync(a, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await _tagRepository.AddAsync(b, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = await Assert.ThrowsAsync<DbUpdateException>(
-            () => _tagRepository.SaveChangesAsync(CancellationToken.None)).ConfigureAwait(true);
+            () => _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     // ============ ReplaceFileTagsAsync edge cases ============
@@ -133,11 +133,11 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
         // Vorbereitung: ein File mit zwei Tag-Links.
         Guid fileId = await SeedFileWithTwoTagsAsync().ConfigureAwait(true);
 
-        await _tagRepository.ReplaceFileTagsAsync(fileId, [], CancellationToken.None).ConfigureAwait(true);
-        _ = await _tagRepository.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        await _tagRepository.ReplaceFileTagsAsync(fileId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         int remaining = await _dbContext.Set<MarkdownFileTag>()
-            .CountAsync(link => link.MarkdownFileId == fileId).ConfigureAwait(true);
+            .CountAsync(link => link.MarkdownFileId == fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(0, remaining);
     }
 
@@ -148,10 +148,10 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
         // im Composite-Key {MarkdownFileId, TagId} bereits beim AddAsync ab. Caller müssen
         // dedupplizieren oder eine InvalidOperationException erwarten — dokumentiertes Verhalten.
         Guid fileId = await SeedFileWithTwoTagsAsync().ConfigureAwait(true);
-        Guid singleTagId = await _dbContext.Set<Tag>().Select(t => t.Id).FirstAsync().ConfigureAwait(true);
+        Guid singleTagId = await _dbContext.Set<Tag>().Select(t => t.Id).FirstAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _tagRepository.ReplaceFileTagsAsync(fileId, [singleTagId, singleTagId], CancellationToken.None))
+            () => _tagRepository.ReplaceFileTagsAsync(fileId, [singleTagId, singleTagId], TestContext.Current.CancellationToken))
             .ConfigureAwait(true);
     }
 
@@ -161,7 +161,7 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     public async Task FileRepo_GetByAbsolutePathAsync_OnNonExistentPath_ReturnsNull()
     {
         MarkdownFile? result = await _fileRepository
-            .GetByAbsolutePathAsync(@"C:\nicht\vorhanden.md", CancellationToken.None)
+            .GetByAbsolutePathAsync(@"C:\nicht\vorhanden.md", TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Null(result);
@@ -171,14 +171,14 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     public async Task FileRepo_AddAsync_OnDuplicateAbsolutePath_ThrowsOnSaveChanges()
     {
         MarkdownFile a = NewFile(@"C:\notes\a.md");
-        await _fileRepository.AddAsync(a, CancellationToken.None).ConfigureAwait(true);
-        _ = await _fileRepository.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        await _fileRepository.AddAsync(a, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _fileRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         MarkdownFile dup = NewFile(@"C:\notes\a.md");
-        await _fileRepository.AddAsync(dup, CancellationToken.None).ConfigureAwait(true);
+        await _fileRepository.AddAsync(dup, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = await Assert.ThrowsAsync<DbUpdateException>(
-            () => _fileRepository.SaveChangesAsync(CancellationToken.None)).ConfigureAwait(true);
+            () => _fileRepository.SaveChangesAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     // ============ Helfer ============

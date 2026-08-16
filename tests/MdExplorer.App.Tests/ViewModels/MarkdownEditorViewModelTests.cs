@@ -24,7 +24,7 @@ public sealed class MarkdownEditorViewModelTests
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("# Titel\r\nText");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
 
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("# Titel\r\nText", vm.Text);
         Assert.False(vm.IsDirty);
@@ -36,7 +36,7 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         vm.Text = "neu";
 
@@ -49,7 +49,7 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("original");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.Text = "geändert";
         Assert.True(vm.IsDirty);
 
@@ -64,12 +64,12 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("Body");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TestDebounce);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         TaskCompletionSource completion = new();
         vm.TagsRefreshed += (_, _) => completion.TrySetResult();
 
         vm.Text = "Body mit #alpha und #beta";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(true);
+        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("alpha", vm.Tags);
         Assert.Contains("beta", vm.Tags);
@@ -81,11 +81,11 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt\r\n");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
         vm.Text = "neuer Inhalt";
 
-        await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await vm.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(fs.WrittenFiles.ContainsKey(TestPath));
         Assert.False(vm.IsDirty);
@@ -97,11 +97,11 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("zeile1\nzeile2\n");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
         vm.Text = "zeile1\r\nzeile2\r\nzeile3\r\n";
 
-        await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await vm.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         string written = Encoding.UTF8.GetString(fs.WrittenFiles[TestPath]);
         Assert.Equal("zeile1\nzeile2\nzeile3\n", written);
@@ -113,12 +113,12 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("v1");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
         vm.Text = "v2 vom Editor";
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("v1-extern-verändert");
 
-        await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await vm.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(fs.WrittenFiles.ContainsKey(TestPath));
         Assert.True(vm.IsDirty);
@@ -131,7 +131,7 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("Text");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
         vm.TagInput = "wichtig";
 
@@ -147,7 +147,7 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("Text mit #weg und #bleibt.");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
 
         vm.RemoveTag("weg");
@@ -162,7 +162,7 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("#alpha hier, #alpha dort.");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
 
         vm.RenameTag("alpha", "omega");
@@ -177,13 +177,13 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
         vm.Text = "neu";
         string? receivedText = null;
         vm.Saved += (_, args) => receivedText = args.SavedText;
 
-        await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await vm.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("neu", receivedText);
     }
@@ -195,7 +195,7 @@ public sealed class MarkdownEditorViewModelTests
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("Body");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
 
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(vm.IsLocked);
     }
@@ -206,9 +206,9 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await vm.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(fs.WrittenFiles.ContainsKey(TestPath));
         Assert.True(vm.IsLocked);
@@ -220,7 +220,7 @@ public sealed class MarkdownEditorViewModelTests
         FakeFileSystem fs = new();
         using MarkdownEditorViewModel vm = CreateViewModel(fs, TimeSpan.Zero);
 
-        await vm.LoadDirectAsync(TestPath, "# Headline\nText", CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadDirectAsync(TestPath, "# Headline\nText", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("# Headline\nText", vm.Text);
         Assert.Equal(Guid.Empty, vm.MarkdownFileId);
@@ -259,11 +259,11 @@ public sealed class MarkdownEditorViewModelTests
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
         FakeConfirm confirm = new() { Result = false };
         using MarkdownEditorViewModel vm = CreateViewModelWithConfirm(fs, confirm);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
         vm.Text = "neu";
 
-        await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await vm.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(fs.WrittenFiles.ContainsKey(TestPath));
         Assert.True(vm.IsDirty, "Text bleibt dirty, weil nichts persistiert wurde.");
@@ -277,13 +277,13 @@ public sealed class MarkdownEditorViewModelTests
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
         FakeConfirm confirm = new() { Result = true };
         using MarkdownEditorViewModel vm = CreateViewModelWithConfirm(fs, confirm);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         vm.EnterEditMode();
         vm.Text = "neuer Inhalt";
         EditorSavedEventArgs? savedArgs = null;
         vm.Saved += (_, e) => savedArgs = e;
 
-        await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await vm.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(fs.WrittenFiles.ContainsKey(TestPath));
         Assert.NotNull(savedArgs);
@@ -299,10 +299,10 @@ public sealed class MarkdownEditorViewModelTests
         fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
         FakeConfirm confirm = new() { Result = true };
         using MarkdownEditorViewModel vm = CreateViewModelWithConfirm(fs, confirm);
-        await vm.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        await vm.LoadAsync(Guid.NewGuid(), TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         // Kein EnterEditMode → Editor bleibt im Anzeigen-Modus.
 
-        await vm.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await vm.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(fs.WrittenFiles.ContainsKey(TestPath));
         Assert.Equal(0, confirm.CallCount);

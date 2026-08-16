@@ -50,7 +50,7 @@ public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
         await SeedAsync(second, "Zweiter Body-Text").ConfigureAwait(true);
 
         IReadOnlyDictionary<Guid, string> bodies = await _sut
-            .LoadBodiesAsync([first, second, missing], CancellationToken.None)
+            .LoadBodiesAsync([first, second, missing], TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Equal(2, bodies.Count);
@@ -63,7 +63,7 @@ public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
     public async Task LoadBodiesAsync_OnEmptyInput_ReturnsEmptyMap()
     {
         IReadOnlyDictionary<Guid, string> bodies = await _sut
-            .LoadBodiesAsync([], CancellationToken.None)
+            .LoadBodiesAsync([], TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(bodies);
@@ -83,7 +83,7 @@ public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
         }
 
         IReadOnlyDictionary<Guid, string> bodies = await _sut
-            .LoadBodiesAsync(ids, CancellationToken.None)
+            .LoadBodiesAsync(ids, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Equal(Count, bodies.Count);
@@ -101,6 +101,6 @@ public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
             Frontmatter: string.Empty,
             Path: "notes/datei.md",
             SourceContentHash: "hash");
-        return _sut.ApplyChangesAsync([], [entry], CancellationToken.None);
+        return _sut.ApplyChangesAsync([], [entry], TestContext.Current.CancellationToken);
     }
 }

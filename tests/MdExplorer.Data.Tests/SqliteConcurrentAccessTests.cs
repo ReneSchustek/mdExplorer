@@ -64,7 +64,7 @@ public sealed class SqliteConcurrentAccessTests : IDisposable
     public async Task ParallelWriterAndReader_OnSharedDatabase_DoesNotThrowSqliteLockedException()
     {
         IDatabaseMigrator migrator = _services.GetRequiredService<IDatabaseMigrator>();
-        await migrator.MigrateAsync(CancellationToken.None).ConfigureAwait(true);
+        await migrator.MigrateAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Guid seedId = await SeedReadTargetAsync().ConfigureAwait(true);
 
@@ -80,8 +80,8 @@ public sealed class SqliteConcurrentAccessTests : IDisposable
         Guid id = Guid.NewGuid();
         using IServiceScope scope = _services.CreateScope();
         IMarkdownFileRepository repository = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
-        await repository.AddAsync(BuildFile(id, @"C:\Wurzel\seed.md", "seed-hash"), CancellationToken.None).ConfigureAwait(true);
-        _ = await repository.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        await repository.AddAsync(BuildFile(id, @"C:\Wurzel\seed.md", "seed-hash"), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await repository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         return id;
     }
 

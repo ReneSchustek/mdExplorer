@@ -197,7 +197,7 @@ public sealed class Fts5IndexMaintainerTests
         using ThrowingMaintainerHarness harness = new(new ArgumentException("simulated invariant"));
 
         // Darf nicht werfen.
-        await harness.Sut.TrySynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Sut.TrySynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, harness.Source.CallCount);
     }
@@ -207,7 +207,7 @@ public sealed class Fts5IndexMaintainerTests
     {
         using ThrowingMaintainerHarness harness = new(new InvalidOperationException("simulated bad state"));
 
-        await harness.Sut.TrySynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Sut.TrySynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, harness.Source.CallCount);
     }
@@ -247,12 +247,12 @@ public sealed class Fts5IndexMaintainerTests
         int expectedTicks = (int)Math.Ceiling((double)DocumentCount / BatchSize);
         for (int tick = 0; tick < expectedTicks; tick++)
         {
-            _ = await harness.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+            _ = await harness.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
 
         Assert.Equal(DocumentCount, harness.Storage.Indexed.Count);
 
-        int idempotentChange = await harness.Sut.SynchronizeAsync(CancellationToken.None).ConfigureAwait(true);
+        int idempotentChange = await harness.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(0, idempotentChange);
         Assert.Equal(DocumentCount, harness.Storage.Indexed.Count);
     }

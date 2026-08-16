@@ -36,7 +36,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     {
         FakeFileSystem fs = ErzeugeDateisystem("alt");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         Assert.False(sut.IsLocked);
 
@@ -52,7 +52,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         FakeFileSystem fs = new();
         using MarkdownEditorViewModel sut = Erzeuge(fs);
 
-        await sut.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(fs.WrittenFiles);
     }
@@ -65,11 +65,11 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         FakeFileSystem fs = ErzeugeDateisystem("alt");
         fs.FailOnWrite = new IOException("Datei ist belegt");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         sut.Text = "neu";
 
-        await sut.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("fehlgeschlagen", sut.StatusMessage!, StringComparison.Ordinal);
         Assert.True(sut.IsDirty);
@@ -82,11 +82,11 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         FakeFileSystem fs = ErzeugeDateisystem("alt");
         fs.FailOnWrite = new UnauthorizedAccessException("Kein Zugriff");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         sut.Text = "neu";
 
-        await sut.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("fehlgeschlagen", sut.StatusMessage!, StringComparison.Ordinal);
         Assert.True(sut.IsDirty);
@@ -99,11 +99,11 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         // Fremdänderung muss das durchlassen, sonst lässt sich eine neue Datei nie speichern.
         FakeFileSystem fs = new();
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadDirectAsync(Testpfad, "Inhalt", CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadDirectAsync(Testpfad, "Inhalt", TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         sut.Text = "geänderter Text";
 
-        await sut.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(fs.WrittenFiles.ContainsKey(Testpfad));
         Assert.False(sut.IsDirty);
@@ -114,7 +114,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     {
         FakeFileSystem fs = ErzeugeDateisystem("Text");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.TagInput = "bericht";
 
         sut.AddTag();
@@ -127,7 +127,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     {
         FakeFileSystem fs = ErzeugeDateisystem("Text");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         sut.TagInput = "#";
 
@@ -141,7 +141,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     {
         FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         sut.RemoveTag("bericht");
 
@@ -153,7 +153,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     {
         FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
 
         sut.RemoveTag("   ");
@@ -166,7 +166,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     {
         FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         sut.RenameTag("bericht", "notiz");
 
@@ -188,7 +188,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         using MarkdownEditorViewModel sut = Erzeuge(new FakeFileSystem());
 
         _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => sut.LoadDirectAsync(Testpfad, null!, CancellationToken.None)).ConfigureAwait(true);
+            () => sut.LoadDirectAsync(Testpfad, null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         // Das Hauptfenster fragt diese Eigenschaft beim Schließen ab.
         FakeFileSystem fs = ErzeugeDateisystem("alt");
         using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.False(sut.HasUnsavedChanges);
 
         sut.EnterEditMode();
@@ -228,7 +228,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
             new AlwaysConfirms(),
             NullLogger<MarkdownEditorViewModel>.Instance);
 
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("Text mit #bericht.", sut.Text, StringComparer.Ordinal);
         Assert.Contains("bericht", sut.Tags, StringComparer.OrdinalIgnoreCase);

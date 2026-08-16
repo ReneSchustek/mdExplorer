@@ -18,13 +18,13 @@ public sealed class MarkdownIndexerEdgeCaseTests
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: []);
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Ohne Wurzel gibt es nichts zu beobachten — der Dienst darf dann auch keinen
         // Beobachter anlegen, statt leer weiterzulaufen.
         Assert.Empty(harness.WatcherFactory.Watchers);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -41,14 +41,14 @@ public sealed class MarkdownIndexerEdgeCaseTests
                     Roots = ["   ", IndexerTestHarness.DefaultRoot],
                 },
             },
-            CancellationToken.None).ConfigureAwait(true);
+            TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(harness.WatcherFactory.Watchers);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -65,51 +65,51 @@ public sealed class MarkdownIndexerEdgeCaseTests
                     Roots = [IndexerTestHarness.DefaultRoot, @"C:\GibtEsNicht"],
                 },
             },
-            CancellationToken.None).ConfigureAwait(true);
+            TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(harness.WatcherFactory.Watchers);
         Assert.Contains(IndexerTestHarness.DefaultRoot, harness.WatcherFactory.Watchers.Keys);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
     public async Task OnRenameWithoutOldPath_TreatsItAsANewFile()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         harness.FileSystem.AddFile(@"C:\Wurzel\ohne-vorgaenger.md", "Inhalt", FixedWrite);
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Renamed, @"C:\Wurzel\ohne-vorgaenger.md", OldPath: null, IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
 
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Contains(@"C:\Wurzel\ohne-vorgaenger.md", harness.Repository.Snapshot.Keys);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
     public async Task OnRenameWithUnknownOldPath_TreatsItAsANewFile()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         harness.FileSystem.AddFile(@"C:\Wurzel\ziel.md", "Inhalt", FixedWrite);
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Renamed, @"C:\Wurzel\ziel.md", @"C:\Wurzel\nie-indiziert.md", IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
 
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Contains(@"C:\Wurzel\ziel.md", harness.Repository.Snapshot.Keys);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -120,8 +120,8 @@ public sealed class MarkdownIndexerEdgeCaseTests
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\alt.md", "Inhalt", FixedWrite);
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Contains(@"C:\Wurzel\alt.md", harness.Repository.Snapshot.Keys);
 
         harness.FileSystem.RemoveFile(@"C:\Wurzel\alt.md");
@@ -129,28 +129,28 @@ public sealed class MarkdownIndexerEdgeCaseTests
             new FileSystemEvent(FileSystemEventKind.Renamed, @"C:\Woanders\alt.md", @"C:\Wurzel\alt.md", IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
 
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.DoesNotContain(@"C:\Wurzel\alt.md", harness.Repository.Snapshot.Keys);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
     public async Task OnChangeEventForMissingFile_DoesNotWrite()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         int vorher = harness.Repository.TotalWrites;
 
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Changed, @"C:\Wurzel\gibt-es-nicht.md", OldPath: null, IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        await Task.Delay(100).ConfigureAwait(true);
+        await Task.Delay(100, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(vorher, harness.Repository.TotalWrites);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -161,18 +161,18 @@ public sealed class MarkdownIndexerEdgeCaseTests
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\gleichbleibend.md", "Immer gleich", FixedWrite);
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         int vorher = harness.Repository.TotalWrites;
 
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Changed, @"C:\Wurzel\gleichbleibend.md", OldPath: null, IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        await Task.Delay(100).ConfigureAwait(true);
+        await Task.Delay(100, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(vorher, harness.Repository.TotalWrites);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -183,8 +183,8 @@ public sealed class MarkdownIndexerEdgeCaseTests
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\beruehrt.md", "Gleicher Inhalt", FixedWrite);
 
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         MarkdownFile vorher = harness.Repository.Snapshot[@"C:\Wurzel\beruehrt.md"];
         string hashVorher = vorher.ContentHash;
 
@@ -192,30 +192,30 @@ public sealed class MarkdownIndexerEdgeCaseTests
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Changed, @"C:\Wurzel\beruehrt.md", OldPath: null, IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         MarkdownFile nachher = harness.Repository.Snapshot[@"C:\Wurzel\beruehrt.md"];
         Assert.Equal(hashVorher, nachher.ContentHash, StringComparer.Ordinal);
         Assert.Equal(FixedWrite.AddHours(1), nachher.LastWriteTimeUtc);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
     public async Task OnDeleteEventForUnknownFile_DoesNotWrite()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        await harness.Indexer.StartAsync(CancellationToken.None).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout).ConfigureAwait(true);
+        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
         int vorher = harness.Repository.TotalWrites;
 
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Deleted, @"C:\Wurzel\war-nie-da.md", OldPath: null, IndexerTestHarness.DefaultRoot));
         harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        await Task.Delay(100).ConfigureAwait(true);
+        await Task.Delay(100, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(vorher, harness.Repository.TotalWrites);
 
-        await harness.Indexer.StopAsync(CancellationToken.None).ConfigureAwait(true);
+        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 }

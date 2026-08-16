@@ -144,7 +144,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         using FolderTreeViewModel sut = new(einstellungen, fs);
         _ = Assert.Single(sut.Roots);
 
-        await einstellungen.SaveAsync(BaueEinstellungen(wurzelA, wurzelB), CancellationToken.None).ConfigureAwait(true);
+        await einstellungen.SaveAsync(BaueEinstellungen(wurzelA, wurzelB), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, sut.Roots.Count);
     }
@@ -160,7 +160,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         StubSettings einstellungen = new(BaueEinstellungen(wurzelA));
         using FolderTreeViewModel sut = new(einstellungen, fs);
 
-        await einstellungen.SaveAsync(BaueEinstellungen(wurzelB), CancellationToken.None).ConfigureAwait(true);
+        await einstellungen.SaveAsync(BaueEinstellungen(wurzelB), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(wurzelB, Assert.Single(sut.Roots).AbsolutePath, StringComparer.OrdinalIgnoreCase);
     }
@@ -172,7 +172,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         // neu gebaut, klappte er bei jeder Einstellungsänderung zusammen.
         string wurzel = ErzeugeOrdner("wurzel");
         string unterordner = ErzeugeOrdner("wurzel", "Unterordner");
-        await File.WriteAllTextAsync(Path.Combine(wurzel, "notiz.md"), "# Notiz").ConfigureAwait(true);
+        await File.WriteAllTextAsync(Path.Combine(wurzel, "notiz.md"), "# Notiz", TestContext.Current.CancellationToken).ConfigureAwait(true);
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
         StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs);
@@ -182,7 +182,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
 
         await einstellungen.SaveAsync(
             BaueEinstellungen([wurzel], [unterordner]),
-            CancellationToken.None).ConfigureAwait(true);
+            TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Same(root, sut.Roots[0]);
         Assert.Equal(kinderVorher, root.Children.Count);
@@ -246,8 +246,8 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
         // Der Ausschluss-Filter hält Entwurfsdateien aus dem Baum heraus, damit die
         // Anzeige zum Index passt — sonst klickt der Nutzer auf Dateien ohne Treffer.
         string wurzel = ErzeugeOrdner("wurzel");
-        await File.WriteAllTextAsync(Path.Combine(wurzel, "sichtbar.md"), "# Sichtbar").ConfigureAwait(true);
-        await File.WriteAllTextAsync(Path.Combine(wurzel, "entwurf.md"), "# Entwurf").ConfigureAwait(true);
+        await File.WriteAllTextAsync(Path.Combine(wurzel, "sichtbar.md"), "# Sichtbar", TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await File.WriteAllTextAsync(Path.Combine(wurzel, "entwurf.md"), "# Entwurf", TestContext.Current.CancellationToken).ConfigureAwait(true);
         FakeFileSystem fs = ErzeugeDateisystem(wurzel);
         StubSettings einstellungen = new(BaueEinstellungen(wurzel));
         using FolderTreeViewModel sut = new(einstellungen, fs, new EntwurfsFilter());

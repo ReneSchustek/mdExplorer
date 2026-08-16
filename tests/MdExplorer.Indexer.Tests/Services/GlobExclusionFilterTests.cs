@@ -63,7 +63,7 @@ public sealed class GlobExclusionFilterTests
         {
             Indexing = new IndexingSettings(settings.Current.Indexing.Roots, ["**/sub/**"], [], true),
         };
-        _ = settings.SaveAsync(updated, CancellationToken.None);
+        _ = settings.SaveAsync(updated, TestContext.Current.CancellationToken);
 
         Assert.True(sut.IsExcluded(@"C:\Wurzel\sub\file.md", Root));
     }
@@ -101,7 +101,7 @@ public sealed class GlobExclusionFilterTests
         {
             Indexing = new IndexingSettings(settings.Current.Indexing.Roots, [], [], true),
         };
-        _ = settings.SaveAsync(updated, CancellationToken.None);
+        _ = settings.SaveAsync(updated, TestContext.Current.CancellationToken);
 
         Assert.False(sut.IsExcluded(@"C:\Wurzel\paused\note.md", Root));
     }

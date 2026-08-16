@@ -28,7 +28,7 @@ public sealed class TagCloudRefreshServiceTests
         TagsRefreshedMessage? received = null;
         messenger.Register<TagsRefreshedMessage>(this, (_, message) => received = message);
 
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.NotNull(received);
         _ = Assert.Single(received!.Snapshot);
@@ -48,8 +48,8 @@ public sealed class TagCloudRefreshServiceTests
         int received = 0;
         messenger.Register<TagsRefreshedMessage>(this, (_, _) => received++);
 
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, received);
 
@@ -72,9 +72,9 @@ public sealed class TagCloudRefreshServiceTests
             last = message;
         });
 
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 4, FixedUtc));
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, received);
         Assert.NotNull(last);
@@ -99,10 +99,10 @@ public sealed class TagCloudRefreshServiceTests
             last = message;
         });
 
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         DateTime newer = FixedUtc.AddMinutes(5);
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, newer));
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, received);
         Assert.NotNull(last);
@@ -123,13 +123,13 @@ public sealed class TagCloudRefreshServiceTests
         messenger.Register<TagsRefreshedMessage>(this, (_, _) => received++);
 
         // ArgumentException aus dem Tag-Statistik-Pfad darf nicht durchschlagen.
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(0, received);
 
         // Nächster Snapshot wird normal published.
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(1, received);
 
         messenger.UnregisterAll(this);
@@ -146,14 +146,14 @@ public sealed class TagCloudRefreshServiceTests
         int received = 0;
         messenger.Register<TagsRefreshedMessage>(this, (_, _) => received++);
 
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(0, received);
 
         // Wenn die nächste Iteration einen gültigen Snapshot liefert, muss er publiziert werden —
         // _lastSignature darf vom Fehler nicht beeinflusst worden sein.
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
-        await sut.PublishIfChangedAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(1, received);
 
@@ -180,7 +180,7 @@ public sealed class TagCloudRefreshServiceTests
             MicrosoftOptions.Create(options),
             NullLogger<TagCloudRefreshService>.Instance);
 
-        await sut.StartAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         try
         {
             await WaitForAsync(() => statsService.CallCount >= 1, TimeSpan.FromSeconds(5)).ConfigureAwait(true);
@@ -192,7 +192,7 @@ public sealed class TagCloudRefreshServiceTests
         }
         finally
         {
-            await sut.StopAsync(CancellationToken.None).ConfigureAwait(true);
+            await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
 
         Assert.Equal(2, statsService.CallCount);

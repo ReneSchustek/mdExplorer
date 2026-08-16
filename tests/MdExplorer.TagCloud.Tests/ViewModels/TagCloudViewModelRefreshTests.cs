@@ -31,7 +31,7 @@ public sealed class TagCloudViewModelRefreshTests
         ];
         using TagCloudViewModel sut = Erzeuge(dienst);
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, sut.Items.Count);
         Assert.Equal("bericht", sut.Items[0].Slug, StringComparer.Ordinal);
@@ -45,7 +45,7 @@ public sealed class TagCloudViewModelRefreshTests
         SteuerbareStatistik dienst = new();
         using TagCloudViewModel sut = Erzeuge(dienst);
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(sut.IsBusy);
     }
@@ -58,7 +58,7 @@ public sealed class TagCloudViewModelRefreshTests
         dienst.Blockieren();
         using TagCloudViewModel sut = Erzeuge(dienst);
 
-        Task laufend = sut.RefreshAsync(CancellationToken.None);
+        Task laufend = sut.RefreshAsync(TestContext.Current.CancellationToken);
 
         Assert.True(sut.IsBusy);
         dienst.Freigeben();
@@ -72,7 +72,7 @@ public sealed class TagCloudViewModelRefreshTests
         SteuerbareStatistik dienst = new();
         using TagCloudViewModel sut = Erzeuge(dienst, new TagCloudOptions { TopN = 25, LongTailTopN = 700 });
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(25, dienst.LetztesTopN);
     }
@@ -84,7 +84,7 @@ public sealed class TagCloudViewModelRefreshTests
         using TagCloudViewModel sut = Erzeuge(dienst, new TagCloudOptions { TopN = 25, LongTailTopN = 700 });
         sut.IsLongTailExpanded = true;
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(700, dienst.LetztesTopN);
         Assert.Equal(700, sut.EffectiveTopN);
@@ -114,7 +114,7 @@ public sealed class TagCloudViewModelRefreshTests
         sut.ApplySnapshot([new TagStatistic("Bericht", "bericht", 4, FesteZeit)]);
         dienst.Fehler = new OperationCanceledException();
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(sut.Items);
         Assert.False(sut.IsBusy);
@@ -128,7 +128,7 @@ public sealed class TagCloudViewModelRefreshTests
         sut.ApplySnapshot([new TagStatistic("Bericht", "bericht", 4, FesteZeit)]);
         dienst.Fehler = new InvalidOperationException("kaputter Zustand");
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(sut.Items);
         Assert.False(sut.IsBusy);
@@ -142,7 +142,7 @@ public sealed class TagCloudViewModelRefreshTests
         sut.ApplySnapshot([new TagStatistic("Bericht", "bericht", 4, FesteZeit)]);
         dienst.Fehler = new TestDbException("Datenbank belegt");
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(sut.Items);
         Assert.False(sut.IsBusy);
@@ -155,7 +155,7 @@ public sealed class TagCloudViewModelRefreshTests
         SteuerbareStatistik dienst = new();
         using TagCloudViewModel sut = Erzeuge(dienst);
 
-        await sut.RefreshAsync(CancellationToken.None).ConfigureAwait(true);
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(sut.Items);
         Assert.Equal(1, sut.MinCount);

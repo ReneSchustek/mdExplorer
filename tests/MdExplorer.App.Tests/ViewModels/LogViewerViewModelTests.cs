@@ -81,10 +81,10 @@ public sealed class LogViewerViewModelTests
             await sut.ExportCommand.ExecuteAsync(null).ConfigureAwait(true);
 
             Assert.True(File.Exists(tempFile));
-            string content = await File.ReadAllTextAsync(tempFile).ConfigureAwait(true);
+            string content = await File.ReadAllTextAsync(tempFile, TestContext.Current.CancellationToken).ConfigureAwait(true);
             Assert.Contains("Treffer Alpha", content, StringComparison.Ordinal);
             Assert.DoesNotContain("ignoriert", content, StringComparison.Ordinal);
-            byte[] bytes = await File.ReadAllBytesAsync(tempFile).ConfigureAwait(true);
+            byte[] bytes = await File.ReadAllBytesAsync(tempFile, TestContext.Current.CancellationToken).ConfigureAwait(true);
             Assert.False(bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF);
         }
         finally
@@ -168,7 +168,7 @@ public sealed class LogViewerViewModelTests
 
             await sut.ExportCommand.ExecuteAsync(null).ConfigureAwait(true);
 
-            string inhalt = await File.ReadAllTextAsync(zielDatei).ConfigureAwait(true);
+            string inhalt = await File.ReadAllTextAsync(zielDatei, TestContext.Current.CancellationToken).ConfigureAwait(true);
             Assert.Contains("[TRC]", inhalt, StringComparison.Ordinal);
             Assert.Contains("[DBG]", inhalt, StringComparison.Ordinal);
             Assert.Contains("[ERR]", inhalt, StringComparison.Ordinal);

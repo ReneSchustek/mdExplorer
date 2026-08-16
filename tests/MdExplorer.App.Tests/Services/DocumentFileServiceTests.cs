@@ -27,13 +27,13 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, FakeFileSystem fs, FakeMarkdownFileRepository repo) = Build();
 
-        DocumentFileResult result = await sut.RenameAsync(FileId, "Neuer Name", CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult result = await sut.RenameAsync(FileId, "Neuer Name", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(result.Succeeded);
         Assert.True(fs.Files.ContainsKey(@"C:\notes\unter\Neuer Name.md"));
         Assert.False(fs.Files.ContainsKey(@"C:\notes\unter\Alt.md"));
 
-        MarkdownFile? stored = await repo.GetByIdAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+        MarkdownFile? stored = await repo.GetByIdAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.NotNull(stored);
         Assert.Equal(@"C:\notes\unter\Neuer Name.md", stored.AbsolutePath);
         Assert.Equal("unter/Neuer Name.md", stored.RelativePath);
@@ -45,7 +45,7 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, FakeFileSystem fs, _) = Build();
 
-        _ = await sut.RenameAsync(FileId, "Ohne Endung", CancellationToken.None).ConfigureAwait(true);
+        _ = await sut.RenameAsync(FileId, "Ohne Endung", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(fs.Files.ContainsKey(@"C:\notes\unter\Ohne Endung.md"));
     }
@@ -55,7 +55,7 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, FakeFileSystem fs, _) = Build();
 
-        _ = await sut.RenameAsync(FileId, "Mit Endung.md", CancellationToken.None).ConfigureAwait(true);
+        _ = await sut.RenameAsync(FileId, "Mit Endung.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(fs.Files.ContainsKey(@"C:\notes\unter\Mit Endung.md"));
         Assert.False(fs.Files.ContainsKey(@"C:\notes\unter\Mit Endung.md.md"));
@@ -67,11 +67,11 @@ public sealed class DocumentFileServiceTests
         (DocumentFileService sut, FakeFileSystem fs, FakeMarkdownFileRepository repo) = Build();
         fs.Files[@"C:\notes\unter\Belegt.md"] = [1, 2, 3];
 
-        DocumentFileResult result = await sut.RenameAsync(FileId, "Belegt", CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult result = await sut.RenameAsync(FileId, "Belegt", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(result.Succeeded);
         Assert.True(fs.Files.ContainsKey(@"C:\notes\unter\Alt.md"));
-        MarkdownFile? stored = await repo.GetByIdAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+        MarkdownFile? stored = await repo.GetByIdAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(@"C:\notes\unter\Alt.md", stored!.AbsolutePath);
     }
 
@@ -80,11 +80,11 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, FakeFileSystem fs, FakeMarkdownFileRepository repo) = Build();
 
-        DocumentFileResult result = await sut.MoveAsync(FileId, @"C:\notes\woanders", CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult result = await sut.MoveAsync(FileId, @"C:\notes\woanders", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(result.Succeeded);
         Assert.True(fs.Files.ContainsKey(@"C:\notes\woanders\Alt.md"));
-        MarkdownFile? stored = await repo.GetByIdAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+        MarkdownFile? stored = await repo.GetByIdAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal("woanders/Alt.md", stored!.RelativePath);
     }
 
@@ -96,9 +96,9 @@ public sealed class DocumentFileServiceTests
         // gegen die falsche Wurzel gerechnet wurde.
         (DocumentFileService sut, _, FakeMarkdownFileRepository repo) = Build();
 
-        _ = await sut.MoveAsync(FileId, @"D:\ganz\woanders", CancellationToken.None).ConfigureAwait(true);
+        _ = await sut.MoveAsync(FileId, @"D:\ganz\woanders", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        MarkdownFile? stored = await repo.GetByIdAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+        MarkdownFile? stored = await repo.GetByIdAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal("Alt.md", stored!.RelativePath);
     }
 
@@ -107,7 +107,7 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, _, _) = Build();
 
-        DocumentFileResult result = await sut.MoveAsync(FileId, @"C:\notes\unter", CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult result = await sut.MoveAsync(FileId, @"C:\notes\unter", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(result.Succeeded);
     }
@@ -117,12 +117,12 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, FakeFileSystem fs, FakeMarkdownFileRepository repo) = Build();
 
-        DocumentFileResult result = await sut.DeleteAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult result = await sut.DeleteAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.True(result.Succeeded);
         Assert.Null(result.NewAbsolutePath);
         Assert.Contains(@"C:\notes\unter\Alt.md", fs.DeletedFiles);
-        Assert.Null(await repo.GetByIdAsync(FileId, CancellationToken.None).ConfigureAwait(true));
+        Assert.Null(await repo.GetByIdAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     [Fact]
@@ -131,11 +131,11 @@ public sealed class DocumentFileServiceTests
         (DocumentFileService sut, FakeFileSystem fs, FakeMarkdownFileRepository repo) = Build();
         fs.FailOnMove = new UnauthorizedAccessException("Zugriff verweigert");
 
-        DocumentFileResult result = await sut.RenameAsync(FileId, "Neu", CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult result = await sut.RenameAsync(FileId, "Neu", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(result.Succeeded);
         Assert.Contains("Zugriff verweigert", result.Message, StringComparison.Ordinal);
-        MarkdownFile? stored = await repo.GetByIdAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+        MarkdownFile? stored = await repo.GetByIdAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(@"C:\notes\unter\Alt.md", stored!.AbsolutePath);
     }
 
@@ -144,7 +144,7 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, FakeFileSystem fs, _) = Build();
 
-        DocumentFileResult result = await sut.DeleteAsync(Guid.NewGuid(), CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult result = await sut.DeleteAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(result.Succeeded);
         Assert.Empty(fs.DeletedFiles);
@@ -155,7 +155,7 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, _, _) = Build(incomingLinks: 3);
 
-        DocumentImpact impact = await sut.GetImpactAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+        DocumentImpact impact = await sut.GetImpactAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("Alt", impact.Title);
         Assert.Equal(3, impact.IncomingLinkCount);
@@ -166,7 +166,7 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, _, _) = Build();
 
-        DocumentImpact impact = await sut.GetImpactAsync(Guid.NewGuid(), CancellationToken.None).ConfigureAwait(true);
+        DocumentImpact impact = await sut.GetImpactAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(impact.Title);
         Assert.Equal(0, impact.IncomingLinkCount);
@@ -230,11 +230,11 @@ public sealed class DocumentFileServiceTests
             ? new IOException("Die Datei wird von einem anderen Programm verwendet.")
             : new UnauthorizedAccessException("Zugriff verweigert.");
 
-        DocumentFileResult result = await sut.DeleteAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult result = await sut.DeleteAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.False(result.Succeeded);
         Assert.Contains("nicht löschen", result.Message, StringComparison.Ordinal);
-        Assert.NotNull(await repo.GetByIdAsync(FileId, CancellationToken.None).ConfigureAwait(true));
+        Assert.NotNull(await repo.GetByIdAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     /// <remarks>
@@ -248,9 +248,9 @@ public sealed class DocumentFileServiceTests
         (DocumentFileService sut, _, _) = Build();
         Guid unbekannt = new("99999999-9999-9999-9999-999999999999");
 
-        DocumentFileResult umbenannt = await sut.RenameAsync(unbekannt, "Neu", CancellationToken.None).ConfigureAwait(true);
-        DocumentFileResult verschoben = await sut.MoveAsync(unbekannt, @"C:\notes\woanders", CancellationToken.None).ConfigureAwait(true);
-        DocumentFileResult entfernt = await sut.DeleteAsync(unbekannt, CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult umbenannt = await sut.RenameAsync(unbekannt, "Neu", TestContext.Current.CancellationToken).ConfigureAwait(true);
+        DocumentFileResult verschoben = await sut.MoveAsync(unbekannt, @"C:\notes\woanders", TestContext.Current.CancellationToken).ConfigureAwait(true);
+        DocumentFileResult entfernt = await sut.DeleteAsync(unbekannt, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         foreach (DocumentFileResult ergebnis in (DocumentFileResult[])[umbenannt, verschoben, entfernt])
         {

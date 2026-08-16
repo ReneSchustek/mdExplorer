@@ -91,12 +91,17 @@ public sealed partial class ParseOrchestrator : BackgroundService
         int processed = 0;
         int skipped = 0;
 
-        AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
-        await using (scope.ConfigureAwait(false))
+        // Zwei Bereiche, mit Absicht: Der Lesebereich hält die laufende Aufzählung offen, jeder
+        // Stapel schreibt in einem eigenen. Vorher lief der ganze Durchlauf in einem einzigen
+        // Bereich — der Änderungsverfolger sammelte dann jedes Dokument und jedes Schlagwort
+        // des gesamten Bestands, und `SaveChangesAsync` durchlief bei jedem Stapel alles bereits
+        // Verfolgte. Über 29.889 Dateien hieß das am 16.08.2026: 9 GB Arbeitsspeicher und ein
+        // Stapel, der von einer Sekunde auf zweieinhalb Minuten anwuchs. Der Indexer macht es
+        // aus demselben Grund seit jeher so.
+        AsyncServiceScope readScope = _scopeFactory.CreateAsyncScope();
+        await using (readScope.ConfigureAwait(false))
         {
-            IMarkdownSourceProvider sourceProvider = scope.ServiceProvider.GetRequiredService<IMarkdownSourceProvider>();
-            IMarkdownDocumentRepository docRepo = scope.ServiceProvider.GetRequiredService<IMarkdownDocumentRepository>();
-            ITagRepository tagRepo = scope.ServiceProvider.GetRequiredService<ITagRepository>();
+            IMarkdownSourceProvider sourceProvider = readScope.ServiceProvider.GetRequiredService<IMarkdownSourceProvider>();
 
             List<MarkdownSourceSnapshot> batch = new(_options.BatchSize);
             await foreach (MarkdownSourceSnapshot snapshot in sourceProvider.EnumerateAsync(cancellationToken).ConfigureAwait(false))
@@ -104,7 +109,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
                 batch.Add(snapshot);
                 if (batch.Count >= _options.BatchSize)
                 {
-                    (int p, int s) = await ProcessBatchAsync(docRepo, tagRepo, batch, cancellationToken).ConfigureAwait(false);
+                    (int p, int s) = await ProcessBatchInOwnScopeAsync(batch, cancellationToken).ConfigureAwait(false);
                     processed += p;
                     skipped += s;
                     batch.Clear();
@@ -112,11 +117,19 @@ public sealed partial class ParseOrchestrator : BackgroundService
             }
             if (batch.Count > 0)
             {
-                (int p, int s) = await ProcessBatchAsync(docRepo, tagRepo, batch, cancellationToken).ConfigureAwait(false);
+                (int p, int s) = await ProcessBatchInOwnScopeAsync(batch, cancellationToken).ConfigureAwait(false);
                 processed += p;
                 skipped += s;
             }
         }
+
+        // Bewusst bei jedem Durchlauf, nicht nur wenn etwas geschrieben wurde: Ein Schlagwort
+        // verliert seine letzte Datei meist gar nicht durch den Parser, sondern weil der
+        // Indexer die Datei entfernt hat. Am 16.08.2026 blieben nach dem Wegräumen von 14.081
+        // Einträgen 249 Schlagworte ohne Datei stehen — der Parser hatte nichts zu tun und
+        // räumte deshalb auch nicht auf. Die Abfrage ist ein Anti-Join über eine kleine
+        // Tabelle; sie kostet nichts.
+        await RemoveOrphanedTagsAsync(cancellationToken).ConfigureAwait(false);
 
         TimeSpan elapsed = _timeProvider.GetElapsedTime(startedAt);
         LogPollCompleted(_logger, processed, skipped, elapsed.TotalMilliseconds);
@@ -217,6 +230,36 @@ public sealed partial class ParseOrchestrator : BackgroundService
         }
         Guid[] tagIds = [.. slugs.Select(slug => slugToId[slug])];
         await tagRepo.ReplaceFileTagsAsync(entry.Snapshot.Id, tagIds, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Räumt Schlagworte weg, an denen nach diesem Durchlauf keine Datei mehr hängt.</summary>
+    private async Task RemoveOrphanedTagsAsync(CancellationToken cancellationToken)
+    {
+        AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            ITagRepository tagRepo = scope.ServiceProvider.GetRequiredService<ITagRepository>();
+            int removed = await tagRepo.RemoveOrphanedTagsAsync(cancellationToken).ConfigureAwait(false);
+            if (removed > 0)
+            {
+                LogOrphanedTagsRemoved(_logger, removed);
+            }
+        }
+    }
+
+    /// <summary>Schreibt einen Stapel in einem eigenen Bereich — der Verfolger stirbt mit ihm.</summary>
+    private async Task<(int Processed, int Skipped)> ProcessBatchInOwnScopeAsync(
+        List<MarkdownSourceSnapshot> batch,
+        CancellationToken cancellationToken)
+    {
+        AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            IMarkdownDocumentRepository docRepo = scope.ServiceProvider.GetRequiredService<IMarkdownDocumentRepository>();
+            ITagRepository tagRepo = scope.ServiceProvider.GetRequiredService<ITagRepository>();
+
+            return await ProcessBatchAsync(docRepo, tagRepo, batch, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async Task<(int Processed, int Skipped)> ProcessBatchAsync(
@@ -398,4 +441,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
 
     [LoggerMessage(EventId = 208, Level = LogLevel.Error, Message = "ParseOrchestrator-Watchdog: unerwartete Exception aufgefangen, Service wird ordentlich beendet.")]
     private static partial void LogWatchdogTriggered(ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 209, Level = LogLevel.Information, Message = "{Count} Schlagwort/Schlagworte ohne Datei entfernt.")]
+    private static partial void LogOrphanedTagsRemoved(ILogger logger, int count);
 }

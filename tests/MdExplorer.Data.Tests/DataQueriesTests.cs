@@ -45,7 +45,7 @@ public sealed class DataQueriesTests : IAsyncDisposable
         MarkdownSourceProvider sut = new(_dbContext);
 
         List<MarkdownSourceSnapshot> result = [];
-        await foreach (MarkdownSourceSnapshot snapshot in sut.EnumerateAsync(CancellationToken.None).ConfigureAwait(true))
+        await foreach (MarkdownSourceSnapshot snapshot in sut.EnumerateAsync(TestContext.Current.CancellationToken).ConfigureAwait(true))
         {
             result.Add(snapshot);
         }
@@ -68,7 +68,7 @@ public sealed class DataQueriesTests : IAsyncDisposable
         await SeedTagWithLinksAsync(tagId, "wichtig", [fileZ, fileA]).ConfigureAwait(true);
 
         TagFileLookupQuery sut = new(_dbContext);
-        IReadOnlyList<TagFileLookupRow> rows = await sut.GetFilesByTagSlugAsync("wichtig", CancellationToken.None).ConfigureAwait(true);
+        IReadOnlyList<TagFileLookupRow> rows = await sut.GetFilesByTagSlugAsync("wichtig", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, rows.Count);
         Assert.Equal("a.md", rows[0].RelativePath); // alphabetisch vor z.md
@@ -81,7 +81,7 @@ public sealed class DataQueriesTests : IAsyncDisposable
     {
         TagFileLookupQuery sut = new(_dbContext);
 
-        IReadOnlyList<TagFileLookupRow> rows = await sut.GetFilesByTagSlugAsync("gibt-es-nicht", CancellationToken.None).ConfigureAwait(true);
+        IReadOnlyList<TagFileLookupRow> rows = await sut.GetFilesByTagSlugAsync("gibt-es-nicht", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(rows);
     }

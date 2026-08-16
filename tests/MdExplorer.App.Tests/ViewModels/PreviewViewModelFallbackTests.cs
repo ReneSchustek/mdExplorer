@@ -29,9 +29,9 @@ public sealed class PreviewViewModelFallbackTests
         FakeMarkdownDocumentRepository repo = new();
         using ServiceProvider provider = ErzeugeAnbieter(repo);
         PreviewViewModel sut = Erzeuge(provider);
-        await sut.LoadAsync(Guid.NewGuid(), CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        await sut.LoadAsync(Guid.Empty, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.Empty, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(sut.CurrentDocumentId);
         // Auch ohne Inhalt trägt die Anzeige die Belegung: Ein blankes HTML-Gerüst stand im
@@ -50,11 +50,11 @@ public sealed class PreviewViewModelFallbackTests
         repo.Put(fileId, ErzeugeDokument(fileId, "<h1>Bestand</h1>"));
         using ServiceProvider provider = ErzeugeAnbieter(repo);
         PreviewViewModel sut = Erzeuge(provider);
-        await sut.LoadAsync(fileId, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
         string vorher = sut.Html;
 
         repo.FailOnGet = new OperationCanceledException();
-        await sut.LoadAsync(Guid.NewGuid(), CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(vorher, sut.Html, StringComparer.Ordinal);
         Assert.Equal(fileId, sut.CurrentDocumentId);
@@ -68,7 +68,7 @@ public sealed class PreviewViewModelFallbackTests
         using ServiceProvider provider = ErzeugeAnbieter(repo);
         PreviewViewModel sut = Erzeuge(provider);
 
-        await sut.LoadAsync(fileId, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Die Datei gilt als angezeigt — sonst lädt die Oberfläche endlos dieselbe Datei nach.
         Assert.Equal(fileId, sut.CurrentDocumentId);
@@ -94,7 +94,7 @@ public sealed class PreviewViewModelFallbackTests
         using ServiceProvider provider = ErzeugeAnbieter(repo);
         PreviewViewModel sut = Erzeuge(provider);
 
-        await sut.LoadAsync(fileId, CancellationToken.None).ConfigureAwait(true);
+        await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(fileId, sut.CurrentDocumentId);
         Assert.Contains("Content-Security-Policy", sut.Html, StringComparison.Ordinal);
