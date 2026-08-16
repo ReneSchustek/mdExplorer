@@ -22,6 +22,16 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
     private readonly IDialogService _dialogService;
     private readonly ILogger<SettingsWindowViewModel> _logger;
 
+    /// <summary>
+    /// Der Merker, der beim Beenden der Anwendung anschlägt.
+    /// </summary>
+    /// <remarks>
+    /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
+    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// </remarks>
+    private readonly CancellationToken _shutdownToken;
+
     /// <summary>Erzeugt das ViewModel — bezieht den aktuellen Settings-Stand aus dem Service.</summary>
     public SettingsWindowViewModel(
         ISettingsService settingsService,
@@ -29,7 +39,8 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
         IDialogService dialogService,
         IUpdateChecker updateChecker,
         IUpdateInstaller updateInstaller,
-        ILogger<SettingsWindowViewModel> logger)
+        ILogger<SettingsWindowViewModel> logger,
+        CancellationToken shutdownToken = default)
     {
         ArgumentNullException.ThrowIfNull(settingsService);
         ArgumentNullException.ThrowIfNull(validator);
@@ -42,6 +53,7 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
         _validator = validator;
         _dialogService = dialogService;
         _logger = logger;
+        _shutdownToken = shutdownToken;
 
         AppSettings current = settingsService.Current;
         Indexing = new IndexingTabViewModel(current.Indexing, dialogService);
@@ -105,7 +117,7 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
 
         try
         {
-            await _settingsService.SaveAsync(candidate, CancellationToken.None).ConfigureAwait(true);
+            await _settingsService.SaveAsync(candidate, _shutdownToken).ConfigureAwait(true);
             LogSettingsSaved(_logger);
             CloseRequested?.Invoke(this, new SettingsCloseEventArgs(true));
         }

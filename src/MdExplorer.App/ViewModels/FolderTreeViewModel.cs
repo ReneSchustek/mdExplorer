@@ -35,6 +35,16 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     private readonly IFileSystem _fileSystem;
     private readonly ISettingsService _settings;
     private readonly IExclusionFilter? _exclusionFilter;
+
+    /// <summary>
+    /// Der Merker, der beim Beenden der Anwendung anschlägt.
+    /// </summary>
+    /// <remarks>
+    /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
+    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// </remarks>
+    private readonly CancellationToken _shutdownToken;
     private bool _disposed;
 
     [ObservableProperty]
@@ -50,7 +60,8 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     public FolderTreeViewModel(
         ISettingsService settings,
         IFileSystem fileSystem,
-        IExclusionFilter? exclusionFilter = null)
+        IExclusionFilter? exclusionFilter = null,
+        CancellationToken shutdownToken = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(fileSystem);
@@ -58,6 +69,7 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
         _settings = settings;
         _fileSystem = fileSystem;
         _exclusionFilter = exclusionFilter;
+        _shutdownToken = shutdownToken;
         Roots = BuildRoots(settings.Current.Indexing.Roots);
         _settings.SettingsChanged += OnSettingsChanged;
     }
@@ -306,7 +318,7 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
         AppSettings next = current with { Indexing = indexing };
         try
         {
-            await _settings.SaveAsync(next, CancellationToken.None).ConfigureAwait(true);
+            await _settings.SaveAsync(next, _shutdownToken).ConfigureAwait(true);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DbException)
         {

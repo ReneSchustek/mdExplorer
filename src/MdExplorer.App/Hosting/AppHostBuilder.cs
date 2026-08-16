@@ -134,11 +134,13 @@ internal static class AppHostBuilder
         _ = builder.Services.AddSingleton(sp => new FolderTreeViewModel(
             sp.GetRequiredService<ISettingsService>(),
             sp.GetRequiredService<IFileSystem>(),
-            sp.GetRequiredService<IExclusionFilter>()));
+            sp.GetRequiredService<IExclusionFilter>(),
+            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
         _ = builder.Services.AddSingleton(sp => new AllFilesViewModel(
             sp.GetRequiredService<IServiceScopeFactory>(),
             sp.GetRequiredService<TimeProvider>(),
-            sp.GetRequiredService<ILogger<AllFilesViewModel>>()));
+            sp.GetRequiredService<ILogger<AllFilesViewModel>>(),
+            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
         _ = builder.Services.AddSingleton(sp => new SearchViewModel(
             sp.GetRequiredService<IServiceScopeFactory>(),
             sp.GetRequiredService<TimeProvider>(),
@@ -168,7 +170,8 @@ internal static class AppHostBuilder
             sp.GetRequiredService<IServiceScopeFactory>(),
             sp.GetRequiredService<IDocumentFileService>(),
             sp.GetRequiredService<IDialogService>(),
-            sp.GetRequiredService<ILogger<DocumentRelationsViewModel>>()));
+            sp.GetRequiredService<ILogger<DocumentRelationsViewModel>>(),
+            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
         _ = builder.Services.AddSingleton(sp => new DocumentPanelViewModel(
             sp.GetRequiredService<PreviewViewModel>(),
             sp.GetRequiredService<MarkdownEditorViewModel>(),
@@ -191,7 +194,8 @@ internal static class AppHostBuilder
             sp.GetRequiredService<MdExplorer.Indexer.Abstractions.IIndexer>(),
             sp.GetRequiredService<IMessenger>(),
             sp.GetRequiredService<TimeProvider>(),
-            sp.GetRequiredService<ILogger<MainViewModel>>()));
+            sp.GetRequiredService<ILogger<MainViewModel>>(),
+            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
         _ = builder.Services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<MainViewModel>());
 
         _ = builder.Services.AddSingleton(sp => new PreviewPanel(
@@ -208,7 +212,8 @@ internal static class AppHostBuilder
             sp.GetRequiredService<IDialogService>(),
             sp.GetRequiredService<MdExplorer.Update.Abstractions.IUpdateChecker>(),
             sp.GetRequiredService<MdExplorer.Update.Abstractions.IUpdateInstaller>(),
-            sp.GetRequiredService<ILogger<SettingsWindowViewModel>>()));
+            sp.GetRequiredService<ILogger<SettingsWindowViewModel>>(),
+            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
         _ = builder.Services.AddTransient(sp => new SettingsWindow(
             sp.GetRequiredService<SettingsWindowViewModel>(),
             sp.GetRequiredService<IHelpContextProvider>()));
@@ -217,7 +222,8 @@ internal static class AppHostBuilder
         _ = builder.Services.AddTransient(sp => new GraphViewModel(
             sp.GetRequiredService<IServiceScopeFactory>(),
             sp.GetRequiredService<UiSettingsStore>(),
-            sp.GetRequiredService<ILogger<GraphViewModel>>()));
+            sp.GetRequiredService<ILogger<GraphViewModel>>(),
+            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
         _ = builder.Services.AddTransient(sp => new GraphWindow(
             sp.GetRequiredService<GraphViewModel>(),
             sp.GetRequiredService<IHelpContextProvider>(),

@@ -31,7 +31,7 @@ public sealed class SettingsValidator
     private readonly IFileSystem _fileSystem;
 
     /// <summary>Erzeugt den Validator und injiziert das Dateisystem.</summary>
-    /// <param name="fileSystem">Dateisystem-Abstraktion, über die Root-Pfade geprüfte werden.</param>
+    /// <param name="fileSystem">Dateisystem-Abstraktion, über die Root-Pfade geprüft werden.</param>
     public SettingsValidator(IFileSystem fileSystem)
     {
         ArgumentNullException.ThrowIfNull(fileSystem);

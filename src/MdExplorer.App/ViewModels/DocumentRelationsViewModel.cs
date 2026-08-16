@@ -28,6 +28,16 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     private readonly IDialogService _dialogService;
     private readonly ILogger<DocumentRelationsViewModel> _logger;
 
+    /// <summary>
+    /// Der Merker, der beim Beenden der Anwendung anschlägt.
+    /// </summary>
+    /// <remarks>
+    /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
+    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// </remarks>
+    private readonly CancellationToken _shutdownToken;
+
     private Guid _openDocumentId;
     private string _openAbsolutePath = string.Empty;
 
@@ -50,7 +60,8 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         IServiceScopeFactory scopeFactory,
         IDocumentFileService fileService,
         IDialogService dialogService,
-        ILogger<DocumentRelationsViewModel> logger)
+        ILogger<DocumentRelationsViewModel> logger,
+        CancellationToken shutdownToken = default)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(fileService);
@@ -61,6 +72,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         _fileService = fileService;
         _dialogService = dialogService;
         _logger = logger;
+        _shutdownToken = shutdownToken;
         Outgoing = [];
         Incoming = [];
         Tags = [];
@@ -250,7 +262,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     private async Task RenameAsync()
     {
         DocumentImpact impact = await _fileService
-            .GetImpactAsync(_openDocumentId, CancellationToken.None)
+            .GetImpactAsync(_openDocumentId, _shutdownToken)
             .ConfigureAwait(true);
 
         if (impact.IncomingLinkCount > 0
@@ -260,7 +272,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         }
 
         DocumentFileResult result = await _fileService
-            .RenameAsync(_openDocumentId, NewName, CancellationToken.None)
+            .RenameAsync(_openDocumentId, NewName, _shutdownToken)
             .ConfigureAwait(true);
 
         ReportAndFollow(result);
@@ -276,7 +288,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         }
 
         DocumentFileResult result = await _fileService
-            .MoveAsync(_openDocumentId, target, CancellationToken.None)
+            .MoveAsync(_openDocumentId, target, _shutdownToken)
             .ConfigureAwait(true);
 
         ReportAndFollow(result);
@@ -293,7 +305,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     private async Task DeleteAsync()
     {
         DocumentImpact impact = await _fileService
-            .GetImpactAsync(_openDocumentId, CancellationToken.None)
+            .GetImpactAsync(_openDocumentId, _shutdownToken)
             .ConfigureAwait(true);
 
         if (!_dialogService.Confirm("Datei löschen", DeletionQuestion(impact)))
@@ -302,7 +314,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         }
 
         DocumentFileResult result = await _fileService
-            .DeleteAsync(_openDocumentId, CancellationToken.None)
+            .DeleteAsync(_openDocumentId, _shutdownToken)
             .ConfigureAwait(true);
 
         ReportAndFollow(result);

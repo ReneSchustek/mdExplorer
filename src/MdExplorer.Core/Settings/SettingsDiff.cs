@@ -32,22 +32,6 @@ public static class SettingsDiff
         return changes;
     }
 
-    /// <summary>
-    /// Serialisiert einen <see cref="MdExplorer.Core.Models.AppSettings"/>-Snapshot in das
-    /// Audit-kompatible JSON-Format. Nutzt CamelCase und überspringt <c>null</c>-Werte —
-    /// identisch zur Wire-Format-Datei <c>settings.json</c>.
-    /// </summary>
-    /// <typeparam name="T">Typ des zu serialisierenden Snapshots — meist <see cref="MdExplorer.Core.Models.AppSettings"/>.</typeparam>
-    /// <param name="value">Snapshot-Instanz, die serialisiert wird.</param>
-    /// <param name="options">JSON-Optionen (CamelCase, Indent, Converter) für das Wire-Format.</param>
-    /// <returns>Serialisierte JSON-Repräsentation von <paramref name="value"/>.</returns>
-    public static string Serialize<T>(T value, JsonSerializerOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-        ArgumentNullException.ThrowIfNull(options);
-        return JsonSerializer.Serialize(value, options);
-    }
-
     private static void Walk(string path, JsonNode? previous, JsonNode? current, List<SettingsChangeEntry> changes)
     {
         if (previous is JsonObject prevObj && current is JsonObject currObj)

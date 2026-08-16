@@ -8,11 +8,11 @@ beim nächsten Speichern.
 
 ## Schema
 
-Aktuelle Version: `2`.
+Aktuelle Version: `3`.
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "indexing": {
     "roots": [
       "C:\\Users\\me\\Documents\\Notes",
@@ -37,7 +37,8 @@ Aktuelle Version: `2`.
   },
   "behavior": {
     "searchDebounceMs": 300,
-    "indexerResyncIntervalSeconds": 300
+    "indexerResyncIntervalSeconds": 300,
+    "checkForUpdatesAtStartup": true
   }
 }
 ```
@@ -85,6 +86,7 @@ fehlende Felder mit Defaults aufgefüllt.
 |------|-----|---------|---------|--------------|
 | `searchDebounceMs` | `int` | `300` | 50–5000 | Wartezeit nach letztem Tastendruck, bevor die Suche feuert |
 | `indexerResyncIntervalSeconds` | `int` | `300` | 0–3600 | Intervall für den Soll/Ist-Abgleich des Indexers (`0` deaktiviert) |
+| `checkForUpdatesAtStartup` | `bool` | `true` | — | Prüft beim Start auf neue Fassungen. Die Drossel von 24 Stunden liegt im Update-Modul; die manuelle Prüfung im Einstellungs-Dialog übergeht sie |
 
 ## Glob-Muster und Negation
 
@@ -151,7 +153,9 @@ mit drei Tabs:
 
 - **Indexierung** — `roots`, `exclusionPatterns`, `autoExtractHashtags`
 - **Darstellung** — `theme`, `previewFontSize`, `resultsPerPage`
-- **Verhalten** — `searchDebounceMs`, `indexerResyncIntervalSeconds`
+- **Verhalten** — `searchDebounceMs`, `indexerResyncIntervalSeconds`,
+  `checkForUpdatesAtStartup` samt Schaltfläche für die sofortige Prüfung,
+  das Herunterladen und das Starten des Installationspakets
 
 `Abbrechen` verwirft Änderungen, `Anwenden` schreibt sie atomar und
 löst die abhängigen Services über das `SettingsChanged`-Event aus
@@ -169,6 +173,9 @@ Migrations-Schritte auf:
   rekonstruierbar und müssen neu gesetzt werden.
 - Schema-Version `< 2` setzt `autoExtractHashtags = true`, um die
   bisherige Default-Semantik zu erhalten.
+- Schema-Version `< 3` setzt `checkForUpdatesAtStartup = true` — die
+  Deserialisierung lieferte für ältere Dateien sonst `false` und damit das
+  Gegenteil des dokumentierten Standards.
 
 Die normalisierte Instanz wird beim nächsten Schreiben unter
-`schemaVersion: 2` persistiert.
+`schemaVersion: 3` persistiert.

@@ -176,6 +176,22 @@ Die **optionale vierte Spalte** ist die Tag-Cloud. Über das Menü
 die häufigsten Tags des aktuellen Bestands; Details dazu folgen in
 Kapitel 6.
 
+### Helles und dunkles Erscheinungsbild
+
+Unter „Datei → Einstellungen → Darstellung" steht die Wahl zwischen
+**System**, **Hell** und **Dunkel**. „System" folgt der Einstellung von
+Windows; die beiden anderen setzen sich darüber hinweg. Der Wechsel wirkt
+sofort und ohne Neustart.
+
+Die Wahl gilt für die **gesamte** Anwendung — auch für die Dokument-Vorschau,
+den Verweis-Graphen und die Titelleisten der Fenster. Wer „Dunkel" wählt,
+während Windows hell steht, bekommt deshalb keine weiße Fläche mitten in einer
+dunklen Anwendung.
+
+Spaltenbreiten, sichtbare Tag-Cloud und der zuletzt gewählte Reiter bleiben
+vom Erscheinungsbild unberührt; sie stehen in `ui-layout.json` und gelten
+unabhängig davon.
+
 ## 4. Indexierung, Ausschlüsse und `.mdignore` {#indexierung}
 
 Der Indexer ist ein Hintergrunddienst, der unter drei Bedingungen
@@ -290,6 +306,10 @@ Baum-Wurzel selbst hebt die Einschränkung wieder auf (globale Suche).
 Im Gegensatz zum `path:`-Filter, den man pro Anfrage tippt, bleibt
 diese Einstellung über alle Suchen hinweg aktiv, bis man sie wieder
 abwählt. Das Umschalten löst die laufende Suche sofort neu aus.
+
+Jeder Eintrag der Trefferliste zeigt einen Ausschnitt aus dem Fundstück, in
+dem die **Trefferstellen hervorgehoben** sind. Die Hervorhebung folgt dem
+gewählten Erscheinungsbild und bleibt in beiden lesbar.
 
 Ein Klick auf einen Treffer öffnet die Datei in der rechten Spalte.
 Die Vorschau rendert das Markdown in einer eingebetteten WebView2-

@@ -40,6 +40,15 @@ public sealed class GestaltungslinieGuardTests
         "Value\\s*=\\s*\"(#[0-9A-Fa-f]{3,8}|White|Black|Gray|LightGray|DarkGray|Silver|Red|Green|Blue|Yellow|Orange|Navy|Teal)\"",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    // Dritter Weg in dieselbe Falle, und der stillste: Die Farbe steht gar nicht in der
+    // Ansicht, sondern im Code dahinter. Die Prüfungen oben lesen XAML und haben deshalb
+    // ein halbes Jahr lang nicht gesehen, dass die Trefferhervorhebung der Suche einen
+    // festen Gelbton mitbrachte — im Dunklen heller Text auf hellem Grund.
+    private static readonly Regex ColorInCode = new(
+        "Color\\.From(Rgb|Argb|Scrgb)\\s*\\(|Colors\\.[A-Z][A-Za-z]+|Brushes\\.[A-Z][A-Za-z]+"
+        + "|\"#[0-9A-Fa-f]{3,8}\"",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     [Fact]
     public void ViewsAndControlsContainNoColorValues()
     {
@@ -92,6 +101,38 @@ public sealed class GestaltungslinieGuardTests
     }
 
     /// <remarks>
+    /// Eine Ansicht ist nicht nur ihr Markup. Wer die Farbe eine Ebene tiefer schreibt —
+    /// in den Code hinter der Ansicht oder in einen Wandler —, umgeht jede Prüfung, die
+    /// XAML liest. Genau so kam die Trefferhervorhebung der Suche zu ihrem festen Gelbton,
+    /// und genau deshalb war sie im dunklen Erscheinungsbild nicht mehr lesbar.
+    /// </remarks>
+    [Fact]
+    public void CodeBehindAndConvertersContainNoColorValues()
+    {
+        List<string> findings = [];
+
+        foreach (string file in CodeFilesOfPresentationLayer())
+        {
+            string[] lines = File.ReadAllLines(file);
+            for (int index = 0; index < lines.Length; index++)
+            {
+                Match match = ColorInCode.Match(lines[index]);
+                if (match.Success)
+                {
+                    findings.Add($"{Path.GetFileName(file)}:{index + 1}  {lines[index].Trim()}");
+                }
+            }
+        }
+
+        Assert.True(
+            findings.Count == 0,
+            "Auch im Code hinter einer Ansicht gehören Farben in die Belegung. Ein fester Wert "
+            + "bleibt beim Wechsel des Erscheinungsbilds stehen — über SetResourceReference "
+            + "zieht er mit:"
+            + Environment.NewLine + string.Join(Environment.NewLine, findings));
+    }
+
+    /// <remarks>
     /// Ohne diese Prüfung wäre die Farbsuche oben grün, sobald sie keine Datei mehr findet —
     /// etwa nach einer Umbenennung des Verzeichnisses. Ein Wächter, der nichts mehr ansieht,
     /// meldet dasselbe wie einer, der nichts findet.
@@ -101,6 +142,7 @@ public sealed class GestaltungslinieGuardTests
     {
         Assert.NotEmpty(ResourceKeys("Light.xaml"));
         Assert.NotEmpty(ViewAndControlFiles());
+        Assert.NotEmpty(CodeFilesOfPresentationLayer());
     }
 
     /// <remarks>
@@ -233,6 +275,29 @@ public sealed class GestaltungslinieGuardTests
                 if (Directory.Exists(path))
                 {
                     files.AddRange(Directory.EnumerateFiles(path, "*.xaml", SearchOption.AllDirectories));
+                }
+            }
+        }
+
+        return files;
+    }
+
+    /// <summary>
+    /// Alle C#-Dateien der Darstellungsschicht: Code hinter den Ansichten, die Bausteine
+    /// und die Wandler.
+    /// </summary>
+    private static List<string> CodeFilesOfPresentationLayer()
+    {
+        List<string> files = [];
+
+        foreach (string module in Directory.EnumerateDirectories(SourceDirectory()))
+        {
+            foreach (string folder in new[] { "Views", "Controls", "Converters" })
+            {
+                string path = Path.Combine(module, folder);
+                if (Directory.Exists(path))
+                {
+                    files.AddRange(Directory.EnumerateFiles(path, "*.cs", SearchOption.AllDirectories));
                 }
             }
         }

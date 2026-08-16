@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using MdExplorer.Parser.Services;
 
 namespace MdExplorer.App.Services;
 
@@ -97,13 +98,9 @@ internal static partial class TagDocumentEditor
         RegexOptions.CultureInvariant)]
     private static partial Regex ManagedBlockRegex();
 
-    private static Regex BuildHashtagRegex(string tagName)
-    {
-        // Identische Boundary-Regeln wie TagExtractor: davor kein Wortzeichen / kein '#',
-        // danach kein Wortzeichen / kein '-' (sonst würden Präfix-Treffer falsch matchen).
-        string pattern = $@"(?<![\w#])#{Regex.Escape(tagName)}(?![\w\-])";
-        return new Regex(pattern, RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-    }
+    // Die Grenzen kommen aus HashtagPattern — derselben Stelle, aus der auch Extractor und
+    // Rewriter lesen. Eine eigene Abschrift lief hier bis zum 16.08.2026 mit.
+    private static Regex BuildHashtagRegex(string tagName) => HashtagPattern.ForTag(tagName);
 
     private static string CleanupEmptyManagedBlock(string text)
     {

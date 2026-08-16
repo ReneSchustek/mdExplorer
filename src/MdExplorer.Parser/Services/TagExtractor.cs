@@ -19,7 +19,7 @@ namespace MdExplorer.Parser.Services;
 /// </remarks>
 public sealed partial class TagExtractor : ITagExtractor
 {
-    [GeneratedRegex(@"(?<![\w#])#([A-Za-zÄÖÜäöüß][A-Za-z0-9ÄÖÜäöüß_\-]{1,})", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(HashtagPattern.Expression, RegexOptions.CultureInvariant)]
     private static partial Regex HashtagRegex();
 
     private readonly ISettingsService _settingsService;
@@ -70,7 +70,12 @@ public sealed partial class TagExtractor : ITagExtractor
             string text = literal.Content.ToString();
             foreach (Match match in HashtagRegex().Matches(text))
             {
-                string tag = match.Groups[1].Value;
+                string tag = match.Groups["name"].Value;
+                // Ein Farbwert erfüllt jede Bedingung eines Schlagworts und ist doch keines.
+                if (HashtagPattern.IsColorLiteral(tag))
+                {
+                    continue;
+                }
                 if (seen.Add(tag))
                 {
                     ordered.Add(tag);

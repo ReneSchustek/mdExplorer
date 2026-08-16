@@ -30,6 +30,16 @@ internal sealed partial class AllFilesViewModel : ObservableObject
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AllFilesViewModel> _logger;
+
+    /// <summary>
+    /// Der Merker, der beim Beenden der Anwendung anschlägt.
+    /// </summary>
+    /// <remarks>
+    /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
+    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf eine Abfrage,
+    /// die niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// </remarks>
+    private readonly CancellationToken _shutdownToken;
     private readonly TimeProvider _timeProvider;
     private readonly HashSet<string> _tagFilters = new(StringComparer.OrdinalIgnoreCase);
 
@@ -61,7 +71,11 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     public event Action<string>? FileSelected;
 
     /// <summary>Erzeugt das ViewModel und verdrahtet die Refresh-Aktion.</summary>
-    public AllFilesViewModel(IServiceScopeFactory scopeFactory, TimeProvider timeProvider, ILogger<AllFilesViewModel> logger)
+    public AllFilesViewModel(
+        IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider,
+        ILogger<AllFilesViewModel> logger,
+        CancellationToken shutdownToken = default)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -70,6 +84,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         _scopeFactory = scopeFactory;
         _timeProvider = timeProvider;
         _logger = logger;
+        _shutdownToken = shutdownToken;
         Items = [];
         ActiveFilters = [];
         PeriodFilters =
@@ -180,7 +195,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
             await using (scope.ConfigureAwait(true))
             {
                 IAllFilesQuery query = scope.ServiceProvider.GetRequiredService<IAllFilesQuery>();
-                IReadOnlyList<AllFilesRow> rows = await query.GetAllAsync(CancellationToken.None).ConfigureAwait(true);
+                IReadOnlyList<AllFilesRow> rows = await query.GetAllAsync(_shutdownToken).ConfigureAwait(true);
                 TimeZoneInfo timeZone = _timeProvider.LocalTimeZone;
                 _allItems = rows.Select(row => new AllFilesItemViewModel(row, timeZone)).ToArray();
                 ApplyViewState();

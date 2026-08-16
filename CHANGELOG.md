@@ -7,6 +7,44 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.14.0] - 2026-08-16
+
+### Hinzugefügt
+- Alle Listen tragen dieselbe Gestaltung: ein Suchfeld, das sagt, was es
+  durchsucht, Zeitraum-Schalter, Filter für Ordner und Kennzeichnungen als
+  einzeln abnehmbare Merkzettel, sichtbare Gruppen und eine Sprungleiste von A
+  bis Z. Leere Listen unterscheiden „nichts vorhanden" von „nichts gefunden" und
+  bieten im zweiten Fall an, die Einschränkungen zurückzunehmen.
+- Bereich „Zusammenhänge" unter der Vorschau: Er zeigt, wohin ein Dokument
+  verweist und wer auf es verweist, dazu seinen Ordner und seine
+  Kennzeichnungen. Jeder Eintrag ist ein Weg dorthin, keine bloße Angabe.
+- Umbenennen, Verschieben und Löschen einer Datei aus diesem Bereich heraus.
+  Vor dem Eingriff steht, wie viele Dokumente danach ins Leere zeigen — vorher,
+  nicht hinterher.
+- Dunkles Erscheinungsbild für die gesamte Oberfläche: Register, Menü,
+  Schaltflächen, Titelleiste, Auswahl, Vorschau und Schlagwortverwaltung.
+
+### Behoben
+- Die Trefferstellen der Suche waren im dunklen Erscheinungsbild nicht lesbar —
+  helle Schrift auf hellem Grund. Sie folgen jetzt der Farbbelegung und wechseln
+  mit ihr.
+- Die Schlagwortverwaltung ließ sich gar nicht öffnen: Ein Ressourcen-Block
+  stand hinter seiner Verwendung.
+- Das Menü klappte über den rechten Fensterrand hinaus, wenn Windows „Menüs
+  rechtsbündig ausrichten" gesetzt hat.
+- Der Verweis-Graph zeichnete unabhängig vom gewählten Erscheinungsbild immer
+  dunkel und blieb nach einer Größenänderung des Fensters leer.
+- Zeitangaben in der Statusleiste und in der Dateiliste standen in koordinierter
+  Weltzeit statt in der Zeit des Rechners.
+- Das projektweite Umbenennen einer Kennzeichnung ließ Vorkommen stehen, die die
+  Indizierung sehr wohl erfasst hatte. Beide benutzen jetzt dieselbe Regel.
+- Farbwerte wie `#F59E0B` landeten als Kennzeichnung im Bestand. Sie werden
+  nicht mehr aufgenommen.
+
+### Geändert
+- Lange Abfragen brechen beim Beenden der Anwendung ab, statt das Schließen
+  aufzuhalten.
+
 ## [0.13.0] - 2026-08-01
 
 Diese Fassung enthält keine Änderung am Funktionsumfang. Sie markiert den
@@ -87,7 +125,8 @@ Abschluss der Qualitätssicherung.
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.13.0...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.0
 [0.13.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.13.0
 [0.12.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.12.1
 [0.12.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.12.0

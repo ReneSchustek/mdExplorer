@@ -29,6 +29,16 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     private readonly IMessenger _messenger;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<MainViewModel> _logger;
+
+    /// <summary>
+    /// Der Merker, der beim Beenden der Anwendung anschlägt.
+    /// </summary>
+    /// <remarks>
+    /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
+    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// </remarks>
+    private readonly CancellationToken _shutdownToken;
     private readonly Dictionary<string, int> _perRootProcessed = new(StringComparer.OrdinalIgnoreCase);
     private readonly Lock _perRootLock = new();
     private bool _disposed;
@@ -84,7 +94,8 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         IIndexer indexer,
         IMessenger messenger,
         TimeProvider timeProvider,
-        ILogger<MainViewModel> logger)
+        ILogger<MainViewModel> logger,
+        CancellationToken shutdownToken = default)
     {
         ArgumentNullException.ThrowIfNull(folderTree);
         ArgumentNullException.ThrowIfNull(allFiles);
@@ -113,6 +124,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         _messenger = messenger;
         _timeProvider = timeProvider;
         _logger = logger;
+        _shutdownToken = shutdownToken;
         StorageLocation = settingsStore.StorageLocation;
         Health = healthProvider.Current;
         HealthDetail = healthProvider.Detail;
@@ -330,7 +342,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
             {
                 return;
             }
-            _ = DocumentPanel.LoadAsync(selected.MarkdownFileId, CancellationToken.None);
+            _ = DocumentPanel.LoadAsync(selected.MarkdownFileId, _shutdownToken);
         }
     }
 
@@ -347,7 +359,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     /// <summary>Öffnet ein Dokument, das am geöffneten hängt.</summary>
     private void OnRelatedDocumentRequested(Guid markdownFileId)
     {
-        _ = NavigateToDocumentAsync(markdownFileId, CancellationToken.None);
+        _ = NavigateToDocumentAsync(markdownFileId, _shutdownToken);
     }
 
     /// <summary>
@@ -400,16 +412,16 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     {
         try
         {
-            Guid? targetId = await _documentLocator.FindByAbsolutePathAsync(absolutePath, CancellationToken.None).ConfigureAwait(true);
+            Guid? targetId = await _documentLocator.FindByAbsolutePathAsync(absolutePath, _shutdownToken).ConfigureAwait(true);
             if (targetId is null)
             {
                 // Indexer kennt die Datei noch nicht — Direct-Load aus dem Dateisystem,
                 // damit der Nutzer Inhalt sieht, ohne auf den ersten Scan warten zu müssen.
                 LogPathUnresolved(_logger, absolutePath);
-                await DocumentPanel.LoadByPathAsync(absolutePath, CancellationToken.None).ConfigureAwait(true);
+                await DocumentPanel.LoadByPathAsync(absolutePath, _shutdownToken).ConfigureAwait(true);
                 return;
             }
-            _ = await NavigateToDocumentAsync(targetId.Value, CancellationToken.None).ConfigureAwait(true);
+            _ = await NavigateToDocumentAsync(targetId.Value, _shutdownToken).ConfigureAwait(true);
         }
         catch (DbException exception)
         {

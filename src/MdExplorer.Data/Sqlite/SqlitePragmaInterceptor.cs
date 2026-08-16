@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace MdExplorer.Data.Sqlite;
@@ -15,6 +16,28 @@ public sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
 {
     /// <summary>Wartezeit für blockierte SQLite-Schreibzugriffe (ms).</summary>
     public const int BusyTimeoutMilliseconds = 5000;
+
+    /// <summary>Größe des Seiten-Zwischenspeichers; negativ heißt Kibibyte statt Seiten.</summary>
+    private const int PageCacheKibibytes = -20_000;
+
+    /// <summary>
+    /// Die Pragmas in der Reihenfolge, in der sie gesetzt werden.
+    /// </summary>
+    /// <remarks>
+    /// Als Liste und nicht als sechs gleiche Blöcke: Der nächste Eintrag ist dann eine Zeile
+    /// statt sieben. Die Wartezeit kommt aus <see cref="BusyTimeoutMilliseconds"/> — sie stand
+    /// bis zum 16.08.2026 ein zweites Mal im Text des Befehls, und wer die Konstante änderte,
+    /// änderte nichts.
+    /// </remarks>
+    private static readonly string[] PragmaStatements =
+    [
+        "PRAGMA journal_mode = WAL;",
+        "PRAGMA synchronous = NORMAL;",
+        string.Create(CultureInfo.InvariantCulture, $"PRAGMA busy_timeout = {BusyTimeoutMilliseconds};"),
+        "PRAGMA temp_store = MEMORY;",
+        string.Create(CultureInfo.InvariantCulture, $"PRAGMA cache_size = {PageCacheKibibytes};"),
+        "PRAGMA foreign_keys = ON;",
+    ];
 
     /// <inheritdoc />
     public override void ConnectionOpened(DbConnection connection, ConnectionEndEventData eventData)
@@ -37,34 +60,14 @@ public sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
 
     private static void ApplyPragmas(DbConnection connection)
     {
-        using (DbCommand command = connection.CreateCommand())
+        foreach (string statement in PragmaStatements)
         {
-            command.CommandText = "PRAGMA journal_mode = WAL;";
-            _ = command.ExecuteNonQuery();
-        }
-        using (DbCommand command = connection.CreateCommand())
-        {
-            command.CommandText = "PRAGMA synchronous = NORMAL;";
-            _ = command.ExecuteNonQuery();
-        }
-        using (DbCommand command = connection.CreateCommand())
-        {
-            command.CommandText = "PRAGMA busy_timeout = 5000;";
-            _ = command.ExecuteNonQuery();
-        }
-        using (DbCommand command = connection.CreateCommand())
-        {
-            command.CommandText = "PRAGMA temp_store = MEMORY;";
-            _ = command.ExecuteNonQuery();
-        }
-        using (DbCommand command = connection.CreateCommand())
-        {
-            command.CommandText = "PRAGMA cache_size = -20000;";
-            _ = command.ExecuteNonQuery();
-        }
-        using (DbCommand command = connection.CreateCommand())
-        {
-            command.CommandText = "PRAGMA foreign_keys = ON;";
+            using DbCommand command = connection.CreateCommand();
+            // CA2100: Der Text stammt ausschließlich aus der obigen Liste — kein Wert von
+            // außen, keine Verkettung zur Laufzeit.
+#pragma warning disable CA2100
+            command.CommandText = statement;
+#pragma warning restore CA2100
             _ = command.ExecuteNonQuery();
         }
     }

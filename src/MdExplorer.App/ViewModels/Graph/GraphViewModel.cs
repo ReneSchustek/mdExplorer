@@ -22,6 +22,16 @@ internal sealed partial class GraphViewModel : ObservableObject
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly UiSettingsStore _settingsStore;
     private readonly ILogger<GraphViewModel> _logger;
+
+    /// <summary>
+    /// Der Merker, der beim Beenden der Anwendung anschlägt.
+    /// </summary>
+    /// <remarks>
+    /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
+    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// </remarks>
+    private readonly CancellationToken _shutdownToken;
     private bool _suppressPrefixSave;
 
     [ObservableProperty]
@@ -49,7 +59,8 @@ internal sealed partial class GraphViewModel : ObservableObject
     public GraphViewModel(
         IServiceScopeFactory scopeFactory,
         UiSettingsStore settingsStore,
-        ILogger<GraphViewModel> logger)
+        ILogger<GraphViewModel> logger,
+        CancellationToken shutdownToken = default)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(settingsStore);
@@ -58,6 +69,7 @@ internal sealed partial class GraphViewModel : ObservableObject
         _scopeFactory = scopeFactory;
         _settingsStore = settingsStore;
         _logger = logger;
+        _shutdownToken = shutdownToken;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
 
         _suppressPrefixSave = true;
@@ -87,7 +99,7 @@ internal sealed partial class GraphViewModel : ObservableObject
             await using (scope.ConfigureAwait(true))
             {
                 IGraphService service = scope.ServiceProvider.GetRequiredService<IGraphService>();
-                GraphSnapshot snapshot = await service.BuildSnapshotAsync(filter, CancellationToken.None).ConfigureAwait(true);
+                GraphSnapshot snapshot = await service.BuildSnapshotAsync(filter, _shutdownToken).ConfigureAwait(true);
                 NodeCount = snapshot.Nodes.Count;
                 EdgeCount = snapshot.Edges.Count;
                 OriginalNodeCount = snapshot.OriginalNodeCount;

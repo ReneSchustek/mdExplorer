@@ -13,7 +13,7 @@ namespace MdExplorer.Parser.Services;
 /// </summary>
 public sealed partial class MarkdownTagRewriter : IMarkdownTagRewriter
 {
-    [GeneratedRegex(@"(?<![\w#])#(?<name>[A-Za-zÄÖÜäöüß][A-Za-z0-9ÄÖÜäöüß_\-]+)(?![\w-])", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(HashtagPattern.Expression, RegexOptions.CultureInvariant)]
     private static partial Regex HashtagRegex();
 
     [GeneratedRegex(@"^(?<indent>\s*)tags\s*:\s*(?<value>.*)$", RegexOptions.CultureInvariant)]

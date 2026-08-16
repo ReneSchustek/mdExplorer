@@ -1,8 +1,9 @@
 # Architektur
 
 MdExplorer ist eine WPF-Desktopanwendung auf .NET 10 mit modularer
-Struktur. Module sind eigene .NET-Klassenbibliotheken im Repo-Wurzel
-(Flat-Layout) und werden in der `MdExplorer.slnx`-Solution geführt.
+Struktur. Jedes Modul ist eine eigene .NET-Klassenbibliothek; sie liegen
+unter `src/`, die zugehörigen Testprojekte unter `tests/`. Geführt werden
+alle in der `MdExplorer.slnx`-Solution.
 
 ## Schichten
 
@@ -59,7 +60,7 @@ ausschließlich über Abstraktionen in `MdExplorer.Core.Abstractions`.
 
 | Modul | Projekt-Referenzen |
 |-------|--------------------|
-| `MdExplorer.App` | Core, Data, Graph, Indexer, Parser, Search, TagCloud |
+| `MdExplorer.App` | Core, Data, Graph, Indexer, Parser, Search, TagCloud, Update |
 | `MdExplorer.Core` | — (keine) |
 | `MdExplorer.Data` | Core |
 | `MdExplorer.Indexer` | Core |
@@ -67,16 +68,24 @@ ausschließlich über Abstraktionen in `MdExplorer.Core.Abstractions`.
 | `MdExplorer.Search` | Core |
 | `MdExplorer.Graph` | Core, Parser |
 | `MdExplorer.TagCloud` | Core, Parser |
+| `MdExplorer.Update` | Core |
 
 ## Modul-Verantwortlichkeiten
 
 ### MdExplorer.App
 
 WPF-Frontend mit MVVM-Trennung (`Views/`, `ViewModels/`, `Services/`,
-`Commands/`). Hostet den .NET-Generic-Host mit DI-Container, registriert
-Module über `Add*`-Erweiterungsmethoden und stellt den
+`Controls/`, `Converters/`). Hostet den .NET-Generic-Host mit DI-Container,
+registriert Module über `Add*`-Erweiterungsmethoden und stellt den
 `SettingsWindow`-Dialog, das Hauptfenster und das
 `GraphWindow`-WebView2-Fenster bereit.
+
+Die Gestaltungslinie liegt in `Themes/`: `Tokens.xaml` trägt Abstände, Radien
+und Typografie, `Light.xaml` und `Dark.xaml` je eine vollständige Farbbelegung
+mit demselben Schlüsselsatz, `ControlStyles.xaml` die Grundbelegung der
+Bedienelemente. Getauscht wird zur Laufzeit genau ein Wörterbuch — die Belegung.
+Wiederverwendbare Bausteine (Suchfeld, Leerzustand, Sprungleiste) stehen als
+Steuerelemente in `Controls/`, nicht als abgeschriebenes Markup.
 
 ### MdExplorer.Core
 
@@ -96,7 +105,7 @@ Abhängigkeiten außer dem .NET-BCL und `Microsoft.Extensions.*`:
 ### MdExplorer.Data
 
 EF Core / SQLite mit Migrations und Repository-Implementierungen.
-Stellt den `AppDbContext` und FTS5-Schreibpfade bereit. Die Datenbank
+Stellt den `MdExplorerDbContext` und FTS5-Schreibpfade bereit. Die Datenbank
 liegt unter `%LOCALAPPDATA%\MdExplorer\app.db`.
 
 ### MdExplorer.Indexer
@@ -126,6 +135,13 @@ ihn über `GraphJsonBuilder` und wird im App-Modul vom
 Hintergrund-Aggregation der Tag-Frequenzen mit `ObservableCollection`
 und WPF-Thread-Synchronisierung (`EnableCollectionSynchronization`).
 
+### MdExplorer.Update
+
+Prüft über die GitHub-Releases-API auf neue Fassungen, lädt das
+Installationspaket und gleicht es gegen den veröffentlichten SHA-256 ab.
+Ohne Prüfwert wird nicht geladen, bei Abweichung die Datei verworfen statt
+ausgeführt — der Installer ist unsigniert, die Prüfsumme ist der einzige Beleg.
+
 ## Querschnittsregeln
 
 - **Keine Cross-Modul-Kopplung** außer über `MdExplorer.Core.Abstractions`.
@@ -137,7 +153,7 @@ und WPF-Thread-Synchronisierung (`EnableCollectionSynchronization`).
   `DependencyInjection/`.
 - **Logging** über `Microsoft.Extensions.Logging` mit `LoggerMessage`-
   Source-Generators (Event-IDs pro Bereich).
-- **Tests** für jedes Modul in `<Modul>.Tests/` auf xUnit-Basis.
+- **Tests** für jedes Modul in `tests/<Modul>.Tests/` auf xUnit-Basis.
 
 ## Datenfluss: Datei → Index → Suche
 
@@ -151,7 +167,7 @@ und WPF-Thread-Synchronisierung (`EnableCollectionSynchronization`).
 [ Parser: Frontmatter + Body + WikiLinks + #Hashtags ]
        |
        v
-[ Data: AppDbContext → SQLite-Tabellen + FTS5-Spiegel ]
+[ Data: MdExplorerDbContext → SQLite-Tabellen + FTS5-Spiegel ]
        |
        v
 [ Search ] <---- Suchfeld (App)

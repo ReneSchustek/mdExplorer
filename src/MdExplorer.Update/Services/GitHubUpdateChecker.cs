@@ -27,7 +27,7 @@ public sealed partial class GitHubUpdateChecker : IUpdateChecker
     private const int Sha256HexLength = 64;
 
     /// <summary>Trenner in der Prüfsummen-Datei (Format: <c>&lt;hex&gt;  &lt;dateiname&gt;</c>).</summary>
-    private static readonly char[] ChecksumSeparators = new[] { ' ', '\t', '\r', '\n' };
+    private static readonly char[] ChecksumSeparators = [' ', '\t', '\r', '\n'];
 
     private readonly HttpClient _httpClient;
     private readonly UpdateOptions _options;
