@@ -37,5 +37,12 @@ internal sealed class FakeMarkdownFileRepository : IMarkdownFileRepository
     public Task AddAsync(MarkdownFile entity, CancellationToken cancellationToken) { Add(entity); return Task.CompletedTask; }
     public void Update(MarkdownFile entity) => Add(entity);
     public void Remove(MarkdownFile entity) { ArgumentNullException.ThrowIfNull(entity); _ = _store.Remove(entity.Id); }
+    public Task<int> RemoveRangeAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        int entfernt = ids.Count(id => _store.Remove(id));
+        return Task.FromResult(entfernt);
+    }
+
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) => Task.FromResult(0);
 }

@@ -147,4 +147,98 @@ public sealed class LocalFileSystemTests : IDisposable
 
         Assert.Equal(Path.GetFullPath(_testRoot), result);
     }
+    /// <remarks>
+    /// Verschieben und Löschen sind die beiden Vorgänge, die etwas kaputt machen können.
+    /// Sie standen bis zum 16.08.2026 ohne einen einzigen Test da — bemerkt beim Nachrechnen
+    /// der Abdeckung, nicht durch einen Fehler. Das ist der unangenehmere der beiden Wege,
+    /// auf denen so etwas auffällt.
+    /// </remarks>
+    [Fact]
+    public void MoveFile_MovesTheContentAndLeavesNothingBehind()
+    {
+        string quelle = Path.Combine(_testRoot, "quelle.md");
+        string ziel = Path.Combine(_testRoot, "ziel.md");
+        File.WriteAllText(quelle, "Inhalt");
+
+        _sut.MoveFile(quelle, ziel);
+
+        Assert.False(File.Exists(quelle));
+        Assert.Equal("Inhalt", File.ReadAllText(ziel));
+    }
+
+    /// <remarks>
+    /// Fehlt das Zielverzeichnis, wird es angelegt. Sonst müsste jeder Aufrufer daran denken —
+    /// und einer denkt nicht daran.
+    /// </remarks>
+    [Fact]
+    public void MoveFile_IntoAMissingDirectory_CreatesTheDirectory()
+    {
+        string quelle = Path.Combine(_testRoot, "quelle.md");
+        string ziel = Path.Combine(_testRoot, "neu", "tiefer", "ziel.md");
+        File.WriteAllText(quelle, "Inhalt");
+
+        _sut.MoveFile(quelle, ziel);
+
+        Assert.Equal("Inhalt", File.ReadAllText(ziel));
+    }
+
+    /// <remarks>
+    /// Der Punkt, an dem <c>overwrite: false</c> hängt: Ein vorhandenes Ziel muss den Vorgang
+    /// abbrechen. Andernfalls verschluckt ein Umbenennen eine fremde Datei — und beides,
+    /// Quelle und Ziel, ist danach nicht mehr da, wo es hingehört.
+    /// </remarks>
+    [Fact]
+    public void MoveFile_OntoAnExistingTarget_ThrowsAndKeepsBothFiles()
+    {
+        string quelle = Path.Combine(_testRoot, "quelle.md");
+        string ziel = Path.Combine(_testRoot, "belegt.md");
+        File.WriteAllText(quelle, "neu");
+        File.WriteAllText(ziel, "alt");
+
+        _ = Assert.Throws<IOException>(() => _sut.MoveFile(quelle, ziel));
+
+        Assert.Equal("neu", File.ReadAllText(quelle));
+        Assert.Equal("alt", File.ReadAllText(ziel));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void MoveFile_OnBlankPath_Throws(string leer)
+    {
+        string ziel = Path.Combine(_testRoot, "ziel.md");
+
+        _ = Assert.Throws<ArgumentException>(() => _sut.MoveFile(leer, ziel));
+        _ = Assert.Throws<ArgumentException>(() => _sut.MoveFile(ziel, leer));
+    }
+
+    [Fact]
+    public void DeleteFile_OnExistingFile_RemovesIt()
+    {
+        string pfad = Path.Combine(_testRoot, "weg.md");
+        File.WriteAllText(pfad, "Inhalt");
+
+        _sut.DeleteFile(pfad);
+
+        Assert.False(File.Exists(pfad));
+    }
+
+    /// <remarks>
+    /// Wer löschen will, was schon weg ist, hat sein Ziel erreicht. Diese Zusage steht als
+    /// Kommentar im Code; hier steht sie als Prüfung — sonst hinge der Aufrufer an einer
+    /// Ausnahme für einen Zustand, den er sich gewünscht hat.
+    /// </remarks>
+    [Fact]
+    public void DeleteFile_OnAlreadyMissingFile_StaysQuiet()
+    {
+        _sut.DeleteFile(Path.Combine(_testRoot, "gab-es-nie.md"));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void DeleteFile_OnBlankPath_Throws(string leer)
+    {
+        _ = Assert.Throws<ArgumentException>(() => _sut.DeleteFile(leer));
+    }
 }

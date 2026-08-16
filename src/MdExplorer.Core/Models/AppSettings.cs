@@ -46,11 +46,21 @@ public sealed record IndexingSettings(
     IReadOnlyList<string> UiExcludedFolders,
     bool AutoExtractHashtags)
 {
-    /// <summary>Default-Ausschlussmuster — übernehmen die früheren hartverdrahteten Ordnernamen.</summary>
+    /// <summary>
+    /// Default-Ausschlussmuster.
+    /// </summary>
+    /// <remarks>
+    /// Die ersten fünf übernehmen die früheren hartverdrahteten Ordnernamen. <c>vendor</c> kam
+    /// am 16.08.2026 dazu: Die Auswertung eines gewachsenen Bestands fand dort 3.906
+    /// Markdown-Dateien fremder Pakete — Dokumentation, die niemand hier sucht und die jede
+    /// Trefferliste überlagert. Es ist der Ordnername, den PHP, Ruby und Go gleichermaßen
+    /// verwenden; <c>node_modules</c> ist dasselbe für JavaScript und stand längst hier.
+    /// </remarks>
     public static readonly IReadOnlyList<string> DefaultExclusionPatterns =
     [
         "**/.git/**",
         "**/node_modules/**",
+        "**/vendor/**",
         "**/bin/**",
         "**/obj/**",
         "**/.vs/**",

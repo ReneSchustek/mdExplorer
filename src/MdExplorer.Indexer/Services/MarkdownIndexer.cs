@@ -159,6 +159,18 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     [LoggerMessage(EventId = 115, Level = LogLevel.Error, Message = "MarkdownIndexer-Watchdog: unerwartete Exception aufgefangen, Service wird ordentlich beendet.")]
     private static partial void LogWatchdogTriggered(ILogger logger, Exception exception);
 
+    [LoggerMessage(EventId = 116, Level = LogLevel.Warning, Message = "Wurzel {Root} nur teilweise gelesen — es werden keine Einträge entfernt ({Found} Datei(en) gefunden).")]
+    private static partial void LogCleanupSkipped(ILogger logger, string root, int found);
+
+    [LoggerMessage(EventId = 117, Level = LogLevel.Warning, Message = "Stapel mit {BatchCount} Datei(en) für Wurzel {Root} nicht geschrieben — nächster Abgleich versucht es erneut.")]
+    private static partial void LogBatchCommitFailed(ILogger logger, int batchCount, string root, Exception exception);
+
+    [LoggerMessage(EventId = 118, Level = LogLevel.Warning, Message = "Aufzählung der Wurzel {Root} abgebrochen.")]
+    private static partial void LogEnumerationFailed(ILogger logger, string root, Exception exception);
+
+    [LoggerMessage(EventId = 119, Level = LogLevel.Information, Message = "{Count} verwaiste Eintrag/Einträge für Wurzel {Root} entfernt.")]
+    private static partial void LogTombstonesRemoved(ILogger logger, int count, string root);
+
     private List<string> ValidRoots()
     {
         List<string> result = [];
@@ -191,18 +203,51 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         LogInitialScanCompleted(_logger, totalProcessed, elapsed.TotalMilliseconds);
     }
 
+    /// <summary>
+    /// Gleicht eine Wurzel ab: erst lesen und schreiben, dann die Einträge entfernen,
+    /// deren Datei es nicht mehr gibt.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Das Entfernen hängt <b>nicht</b> mehr daran, ob jeder Stapel geschrieben werden
+    /// konnte. Eine Datenbank-Spitze beim Schreiben ließ vorher den zweiten Schritt ganz
+    /// ausfallen, der Wächter beendete den Dienst, und danach lief kein Abgleich mehr —
+    /// weder für neue Dateien noch für verschwundene. Das ist die mutmaßliche Ursache der
+    /// 5.975 verwaisten Einträge vom 16.08.2026.
+    /// </para>
+    /// <para>
+    /// Was dagegen sehr wohl gilt: <b>Ein halb gelesener Baum darf nichts entfernen.</b>
+    /// Bricht die Aufzählung ab, kennt <c>filesOnDisk</c> nur einen Teil des Bestands —
+    /// alles Ungelesene sähe wie gelöscht aus. Dann wird ausgesetzt und protokolliert.
+    /// </para>
+    /// </remarks>
     private async Task<int> SyncRootAsync(string root, CancellationToken cancellationToken)
     {
-        // Aufgespalten in Scan+Persist (Hot-Path mit Batch-Saves und Scope-Rotation)
-        // und Tombstone-Cleanup (separater Final-Scope).
-        (HashSet<string> filesOnDisk, int totalProcessed) =
-            await ScanAndPersistAsync(root, cancellationToken).ConfigureAwait(false);
-        await RemoveTombstonedFilesAsync(root, filesOnDisk, cancellationToken).ConfigureAwait(false);
-        RaiseProgress(root, totalProcessed, isCompleted: true);
-        return filesOnDisk.Count;
+        ScanOutcome outcome = await ScanAndPersistAsync(root, cancellationToken).ConfigureAwait(false);
+
+        if (outcome.EnumerationCompleted)
+        {
+            await RemoveTombstonedFilesAsync(root, outcome.FilesOnDisk, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            LogCleanupSkipped(_logger, root, outcome.FilesOnDisk.Count);
+        }
+
+        RaiseProgress(root, outcome.TotalProcessed, isCompleted: true);
+        return outcome.FilesOnDisk.Count;
     }
 
-    private async Task<(HashSet<string> FilesOnDisk, int TotalProcessed)> ScanAndPersistAsync(
+    /// <summary>Ergebnis eines Scan-Durchgangs über eine Wurzel.</summary>
+    /// <param name="FilesOnDisk">Die gefundenen Dateien — vollständig nur bei <paramref name="EnumerationCompleted"/>.</param>
+    /// <param name="TotalProcessed">Wie viele Dateien angefasst wurden.</param>
+    /// <param name="EnumerationCompleted">Ob der Baum vollständig gelesen wurde.</param>
+    private readonly record struct ScanOutcome(
+        HashSet<string> FilesOnDisk,
+        int TotalProcessed,
+        bool EnumerationCompleted);
+
+    private async Task<ScanOutcome> ScanAndPersistAsync(
         string root,
         CancellationToken cancellationToken)
     {
@@ -214,44 +259,79 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         HashSet<string> filesOnDisk = new(PathComparer);
         int totalProcessed = 0;
         int batchAccumulator = 0;
+        bool enumerationCompleted = false;
         AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         try
         {
             IMarkdownFileRepository repository = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
 
-            foreach (string path in _scanner.EnumerateMarkdownFiles(root, cancellationToken))
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                _ = filesOnDisk.Add(path);
-                await UpsertAsync(repository, path, root, cancellationToken).ConfigureAwait(false);
-                totalProcessed++;
-                batchAccumulator++;
-
-                if (batchAccumulator >= batchSize)
+                foreach (string path in _scanner.EnumerateMarkdownFiles(root, cancellationToken))
                 {
-                    _ = await repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                    LogBatchCommitted(_logger, batchAccumulator, totalProcessed, root);
-                    RaiseProgress(root, totalProcessed, isCompleted: false);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    _ = filesOnDisk.Add(path);
+                    await UpsertAsync(repository, path, root, cancellationToken).ConfigureAwait(false);
+                    totalProcessed++;
+                    batchAccumulator++;
 
-                    // Neuer Scope: EF-Change-Tracker bleibt schlank — bei 10k+ Files
-                    // würde ein einziger Tracker überproportional viel RAM ziehen.
-                    await scope.DisposeAsync().ConfigureAwait(false);
-                    scope = _scopeFactory.CreateAsyncScope();
-                    repository = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
-                    batchAccumulator = 0;
+                    if (batchAccumulator >= batchSize)
+                    {
+                        await CommitBatchAsync(repository, batchAccumulator, totalProcessed, root, cancellationToken).ConfigureAwait(false);
+                        RaiseProgress(root, totalProcessed, isCompleted: false);
+
+                        // Neuer Scope: EF-Change-Tracker bleibt schlank — bei 10k+ Files
+                        // würde ein einziger Tracker überproportional viel RAM ziehen.
+                        await scope.DisposeAsync().ConfigureAwait(false);
+                        scope = _scopeFactory.CreateAsyncScope();
+                        repository = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
+                        batchAccumulator = 0;
+                    }
                 }
+
+                enumerationCompleted = true;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Der Baum ist nur zum Teil gelesen. Was schon geschrieben wurde, bleibt
+                // stehen; entfernt wird nichts — das entscheidet der Aufrufer am Merker.
+                LogEnumerationFailed(_logger, root, ex);
             }
 
             if (batchAccumulator > 0)
             {
-                _ = await repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                LogBatchCommitted(_logger, batchAccumulator, totalProcessed, root);
+                await CommitBatchAsync(repository, batchAccumulator, totalProcessed, root, cancellationToken).ConfigureAwait(false);
             }
-            return (filesOnDisk, totalProcessed);
+
+            return new ScanOutcome(filesOnDisk, totalProcessed, enumerationCompleted);
         }
         finally
         {
             await scope.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Schreibt einen Stapel — ein Fehlschlag beendet den Lauf nicht.</summary>
+    /// <remarks>
+    /// Eine Datenbank-Spitze kostet den Stapel, nicht den Durchgang: Die Dateien stehen
+    /// weiter auf der Platte und werden beim nächsten Abgleich erneut angeboten. Vorher riss
+    /// ein einzelner Fehlschlag den gesamten Dienst mit.
+    /// </remarks>
+    private async Task CommitBatchAsync(
+        IMarkdownFileRepository repository,
+        int batchCount,
+        int totalCount,
+        string root,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            _ = await repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            LogBatchCommitted(_logger, batchCount, totalCount, root);
+        }
+        catch (DbException ex)
+        {
+            LogBatchCommitFailed(_logger, batchCount, root, ex);
         }
     }
 
@@ -268,17 +348,23 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
                 .GetAllUnderRootAsync(root, cancellationToken)
                 .ConfigureAwait(false);
 
-            bool anyRemoved = false;
+            List<Guid> tombstoned = [];
             foreach (MarkdownFile entry in stored.Where(entry => !filesOnDisk.Contains(entry.AbsolutePath)))
             {
-                repository.Remove(entry);
+                tombstoned.Add(entry.Id);
                 LogFileRemoved(_logger, entry.AbsolutePath);
-                anyRemoved = true;
             }
-            if (anyRemoved)
+
+            if (tombstoned.Count == 0)
             {
-                _ = await repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                return;
             }
+
+            // Als Menge und nicht Stück für Stück: Bei einem gewachsenen Bestand sind das
+            // Zehntausende Einträge, und einzeln kostet jeder davon einen Abgleich über alle
+            // vorgemerkten — der Durchgang bleibt dann stehen, statt lange zu dauern.
+            int removed = await repository.RemoveRangeAsync(tombstoned, cancellationToken).ConfigureAwait(false);
+            LogTombstonesRemoved(_logger, removed, root);
         }
     }
 

@@ -24,8 +24,18 @@ internal sealed class FakeFileSystem : IFileSystem
 
     public string GetDirectoryFinalPath(string path) => path;
 
+    /// <summary>Der Fehler, den das Lesen meldet — <see langword="null"/>, wenn es gelingen soll.</summary>
+    /// <remarks>
+    /// Eine gesperrte oder mitten im Zugriff gelöschte Datei ist im Betrieb der Normalfall
+    /// und nicht die Ausnahme. Ohne diesen Haken bliebe der Zweig, der sie auffängt,
+    /// ungeprüft — und ein Aufrufer, der ihn wegoptimiert, fiele niemandem auf.
+    /// </remarks>
+    public Exception? FailOnRead { get; set; }
+
     public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken) =>
-        Task.FromResult(Files.TryGetValue(path, out byte[]? bytes) ? bytes : Array.Empty<byte>());
+        FailOnRead is not null
+            ? Task.FromException<byte[]>(FailOnRead)
+            : Task.FromResult(Files.TryGetValue(path, out byte[]? bytes) ? bytes : Array.Empty<byte>());
 
     public byte[] ReadAllBytes(string path) =>
         Files.TryGetValue(path, out byte[]? bytes) ? bytes : Array.Empty<byte>();
@@ -80,9 +90,21 @@ internal sealed class FakeFileSystem : IFileSystem
         _ = Files.Remove(sourcePath);
     }
 
+    /// <summary>Der Fehler, den das Löschen meldet — <see langword="null"/>, wenn es gelingen soll.</summary>
+    /// <remarks>
+    /// Eine Datei, die gerade in einem anderen Programm offen ist, lässt sich unter Windows
+    /// nicht löschen. Das ist der wahrscheinlichste Fehlschlag des ganzen Vorgangs.
+    /// </remarks>
+    public Exception? FailOnDelete { get; set; }
+
     /// <inheritdoc />
     public void DeleteFile(string path)
     {
+        if (FailOnDelete is not null)
+        {
+            throw FailOnDelete;
+        }
+
         DeletedFiles.Add(path);
         _ = Files.Remove(path);
     }

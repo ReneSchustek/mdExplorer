@@ -73,15 +73,31 @@ internal sealed class FakeFileSystem : IFileSystem
 
     public void EnsureDirectoryExists(string path) => AddDirectory(path);
 
+    /// <summary>
+    /// Lässt die Aufzählung nach so vielen gelieferten Dateien abbrechen.
+    /// </summary>
+    /// <remarks>
+    /// Bildet den halb gelesenen Baum nach: ein Verzeichnis, auf das der Zugriff mitten im
+    /// Lauf verweigert wird. Der Indexer darf danach keine Einträge entfernen — was er
+    /// nicht gelesen hat, sähe sonst wie gelöscht aus.
+    /// </remarks>
+    public int? ThrowAfterEnumerating { get; set; }
+
     public IEnumerable<string> EnumerateFiles(string directory, string searchPattern, bool recursive)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
         ArgumentException.ThrowIfNullOrWhiteSpace(searchPattern);
         string normalizedRoot = ResolveSymlinkChain(NormalizePath(directory));
         string extension = searchPattern.TrimStart('*');
+        int delivered = 0;
 
         foreach (string path in _files.Keys)
         {
+            if (ThrowAfterEnumerating is { } limit && delivered >= limit)
+            {
+                throw new IOException("Zugriff auf das Verzeichnis verweigert.");
+            }
+
             if (!path.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
@@ -98,6 +114,7 @@ internal sealed class FakeFileSystem : IFileSystem
                     continue;
                 }
             }
+            delivered++;
             yield return path;
         }
     }

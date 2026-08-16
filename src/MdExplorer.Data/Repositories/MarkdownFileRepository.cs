@@ -11,6 +11,16 @@ namespace MdExplorer.Data.Repositories;
 /// </summary>
 public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMarkdownFileRepository
 {
+    /// <summary>
+    /// Wie viele Schlüssel höchstens in eine Löschanweisung gehen.
+    /// </summary>
+    /// <remarks>
+    /// SQLite lässt je Anweisung eine begrenzte Zahl gebundener Werte zu — voreingestellt
+    /// 32.766. 500 hält deutlichen Abstand dazu und macht jede Portion für sich schnell genug,
+    /// dass ein Abbruch nur wenig Arbeit kostet.
+    /// </remarks>
+    private const int DeleteChunkSize = 500;
+
     private readonly MdExplorerDbContext _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 
     /// <inheritdoc />
@@ -95,7 +105,14 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
         // an den Change-Tracker angehängt werden. Bevorzugt eine bereits getrackte Kopie
         // mit derselben Id (sonst wirft Attach IdentityConflict, wenn der Caller die Entity
         // im selben Scope schon angelegt/geladen hat).
-        MarkdownFile? alreadyTracked = _dbContext.Set<MarkdownFile>().Local.FirstOrDefault(file => file.Id == entity.Id);
+        //
+        // FindEntry statt einer Suche über Local: Die Suche lief die Liste der bereits
+        // vorgemerkten Entitäten jedes Mal von vorne durch. Bei einem Aufräumdurchgang mit n
+        // Entfernungen sind das n²/2 Vergleiche — am 16.08.2026 blieb ein Lauf über 27.000
+        // verwaiste Einträge deshalb 20 Minuten lang bei voller Rechenlast stehen, ohne eine
+        // Zeile zu schreiben. FindEntry greift auf die Identitätstabelle zu und braucht
+        // dafür konstante Zeit.
+        MarkdownFile? alreadyTracked = _dbContext.Set<MarkdownFile>().Local.FindEntry(entity.Id)?.Entity;
         if (alreadyTracked is not null)
         {
             _ = _dbContext.Set<MarkdownFile>().Remove(alreadyTracked);
@@ -108,6 +125,32 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
             _ = _dbContext.Set<MarkdownFile>().Attach(entity);
         }
         _ = _dbContext.Set<MarkdownFile>().Remove(entity);
+    }
+
+    /// <inheritdoc />
+    public async Task<int> RemoveRangeAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        if (ids.Count == 0)
+        {
+            return 0;
+        }
+
+        int removed = 0;
+        foreach (Guid[] portion in ids.Chunk(DeleteChunkSize))
+        {
+            // Bewusst ohne umschließende Transaktion: Die Wiederholungsstrategie darf jede
+            // Portion für sich noch einmal versuchen, und ein abgebrochener Durchgang
+            // hinterlässt einen kleineren, aber stimmigen Index statt eines halben.
+            removed += await _dbContext.Set<MarkdownFile>()
+                .Where(file => portion.Contains(file.Id))
+                .ExecuteDeleteAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        // Was der Aufrufer noch verfolgt, zeigt jetzt auf Zeilen, die es nicht mehr gibt.
+        _dbContext.ChangeTracker.Clear();
+        return removed;
     }
 
     /// <inheritdoc />

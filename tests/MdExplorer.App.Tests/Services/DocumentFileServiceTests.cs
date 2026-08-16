@@ -214,4 +214,48 @@ public sealed class DocumentFileServiceTests
         public Task<DocumentRelations> GetRelationsAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
             Task.FromResult(relations);
     }
+    /// <remarks>
+    /// Die Datei ist in einem anderen Programm offen und lässt sich nicht löschen. Entscheidend
+    /// ist hier nicht die Meldung, sondern was **nicht** passiert: Der Index-Eintrag bleibt
+    /// stehen. Ihn zu entfernen, während die Datei noch da ist, hieße sie unauffindbar zu
+    /// machen — der Vorgang wäre gescheitert und hätte trotzdem etwas kaputt gemacht.
+    /// </remarks>
+    [Theory]
+    [InlineData(typeof(IOException))]
+    [InlineData(typeof(UnauthorizedAccessException))]
+    public async Task DeleteAsync_WhenTheFileIsLocked_KeepsTheIndexEntry(Type fehlerart)
+    {
+        (DocumentFileService sut, FakeFileSystem fs, FakeMarkdownFileRepository repo) = Build();
+        fs.FailOnDelete = fehlerart == typeof(IOException)
+            ? new IOException("Die Datei wird von einem anderen Programm verwendet.")
+            : new UnauthorizedAccessException("Zugriff verweigert.");
+
+        DocumentFileResult result = await sut.DeleteAsync(FileId, CancellationToken.None).ConfigureAwait(true);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("nicht löschen", result.Message, StringComparison.Ordinal);
+        Assert.NotNull(await repo.GetByIdAsync(FileId, CancellationToken.None).ConfigureAwait(true));
+    }
+
+    /// <remarks>
+    /// Alle drei Vorgänge greifen auf denselben Eintrag zu. Ist er zwischen dem Klick und dem
+    /// Ausführen verschwunden — der Aufräumdurchgang des Indexers läuft nebenher —, muss jeder
+    /// von ihnen das sagen, statt auf einem Nullwert weiterzuarbeiten.
+    /// </remarks>
+    [Fact]
+    public async Task EveryOperation_OnAnEntryThatIsGone_SaysSo()
+    {
+        (DocumentFileService sut, _, _) = Build();
+        Guid unbekannt = new("99999999-9999-9999-9999-999999999999");
+
+        DocumentFileResult umbenannt = await sut.RenameAsync(unbekannt, "Neu", CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult verschoben = await sut.MoveAsync(unbekannt, @"C:\notes\woanders", CancellationToken.None).ConfigureAwait(true);
+        DocumentFileResult entfernt = await sut.DeleteAsync(unbekannt, CancellationToken.None).ConfigureAwait(true);
+
+        foreach (DocumentFileResult ergebnis in (DocumentFileResult[])[umbenannt, verschoben, entfernt])
+        {
+            Assert.False(ergebnis.Succeeded);
+            Assert.Contains("nicht mehr im Index", ergebnis.Message, StringComparison.Ordinal);
+        }
+    }
 }

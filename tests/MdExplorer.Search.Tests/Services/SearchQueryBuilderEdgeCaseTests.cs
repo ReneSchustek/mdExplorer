@@ -161,4 +161,86 @@ public sealed class SearchQueryBuilderEdgeCaseTests
 
         Assert.DoesNotContain("NOT", plan.MatchExpression, StringComparison.Ordinal);
     }
+    /// <remarks>
+    /// <para>
+    /// <c>tag:"zwei woerter"</c> — die Wortgruppe muss als **ein** Wert beim Schlagwort
+    /// ankommen. Bis zum 16.08.2026 kam sie als zwei Dinge an: eine Einschränkung auf
+    /// <c>zwei</c> und, davon unabhängig, das Wort <c>woerter</c> irgendwo im Text. Die
+    /// Trefferliste enthielt damit Dateien, die mit dem gesuchten Schlagwort nichts zu tun
+    /// hatten.
+    /// </para>
+    /// <para>
+    /// Dass die Leerstelle dabei wegfällt, ist gewollt und kein zweiter Fehler: Ein Schlagwort
+    /// ist ein Slug und enthält keine. Der Wert ist danach ohne Treffer — aber die Anfrage
+    /// fragt das, was dasteht, und nicht zwei Dinge auf einmal.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void Build_WithAQuotedTagValue_KeepsThePhraseInOneFilter()
+    {
+        SearchQueryBuilder sut = new();
+
+        Fts5QueryPlan plan = sut.Build("tag:\"zwei woerter\"");
+
+        Assert.Equal("Tags:\"zweiwoerter\"", plan.MatchExpression, StringComparer.Ordinal);
+    }
+
+    /// <remarks>
+    /// Dasselbe für die Pfad-Einschränkung: Ordnernamen enthalten Leerzeichen.
+    /// </remarks>
+    [Fact]
+    public void Build_WithAQuotedPathValue_KeepsThePathTogether()
+    {
+        SearchQueryBuilder sut = new();
+
+        Fts5QueryPlan plan = sut.Build("path:\"mein ordner\"");
+
+        Assert.Equal("mein ordner", Assert.Single(plan.PathPrefixes), StringComparer.Ordinal);
+    }
+
+    /// <remarks>
+    /// Die Verneinung am Anfang: Ohne vorangehenden Begriff darf kein führendes Leerzeichen
+    /// entstehen, und die Anfrage muss trotzdem gültig sein.
+    /// </remarks>
+    [Fact]
+    public void Build_WithANegationAsTheOnlyInput_StillProducesAValidQuery()
+    {
+        SearchQueryBuilder sut = new();
+
+        Fts5QueryPlan plan = sut.Build("-bericht");
+
+        Assert.StartsWith("NOT ", plan.MatchExpression, StringComparison.Ordinal);
+        Assert.DoesNotContain("  ", plan.MatchExpression, StringComparison.Ordinal);
+    }
+
+    /// <remarks>
+    /// Führende Trennzeichen entstehen beim Tippen ständig. Sie dürfen nicht als leeres Wort
+    /// in die Anfrage geraten.
+    /// </remarks>
+    [Theory]
+    [InlineData(",,,bericht")]
+    [InlineData("...bericht")]
+    [InlineData(";;bericht")]
+    public void Build_WithLeadingSeparators_FindsTheWordBehindThem(string eingabe)
+    {
+        SearchQueryBuilder sut = new();
+
+        Fts5QueryPlan plan = sut.Build(eingabe);
+
+        Assert.Contains("bericht", plan.MatchExpression, StringComparison.Ordinal);
+    }
+
+    /// <remarks>
+    /// <c>tag:""</c> — angefangen und wieder gelöscht. Ein leerer Wert darf keine
+    /// Schlagwort-Einschränkung erzeugen, sondern gar nichts.
+    /// </remarks>
+    [Fact]
+    public void Build_WithAnEmptyQuotedTagValue_ProducesNoTagFilter()
+    {
+        SearchQueryBuilder sut = new();
+
+        Fts5QueryPlan plan = sut.Build("tag:\"\"");
+
+        Assert.DoesNotContain("Tags", plan.MatchExpression, StringComparison.Ordinal);
+    }
 }

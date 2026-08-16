@@ -35,6 +35,16 @@ public static partial class HashtagPattern
     private static readonly int[] ColorLiteralLengths = [3, 4, 6, 8];
 
     /// <summary>
+    /// Zeitgrenze für einen einzelnen Lauf des Ausdrucks.
+    /// </summary>
+    /// <remarks>
+    /// Der Ausdruck kennt keine Verschachtelung und kann nicht katastrophal zurücksetzen —
+    /// die Grenze ist trotzdem gesetzt: Sie kostet nichts und macht den Fall unmöglich, dass
+    /// eine spätere Änderung am Muster genau das einführt.
+    /// </remarks>
+    private static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
+
+    /// <summary>
     /// Baut den Ausdruck für ein einzelnes Schlagwort — gleiche Grenzen, fester Name.
     /// </summary>
     /// <param name="tagName">Der Name ohne führende Raute.</param>
@@ -45,7 +55,8 @@ public static partial class HashtagPattern
 
         return new Regex(
             $@"(?<![\w#])#{Regex.Escape(tagName)}(?![\w\-])",
-            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase,
+            MatchTimeout);
     }
 
     /// <summary>

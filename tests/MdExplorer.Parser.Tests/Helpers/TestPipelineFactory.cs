@@ -19,7 +19,7 @@ internal static class TestPipelineFactory
             .UseEmphasisExtras()
             .UseYamlFrontMatter()
             .DisableHtml()
-            .UseMdExplorerWikiLinks(Normalizer.ToSlug)
+            .UseMdExplorerWikiLinks(Normalizer.TryToSlug)
             .Build();
 
     public static MarkdownDocument Parse(string markdown) =>

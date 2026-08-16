@@ -82,6 +82,17 @@ internal sealed class FakeMarkdownFileRepository : IMarkdownFileRepository, IDis
         _pendingRemoves.Add(entity);
     }
 
+    /// <summary>Die Schlüssel, die als Menge entfernt wurden — je Aufruf eine Liste.</summary>
+    public List<IReadOnlyCollection<Guid>> RemovedRanges { get; } = [];
+
+    public Task<int> RemoveRangeAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        RemovedRanges.Add(ids);
+        int entfernt = ids.Count(_store.Remove);
+        return Task.FromResult(entfernt);
+    }
+
     /// <summary>Optionaler Throw bei N-tem <see cref="SaveChangesAsync"/>-Aufruf (Test-Hook).</summary>
     public Exception? ThrowOnNextSave { get; set; }
 

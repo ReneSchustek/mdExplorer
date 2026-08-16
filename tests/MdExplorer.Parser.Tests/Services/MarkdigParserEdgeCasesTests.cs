@@ -225,4 +225,43 @@ public sealed class MarkdigParserEdgeCasesTests
         string html = GzipHelper.Decompress(result.RenderedHtmlGz);
         Assert.Contains("Body folgt", html, StringComparison.Ordinal);
     }
+    /// <summary>
+    /// Ein Verweis, dessen Ziel keinen Slug hergibt, darf das Dokument nicht kosten.
+    /// </summary>
+    /// <remarks>
+    /// Gefunden am 16.08.2026 beim Durchlauf über einen gewachsenen Bestand: In einer Datei
+    /// stand <c>[[…]]</c> — drei Punkte als Auslassungszeichen, ein Satzzeichen. Der Renderer
+    /// verlangte dafür einen Slug, bekam eine Ausnahme, und der Wächter verwarf daraufhin
+    /// **die ganze Datei**. Sie fehlte im Index, ohne dass jemand sie gesucht hätte.
+    /// Der Verweis führt nirgendwohin — das ist richtig. Der Text bleibt lesbar — das ist der Punkt.
+    /// </remarks>
+    [Theory]
+    [InlineData("[[…]]")]
+    [InlineData("[[+]]")]
+    [InlineData("[[...]]")]
+    [InlineData("[[ ]]")]
+    public void Parse_OnWikiLinkWithoutSluggableTarget_KeepsTheDocument(string link)
+    {
+        ParseResult result = _sut.Parse("# Titel\n\nDavor. " + link + " Danach.");
+
+        string html = GzipHelper.Decompress(result.RenderedHtmlGz);
+        Assert.Contains("Davor.", html, StringComparison.Ordinal);
+        Assert.Contains("Danach.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("mdexplorer://\"", html, StringComparison.Ordinal);
+        Assert.Empty(result.OutlinkSlugs);
+    }
+
+    /// <remarks>
+    /// Die Gegenprobe zum Fall darüber: Steht neben dem unbrauchbaren Verweis ein brauchbarer,
+    /// bleibt dieser ein Verweis. Ein Ausfall darf nicht auf den Nachbarn übergreifen.
+    /// </remarks>
+    [Fact]
+    public void Parse_OnBrokenAndGoodWikiLink_KeepsTheGoodOne()
+    {
+        ParseResult result = _sut.Parse("[[…]] und [[Zweites Dokument]]");
+
+        string html = GzipHelper.Decompress(result.RenderedHtmlGz);
+        Assert.Contains("mdexplorer://zweites-dokument", html, StringComparison.Ordinal);
+        Assert.Equal("zweites-dokument", Assert.Single(result.OutlinkSlugs));
+    }
 }

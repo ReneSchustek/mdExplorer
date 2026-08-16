@@ -21,6 +21,7 @@ Aktuelle Version: `3`.
     "exclusionPatterns": [
       "**/.git/**",
       "**/node_modules/**",
+      "**/vendor/**",
       "**/bin/**",
       "**/obj/**",
       "**/.vs/**"
@@ -66,6 +67,7 @@ fehlende Felder mit Defaults aufgefüllt.
 [
   "**/.git/**",
   "**/node_modules/**",
+  "**/vendor/**",
   "**/bin/**",
   "**/obj/**",
   "**/.vs/**"
@@ -117,6 +119,7 @@ sobald sie matched.
 "exclusionPatterns": [
   "**/.git/**",
   "**/node_modules/**",
+  "**/vendor/**",
   "archive/**",
   "!archive/2026/**"
 ]

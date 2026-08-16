@@ -9,6 +9,7 @@ using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
+using MdExplorer.Graph.Models;
 using MdExplorer.Indexer.Abstractions;
 using MdExplorer.Parser.Abstractions;
 using MdExplorer.Parser.Models;
@@ -28,6 +29,9 @@ namespace MdExplorer.App.Tests.ViewModels;
 /// <summary>Unit-Tests des <see cref="MainViewModel"/> mit produktiven Child-ViewModels.</summary>
 public sealed class MainViewModelTests
 {
+    /// <summary>Der Registerindex des Suchbereichs — dieselbe Zahl wie im ViewModel.</summary>
+    private const int SearchTabIndex = 2;
+
     private static readonly DateTime FixedUtc = new(2026, 6, 12, 8, 0, 0, DateTimeKind.Utc);
 
     /// <summary>Zone der Prüfung: zwei Stunden vor UTC, ohne Sommerzeitsprünge.</summary>
@@ -381,24 +385,6 @@ public sealed class MainViewModelTests
         return bedingung();
     }
 
-    /// <summary><see cref="System.Data.Common.DbException"/> ist abstrakt — der Fehlerpfad braucht eine eigene Ausprägung.</summary>
-    private sealed class TestDbException : System.Data.Common.DbException
-    {
-        public TestDbException()
-        {
-        }
-
-        public TestDbException(string message)
-            : base(message)
-        {
-        }
-
-        public TestDbException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
-    }
-
     private sealed class TestHarness : IDisposable
     {
         public StrongReferenceMessenger Messenger { get; } = new();
@@ -638,5 +624,102 @@ public sealed class MainViewModelTests
             new StubDocumentFileService(),
             new FakeDialogService(),
             NullLogger<DocumentRelationsViewModel>.Instance);
+    }
+    /// <summary>
+    /// Die Verdrahtung zwischen den Bereichen — geprüft, nicht angenommen.
+    /// </summary>
+    /// <remarks>
+    /// Sechs Ereignisse verbinden die Unterbereiche mit dem Hauptfenster. Sie sind je zwei
+    /// Zeilen lang und standen bis zum 16.08.2026 ohne Prüfung da. Genau solche Zeilen fallen
+    /// bei einem Umbau still weg: Der Bau bleibt grün, der Klick tut nur nichts mehr.
+    /// </remarks>
+    [Fact]
+    public void ShowFolder_PutsThePathFilterIntoTheSearchTab()
+    {
+        using TestHarness harness = new();
+        harness.DocumentPanel.Relations.FolderPath = "projekt/unterordner";
+
+        harness.DocumentPanel.Relations.ShowFolderCommand.Execute(null);
+
+        Assert.Equal("path:projekt/unterordner", harness.Search.QueryText);
+        Assert.Equal(SearchTabIndex, harness.Main.LeftTabIndex);
+    }
+
+    /// <remarks>
+    /// Die Gegenprobe: Ohne Ordner gibt es nichts zu zeigen. Der Befehl darf dann nicht in
+    /// den Suchbereich springen und dort eine leere Einschränkung hinterlassen.
+    /// </remarks>
+    [Fact]
+    public void ShowFolder_WithoutAFolder_ChangesNothing()
+    {
+        using TestHarness harness = new();
+        int vorher = harness.Main.LeftTabIndex;
+
+        harness.DocumentPanel.Relations.ShowFolderCommand.Execute(null);
+
+        Assert.Empty(harness.Search.QueryText);
+        Assert.Equal(vorher, harness.Main.LeftTabIndex);
+    }
+
+    [Fact]
+    public void ShowTag_PutsTheTagFilterIntoTheSearchTab()
+    {
+        using TestHarness harness = new();
+
+        harness.DocumentPanel.Relations.ShowTagCommand.Execute("architektur");
+
+        Assert.Equal("tag:architektur", harness.Search.QueryText);
+        Assert.Equal(SearchTabIndex, harness.Main.LeftTabIndex);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ShowTag_WithoutATag_ChangesNothing(string? leer)
+    {
+        using TestHarness harness = new();
+        int vorher = harness.Main.LeftTabIndex;
+
+        harness.DocumentPanel.Relations.ShowTagCommand.Execute(leer);
+
+        Assert.Empty(harness.Search.QueryText);
+        Assert.Equal(vorher, harness.Main.LeftTabIndex);
+    }
+
+    /// <remarks>
+    /// Ein Klick auf ein verwandtes Dokument öffnet es. Der Nachweis führt über den
+    /// Pfad-Auflöser: Er wird genau dann gefragt, wenn das Öffnen wirklich losläuft.
+    /// </remarks>
+    [Fact]
+    public async Task OpenRelated_OpensTheDocumentBehindTheEntry()
+    {
+        using TestHarness harness = new();
+        Guid ziel = Guid.Parse("77777777-7777-7777-7777-777777777777");
+        const string Pfad = @"C:
+otizen\ziel.md";
+        harness.Locator.SetAbsolutePath(Pfad, ziel);
+        harness.DocRepo.Put(ziel, CreateDocument(ziel, "<h1>Ziel</h1>"));
+        RelatedDocumentViewModel eintrag = new(new RelatedDocument(ziel, "ziel", "ziel.md"));
+
+        harness.DocumentPanel.Relations.OpenRelatedCommand.Execute(eintrag);
+
+        Assert.True(
+            await WaitForAsync(() => harness.Preview.CurrentDocumentId == ziel).ConfigureAwait(true),
+            "Das verwandte Dokument wurde nicht geöffnet.");
+    }
+
+    /// <remarks>
+    /// Ohne Eintrag — der Befehl kann mit <see langword="null"/> ausgelöst werden, wenn die
+    /// Liste gerade leer ist — darf nichts geöffnet werden.
+    /// </remarks>
+    [Fact]
+    public void OpenRelated_WithoutAnEntry_OpensNothing()
+    {
+        using TestHarness harness = new();
+
+        harness.DocumentPanel.Relations.OpenRelatedCommand.Execute(null);
+
+        Assert.Equal(0, harness.Locator.AbsolutePathCallCount);
     }
 }

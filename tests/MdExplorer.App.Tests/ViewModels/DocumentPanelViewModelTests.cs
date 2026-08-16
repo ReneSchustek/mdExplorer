@@ -259,8 +259,13 @@ public sealed class DocumentPanelViewModelTests
         public Task<Guid?> FindByAbsolutePathAsync(string absoluteFilePath, CancellationToken cancellationToken) =>
             Task.FromResult<Guid?>(_indexedPaths.TryGetValue(absoluteFilePath, out Guid id) ? id : null);
 
+        /// <summary>Der Fehler, den die Pfad-Auflösung meldet — für die Datenbank-Spitze.</summary>
+        public Exception? FailOnGetPath { get; set; }
+
         public Task<string?> GetAbsolutePathAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
-            Task.FromResult<string?>(_absolutePaths.TryGetValue(markdownFileId, out string? path) ? path : null);
+            FailOnGetPath is not null
+                ? Task.FromException<string?>(FailOnGetPath)
+                : Task.FromResult<string?>(_absolutePaths.TryGetValue(markdownFileId, out string? path) ? path : null);
     }
 
     private sealed class FakeMarkdownParser : IMarkdownParser
@@ -272,10 +277,18 @@ public sealed class DocumentPanelViewModelTests
 
         public void SetParseResult(string bodyHtml) => _bodyHtml = bodyHtml;
 
+        /// <summary>Der Fehler, den das Übersetzen meldet — für ein Dokument, das Markdig abweist.</summary>
+        public Exception? FailOnParse { get; set; }
+
         public ParseResult Parse(string markdownText)
         {
             ParseCount++;
             LastInput = markdownText;
+            if (FailOnParse is not null)
+            {
+                throw FailOnParse;
+            }
+
             return new ParseResult(
                 new Dictionary<string, string>(),
                 Array.Empty<string>(),
@@ -297,5 +310,93 @@ public sealed class DocumentPanelViewModelTests
             SettingsChanged?.Invoke(this, new SettingsChangedEventArgs(previous, settings));
             return Task.CompletedTask;
         }
+    }
+    /// <remarks>
+    /// Eine Datenbank-Spitze beim Nachschlagen des Pfades darf den Bereich leer lassen — aber
+    /// nicht die Anwendung mitnehmen. Der Nutzer klickt in der Liste; ein Absturz an dieser
+    /// Stelle wäre die teuerste denkbare Antwort auf einen Klick.
+    /// </remarks>
+    [Fact]
+    public async Task LoadAsync_WhenTheDatabaseIsBusy_LeavesThePanelEmptyWithoutThrowing()
+    {
+        Guid fileId = Guid.NewGuid();
+        FakeFileSystem fs = new();
+        FakeMarkdownDocumentRepository repo = new();
+        FakeDocumentLocator locator = new() { FailOnGetPath = new TestDbException("Datenbank ist beschäftigt.") };
+        FakeMarkdownParser parser = new();
+        using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
+
+        await sut.LoadAsync(fileId, CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Null(sut.Editor.FilePath);
+    }
+
+    /// <remarks>
+    /// Ein abgebrochenes Laden ist kein Fehler: Es passiert bei jedem zweiten Klick, wenn der
+    /// Nutzer schneller ist als die Datenbank.
+    /// </remarks>
+    [Fact]
+    public async Task LoadAsync_WhenCancelled_ReturnsQuietly()
+    {
+        Guid fileId = Guid.NewGuid();
+        FakeFileSystem fs = new();
+        FakeMarkdownDocumentRepository repo = new();
+        using CancellationTokenSource abgebrochen = new();
+        await abgebrochen.CancelAsync().ConfigureAwait(true);
+        // So verhält sich der echte Auflöser an einem abgebrochenen Merker.
+        FakeDocumentLocator locator = new() { FailOnGetPath = new OperationCanceledException(abgebrochen.Token) };
+        FakeMarkdownParser parser = new();
+        using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
+
+        await sut.LoadAsync(fileId, abgebrochen.Token).ConfigureAwait(true);
+
+        Assert.Null(sut.Editor.FilePath);
+    }
+
+    /// <remarks>
+    /// Der Ausweichpfad liest die Datei selbst. Ist sie gesperrt oder inzwischen weg, bleibt
+    /// die Vorschau leer — und der Klick bleibt folgenlos statt tödlich.
+    /// </remarks>
+    [Fact]
+    public async Task LoadByPathAsync_WhenTheFileCannotBeRead_LeavesThePreviewEmpty()
+    {
+        FakeFileSystem fs = new() { FailOnRead = new IOException("Datei ist gesperrt.") };
+        fs.Files[TestPath] = Encoding.UTF8.GetBytes("# Titel");
+        FakeMarkdownDocumentRepository repo = new();
+        FakeDocumentLocator locator = new();
+        FakeMarkdownParser parser = new();
+        using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
+
+        await sut.LoadByPathAsync(TestPath, CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Null(sut.Editor.FilePath);
+        Assert.Equal(0, parser.ParseCount);
+    }
+
+    /// <remarks>
+    /// Nach dem Speichern wird die Vorschau aus dem gespeicherten Text neu gebaut. Weist
+    /// Markdig den Text ab — zu tief verschachtelt —, darf das den Speichervorgang nicht
+    /// nachträglich zum Fehler machen: Die Datei liegt zu diesem Zeitpunkt bereits auf der
+    /// Platte. Der Nutzer hat gespeichert; ihm jetzt eine Ausnahme zu zeigen, wäre eine
+    /// Lüge über den Zustand seiner Datei.
+    /// </remarks>
+    [Fact]
+    public async Task OnEditorSaved_WhenTheTextCannotBeRendered_KeepsTheSaveIntact()
+    {
+        FakeFileSystem fs = new();
+        fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
+        FakeMarkdownDocumentRepository repo = new();
+        FakeDocumentLocator locator = new();
+        FakeMarkdownParser parser = new();
+        using DocumentPanelViewModel sut = CreateSut(fs, repo, locator, parser);
+        await sut.Editor.LoadAsync(Guid.NewGuid(), TestPath, CancellationToken.None).ConfigureAwait(true);
+        sut.Editor.EnterEditMode();
+        sut.Editor.Text = "neuer Text";
+
+        parser.FailOnParse = new InvalidOperationException("Zu tief verschachtelt.");
+        await sut.Editor.SaveAsync(CancellationToken.None).ConfigureAwait(true);
+
+        Assert.True(fs.WrittenFiles.ContainsKey(TestPath), "Die Datei muss trotz der abgewiesenen Vorschau geschrieben sein.");
+        Assert.Equal("neuer Text", Encoding.UTF8.GetString(fs.WrittenFiles[TestPath]), StringComparer.Ordinal);
     }
 }

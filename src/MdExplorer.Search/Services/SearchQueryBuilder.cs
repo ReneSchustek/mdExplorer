@@ -288,6 +288,18 @@ public sealed class SearchQueryBuilder : ISearchQueryBuilder
         return (builder.ToString(), index);
     }
 
+    /// <summary>
+    /// Liest ein Wort bis zum nächsten Leerzeichen — oder bis zum nächsten Anführungszeichen.
+    /// </summary>
+    /// <remarks>
+    /// Das Anführungszeichen als Ende kam am 16.08.2026 dazu. Vorher las diese Schleife
+    /// <c>tag:"zwei woerter"</c> als **ein** Wort <c>tag:"zwei</c>; der Wert galt damit als
+    /// mitgeliefert, und der Zweig, der ein Anführungszeichen nach dem Doppelpunkt lesen
+    /// sollte, wurde nie erreicht. Heraus kam <c>Tags:"zwei" AND "woerter"</c> — die
+    /// Einschränkung suchte ein Schlagwort namens <c>zwei</c> und dazu, unabhängig davon, das
+    /// Wort <c>woerter</c> irgendwo im Text. Bei <c>path:"mein ordner"</c> stand am Ende ein
+    /// Pfad-Anfang <c>"mein</c>, samt Anführungszeichen.
+    /// </remarks>
     private static (string Value, int Next) ConsumeWord(string input, int startIndex)
     {
         StringBuilder builder = new();
@@ -296,6 +308,13 @@ public sealed class SearchQueryBuilder : ISearchQueryBuilder
         {
             char character = input[index];
             if (char.IsWhiteSpace(character))
+            {
+                break;
+            }
+
+            // Ein Anführungszeichen beginnt immer eine Wortgruppe — hier endet das Wort davor.
+            // Am Zeilenanfang übernimmt das der Aufrufer; nach einem Doppelpunkt diese Stelle.
+            if (character == '"')
             {
                 break;
             }

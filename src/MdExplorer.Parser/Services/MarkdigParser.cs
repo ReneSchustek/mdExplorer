@@ -44,7 +44,7 @@ public sealed class MarkdigParser : IMarkdownParser
             .UseEmphasisExtras()
             .UseYamlFrontMatter()
             .DisableHtml()
-            .UseMdExplorerWikiLinks(tagNormalizer.ToSlug)
+            .UseMdExplorerWikiLinks(tagNormalizer.TryToSlug)
             .Build();
     }
 
@@ -109,15 +109,13 @@ public sealed class MarkdigParser : IMarkdownParser
         HashSet<string> seenSlugs = new(StringComparer.Ordinal);
         foreach (string raw in rawNames)
         {
-            string slug;
-            try
-            {
-                slug = _tagNormalizer.ToSlug(raw);
-            }
-            catch (ArgumentException)
+            // Ein Name, der keinen Slug hergibt, wird ausgelassen — nicht gemeldet. Er kommt aus
+            // fremdem Text; das ist ein Ergebnis, keine Störung.
+            if (!_tagNormalizer.TryToSlug(raw, out string slug))
             {
                 continue;
             }
+
             if (seenSlugs.Add(slug))
             {
                 names.Add(raw);

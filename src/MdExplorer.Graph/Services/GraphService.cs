@@ -98,15 +98,32 @@ public sealed partial class GraphService : IGraphService
             return DocumentRelations.Empty;
         }
 
-        GraphSourceData source = await _sourceProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
-        if (source.Files.Count == 0)
+        // Nur die Nachbarschaft, nicht der ganze Bestand: Die Datei-Stammdaten sind drei kurze
+        // Spalten und werden für die Auflösung von Name auf Datei gebraucht. Die Verweis-Listen
+        // — die teure Hälfte — holt der Anbieter nur für das Dokument selbst und für die, die
+        // es nennen. Die Auflösung bleibt dieselbe Funktion wie beim vollen Graphen; nur die
+        // Menge, auf der sie arbeitet, ist kleiner.
+        IReadOnlyList<GraphSourceFile> files = await _sourceProvider
+            .LoadFilesAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (files.Count == 0)
         {
             return DocumentRelations.Empty;
         }
 
-        Dictionary<string, Guid> slugIndex = BuildSlugIndex(source.Files);
-        List<GraphEdge> edges = BuildAllEdges(source.Documents, slugIndex, cancellationToken);
-        Dictionary<Guid, GraphSourceFile> filesById = source.Files.ToDictionary(file => file.Id);
+        Dictionary<Guid, GraphSourceFile> filesById = files.ToDictionary(file => file.Id);
+        if (!filesById.TryGetValue(markdownFileId, out GraphSourceFile? own)
+            || !_slugNormalizer.TryToSlug(own.FileNameWithoutExtension, out string ownSlug))
+        {
+            return DocumentRelations.Empty;
+        }
+
+        IReadOnlyList<GraphSourceDocument> neighborhood = await _sourceProvider
+            .LoadNeighborhoodDocumentsAsync(markdownFileId, ownSlug, cancellationToken)
+            .ConfigureAwait(false);
+
+        Dictionary<string, Guid> slugIndex = BuildSlugIndex(files);
+        List<GraphEdge> edges = BuildAllEdges(neighborhood, slugIndex, cancellationToken);
 
         List<RelatedDocument> outgoing = RelatedFrom(edges, filesById, markdownFileId, incoming: false);
         List<RelatedDocument> incoming = RelatedFrom(edges, filesById, markdownFileId, incoming: true);

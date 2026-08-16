@@ -6,18 +6,19 @@ namespace MdExplorer.Parser.MarkdigExtensions;
 
 /// <summary>
 /// Markdig-Erweiterung, die WikiLink-Parsing und HTML-Rendering aktiviert.
-/// Erwartet einen Slug-Provider, der den Zielnamen in einen URL-sicheren Slug überführt
-/// (typischerweise <c>TagNormalizer.ToSlug</c>).
+/// Erwartet einen <see cref="SlugResolver"/>, der den Zielnamen in einen URL-sicheren Slug
+/// überführt (typischerweise <c>TagNormalizer.TryToSlug</c>).
 /// </summary>
 public sealed class WikiLinkExtension : IMarkdownExtension
 {
-    private readonly Func<string, string> _slugProvider;
+    private readonly SlugResolver _slugResolver;
 
-    /// <summary>Erzeugt die Extension mit dem übergebenen Slug-Provider.</summary>
-    public WikiLinkExtension(Func<string, string> slugProvider)
+    /// <summary>Erzeugt die Extension mit dem übergebenen Slug-Bilder.</summary>
+    /// <param name="slugResolver">Bildet den Slug — und meldet, wenn der Zielname keinen hergibt.</param>
+    public WikiLinkExtension(SlugResolver slugResolver)
     {
-        ArgumentNullException.ThrowIfNull(slugProvider);
-        _slugProvider = slugProvider;
+        ArgumentNullException.ThrowIfNull(slugResolver);
+        _slugResolver = slugResolver;
     }
 
     /// <inheritdoc />
@@ -36,7 +37,7 @@ public sealed class WikiLinkExtension : IMarkdownExtension
         ArgumentNullException.ThrowIfNull(renderer);
         if (renderer is HtmlRenderer htmlRenderer && !ContainsRenderer(htmlRenderer))
         {
-            htmlRenderer.ObjectRenderers.Insert(0, new WikiLinkHtmlRenderer(_slugProvider));
+            htmlRenderer.ObjectRenderers.Insert(0, new WikiLinkHtmlRenderer(_slugResolver));
         }
     }
 

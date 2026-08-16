@@ -254,4 +254,153 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
         return datei;
     }
+    /// <summary>
+    /// Ein Aufräumdurchgang über einen gewachsenen Bestand muss durchlaufen.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Am 16.08.2026 blieb genau das stehen: Der Index enthielt 33.886 Einträge, davon rund
+    /// 27.000 für Dateien, die es nicht mehr gab. Der Aufräumdurchgang lief 20 Minuten mit
+    /// voller Rechenlast und schrieb **keine einzige Zeile**. Ursache war diese Methode: Sie
+    /// durchsuchte für jede Entfernung die Liste der bereits vorgemerkten Entitäten von vorne.
+    /// Bei n Entfernungen sind das n²/2 Vergleiche — bei 27.000 rund 360 Millionen, und die
+    /// Vormerkung selbst kostet noch einmal.
+    /// </para>
+    /// <para>
+    /// Dieser Test läuft über 3.000 Einträge — genug, damit ein quadratischer Weg spürbar
+    /// wird, und wenig genug, dass die Suite schnell bleibt. Er prüft vor allem, dass am Ende
+    /// wirklich alle Zeilen weg sind. Eine Zusicherung auf Sekunden steht bewusst **nicht**
+    /// hier: Sie fiele unter paralleler Ausführung um und sagte über die Ordnung nichts aus.
+    /// </para>
+    /// <para>
+    /// Gemessen wurde einmalig mit 20.000 Einträgen: 2 Minuten 25 Sekunden für Anlegen und
+    /// Entfernen zusammen — die Zeit steckt danach in SQLite, nicht mehr in der Suche.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task Remove_OverAGrownStock_RemovesEveryEntry()
+    {
+        const int Anzahl = 3_000;
+        for (int i = 0; i < Anzahl; i++)
+        {
+            _ = await _dbContext.Set<MarkdownFile>().AddAsync(Datei(i)).ConfigureAwait(true);
+        }
+        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        _dbContext.ChangeTracker.Clear();
+
+        IReadOnlyList<MarkdownFile> gespeichert = await _sut
+            .GetAllUnderRootAsync(@"C:\bestand", CancellationToken.None).ConfigureAwait(true);
+        Assert.Equal(Anzahl, gespeichert.Count);
+
+        foreach (MarkdownFile eintrag in gespeichert)
+        {
+            _sut.Remove(eintrag);
+        }
+        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Empty(await _sut.GetAllUnderRootAsync(@"C:\bestand", CancellationToken.None).ConfigureAwait(true));
+    }
+
+    private static MarkdownFile Datei(int index)
+    {
+        string name = index.ToString("D5", System.Globalization.CultureInfo.InvariantCulture);
+        return new MarkdownFile
+        {
+            Id = new Guid(name.PadLeft(8, '0') + "-0000-0000-0000-000000000000"),
+            AbsolutePath = @"C:\bestand\" + name + ".md",
+            RelativePath = name + ".md",
+            FileNameWithoutExtension = name,
+            SizeBytes = 0,
+            LastWriteTimeUtc = new DateTime(2026, 8, 16, 0, 0, 0, DateTimeKind.Utc),
+            ContentHash = "hash-" + name,
+            IndexedAtUtc = new DateTime(2026, 8, 16, 0, 0, 0, DateTimeKind.Utc),
+        };
+    }
+    /// <summary>
+    /// Die Mengen-Löschung nimmt mit, was an den Einträgen hängt.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Der Punkt, an dem dieser Weg gefährlich wäre: Er geht an der Änderungsverfolgung vorbei
+    /// und setzt die Löschung direkt ab. Was an einer Datei hängt — das übersetzte Dokument,
+    /// die Zuordnung zu Schlagworten, der Volltext-Eintrag — verschwindet damit nicht mehr,
+    /// weil das Rahmenwerk es mitzieht, sondern weil die Datenbank es tut.
+    /// </para>
+    /// <para>
+    /// Genau das prüft dieser Test. Wäre die Weitergabe nur im Rahmenwerk hinterlegt und nicht
+    /// im Schema, bliebe hier ein Dokument ohne Datei zurück — und die Suche fände es weiter.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public async Task RemoveRangeAsync_AlsoRemovesWhatHangsOnTheEntries()
+    {
+        MarkdownFile bleibt = Datei(1);
+        MarkdownFile geht = Datei(2);
+        _ = await _dbContext.Set<MarkdownFile>().AddAsync(bleibt).ConfigureAwait(true);
+        _ = await _dbContext.Set<MarkdownFile>().AddAsync(geht).ConfigureAwait(true);
+        _ = await _dbContext.Set<MarkdownDocument>().AddAsync(Dokument(geht.Id)).ConfigureAwait(true);
+        _ = await _dbContext.Set<MarkdownDocument>().AddAsync(Dokument(bleibt.Id)).ConfigureAwait(true);
+        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        _dbContext.ChangeTracker.Clear();
+
+        int entfernt = await _sut.RemoveRangeAsync([geht.Id], CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Equal(1, entfernt);
+        MarkdownFile verblieben = Assert.Single(
+            await _sut.GetAllUnderRootAsync(@"C:\bestand", CancellationToken.None).ConfigureAwait(true));
+        Assert.Equal(bleibt.Id, verblieben.Id);
+        List<Guid> verbliebeneDokumente = await _dbContext.Set<MarkdownDocument>()
+            .AsNoTracking().Select(dokument => dokument.MarkdownFileId).ToListAsync(CancellationToken.None).ConfigureAwait(true);
+        Assert.Equal(bleibt.Id, Assert.Single(verbliebeneDokumente));
+    }
+
+    /// <remarks>
+    /// Mehr Schlüssel, als in eine Anweisung passen: Der Weg zerlegt sie in Portionen. Der Test
+    /// hält fest, dass dabei keiner verlorengeht — die Portionsgrenze ist genau die Stelle, an
+    /// der ein Abschneidefehler unbemerkt bliebe.
+    /// </remarks>
+    [Fact]
+    public async Task RemoveRangeAsync_AcrossMoreEntriesThanOneStatementHolds_RemovesEveryOne()
+    {
+        const int Anzahl = 1_200;
+        List<Guid> ids = [];
+        // Ab eins: Der Nullwert ergäbe einen leeren Schlüssel, und den ersetzt das Rahmenwerk
+        // beim Anlegen durch einen eigenen — die Liste zeigte danach ins Leere.
+        for (int i = 1; i <= Anzahl; i++)
+        {
+            MarkdownFile datei = Datei(i);
+            ids.Add(datei.Id);
+            _ = await _dbContext.Set<MarkdownFile>().AddAsync(datei).ConfigureAwait(true);
+        }
+        _ = await _sut.SaveChangesAsync(CancellationToken.None).ConfigureAwait(true);
+        _dbContext.ChangeTracker.Clear();
+
+        int entfernt = await _sut.RemoveRangeAsync(ids, CancellationToken.None).ConfigureAwait(true);
+
+        Assert.Equal(Anzahl, entfernt);
+        Assert.Empty(await _sut.GetAllUnderRootAsync(@"C:\bestand", CancellationToken.None).ConfigureAwait(true));
+    }
+
+    [Fact]
+    public async Task RemoveRangeAsync_WithoutAnyKey_DoesNothing()
+    {
+        Assert.Equal(0, await _sut.RemoveRangeAsync([], CancellationToken.None).ConfigureAwait(true));
+    }
+
+    [Fact]
+    public async Task RemoveRangeAsync_WithoutAList_Throws()
+    {
+        _ = await Assert.ThrowsAsync<ArgumentNullException>(
+            () => _sut.RemoveRangeAsync(null!, CancellationToken.None)).ConfigureAwait(true);
+    }
+
+    private static MarkdownDocument Dokument(Guid dateiId) => new()
+    {
+        Id = Guid.NewGuid(),
+        MarkdownFileId = dateiId,
+        SourceContentHash = "hash",
+        FrontmatterJson = "{}",
+        OutlinksJson = "[]",
+        ParsedAtUtc = new DateTime(2026, 8, 16, 0, 0, 0, DateTimeKind.Utc),
+    };
 }

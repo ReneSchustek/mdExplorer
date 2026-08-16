@@ -1,4 +1,5 @@
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Graph.Tests.Fakes;
 using MdExplorer.Graph.Models;
 using MdExplorer.Graph.Options;
 using MdExplorer.Graph.Services;
@@ -150,13 +151,10 @@ public sealed class GraphServiceRelationsTests
 
     private static GraphService Build(GraphSourceData data, GraphOptions options) =>
         new(
-            new FakeSourceProvider(data),
+            new FakeGraphSourceProvider(data),
             new TagNormalizer(),
             Microsoft.Extensions.Options.Options.Create(options),
             NullLogger<GraphService>.Instance);
 
-    private sealed class FakeSourceProvider(GraphSourceData data) : IGraphSourceProvider
-    {
-        public Task<GraphSourceData> LoadAsync(CancellationToken cancellationToken) => Task.FromResult(data);
-    }
+
 }

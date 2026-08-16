@@ -1,4 +1,5 @@
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Graph.Tests.Fakes;
 using MdExplorer.Graph.Abstractions;
 using MdExplorer.Graph.Models;
 using MdExplorer.Graph.Options;
@@ -17,7 +18,7 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_OnEmptySource_ReturnsEmptySnapshot()
     {
-        FakeSourceProvider provider = new(new GraphSourceData([], []));
+        FakeGraphSourceProvider provider = new(new GraphSourceData([], []));
         GraphService sut = Build(provider);
 
         GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, CancellationToken.None).ConfigureAwait(true);
@@ -29,7 +30,7 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_OnDocumentsWithLinks_BuildsCorrectEdgesAndIncomingCount()
     {
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [
                 new GraphSourceFile(IndexId, "Index", "Index.md"),
                 new GraphSourceFile(AlphaId, "Alpha", "Alpha.md"),
@@ -57,7 +58,7 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_OnBrokenLink_ExcludesEdge()
     {
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [new GraphSourceFile(IndexId, "Index", "Index.md")],
             [new GraphSourceDocument(IndexId, """["does-not-exist"]""")]));
         GraphService sut = Build(provider);
@@ -70,7 +71,7 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_OnSelfLink_ExcludesEdge()
     {
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [new GraphSourceFile(IndexId, "Index", "Index.md")],
             [new GraphSourceDocument(IndexId, """["index"]""")]));
         GraphService sut = Build(provider);
@@ -83,7 +84,7 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_OnInvalidJson_DoesNotThrow()
     {
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [new GraphSourceFile(IndexId, "Index", "Index.md")],
             [new GraphSourceDocument(IndexId, "{ broken json")]));
         GraphService sut = Build(provider);
@@ -112,7 +113,7 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_WithDefaultFilter_DropsIsolatedNodes()
     {
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [
                 new GraphSourceFile(IndexId, "Index", "Index.md"),
                 new GraphSourceFile(AlphaId, "Alpha", "Alpha.md"),
@@ -141,7 +142,7 @@ public sealed class GraphServiceTests
         Guid hubId = new("44444444-4444-4444-4444-444444444444");
         Guid leafA = new("55555555-5555-5555-5555-555555555555");
         Guid leafB = new("66666666-6666-6666-6666-666666666666");
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [
                 new GraphSourceFile(hubId, "Hub", "Hub.md"),
                 new GraphSourceFile(leafA, "LeafA", "LeafA.md"),
@@ -167,7 +168,7 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_WithPathExclusion_FiltersMatchingPaths()
     {
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [
                 new GraphSourceFile(IndexId, "Index", "Index.md"),
                 new GraphSourceFile(AlphaId, "Alpha", "vendor/Alpha.md"),
@@ -198,7 +199,7 @@ public sealed class GraphServiceTests
     public async Task BuildSnapshotAsync_WithPathPrefix_KeepsOnlyMatchingFiles()
     {
         Guid notizId = new("77777777-7777-7777-7777-777777777777");
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [
                 new GraphSourceFile(IndexId, "Index", "Index.md"),
                 new GraphSourceFile(notizId, "Notiz", "notizen/Notiz.md"),
@@ -225,7 +226,7 @@ public sealed class GraphServiceTests
         // ("#.md" — unter Windows gültig, [[+]]) löste früher eine ArgumentException aus
         // TagNormalizer.ToSlug aus und brachte den gesamten Graph-Build zum Absturz.
         Guid symbolId = new("88888888-8888-8888-8888-888888888888");
-        FakeSourceProvider provider = new(new GraphSourceData(
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
             [
                 new GraphSourceFile(IndexId, "Index", "Index.md"),
                 new GraphSourceFile(symbolId, "#", "#.md"),
@@ -252,8 +253,4 @@ public sealed class GraphServiceTests
     private static GraphService Build(IGraphSourceProvider provider, GraphOptions options) =>
         new(provider, new TagNormalizer(), Microsoft.Extensions.Options.Options.Create(options), NullLogger<GraphService>.Instance);
 
-    private sealed class FakeSourceProvider(GraphSourceData data) : IGraphSourceProvider
-    {
-        public Task<GraphSourceData> LoadAsync(CancellationToken cancellationToken) => Task.FromResult(data);
-    }
 }

@@ -402,4 +402,97 @@ public sealed class JsonSettingsServiceTests : IDisposable
             }
         }
     }
+    /// <remarks>
+    /// Vor dem ersten Laden muss <c>Current</c> etwas Brauchbares liefern. Wer die
+    /// Einstellungen liest, bevor die Datei gelesen wurde — beim Hochfahren nicht
+    /// ungewöhnlich —, darf keinen Nullwert bekommen.
+    /// </remarks>
+    [Fact]
+    public void Current_BeforeTheFirstLoad_IsTheDefaultSet()
+    {
+        using JsonSettingsService sut = new(
+            Path.Combine(_tempDir, "noch-nichts.json"),
+            NullLogger<JsonSettingsService>.Instance);
+
+        AppSettings result = sut.Current;
+
+        Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
+        Assert.Empty(result.Indexing.Roots);
+    }
+
+    /// <remarks>
+    /// Die Datei liegt da, ist aber gesperrt — ein anderer Vorgang hält sie exklusiv. Das
+    /// darf den Start nicht kosten: Die Anwendung läuft mit den Voreinstellungen weiter,
+    /// statt beim Hochfahren umzufallen.
+    /// </remarks>
+    [Fact]
+    public async Task LoadAsync_WhenTheFileIsLockedByAnother_ReturnsDefaults()
+    {
+        string path = Path.Combine(_tempDir, "gesperrt.json");
+        await File.WriteAllTextAsync(path, "{}", CancellationToken.None).ConfigureAwait(true);
+
+        FileStream sperre = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        await using (sperre.ConfigureAwait(true))
+        {
+            using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
+
+            AppSettings result = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+
+            Assert.Equal(AppSettings.CurrentSchemaVersion, result.SchemaVersion);
+            Assert.Empty(result.Indexing.Roots);
+        }
+    }
+
+    /// <remarks>
+    /// Ohne Zuhörer darf das Speichern nichts anderes tun als speichern. Der Test hält fest,
+    /// dass der Weg ohne angemeldetes Ereignis derselbe bleibt — die Datei steht danach da.
+    /// </remarks>
+    [Fact]
+    public async Task SaveAsync_WithoutAnyListener_StillWritesTheFile()
+    {
+        string path = Path.Combine(_tempDir, "ohne-beobachter.json");
+        using JsonSettingsService sut = new(path, NullLogger<JsonSettingsService>.Instance);
+        _ = await sut.LoadAsync(CancellationToken.None).ConfigureAwait(true);
+
+        AppSettings dunkel = AppSettings.Default with
+        {
+            Appearance = AppearanceSettings.Default with { Theme = AppTheme.Dark },
+        };
+        await sut.SaveAsync(dunkel, CancellationToken.None).ConfigureAwait(true);
+
+        Assert.True(File.Exists(path));
+        Assert.Equal(AppTheme.Dark, sut.Current.Appearance.Theme);
+    }
+
+    /// <remarks>
+    /// Ein zweites Freigeben darf nicht zum Fehler werden. Der Dienst hängt am
+    /// Anwendungs-Container; dass der ihn genau einmal freigibt, ist eine Annahme, keine
+    /// Zusicherung.
+    /// </remarks>
+    [Fact]
+    public void Dispose_CalledTwice_IsHarmless()
+    {
+        JsonSettingsService sut = new(
+            Path.Combine(_tempDir, "zweimal.json"),
+            NullLogger<JsonSettingsService>.Instance);
+
+        sut.Dispose();
+        sut.Dispose();
+    }
+
+    /// <remarks>
+    /// Die Gegenprobe zum Test darüber: Nach dem Freigeben darf ein Speichern nicht
+    /// stillschweigend ins Leere laufen. Es scheitert — und zwar erkennbar.
+    /// </remarks>
+    [Fact]
+    public async Task SaveAsync_AfterDispose_Fails()
+    {
+        JsonSettingsService sut = new(
+            Path.Combine(_tempDir, "nach-dispose.json"),
+            NullLogger<JsonSettingsService>.Instance);
+        sut.Dispose();
+
+        _ = await Assert.ThrowsAsync<ObjectDisposedException>(
+            () => sut.SaveAsync(AppSettings.Default, CancellationToken.None)).ConfigureAwait(true);
+    }
 }

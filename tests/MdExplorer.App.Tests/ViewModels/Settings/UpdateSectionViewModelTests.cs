@@ -155,4 +155,69 @@ public sealed class UpdateSectionViewModelTests
         installer = new FakeUpdateInstaller(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
         return new UpdateSectionViewModel(checker, installer);
     }
+    /// <remarks>
+    /// Der wichtigste Satz des ganzen Bereichs: Wenn die Quelle nicht erreichbar war, weiß die
+    /// Anwendung **nicht**, ob eine neuere Fassung existiert — und muss das sagen. Ein „Sie
+    /// sind aktuell" wäre an dieser Stelle eine Behauptung, die niemand geprüft hat.
+    /// </remarks>
+    [Fact]
+    public async Task CheckCommand_WhenTheSourceIsUnreachable_SaysItDoesNotKnow()
+    {
+        FakeUpdateChecker checker = new(UpdateCheckResult.Failed(Current));
+        using UpdateSectionViewModel sut = Build(checker, out _);
+
+        await sut.CheckCommand.ExecuteAsync(null);
+
+        Assert.False(sut.IsInstallAvailable);
+        Assert.Contains("nicht feststellen", sut.StatusText, StringComparison.Ordinal);
+        Assert.Contains("Das heißt nicht, dass Sie aktuell sind", sut.StatusText, StringComparison.Ordinal);
+    }
+
+    /// <remarks>
+    /// Jede Fehlermeldung des Herunterladens sagt, **was** passiert ist und was mit der Datei
+    /// geschehen ist. „Fehlgeschlagen" allein lässt offen, ob etwas Halbes auf der Platte liegt.
+    /// </remarks>
+    [Theory]
+    [InlineData(UpdateDownloadStatus.DownloadFailed, "fehlgeschlagen")]
+    [InlineData(UpdateDownloadStatus.NoChecksumPublished, "keine Prüfsumme")]
+    [InlineData(UpdateDownloadStatus.StorageFailed, "nicht ablegen")]
+    public async Task InstallCommand_OnAFailedDownload_SaysWhatHappened(UpdateDownloadStatus status, string erwartet)
+    {
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
+        FakeUpdateInstaller installer = new(UpdateDownloadResult.Failed(status));
+        using UpdateSectionViewModel sut = new(checker, installer);
+        bool started = false;
+        sut.InstallerStarted += (_, _) => started = true;
+
+        await sut.CheckCommand.ExecuteAsync(null);
+        await sut.InstallCommand.ExecuteAsync(null);
+
+        Assert.False(started);
+        Assert.Null(installer.StartedPath);
+        Assert.Contains(erwartet, sut.StatusText, StringComparison.Ordinal);
+    }
+
+    /// <remarks>
+    /// Die Prüfsumme stimmte, aber das Installationsprogramm ließ sich nicht starten. Dann muss
+    /// der Pfad zur geprüften Datei in der Meldung stehen: Sie ist heruntergeladen und in
+    /// Ordnung, nur der letzte Schritt fehlt — und den kann der Nutzer selbst gehen.
+    /// </remarks>
+    [Fact]
+    public async Task InstallCommand_WhenTheInstallerWillNotStart_NamesTheVerifiedFile()
+    {
+        const string Pfad = @"C:\tmp\setup.exe";
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
+        FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(Pfad), startSucceeds: false);
+        using UpdateSectionViewModel sut = new(checker, installer);
+        bool started = false;
+        sut.InstallerStarted += (_, _) => started = true;
+
+        await sut.CheckCommand.ExecuteAsync(null);
+        await sut.InstallCommand.ExecuteAsync(null);
+
+        Assert.False(started);
+        Assert.Contains(Pfad, sut.StatusText, StringComparison.Ordinal);
+    }
 }

@@ -241,4 +241,90 @@ public sealed class AllFilesViewModelFilterTests
         public Task<IReadOnlyList<AllFilesRow>> GetAllAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Der Index ist nicht ansprechbar.");
     }
+    /// <remarks>
+    /// Die Befehle kommen aus dem Markup und können mit <see langword="null"/> ausgelöst
+    /// werden — bei einer leeren Liste tut WPF genau das. Keiner davon darf dabei einen
+    /// Filter setzen, den der Nutzer nicht angefordert hat.
+    /// </remarks>
+    [Fact]
+    public async Task Commands_CalledWithoutAValue_SetNoFilter()
+    {
+        AllFilesViewModel sut = await LoadAsync().ConfigureAwait(true);
+
+        sut.FilterByFolderCommand.Execute(null);
+        sut.FilterByTagCommand.Execute(null);
+        sut.FilterByTagCommand.Execute("   ");
+        sut.RemoveFilterCommand.Execute(null);
+
+        Assert.Empty(sut.ActiveFilters);
+        Assert.Equal(3, sut.Items.Count);
+    }
+
+    /// <remarks>
+    /// Denselben Zeitraum noch einmal zu wählen ist kein Vorgang. Ohne die Prüfung liefe die
+    /// Liste bei jedem Klick neu durch — sichtbar als Sprung in der Bildlaufleiste.
+    /// </remarks>
+    [Fact]
+    public async Task SelectPeriod_WithTheSameValueAgain_ChangesNothing()
+    {
+        AllFilesViewModel sut = await LoadAsync().ConfigureAwait(true);
+        sut.SelectPeriodCommand.Execute(AllFilesPeriod.Today);
+        int nachErstemMal = sut.Items.Count;
+
+        sut.SelectPeriodCommand.Execute(AllFilesPeriod.Today);
+
+        Assert.Equal(nachErstemMal, sut.Items.Count);
+        _ = Assert.Single(sut.ActiveFilters);
+    }
+
+    /// <remarks>
+    /// Der Sprung ist ein Ereignis, kein Filter: Die Leiste rollt zur Gruppe, der Bestand
+    /// bleibt vollständig. Ein Buchstabe ohne Wert darf gar nichts auslösen.
+    /// </remarks>
+    [Fact]
+    public async Task JumpToLetter_RaisesTheLetterAndKeepsTheStock()
+    {
+        AllFilesViewModel sut = await LoadAsync().ConfigureAwait(true);
+        List<char> gesprungen = [];
+        sut.JumpRequested += gesprungen.Add;
+
+        sut.JumpToLetterCommand.Execute("M");
+        sut.JumpToLetterCommand.Execute(null);
+        sut.JumpToLetterCommand.Execute(string.Empty);
+
+        Assert.Equal('M', Assert.Single(gesprungen));
+        Assert.Equal(3, sut.Items.Count);
+    }
+
+    /// <remarks>
+    /// Die Auswahl meldet den Pfad weiter — daran hängt, welches Dokument die Vorschau zeigt.
+    /// Wird die Auswahl wieder geleert, darf **nichts** gemeldet werden: Sonst öffnete ein
+    /// Neuladen der Liste ungefragt das zuletzt markierte Dokument.
+    /// </remarks>
+    [Fact]
+    public async Task SelectedItem_ReportsThePath_ButNotWhenItIsClearedAgain()
+    {
+        AllFilesViewModel sut = await LoadAsync().ConfigureAwait(true);
+        List<string> gemeldet = [];
+        sut.FileSelected += gemeldet.Add;
+
+        sut.SelectedItem = sut.Items[0];
+        sut.SelectedItem = null;
+
+        string einziger = Assert.Single(gemeldet);
+        Assert.Equal(sut.Items[0].AbsolutePath, einziger, StringComparer.Ordinal);
+    }
+
+    /// <remarks>
+    /// Die Sprungleiste erscheint erst ab einer Bestandsgröße, ab der man die Liste nicht mehr
+    /// überblickt. Drei Einträge sind keine solche Größe.
+    /// </remarks>
+    [Fact]
+    public async Task JumpBar_StaysHiddenForASmallStock()
+    {
+        AllFilesViewModel sut = await LoadAsync().ConfigureAwait(true);
+
+        Assert.False(sut.IsJumpBarVisible);
+        Assert.False(sut.ShowsNothingAtAll);
+    }
 }

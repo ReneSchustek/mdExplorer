@@ -7,6 +7,33 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.14.1] - 2026-08-16
+
+### Behoben
+- Ein Filter mit mehreren Wörtern in Anführungszeichen suchte etwas anderes als
+  angegeben. `tag:"zwei Wörter"` wurde als Schlagwort `zwei` gelesen, dazu das
+  Wort `Wörter` irgendwo im Text; `path:"mein Ordner"` suchte einen Pfad, der mit
+  einem Anführungszeichen beginnt.
+- Ein Verweis mit einem Ziel, aus dem sich kein Sprungziel bilden lässt — etwa
+  `[[…]]` mit drei Punkten als Auslassungszeichen — ließ die **ganze Datei** aus
+  dem Bestand fallen. Ein unbrauchbares Ziel bleibt jetzt einfach ein Text.
+- Der Aufräumdurchgang der Indizierung entfernt verschwundene Dateien auch dann,
+  wenn beim Schreiben eines Stapels etwas schiefging. Bisher hing er am Erfolg
+  des gesamten Durchlaufs — Einträge zu längst gelöschten Dateien blieben stehen.
+  Bei einem nur teilweise lesbaren Verzeichnisbaum wird weiterhin nichts
+  entfernt: Was niemand gesehen hat, ist nicht dasselbe wie gelöscht.
+
+### Geändert
+- Der Bereich „Zusammenhänge" lädt beim Klick auf ein Dokument nur noch dessen
+  Nachbarschaft statt des gesamten Bestands.
+- `vendor` ist ab Werk von der Indizierung ausgenommen — der Ordner, in dem PHP,
+  Ruby und Go fremde Pakete ablegen. In einem gewachsenen Bestand lagen dort
+  3.906 Markdown-Dateien fremder Dokumentation, die jede Trefferliste überlagern.
+- Die gemessene Zeilenabdeckung liegt wieder über der Marke: 95,2 % bei 86,7 %
+  Zweigabdeckung. Nicht mitgemessen sind Fenster, Bedienflächen-Code hinter der
+  Oberfläche und die Verdrahtung der Dienste — 39 Typen mit zusammen 1.760
+  Codezeilen, rund ein Sechstel des Produktivcodes.
+
 ## [0.14.0] - 2026-08-16
 
 ### Hinzugefügt
@@ -126,6 +153,7 @@ Abschluss der Qualitätssicherung.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
 [Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.14.0...HEAD
+[0.14.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.1
 [0.14.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.0
 [0.13.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.13.0
 [0.12.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.12.1

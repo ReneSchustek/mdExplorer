@@ -36,6 +36,30 @@ public interface IMarkdownFileRepository
     /// <summary>Entfernt eine Datei aus dem Index.</summary>
     void Remove(MarkdownFile entity);
 
+    /// <summary>
+    /// Entfernt viele Dateien auf einmal — unmittelbar, ohne <see cref="SaveChangesAsync"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Der Aufräumdurchgang entfernt keine drei Einträge, sondern Zehntausende. Über
+    /// <see cref="Remove"/> hieße das: jede Entität einzeln anhängen, vormerken und dabei
+    /// jedes Mal den gesamten bereits vorgemerkten Bestand abgleichen lassen. Am 16.08.2026
+    /// blieb ein Lauf über 27.000 verwaiste Einträge deshalb zweimal hintereinander bei voller
+    /// Rechenlast stehen, ohne eine einzige Zeile zu schreiben.
+    /// </para>
+    /// <para>
+    /// Diese Methode geht den anderen Weg: Sie setzt die Löschung als Anweisung ab, portionsweise
+    /// und ohne Änderungsverfolgung. Was an den Einträgen hängt — Dokumente, Zuordnungen und der
+    /// Volltext —, fällt über die Regeln der Datenbank mit weg; das ist dort hinterlegt und nicht
+    /// hier. Weil jede Portion für sich abgeschlossen wird, ist ein abgebrochener Durchgang kein
+    /// Schaden: Der nächste Abgleich holt den Rest.
+    /// </para>
+    /// </remarks>
+    /// <param name="ids">Die Schlüssel der zu entfernenden Dateien.</param>
+    /// <param name="cancellationToken">Abbruch-Merker.</param>
+    /// <returns>Die Anzahl entfernter Einträge.</returns>
+    Task<int> RemoveRangeAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken);
+
     /// <summary>Persistiert die ausstehenden Änderungen und liefert die Anzahl der Schreibzugriffe.</summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
