@@ -7,6 +7,22 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.15.2] - 2026-08-17
+
+### Behoben
+- **Verweisgraph und Hilfe blieben in der installierten Fassung leer** und meldeten
+  „Zugriff verweigert". Beide Fenster legten ihre Browser-Daten neben der
+  Programmdatei ab — nach einer Installation also in einem Ordner, in den kein
+  Benutzer schreiben darf. Sie benutzen jetzt dasselbe Verzeichnis wie die
+  Vorschau, unterhalb der übrigen Anwendungsdaten. Wer die Anwendung aus dem
+  Entwicklungsordner startete, hat davon nie etwas gemerkt.
+
+### Geändert
+- Die Verknüpfung auf dem Schreibtisch ist im Setup vorausgewählt und weiterhin
+  abwählbar. Bisher war das Häkchen voreingestellt leer — wer es übersah, hatte
+  keine Verknüpfung, und weil das Setup die getroffene Auswahl merkt, blieb das
+  auch nach jeder neuen Fassung so.
+
 ## [0.15.1] - 2026-08-16
 
 ### Behoben

@@ -107,7 +107,8 @@ internal sealed partial class GraphWindow : Window
 
     private async void OnLoadedAsync(object sender, RoutedEventArgs args)
     {
-        await GraphView.EnsureCoreWebView2Async().ConfigureAwait(true);
+        await GraphView.EnsureCoreWebView2Async(
+            await WebView2EnvironmentProvider.GetAsync().ConfigureAwait(true)).ConfigureAwait(true);
         _isInitialized = true;
         await _viewModel.RefreshAsync().ConfigureAwait(true);
     }

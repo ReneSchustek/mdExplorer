@@ -20,6 +20,9 @@ public static class AppPaths
     /// <summary>Unterverzeichnis für Settings-Snapshots des Audit-Trails.</summary>
     public const string SettingsHistoryFolderName = "settings-history";
 
+    /// <summary>Unterverzeichnis für die Benutzerdaten der eingebetteten Browser-Ansichten.</summary>
+    public const string WebView2FolderName = "webview2";
+
     /// <summary>Dateiname der Settings-Diff-Audit-Datei (JSON-Lines, ein Eintrag pro Save).</summary>
     public const string SettingsAuditLogFileName = "settings-audit.log";
 
@@ -67,4 +70,17 @@ public static class AppPaths
     /// <summary>Vollständiger Pfad der Settings-Diff-Audit-Datei.</summary>
     public static string GetSettingsAuditLogPath() =>
         Path.Combine(GetApplicationDataDirectory(), SettingsAuditLogFileName);
+
+    /// <summary>
+    /// Verzeichnis für die Benutzerdaten der eingebetteten Browser-Ansichten.
+    /// </summary>
+    /// <remarks>
+    /// Ohne ausdrückliche Angabe legt die Browser-Komponente ihre Daten neben der
+    /// Programmdatei ab. Nach einer Installation ist das <c>C:\Program Files</c>, und dort
+    /// darf ein Benutzer nicht schreiben — die Ansicht bleibt dann leer und meldet
+    /// „Zugriff verweigert". Im Entwicklungslauf fällt das nie auf, weil das
+    /// Ausgabeverzeichnis beschreibbar ist.
+    /// </remarks>
+    public static string GetWebView2DataDirectory() =>
+        Path.Combine(GetApplicationDataDirectory(), WebView2FolderName);
 }

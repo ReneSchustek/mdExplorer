@@ -52,9 +52,7 @@ internal sealed partial class PreviewPanel : UserControl
     {
         try
         {
-            CoreWebView2Environment environment = await CoreWebView2Environment.CreateAsync(
-                browserExecutableFolder: null,
-                userDataFolder: Path.Combine(AppPaths.GetApplicationDataDirectory(), "webview2")).ConfigureAwait(true);
+            CoreWebView2Environment environment = await WebView2EnvironmentProvider.GetAsync().ConfigureAwait(true);
             await Browser.EnsureCoreWebView2Async(environment).ConfigureAwait(true);
             ConfigureCoreSettings();
             _isCoreReady = true;

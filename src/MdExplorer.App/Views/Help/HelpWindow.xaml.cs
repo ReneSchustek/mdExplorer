@@ -164,7 +164,8 @@ internal sealed partial class HelpWindow : Window
     {
         try
         {
-            await HelpView.EnsureCoreWebView2Async().ConfigureAwait(true);
+            await HelpView.EnsureCoreWebView2Async(
+                await WebView2EnvironmentProvider.GetAsync().ConfigureAwait(true)).ConfigureAwait(true);
             _content = await _contentService.GetAsync(CancellationToken.None).ConfigureAwait(true);
             _viewModel.SetToc(_content.Toc);
             string html = BuildHtml(_content.Html, ResolveTheme());
