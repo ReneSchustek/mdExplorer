@@ -43,9 +43,9 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [0.15.1] - 2026-08-16
 
-Nicht einzeln veröffentlicht — das Etikett wurde damals nicht gesetzt, und ohne
-Etikett baut die Pipeline nichts. Die Änderungen stecken vollständig in den
-Artefakten von 0.15.2.
+Das Etikett zu dieser Fassung wurde erst am 18.08.2026 nachgetragen; die Pakete im
+Verzeichnis der Veröffentlichungen sind darum jünger als die Änderungen selbst. Als
+neueste Fassung gilt sie nicht.
 
 ### Behoben
 - **Bilder in Notizen waren in der Vorschau nie zu sehen.** Ein Bild mit
@@ -232,7 +232,7 @@ Abschluss der Qualitätssicherung.
 [Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.15.3...HEAD
 [0.15.3]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.3
 [0.15.2]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.2
-[0.15.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.2
+[0.15.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.1
 [0.15.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.0
 [0.14.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.1
 [0.14.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.0
