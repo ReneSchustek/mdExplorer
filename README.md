@@ -137,7 +137,8 @@ Dialog mit drei Tabs:
   (mit `!`-Negation), Auto-Hashtag-Extraktion
 - **Darstellung** — Theme (System/Hell/Dunkel), Preview-Schriftgröße,
   Treffer pro Seite
-- **Verhalten** — Such-Debounce, Indexer-Resync-Intervall
+- **Verhalten** — Such-Debounce, Indexer-Resync-Intervall,
+  Update-Prüfung beim Start, Bilder aus dem Netz in der Vorschau
 
 Speichern erfolgt atomar (`.tmp` + `File.Move`). Detailliertes Schema
 und Beispiele: [`docs/SETTINGS.md`](docs/SETTINGS.md).

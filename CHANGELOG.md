@@ -7,6 +7,24 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.15.3] - 2026-08-18
+
+### Behoben
+- **Das Handbuch versprach „kein Aufruf externer Server".** Das war falsch: Die
+  Prüfung auf eine neue Fassung fragt beim Start die Veröffentlichungsliste des
+  Projekts auf GitHub ab, und sie ist ab Werk eingeschaltet. Abschnitt 1 benennt
+  jetzt beide Wege nach draußen — diese Prüfung und die Bilder von fremden
+  Servern in der Vorschau — samt Drossel, Schalter und Werkseinstellung.
+
+### Geändert
+- Die Einstellung „Bilder aus dem Netz in der Vorschau laden" aus Fassung 0.15.1
+  ist in der Dokumentation angekommen: im Handbuch beim Abschnitt zur Vorschau,
+  in README und `docs/SETTINGS.md` in der Aufzählung des Verhalten-Reiters.
+  Beschrieben war sie bisher nur in der Feldtabelle des Schemas.
+- Unter der Haube aufgeräumt: Kommentare im Quelltext sagen das Warum statt die
+  Vorgeschichte, und ein Test räumt seine Zwischendatei auch dann weg, wenn ein
+  anderer Zugriff sie einen Augenblick festhält.
+
 ## [0.15.2] - 2026-08-17
 
 ### Behoben
@@ -24,6 +42,10 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
   auch nach jeder neuen Fassung so.
 
 ## [0.15.1] - 2026-08-16
+
+Nicht einzeln veröffentlicht — das Etikett wurde damals nicht gesetzt, und ohne
+Etikett baut die Pipeline nichts. Die Änderungen stecken vollständig in den
+Artefakten von 0.15.2.
 
 ### Behoben
 - **Bilder in Notizen waren in der Vorschau nie zu sehen.** Ein Bild mit
@@ -207,8 +229,10 @@ Abschluss der Qualitätssicherung.
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.14.0...HEAD
-[0.15.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.1
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.15.3...HEAD
+[0.15.3]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.3
+[0.15.2]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.2
+[0.15.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.2
 [0.15.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.0
 [0.14.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.1
 [0.14.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.14.0

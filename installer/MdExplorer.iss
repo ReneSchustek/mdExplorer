@@ -44,9 +44,8 @@ PrivilegesRequired=admin
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-; Die Verknüpfung auf dem Schreibtisch bleibt eine Aufgabe zum Abwählen, ist aber
-; vorausgewählt. Mit "unchecked" war sie es nicht, und weil Inno die getroffene Auswahl
-; je AppId merkt, blieb sie auch bei jedem weiteren Update leer.
+; Abwählbar, aber vorausgewählt — Inno merkt sich die Auswahl je AppId und übernimmt
+; sie bei jedem weiteren Update.
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 

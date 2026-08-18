@@ -43,12 +43,29 @@ public sealed class JsonFileUpdateCheckJournalTests : IDisposable
         Assert.Null(result);
     }
 
-    /// <summary>Entfernt die temporäre Journal-Datei.</summary>
+    /// <summary>
+    /// Entfernt die temporäre Journal-Datei; eine kurzzeitige Sperre wird abgewartet.
+    /// </summary>
     public void Dispose()
     {
-        if (File.Exists(_filePath))
+        for (int versuch = 0; versuch < 5; versuch++)
         {
-            File.Delete(_filePath);
+            try
+            {
+                if (File.Exists(_filePath))
+                {
+                    File.Delete(_filePath);
+                }
+                return;
+            }
+            catch (IOException)
+            {
+                Thread.Sleep(50);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return;
+            }
         }
     }
 

@@ -160,7 +160,8 @@ mit drei Tabs:
 - **Darstellung** — `theme`, `previewFontSize`, `resultsPerPage`
 - **Verhalten** — `searchDebounceMs`, `indexerResyncIntervalSeconds`,
   `checkForUpdatesAtStartup` samt Schaltfläche für die sofortige Prüfung,
-  das Herunterladen und das Starten des Installationspakets
+  das Herunterladen und das Starten des Installationspakets,
+  `loadRemoteImagesInPreview`
 
 `Abbrechen` verwirft Änderungen, `Anwenden` schreibt sie atomar und
 löst die abhängigen Services über das `SettingsChanged`-Event aus

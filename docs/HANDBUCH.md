@@ -38,8 +38,15 @@ für kurze Korrekturen und das Pflegen von Tags ausreicht, aber für
 ausführliches Schreiben bleibt ein dedizierter Editor (etwa Typora,
 Obsidian oder VS Code) die bessere Wahl. Genauso wenig ist MdExplorer
 ein Cloud-Dienst: alle Daten — Index, Einstellungen, Logs — bleiben
-auf dem lokalen Rechner. Es findet keine Synchronisierung statt, kein
-Aufruf externer Server, kein Telemetrie-Versand.
+auf dem lokalen Rechner. Es findet keine Synchronisierung statt und kein
+Telemetrie-Versand; ohne Internetverbindung arbeitet die Anwendung vollständig.
+
+Zwei Wege nach draußen gibt es, beide sichtbar und beide abschaltbar. Die
+**Prüfung auf eine neue Fassung** fragt beim Start die Veröffentlichungsliste des
+Projekts auf GitHub ab — ab Werk eingeschaltet, höchstens einmal in 24 Stunden,
+abzuschalten unter `Einstellungen → Verhalten`. Und **Bilder von fremden Servern**
+lädt die Vorschau nur, wenn Sie es dort ausdrücklich erlauben; ab Werk tut sie
+es nicht.
 
 Die Stärken liegen in drei Bereichen. Erstens beim **Auffinden** von
 Inhalten in größeren Markdown-Sammlungen: Eine Volltext-Suche, die
@@ -319,6 +326,13 @@ werden als interne Links auf die Zieldatei aufgelöst — ein Klick
 darauf wechselt die Vorschau auf das Verlinkungsziel. Bilder werden
 relativ zur Quelldatei aufgelöst, sodass Markdown-Notizen mit
 Bildordnern unverändert dargestellt werden.
+
+Bilder von fremden Servern bleiben dabei aus — der Schalter dafür heißt
+„Bilder aus dem Netz in der Vorschau laden" und steht unter
+`Einstellungen → Verhalten`. Der Grund: Ein Netzbild ruft beim Anzeigen einen
+fremden Server auf und verrät ihm, wann Sie welche Notiz geöffnet haben. Wer
+Abzeichen und Netzbilder sehen will, schaltet ihn ein; geladen werden dann
+ausschließlich Bildquellen, Skripte bleiben in jedem Fall gesperrt.
 
 Wer auf den Rohtext zugreifen möchte — sei es, um einen Schreibfehler
 zu korrigieren oder einen Tag zu ergänzen — wechselt mit `Strg+E`

@@ -35,9 +35,8 @@ public sealed class AppPathsTests
     [Fact]
     public void GetWebView2DataDirectory_LiesUnderTheWritableApplicationDataDirectory()
     {
-        // Ohne diesen Pfad legt die Browser-Komponente ihre Daten neben der Programmdatei
-        // ab. Nach einer Installation ist das C:\Program Files — dort scheitert der Start
-        // der Ansicht mit „Zugriff verweigert", und zwar nur in der installierten Fassung.
+        // Neben der Programmdatei liegt nach einer Installation C:\Program Files — dort
+        // darf die Browser-Komponente nicht schreiben.
         string actual = AppPaths.GetWebView2DataDirectory();
 
         Assert.StartsWith(AppPaths.GetApplicationDataDirectory(), actual, StringComparison.OrdinalIgnoreCase);

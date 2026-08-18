@@ -75,11 +75,8 @@ public static class AppPaths
     /// Verzeichnis für die Benutzerdaten der eingebetteten Browser-Ansichten.
     /// </summary>
     /// <remarks>
-    /// Ohne ausdrückliche Angabe legt die Browser-Komponente ihre Daten neben der
-    /// Programmdatei ab. Nach einer Installation ist das <c>C:\Program Files</c>, und dort
-    /// darf ein Benutzer nicht schreiben — die Ansicht bleibt dann leer und meldet
-    /// „Zugriff verweigert". Im Entwicklungslauf fällt das nie auf, weil das
-    /// Ausgabeverzeichnis beschreibbar ist.
+    /// Ohne ausdrückliche Angabe schreibt die Browser-Komponente neben die Programmdatei —
+    /// nach einer Installation also dorthin, wo ein Benutzer keine Rechte hat.
     /// </remarks>
     public static string GetWebView2DataDirectory() =>
         Path.Combine(GetApplicationDataDirectory(), WebView2FolderName);
