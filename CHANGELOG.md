@@ -7,6 +7,22 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.15.4] - 2026-08-19
+
+### Behoben
+- **Eine einzige unlesbare Datei füllte das Protokoll.** Sie wurde alle fünf
+  Sekunden erneut ausgewertet, und jeder Versuch schrieb den vollen Fehlerbericht
+  mit — echte Meldungen rollten dadurch binnen Stunden aus den Dateien heraus.
+  Ein gescheiterter Versuch wird jetzt vermerkt: Die Datei ruht, solange sie
+  unverändert bleibt und dieselbe Programmfassung läuft. Ändert sie sich, läuft
+  der Versuch normal wieder an, und der Vermerk verschwindet, sobald sie sich
+  auswerten lässt.
+
+### Geändert
+- Der Betriebs-Status nennt jetzt, wie viele Dateien nicht verarbeitet werden
+  können, und steht dabei mindestens auf Gelb. Vorher verschwand eine dauerhaft
+  unlesbare Datei mit ihrem Protokolleintrag aus dem Blick.
+
 ## [0.15.3] - 2026-08-18
 
 ### Behoben
@@ -229,7 +245,8 @@ Abschluss der Qualitätssicherung.
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.15.3...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.15.4...HEAD
+[0.15.4]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.4
 [0.15.3]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.3
 [0.15.2]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.2
 [0.15.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.1

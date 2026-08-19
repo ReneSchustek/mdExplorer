@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Core.FileSystem;
 using MdExplorer.Core.Settings;
 using MdExplorer.Core.Startup;
@@ -15,8 +16,8 @@ namespace MdExplorer.Core.DependencyInjection;
 public static class CoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registriert <see cref="TimeProvider"/>, <see cref="IFileSystem"/>, Settings-Service und
-    /// Startup-Orchestrierung.
+    /// Registriert <see cref="TimeProvider"/>, <see cref="IFileSystem"/>, den Betriebs-Stand der
+    /// Parse-Fehlschläge, Settings-Service und Startup-Orchestrierung.
     /// </summary>
     public static IServiceCollection AddCore(this IServiceCollection services)
     {
@@ -24,6 +25,7 @@ public static class CoreServiceCollectionExtensions
 
         _ = services.AddSingleton(TimeProvider.System);
         _ = services.AddSingleton<IFileSystem, LocalFileSystem>();
+        _ = services.AddSingleton<IParseFailureStatus, ParseFailureStatus>();
         _ = services.AddSingleton<ISettingsHistoryStore>(sp => new FileSystemSettingsHistoryStore(
             AppPaths.GetSettingsHistoryDirectory(),
             AppPaths.GetSettingsAuditLogPath(),

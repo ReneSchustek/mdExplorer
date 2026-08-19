@@ -1,4 +1,5 @@
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Parser.Abstractions;
 using MdExplorer.Parser.Options;
 using MdExplorer.Parser.Services;
@@ -245,6 +246,8 @@ public sealed class ParseOrchestratorTests
         public FakeMarkdownSourceProvider Source { get; } = new();
         public FakeMarkdownDocumentRepository DocRepo { get; } = new();
         public FakeTagRepository TagRepo { get; } = new();
+        public FakeParseFailureRepository FailureRepo { get; } = new();
+        public ParseFailureStatus FailureStatus { get; } = new();
         public ParseOrchestrator Sut { get; }
 
         public TestHarness()
@@ -255,6 +258,7 @@ public sealed class ParseOrchestratorTests
             _ = services.AddSingleton<IMarkdownSourceProvider>(Source);
             _ = services.AddSingleton<IMarkdownDocumentRepository>(DocRepo);
             _ = services.AddSingleton<ITagRepository>(TagRepo);
+            _ = services.AddSingleton<IParseFailureRepository>(FailureRepo);
             ServiceProvider provider = services.BuildServiceProvider();
 
             TagNormalizer normalizer = new();
@@ -270,6 +274,7 @@ public sealed class ParseOrchestratorTests
                 provider.GetRequiredService<IServiceScopeFactory>(),
                 FileSystem,
                 parser,
+                FailureStatus,
                 MEOptions.Create(parserOptions),
                 timeProvider,
                 NullLogger<ParseOrchestrator>.Instance);
@@ -297,78 +302,6 @@ public sealed class ParseOrchestratorTests
                 }
             }
             throw new InvalidOperationException($"Source with id {fileId} not found.");
-        }
-    }
-
-    // Harness mit einem Parser, der bei einem bestimmten Roh-Inhalt wirft. Damit testen
-    // wir die ParseOneAsync-Catch-Pfade unabhängig vom Markdig-Versionsverhalten.
-    private sealed class ThrowingParserHarness
-    {
-        public FakeFileSystem FileSystem { get; } = new();
-        public FakeMarkdownSourceProvider Source { get; } = new();
-        public FakeMarkdownDocumentRepository DocRepo { get; } = new();
-        public FakeTagRepository TagRepo { get; } = new();
-        public ParseOrchestrator Sut { get; }
-
-        public ThrowingParserHarness(string failingContent, Exception failure)
-        {
-            DocRepo.OnSaveChangesAsync = ct => TagRepo.SaveChangesAsync(ct);
-
-            ServiceCollection services = new();
-            _ = services.AddSingleton<IMarkdownSourceProvider>(Source);
-            _ = services.AddSingleton<IMarkdownDocumentRepository>(DocRepo);
-            _ = services.AddSingleton<ITagRepository>(TagRepo);
-            ServiceProvider provider = services.BuildServiceProvider();
-
-            TagNormalizer normalizer = new();
-            MarkdigParser baseParser = new(
-                new FrontmatterExtractor(),
-                new TagExtractor(new FakeSettingsService()),
-                new WikiLinkExtractor(),
-                normalizer);
-            ContentBasedThrowingParser throwingParser = new(baseParser, failingContent, failure);
-            ParserOptions parserOptions = new() { MaxParallelism = 2, BatchSize = 100, PollIntervalSeconds = 1 };
-            FakeTimeProvider timeProvider = new();
-
-            Sut = new ParseOrchestrator(
-                provider.GetRequiredService<IServiceScopeFactory>(),
-                FileSystem,
-                throwingParser,
-                MEOptions.Create(parserOptions),
-                timeProvider,
-                NullLogger<ParseOrchestrator>.Instance);
-        }
-
-        public Guid AddSource(string path, string contentHash, string content)
-        {
-            Guid id = Guid.NewGuid();
-            string normalized = path.Replace('/', Path.DirectorySeparatorChar);
-            FileSystem.AddFile(normalized, content);
-            Source.Sources.Add(new MarkdownSourceSnapshot(id, normalized, contentHash));
-            return id;
-        }
-    }
-
-    private sealed class ContentBasedThrowingParser : IMarkdownParser
-    {
-        private readonly IMarkdownParser _inner;
-        private readonly string _failingContent;
-        private readonly Exception _failure;
-
-        public ContentBasedThrowingParser(IMarkdownParser inner, string failingContent, Exception failure)
-        {
-            _inner = inner;
-            _failingContent = failingContent;
-            _failure = failure;
-        }
-
-        public Parser.Models.ParseResult Parse(string markdownText)
-        {
-            if (string.Equals(markdownText, _failingContent, StringComparison.Ordinal))
-            {
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(_failure).Throw();
-            }
-            return _inner.Parse(markdownText);
         }
     }
 }

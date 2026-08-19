@@ -1,6 +1,7 @@
 using System.Data.Common;
 using System.Runtime.CompilerServices;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Parser.Abstractions;
 using MdExplorer.Parser.Options;
 using MdExplorer.Parser.Services;
@@ -202,6 +203,7 @@ public sealed class ParseOrchestratorLoopTests
             _ = dienste.AddSingleton<IMarkdownSourceProvider>(Quelle);
             _ = dienste.AddSingleton<IMarkdownDocumentRepository>(DocRepo);
             _ = dienste.AddSingleton<ITagRepository>(TagRepo);
+            _ = dienste.AddSingleton<IParseFailureRepository>(FailureRepo);
             _provider = dienste.BuildServiceProvider();
 
             MarkdigParser parser = new(
@@ -214,6 +216,7 @@ public sealed class ParseOrchestratorLoopTests
                 _provider.GetRequiredService<IServiceScopeFactory>(),
                 FileSystem,
                 parser,
+                FailureStatus,
                 MEOptions.Create(new ParserOptions
                 {
                     MaxParallelism = 2,
@@ -225,6 +228,10 @@ public sealed class ParseOrchestratorLoopTests
         }
 
         public FakeFileSystem FileSystem { get; } = new();
+
+        public FakeParseFailureRepository FailureRepo { get; } = new();
+
+        public ParseFailureStatus FailureStatus { get; } = new();
 
         public CountingSource Quelle { get; }
 

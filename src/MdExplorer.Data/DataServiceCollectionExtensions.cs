@@ -58,6 +58,7 @@ public static class DataServiceCollectionExtensions
         _ = services.AddScoped<IMarkdownDocumentRepository, MarkdownDocumentRepository>();
         _ = services.AddScoped<IMarkdownSourceProvider, MarkdownSourceProvider>();
         _ = services.AddScoped<ITagRepository, TagRepository>();
+        _ = services.AddScoped<IParseFailureRepository, ParseFailureRepository>();
         _ = services.AddScoped<IGraphSourceProvider, GraphSourceProvider>();
         _ = services.AddScoped<ISearchSourceProvider, SearchSourceProvider>();
         _ = services.AddScoped<ISearchIndexStorage, SqliteSearchIndexStorage>();

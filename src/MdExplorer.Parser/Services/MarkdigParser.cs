@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using Markdig;
@@ -15,6 +16,8 @@ namespace MdExplorer.Parser.Services;
 public sealed class MarkdigParser : IMarkdownParser
 {
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
+
+    private static readonly string EngineVersionValue = BuildEngineVersion();
 
     private readonly IFrontmatterExtractor _frontmatterExtractor;
     private readonly ITagExtractor _tagExtractor;
@@ -49,6 +52,9 @@ public sealed class MarkdigParser : IMarkdownParser
     }
 
     /// <inheritdoc />
+    public string EngineVersion => EngineVersionValue;
+
+    /// <inheritdoc />
     public ParseResult Parse(string markdownText)
     {
         ArgumentNullException.ThrowIfNull(markdownText);
@@ -71,6 +77,18 @@ public sealed class MarkdigParser : IMarkdownParser
             TagNames: uniqueNames,
             OutlinkSlugs: outlinkSlugs,
             RenderedHtmlGz: compressed);
+    }
+
+    // Beide Fassungen stehen in der Kennung, weil beide das Ergebnis bestimmen: Markdig
+    // entscheidet über die Verschachtelungsgrenze, unsere eigene Kette über Frontmatter,
+    // Schlagworte und WikiLinks. Ein Vermerk über einen Fehlschlag bindet dadurch nur so
+    // lange, wie die Fassung unverändert bleibt — nach einem Update läuft der Versuch von
+    // selbst wieder an, ohne dass jemand die Datei anfassen muss.
+    private static string BuildEngineVersion()
+    {
+        string markdigVersion = typeof(Markdown).Assembly.GetName().Version?.ToString() ?? "unbekannt";
+        string parserVersion = typeof(MarkdigParser).Assembly.GetName().Version?.ToString() ?? "unbekannt";
+        return string.Create(CultureInfo.InvariantCulture, $"markdig/{markdigVersion};parser/{parserVersion}");
     }
 
     private static IReadOnlyList<string> MergeTagNames(

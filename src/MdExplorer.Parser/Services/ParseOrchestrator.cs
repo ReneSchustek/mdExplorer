@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Globalization;
 using System.Text.Json;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Hosting;
@@ -18,9 +19,14 @@ namespace MdExplorer.Parser.Services;
 /// Treibt den Parse-Lebenszyklus: pollt periodisch nach Markdown-Dateien, deren <c>ContentHash</c>
 /// vom gespeicherten <c>SourceContentHash</c> abweicht oder die noch kein Dokument haben.
 /// Parsing läuft parallel (in-memory), Persistenz sequentiell innerhalb eines DI-Scopes.
+/// Dateien mit einem gültigen Fehlschlag-Vermerk bleiben außen vor, bis sich ihr Inhalt
+/// oder die Parser-Fassung ändert.
 /// </summary>
 public sealed partial class ParseOrchestrator : BackgroundService
 {
+    /// <summary>Obergrenze für den gespeicherten Fehlschlag-Grund — passend zur Spaltenlänge.</summary>
+    private const int FailureReasonMaxLength = 512;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -30,15 +36,19 @@ public sealed partial class ParseOrchestrator : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFileSystem _fileSystem;
     private readonly IMarkdownParser _parser;
+    private readonly IParseFailureStatus _failureStatus;
     private readonly ParserOptions _options;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ParseOrchestrator> _logger;
+
+    private bool _failureCountReported;
 
     /// <summary>Erzeugt den Orchestrator und löst alle Abhängigkeiten auf.</summary>
     public ParseOrchestrator(
         IServiceScopeFactory scopeFactory,
         IFileSystem fileSystem,
         IMarkdownParser parser,
+        IParseFailureStatus failureStatus,
         IOptions<ParserOptions> options,
         TimeProvider timeProvider,
         ILogger<ParseOrchestrator> logger)
@@ -46,6 +56,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(fileSystem);
         ArgumentNullException.ThrowIfNull(parser);
+        ArgumentNullException.ThrowIfNull(failureStatus);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(logger);
@@ -53,6 +64,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
         _scopeFactory = scopeFactory;
         _fileSystem = fileSystem;
         _parser = parser;
+        _failureStatus = failureStatus;
         _options = options.Value;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -88,8 +100,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
     internal async Task RunOnceAsync(CancellationToken cancellationToken)
     {
         long startedAt = _timeProvider.GetTimestamp();
-        int processed = 0;
-        int skipped = 0;
+        BatchOutcome total = default;
 
         // Zwei Bereiche, mit Absicht: Der Lesebereich hält die laufende Aufzählung offen, jeder
         // Stapel schreibt in einem eigenen. Vorher lief der ganze Durchlauf in einem einzigen
@@ -109,17 +120,13 @@ public sealed partial class ParseOrchestrator : BackgroundService
                 batch.Add(snapshot);
                 if (batch.Count >= _options.BatchSize)
                 {
-                    (int p, int s) = await ProcessBatchInOwnScopeAsync(batch, cancellationToken).ConfigureAwait(false);
-                    processed += p;
-                    skipped += s;
+                    total = total.Add(await ProcessBatchInOwnScopeAsync(batch, cancellationToken).ConfigureAwait(false));
                     batch.Clear();
                 }
             }
             if (batch.Count > 0)
             {
-                (int p, int s) = await ProcessBatchInOwnScopeAsync(batch, cancellationToken).ConfigureAwait(false);
-                processed += p;
-                skipped += s;
+                total = total.Add(await ProcessBatchInOwnScopeAsync(batch, cancellationToken).ConfigureAwait(false));
             }
         }
 
@@ -130,9 +137,10 @@ public sealed partial class ParseOrchestrator : BackgroundService
         // räumte deshalb auch nicht auf. Die Abfrage ist ein Anti-Join über eine kleine
         // Tabelle; sie kostet nichts.
         await RemoveOrphanedTagsAsync(cancellationToken).ConfigureAwait(false);
+        await ReportUnparsableCountAsync(total.FailuresChanged, cancellationToken).ConfigureAwait(false);
 
         TimeSpan elapsed = _timeProvider.GetElapsedTime(startedAt);
-        LogPollCompleted(_logger, processed, skipped, elapsed.TotalMilliseconds);
+        LogPollCompleted(_logger, total.Processed, total.Skipped, elapsed.TotalMilliseconds);
     }
 
     /// <inheritdoc />
@@ -232,6 +240,31 @@ public sealed partial class ParseOrchestrator : BackgroundService
         await tagRepo.ReplaceFileTagsAsync(entry.Snapshot.Id, tagIds, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Kürzt Ausnahmetyp und Meldung auf die Spaltenlänge — der volle Stapel steht im Protokoll.</summary>
+    private static string BuildFailureReason(Exception exception)
+    {
+        string reason = string.Create(CultureInfo.InvariantCulture, $"{exception.GetType().Name}: {exception.Message}");
+        return reason.Length <= FailureReasonMaxLength ? reason : reason[..FailureReasonMaxLength];
+    }
+
+    /// <summary>Ein Vermerk gilt nur für genau den Inhalt und genau die Parser-Fassung, an denen er entstanden ist.</summary>
+    private static bool IsStillBinding(ParseFailure failure, MarkdownSourceSnapshot snapshot, string engineVersion) =>
+        string.Equals(failure.ContentHash, snapshot.ContentHash, StringComparison.Ordinal)
+        && string.Equals(failure.EngineVersion, engineVersion, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Ohne diese Prüfung stünde eine unparsbare Datei bei jedem Tick wieder im Stapel: Sie
+    /// bekommt kein Dokument, bleibt damit dauerhaft veraltet und wurde bis dahin alle paar
+    /// Sekunden neu gelesen, dekodiert und durch den Parser geschickt — für ein Ergebnis, das
+    /// längst feststand.
+    /// </summary>
+    private static bool NeedsParseAttempt(
+        MarkdownSourceSnapshot snapshot,
+        IReadOnlyDictionary<Guid, ParseFailure> knownFailures,
+        string engineVersion) =>
+        !knownFailures.TryGetValue(snapshot.Id, out ParseFailure? failure)
+        || !IsStillBinding(failure, snapshot, engineVersion);
+
     /// <summary>Räumt Schlagworte weg, an denen nach diesem Durchlauf keine Datei mehr hängt.</summary>
     private async Task RemoveOrphanedTagsAsync(CancellationToken cancellationToken)
     {
@@ -247,8 +280,30 @@ public sealed partial class ParseOrchestrator : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Meldet die Zahl der nicht verarbeitbaren Dateien an die Betriebsanzeige. Gezählt wird nur
+    /// beim ersten Durchlauf und danach, wenn dieser Durchlauf einen Vermerk angelegt oder
+    /// aufgehoben hat — sonst wäre es alle paar Sekunden dieselbe Abfrage mit demselben Ergebnis.
+    /// </summary>
+    private async Task ReportUnparsableCountAsync(bool failuresChanged, CancellationToken cancellationToken)
+    {
+        if (_failureCountReported && !failuresChanged)
+        {
+            return;
+        }
+
+        AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        await using (scope.ConfigureAwait(false))
+        {
+            IParseFailureRepository failureRepo = scope.ServiceProvider.GetRequiredService<IParseFailureRepository>();
+            int count = await failureRepo.CountAsync(cancellationToken).ConfigureAwait(false);
+            _failureCountReported = true;
+            _failureStatus.Update(count);
+        }
+    }
+
     /// <summary>Schreibt einen Stapel in einem eigenen Bereich — der Verfolger stirbt mit ihm.</summary>
-    private async Task<(int Processed, int Skipped)> ProcessBatchInOwnScopeAsync(
+    private async Task<BatchOutcome> ProcessBatchInOwnScopeAsync(
         List<MarkdownSourceSnapshot> batch,
         CancellationToken cancellationToken)
     {
@@ -257,14 +312,16 @@ public sealed partial class ParseOrchestrator : BackgroundService
         {
             IMarkdownDocumentRepository docRepo = scope.ServiceProvider.GetRequiredService<IMarkdownDocumentRepository>();
             ITagRepository tagRepo = scope.ServiceProvider.GetRequiredService<ITagRepository>();
+            IParseFailureRepository failureRepo = scope.ServiceProvider.GetRequiredService<IParseFailureRepository>();
 
-            return await ProcessBatchAsync(docRepo, tagRepo, batch, cancellationToken).ConfigureAwait(false);
+            return await ProcessBatchAsync(docRepo, tagRepo, failureRepo, batch, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private async Task<(int Processed, int Skipped)> ProcessBatchAsync(
+    private async Task<BatchOutcome> ProcessBatchAsync(
         IMarkdownDocumentRepository docRepo,
         ITagRepository tagRepo,
+        IParseFailureRepository failureRepo,
         List<MarkdownSourceSnapshot> batch,
         CancellationToken cancellationToken)
     {
@@ -272,14 +329,42 @@ public sealed partial class ParseOrchestrator : BackgroundService
         IReadOnlyList<Guid> stale = await docRepo.GetStaleOrMissingAsync(hashes, cancellationToken).ConfigureAwait(false);
         if (stale.Count == 0)
         {
-            return (0, batch.Count);
+            return new BatchOutcome(0, batch.Count, FailuresChanged: false);
         }
 
         HashSet<Guid> staleSet = [.. stale];
-        List<MarkdownSourceSnapshot> targets = [.. batch.Where(snapshot => staleSet.Contains(snapshot.Id))];
+        List<MarkdownSourceSnapshot> candidates = [.. batch.Where(snapshot => staleSet.Contains(snapshot.Id))];
 
-        List<ParsedEntry> results = await ParseInParallelAsync(targets, cancellationToken).ConfigureAwait(false);
+        IReadOnlyDictionary<Guid, ParseFailure> knownFailures = await failureRepo
+            .GetByMarkdownFileIdsAsync([.. candidates.Select(snapshot => snapshot.Id)], cancellationToken)
+            .ConfigureAwait(false);
+        string engineVersion = _parser.EngineVersion;
+        List<MarkdownSourceSnapshot> targets = [.. candidates.Where(snapshot => NeedsParseAttempt(snapshot, knownFailures, engineVersion))];
 
+        ParseCollector collected = await ParseInParallelAsync(targets, cancellationToken).ConfigureAwait(false);
+        List<ParsedEntry> results = collected.Parsed;
+
+        await PersistParsedAsync(docRepo, tagRepo, results, cancellationToken).ConfigureAwait(false);
+
+        bool failuresChanged = await SyncFailureMarksAsync(
+            failureRepo, collected, knownFailures, engineVersion, cancellationToken).ConfigureAwait(false);
+
+        _ = await docRepo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        if (failuresChanged)
+        {
+            _ = await failureRepo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return new BatchOutcome(results.Count, batch.Count - results.Count, failuresChanged);
+    }
+
+    /// <summary>Legt Dokumente und Schlagwort-Verknüpfungen des Stapels an beziehungsweise aktualisiert sie.</summary>
+    private async Task PersistParsedAsync(
+        IMarkdownDocumentRepository docRepo,
+        ITagRepository tagRepo,
+        List<ParsedEntry> results,
+        CancellationToken cancellationToken)
+    {
         // Existierende Dokumente einmal je Batch laden statt pro Datei per Point-Lookup — die
         // Ziel-Ids stehen zum Batch-Start bereits fest. PersistDocumentAsync konsumiert daraus.
         Guid[] resultIds = [.. results.Select(entry => entry.Snapshot.Id)];
@@ -298,28 +383,78 @@ public sealed partial class ParseOrchestrator : BackgroundService
             await PersistDocumentAsync(docRepo, existingByFileId, entry, cancellationToken).ConfigureAwait(false);
             await SyncFileTagLinksAsync(tagRepo, entry, slugToId, cancellationToken).ConfigureAwait(false);
         }
-
-        _ = await docRepo.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        return (results.Count, batch.Count - results.Count);
     }
 
-    private async Task<List<ParsedEntry>> ParseInParallelAsync(
+    /// <summary>
+    /// Schreibt die Fehlschläge dieses Stapels ins Protokoll und in die Datenbank und hebt die
+    /// Vermerke der Dateien auf, die wieder parsbar sind. Liefert, ob sich am Bestand der
+    /// Vermerke etwas geändert hat.
+    /// </summary>
+    private async Task<bool> SyncFailureMarksAsync(
+        IParseFailureRepository failureRepo,
+        ParseCollector collected,
+        IReadOnlyDictionary<Guid, ParseFailure> knownFailures,
+        string engineVersion,
+        CancellationToken cancellationToken)
+    {
+        Guid[] recovered = [.. collected.Parsed
+            .Select(entry => entry.Snapshot.Id)
+            .Where(knownFailures.ContainsKey)];
+        await failureRepo.RemoveAsync(recovered, cancellationToken).ConfigureAwait(false);
+
+        foreach (ParseFailureEntry entry in collected.Failed)
+        {
+            LogFailure(entry, knownFailures);
+            await failureRepo.RecordAsync(
+                new ParseFailure
+                {
+                    Id = Guid.NewGuid(),
+                    MarkdownFileId = entry.Snapshot.Id,
+                    ContentHash = entry.Snapshot.ContentHash,
+                    EngineVersion = engineVersion,
+                    FailureReason = BuildFailureReason(entry.Failure),
+                    FailedAtUtc = _timeProvider.GetUtcNow().UtcDateTime,
+                },
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return recovered.Length > 0 || collected.Failed.Count > 0;
+    }
+
+    /// <summary>
+    /// Der volle Aufrufstapel geht genau einmal je Datei und Inhalt ins Protokoll. Der Renderer
+    /// arbeitet rekursiv — ein einziger Stapel dieser Sorte ist rund 265 Zeilen lang, und
+    /// wiederholt geschrieben verdrängt er jede echte Diagnose aus der Datei.
+    /// </summary>
+    private void LogFailure(ParseFailureEntry entry, IReadOnlyDictionary<Guid, ParseFailure> knownFailures)
+    {
+        bool sameContentAlreadyLogged =
+            knownFailures.TryGetValue(entry.Snapshot.Id, out ParseFailure? previous)
+            && string.Equals(previous.ContentHash, entry.Snapshot.ContentHash, StringComparison.Ordinal);
+
+        if (sameContentAlreadyLogged)
+        {
+            LogParseFailedAgain(_logger, entry.Snapshot.AbsolutePath, BuildFailureReason(entry.Failure));
+            return;
+        }
+        LogParseFailed(_logger, entry.Snapshot.AbsolutePath, entry.Failure);
+    }
+
+    private async Task<ParseCollector> ParseInParallelAsync(
         List<MarkdownSourceSnapshot> targets,
         CancellationToken cancellationToken)
     {
         SemaphoreSlim semaphore = new(_options.MaxParallelism);
         try
         {
-            List<ParsedEntry> results = [];
-            Lock resultsLock = new();
+            ParseCollector collector = new();
 
             Task[] tasks = targets
-                .Select(snapshot => ParseOneAsync(snapshot, semaphore, results, resultsLock, cancellationToken))
+                .Select(snapshot => ParseOneAsync(snapshot, semaphore, collector, cancellationToken))
                 .ToArray();
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
-            return results;
+            return collector;
         }
         finally
         {
@@ -330,8 +465,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
     private async Task ParseOneAsync(
         MarkdownSourceSnapshot snapshot,
         SemaphoreSlim semaphore,
-        List<ParsedEntry> sink,
-        Lock resultsLock,
+        ParseCollector collector,
         CancellationToken cancellationToken)
     {
         await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -359,16 +493,13 @@ public sealed partial class ParseOrchestrator : BackgroundService
                 // Markdig wirft ArgumentException u. a. bei depth-limit-Verstößen
                 // (zu tief verschachtelte Emphasis/Listen). InvalidOperationException kommt
                 // aus dem Yaml-/Frontmatter-Pfad. Beide sind Format-Fehler im Dokument —
-                // Datei überspringen, restlicher Batch läuft weiter.
-                LogParseFailed(_logger, snapshot.AbsolutePath, ex);
+                // Datei überspringen, restlicher Batch läuft weiter. Protokolliert und
+                // vermerkt wird der Fehlschlag gesammelt in SyncFailureMarksAsync.
+                collector.AddFailure(new ParseFailureEntry(snapshot, ex));
                 return;
             }
 
-            ParsedEntry entry = new(snapshot, parseResult);
-            lock (resultsLock)
-            {
-                sink.Add(entry);
-            }
+            collector.AddParsed(new ParsedEntry(snapshot, parseResult));
         }
         finally
         {
@@ -415,6 +546,41 @@ public sealed partial class ParseOrchestrator : BackgroundService
 
     private readonly record struct ParsedEntry(MarkdownSourceSnapshot Snapshot, ParseResult Result);
 
+    private readonly record struct ParseFailureEntry(MarkdownSourceSnapshot Snapshot, Exception Failure);
+
+    /// <summary>Ergebniszahlen eines Stapels — addierbar, damit der Durchlauf sie aufsummieren kann.</summary>
+    private readonly record struct BatchOutcome(int Processed, int Skipped, bool FailuresChanged)
+    {
+        public BatchOutcome Add(BatchOutcome other) =>
+            new(Processed + other.Processed, Skipped + other.Skipped, FailuresChanged || other.FailuresChanged);
+    }
+
+    /// <summary>Sammelt die Ergebnisse der parallel laufenden Parse-Vorgänge unter einer Sperre.</summary>
+    private sealed class ParseCollector
+    {
+        private readonly Lock _gate = new();
+
+        public List<ParsedEntry> Parsed { get; } = [];
+
+        public List<ParseFailureEntry> Failed { get; } = [];
+
+        public void AddParsed(ParsedEntry entry)
+        {
+            lock (_gate)
+            {
+                Parsed.Add(entry);
+            }
+        }
+
+        public void AddFailure(ParseFailureEntry entry)
+        {
+            lock (_gate)
+            {
+                Failed.Add(entry);
+            }
+        }
+    }
+
     [LoggerMessage(EventId = 200, Level = LogLevel.Information, Message = "Parser-Orchestrator gestartet — Polling alle {IntervalSeconds:F0} s.")]
     private static partial void LogOrchestratorStarted(ILogger logger, double intervalSeconds);
 
@@ -444,4 +610,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
 
     [LoggerMessage(EventId = 209, Level = LogLevel.Information, Message = "{Count} Schlagwort/Schlagworte ohne Datei entfernt.")]
     private static partial void LogOrphanedTagsRemoved(ILogger logger, int count);
+
+    [LoggerMessage(EventId = 210, Level = LogLevel.Warning, Message = "Datei weiterhin nicht parsbar, Inhalt unverändert: {Path} — {Reason}")]
+    private static partial void LogParseFailedAgain(ILogger logger, string path, string reason);
 }

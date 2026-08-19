@@ -131,7 +131,8 @@ internal static class AppHostBuilder
         _ = builder.Services.AddSingleton<IFileSaveDialogService, FileSaveDialogService>();
         _ = builder.Services.AddSingleton<IMemoryLogStore>(_ => MemorySink.Instance);
         _ = builder.Services.AddSingleton<IOperationHealthProvider>(sp => new OperationHealthProvider(
-            sp.GetRequiredService<IMemoryLogStore>()));
+            sp.GetRequiredService<IMemoryLogStore>(),
+            sp.GetRequiredService<IParseFailureStatus>()));
 
         _ = builder.Services.AddSingleton(sp => new FolderTreeViewModel(
             sp.GetRequiredService<ISettingsService>(),

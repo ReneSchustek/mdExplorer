@@ -1,4 +1,5 @@
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Parser.Abstractions;
 using MdExplorer.Parser.Options;
 using MdExplorer.Parser.Services;
@@ -27,8 +28,9 @@ public sealed class ParseOrchestratorScopeTests
     [Fact]
     public async Task RunOnce_OnManyFiles_OpensOneScopePerBatch()
     {
-        // Fünf Dateien bei Stapelgröße zwei: drei Stapel, dazu der Lesebereich und der
-        // eine Bereich, in dem am Ende die Schlagworte ohne Datei weggeräumt werden.
+        // Fünf Dateien bei Stapelgröße zwei: drei Stapel, dazu der Lesebereich, der Bereich
+        // fürs Wegräumen der Schlagworte ohne Datei und der, in dem die Zahl der nicht
+        // verarbeitbaren Dateien gelesen wird.
         ScopeCountingHarness harness = new(batchSize: 2);
         for (int i = 0; i < 5; i++)
         {
@@ -37,7 +39,7 @@ public sealed class ParseOrchestratorScopeTests
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(5, harness.ScopeFactory.Created);
+        Assert.Equal(6, harness.ScopeFactory.Created);
     }
 
     [Fact]
@@ -49,19 +51,20 @@ public sealed class ParseOrchestratorScopeTests
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(2, harness.ScopeFactory.Created);
+        Assert.Equal(3, harness.ScopeFactory.Created);
     }
 
     [Theory]
-    [InlineData(6, 3, 4)]
-    [InlineData(6, 6, 3)]
-    [InlineData(7, 3, 5)]
+    [InlineData(6, 3, 5)]
+    [InlineData(6, 6, 4)]
+    [InlineData(7, 3, 6)]
     public async Task RunOnce_OnAnyBatchSize_OpensReadScopePlusOnePerBatch(
         int fileCount,
         int batchSize,
         int expectedScopes)
     {
-        // Erwartet: ein Lesebereich, einer je Stapel, einer fürs Aufräumen am Ende.
+        // Erwartet: ein Lesebereich, einer je Stapel, einer fürs Aufräumen und einer für den
+        // Betriebs-Stand am Ende.
         // Die Zahl hängt damit an der Stapelgröße, nicht am Bestand. Ohne den eigenen
         // Bereich je Stapel stünde hier immer 2 — egal wie groß der Bestand wird.
         ScopeCountingHarness harness = new(batchSize);
@@ -81,6 +84,8 @@ public sealed class ParseOrchestratorScopeTests
         public FakeMarkdownSourceProvider Source { get; } = new();
         public FakeMarkdownDocumentRepository DocRepo { get; } = new();
         public FakeTagRepository TagRepo { get; } = new();
+        public FakeParseFailureRepository FailureRepo { get; } = new();
+        public ParseFailureStatus FailureStatus { get; } = new();
         public CountingScopeFactory ScopeFactory { get; }
         public ParseOrchestrator Sut { get; }
 
@@ -92,6 +97,7 @@ public sealed class ParseOrchestratorScopeTests
             _ = services.AddSingleton<IMarkdownSourceProvider>(Source);
             _ = services.AddSingleton<IMarkdownDocumentRepository>(DocRepo);
             _ = services.AddSingleton<ITagRepository>(TagRepo);
+            _ = services.AddSingleton<IParseFailureRepository>(FailureRepo);
             ServiceProvider provider = services.BuildServiceProvider();
 
             ScopeFactory = new CountingScopeFactory(provider.GetRequiredService<IServiceScopeFactory>());
@@ -113,6 +119,7 @@ public sealed class ParseOrchestratorScopeTests
                 ScopeFactory,
                 FileSystem,
                 parser,
+                FailureStatus,
                 MEOptions.Create(parserOptions),
                 new FakeTimeProvider(),
                 NullLogger<ParseOrchestrator>.Instance);

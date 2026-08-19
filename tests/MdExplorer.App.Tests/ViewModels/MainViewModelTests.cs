@@ -593,6 +593,8 @@ public sealed class MainViewModelTests
 
     private sealed class FakeMarkdownParser : IMarkdownParser
     {
+        public string EngineVersion => "test-engine/1";
+
         public ParseResult Parse(string markdownText) =>
             new(
                 new Dictionary<string, string>(),

@@ -304,6 +304,20 @@ zeigt: grün = normal, gelb = Warnungen im jüngsten Log-Fenster, rot = Fehler
 oder Critical-Einträge. Der ToolTip zeigt den Grund (Anzahl + letzte Meldung).
 Klick auf die LED öffnet direkt den Live-Log-Viewer.
 
+Gibt es Dateien, die nicht verarbeitet werden können, nennt der ToolTip zusätzlich
+deren Anzahl („3 Dateien nicht verarbeitbar.") und die LED steht mindestens auf
+Gelb — auch dann, wenn im Log-Fenster längst nichts mehr dazu steht.
+
+### Dateien, die nicht verarbeitet werden können
+
+Manche Markdown-Dateien lassen sich nicht auswerten, etwa weil sie zu tief
+verschachtelt sind oder ihr Frontmatter kaputt ist. Eine solche Datei wird
+**einmal** mit vollem Fehlerbericht ins Protokoll geschrieben und danach in Ruhe
+gelassen — sie bekommt einen Vermerk mit ihrem Inhalt und der Fassung des
+Auswerters. Erst wenn sich die Datei ändert oder eine neue Programmfassung läuft,
+wird es erneut versucht; klappt es dann, verschwindet der Vermerk von selbst.
+Alle übrigen Dateien werden davon nicht berührt.
+
 ### Live-Log-Viewer
 
 `Ansicht → Logs…` öffnet ein eigenes Fenster mit den letzten Log-Einträgen aus

@@ -1,5 +1,6 @@
 using MdExplorer.App.Logging;
 using MdExplorer.App.Services;
+using MdExplorer.Core.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.Tests.Services;
@@ -11,7 +12,8 @@ public sealed class OperationHealthProviderTests
     public void EmptyStore_ReportsHealthy()
     {
         FakeStore store = new();
-        using OperationHealthProvider sut = new(store);
+        ParseFailureStatus failureStatus = new();
+        using OperationHealthProvider sut = new(store, failureStatus);
 
         Assert.Equal(OperationHealth.Healthy, sut.Current);
         Assert.Contains("normal", sut.Detail, StringComparison.OrdinalIgnoreCase);
@@ -21,7 +23,8 @@ public sealed class OperationHealthProviderTests
     public void OnError_ReportsErrorAndFiresChanged()
     {
         FakeStore store = new();
-        using OperationHealthProvider sut = new(store);
+        ParseFailureStatus failureStatus = new();
+        using OperationHealthProvider sut = new(store, failureStatus);
         int changedCount = 0;
         sut.Changed += (_, _) => changedCount++;
 
@@ -36,7 +39,8 @@ public sealed class OperationHealthProviderTests
     public void OnWarning_OverridesHealthy()
     {
         FakeStore store = new();
-        using OperationHealthProvider sut = new(store);
+        ParseFailureStatus failureStatus = new();
+        using OperationHealthProvider sut = new(store, failureStatus);
 
         store.Add(LogLevel.Warning, "Spike");
 
@@ -48,12 +52,81 @@ public sealed class OperationHealthProviderTests
     public void ErrorBeatsWarning_InSameWindow()
     {
         FakeStore store = new();
-        using OperationHealthProvider sut = new(store);
+        ParseFailureStatus failureStatus = new();
+        using OperationHealthProvider sut = new(store, failureStatus);
 
         store.Add(LogLevel.Warning, "weiches Problem");
         store.Add(LogLevel.Error, "harter Fehler");
 
         Assert.Equal(OperationHealth.Error, sut.Current);
+    }
+
+    [Fact]
+    public void OnUnparsableFiles_ReportsWarningWithCount()
+    {
+        FakeStore store = new();
+        ParseFailureStatus failureStatus = new();
+        using OperationHealthProvider sut = new(store, failureStatus);
+
+        failureStatus.Update(3);
+
+        Assert.Equal(OperationHealth.Warning, sut.Current);
+        Assert.Contains("3 Dateien nicht verarbeitbar.", sut.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OnSingleUnparsableFile_UsesSingularWording()
+    {
+        FakeStore store = new();
+        ParseFailureStatus failureStatus = new();
+        using OperationHealthProvider sut = new(store, failureStatus);
+
+        failureStatus.Update(1);
+
+        Assert.Contains("1 Datei nicht verarbeitbar.", sut.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("normal", sut.Detail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void OnUnparsableFilesWithError_KeepsErrorAndNamesBoth()
+    {
+        FakeStore store = new();
+        ParseFailureStatus failureStatus = new();
+        using OperationHealthProvider sut = new(store, failureStatus);
+
+        store.Add(LogLevel.Error, "Boom");
+        failureStatus.Update(2);
+
+        Assert.Equal(OperationHealth.Error, sut.Current);
+        Assert.Contains("Boom", sut.Detail, StringComparison.Ordinal);
+        Assert.Contains("2 Dateien nicht verarbeitbar.", sut.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OnUnparsableFilesResolved_ReturnsToHealthy()
+    {
+        FakeStore store = new();
+        ParseFailureStatus failureStatus = new();
+        using OperationHealthProvider sut = new(store, failureStatus);
+        failureStatus.Update(1);
+
+        failureStatus.Update(0);
+
+        Assert.Equal(OperationHealth.Healthy, sut.Current);
+        Assert.Contains("normal", sut.Detail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AfterDispose_StatusChangeIsIgnored()
+    {
+        FakeStore store = new();
+        ParseFailureStatus failureStatus = new();
+        OperationHealthProvider sut = new(store, failureStatus);
+        sut.Dispose();
+
+        failureStatus.Update(5);
+
+        Assert.Equal(OperationHealth.Healthy, sut.Current);
     }
 
     private sealed class FakeStore : IMemoryLogStore

@@ -95,11 +95,13 @@ Abhängigkeiten außer dem .NET-BCL und `Microsoft.Extensions.*`:
 - `Abstractions/` — `IFileSystem`, `ISettingsService`, Repository- und
   Query-Interfaces
 - `Models/` — `AppSettings`, `MarkdownFile`, `Tag`, `MarkdownFileTag`,
-  `MarkdownDocument`
+  `MarkdownDocument`, `ParseFailure`
 - `Settings/` — `JsonSettingsService`, `SettingsValidator`,
   `MdIgnoreReader`
 - `FileSystem/` — `LocalFileSystem` (BCL-Wrapper)
 - `Text/` — `LineEndingDetector`, `Utf8Decoder`
+- `Diagnostics/` — `ParseFailureStatus` (Zahl der nicht verarbeitbaren Dateien
+  für die Betriebsanzeige)
 - `AppPaths` — zentrale Pfade unterhalb `%LOCALAPPDATA%\MdExplorer\`
 
 ### MdExplorer.Data

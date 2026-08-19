@@ -272,6 +272,8 @@ public sealed class DocumentPanelViewModelTests
     {
         private string _bodyHtml = string.Empty;
 
+        public string EngineVersion => "test-engine/1";
+
         public int ParseCount { get; private set; }
         public string? LastInput { get; private set; }
 
