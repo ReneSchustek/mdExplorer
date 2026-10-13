@@ -2,7 +2,7 @@ namespace MdExplorer.Search.Models;
 
 /// <summary>
 /// Stufen der Ähnlichkeitssuche im FTS5-Modus. Bewusst auf FTS5-Bordmittel
-/// gestützt — keine Embedding-Pflicht, kein Ollama-Roundtrip.
+/// gestützt: keine Embedding-Pflicht, kein Umweg über einen externen Dienst.
 /// </summary>
 public enum SimilarityMode
 {
