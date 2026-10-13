@@ -5,7 +5,7 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10-512BD4.svg)](https://dotnet.microsoft.com/)
 
 Ein Ordner voller Markdown-Notizen wird ab einer gewissen Größe unübersichtlich:
-Man weiß noch, dass etwas notiert wurde, aber nicht mehr, wo — und schon gar nicht,
+Man weiß noch, dass etwas notiert wurde, aber nicht mehr, wo, und schon gar nicht,
 welche Notiz mit welcher zusammenhängt. MdExplorer indexiert solche Bestände und
 macht sie erkundbar: Volltextsuche über alles, Schlagwörter projektweit pflegbar,
 die Verweise zwischen den Notizen als Graph und eine Vorschau, in der sich jede
@@ -40,7 +40,7 @@ Kennzeichnungen umbenennen, zusammenführen oder löschen:
 
 **Zum Benutzen:** Windows und die
 [WebView2-Runtime](https://developer.microsoft.com/microsoft-edge/webview2/), die auf
-aktuellen Windows-Installationen bereits vorhanden ist. Sonst nichts — SQLite bringt die
+aktuellen Windows-Installationen bereits vorhanden ist. Mehr braucht es nicht, SQLite bringt die
 Anwendung über das Paket `Microsoft.Data.Sqlite` selbst mit.
 
 **Zum Bauen:** zusätzlich das .NET 10 SDK.
@@ -52,7 +52,7 @@ Fertige Fassungen liegen auf der
 Windows-Installer samt SHA-256-Prüfsumme und ein Archiv zum Entpacken. Das Archiv
 läuft aus jedem beliebigen Ordner, ohne Installation.
 
-Der Installer ist **nicht signiert** — Windows zeigt beim ersten Start deshalb eine
+Der Installer ist **nicht signiert**. Windows zeigt beim ersten Start deshalb eine
 Warnung, die sich über „Weitere Informationen" übergehen lässt.
 
 Die Fassung trägt noch eine **Null vor dem Punkt**, und das ist eine Aussage: Die
@@ -73,15 +73,15 @@ dotnet restore MdExplorer.slnx
 ```powershell
 dotnet build MdExplorer.slnx -c Release
 dotnet test  MdExplorer.slnx
-dotnet run   --project MdExplorer.App
+dotnet run   --project src/MdExplorer.App
 ```
 
 ### Statische Analyse
 
 Produktivprojekte ziehen `StyleCop.Analyzers` und `SonarAnalyzer.CSharp`
 zentral über `Directory.Build.props` ein; Tests bleiben ausgenommen.
-Der Build läuft mit `TreatWarningsAsErrors=true` — jede StyleCop- oder
-Sonar-Meldung bricht den Build. Regelwerk: `stylecop.json` und der
+Der Build läuft mit `TreatWarningsAsErrors=true`, jede StyleCop- oder
+Sonar-Meldung bricht ihn also ab. Regelwerk: `stylecop.json` und der
 StyleCop/Sonar-Abschnitt in `.editorconfig`.
 
 ```powershell
@@ -133,11 +133,11 @@ Eine ausführliche Schichten- und Abhängigkeitsübersicht steht in
 `Datei → Einstellungen…` oder Tastenkürzel `Strg+,` öffnet einen modalen
 Dialog mit drei Tabs:
 
-- **Indexierung** — Index-Wurzeln, Glob-Ausschluss-Muster
+- **Indexierung:** Index-Wurzeln, Glob-Ausschluss-Muster
   (mit `!`-Negation), Auto-Hashtag-Extraktion
-- **Darstellung** — Theme (System/Hell/Dunkel), Preview-Schriftgröße,
+- **Darstellung:** Theme (System/Hell/Dunkel), Preview-Schriftgröße,
   Treffer pro Seite
-- **Verhalten** — Such-Debounce, Indexer-Resync-Intervall,
+- **Verhalten:** Such-Debounce, Indexer-Resync-Intervall,
   Update-Prüfung beim Start, Bilder aus dem Netz in der Vorschau
 
 Speichern erfolgt atomar (`.tmp` + `File.Move`). Detailliertes Schema
@@ -153,11 +153,11 @@ ohne Neustart.
 Im Tab „Ordner" zeigt das Folder-Tree die konfigurierten Index-Wurzeln.
 Rechtsklick auf einen Ordner öffnet ein Kontextmenü:
 
-- **Indexierung pausieren** — fügt den Ordner zu `Indexing.UiExcludedFolders`
+- **Indexierung pausieren:** fügt den Ordner zu `Indexing.UiExcludedFolders`
   in der `settings.json` hinzu. Der Ordner und seine Inhalte werden ab dem
   nächsten Indexer-Lauf übersprungen; im Tree bleibt der Knoten ausgegraut
   sichtbar (Pause-Icon).
-- **Indexierung wieder aufnehmen** — entfernt den Pfad aus der Liste. Der
+- **Indexierung wieder aufnehmen:** entfernt den Pfad aus der Liste. Der
   nächste Indexer-Lauf nimmt die Dateien wieder auf.
 
 Die Pause-Liste persistiert beim Neustart und wirkt additiv zu den
@@ -169,10 +169,10 @@ Glob-`ExclusionPatterns` und `.mdignore`-Dateien.
 
 Drei-Panel-Layout mit optionaler Tag-Cloud rechts:
 
-1. **Links** — Tab „Ordner" (Baum) oder „Alle Dateien" (flache Liste)
-2. **Mitte** — Suchpanel mit Treffer-Liste
-3. **Rechts** — Dokument-Panel (Lese-/Bearbeiten-Modus)
-4. **Optional ganz rechts** — Tag-Cloud (ein-/ausblendbar)
+1. **Links:** Tab „Ordner" (Baum) oder „Alle Dateien" (flache Liste)
+2. **Mitte:** Suchpanel mit Treffer-Liste
+3. **Rechts:** Dokument-Panel (Lese-/Bearbeiten-Modus)
+4. **Optional ganz rechts:** Tag-Cloud (ein-/ausblendbar)
 
 ### Tastatur-Shortcuts
 
@@ -187,16 +187,16 @@ Drei-Panel-Layout mit optionaler Tag-Cloud rechts:
 
 ### Suche
 
-Das Suchpanel in der mittleren Spalte sucht beim Tippen — nach einem
-konfigurierbaren Debounce feuert die FTS5-Volltextsuche automatisch;
-ein expliziter Such-Button ist nicht nötig. Mehrere Wörter werden mit
+Das Suchpanel in der mittleren Spalte sucht schon beim Tippen: Nach einem
+konfigurierbaren Debounce startet die FTS5-Volltextsuche von selbst,
+einen eigenen Such-Button braucht es nicht. Mehrere Wörter werden mit
 „UND" verknüpft, `"…"` sucht Phrasen, `wort*` als Präfix; die Filter
 `tag:`, `-tag:` und `path:` schränken auf Metadaten bzw. Pfad-Fragmente
 ein. Über die Dropdowns lassen sich Modus (FTS5 / Regex) und
 Ähnlichkeit (None / Stemmed / NearStem / NearStemSynonyms) umschalten.
 
-Das Kontrollkästchen **„Nur aktueller Ordner"** steuert den Such-Scope:
-ohne Haken (Default) wird global über alle Index-Wurzeln gesucht; mit
+Das Kontrollkästchen **„Nur aktueller Ordner"** steuert den Such-Scope.
+Ohne Haken (Default) wird global über alle Index-Wurzeln gesucht, mit
 Haken werden die Treffer auf den im Ordnerbaum gewählten Pfad und
 dessen Unterordner beschränkt. Die Wurzel selbst zu wählen hebt die
 Einschränkung wieder auf. Umschalten löst die Suche sofort neu aus.
@@ -204,10 +204,10 @@ Einschränkung wieder auf. Umschalten löst die Suche sofort neu aus.
 Bleibt die Trefferliste leer, benennt sie den Grund: „Noch nichts
 gesucht" vor der ersten Eingabe, „Nichts gefunden" bei einer Anfrage
 ohne Treffer und „Die Suche ist gescheitert", wenn die Abfrage selbst
-fehlgeschlagen ist. Die drei Lagen sehen gleich aus und brauchen
-verschiedene Antworten.
+fehlgeschlagen ist. Auf den ersten Blick sehen die drei Lagen gleich
+aus, verlangen aber verschiedene Antworten.
 
-### Alle Dateien — Suchfeld, Filter und Sprungleiste
+### Alle Dateien: Suchfeld, Filter und Sprungleiste
 
 Der Tab „Alle Dateien" filtert beim Tippen über Titel, Pfad und
 Kennzeichnungen; `Escape` leert das Feld. Über die Umschalter „Alle",
@@ -227,7 +227,7 @@ sortiert entfallen Gruppen und Leiste.
 
 Unter dem geöffneten Dokument steht, was daran hängt: auf welche Dokumente
 es verweist, welche auf **es** verweisen, in welchem Ordner es liegt und
-welche Kennzeichnungen es trägt. Jeder Eintrag führt weiter — ein
+welche Kennzeichnungen es trägt. Jeder Eintrag führt weiter: Ein
 verwandtes Dokument wird geöffnet, Ordner und Kennzeichnung führen in die
 Suche mit der passenden Einschränkung.
 
@@ -236,15 +236,15 @@ löschen**, ohne den Zusammenhang zu verlassen. Vor dem Löschen und vor
 einer Umbenennung, die Verweise bricht, nennt die Rückfrage die Folgen:
 wie viele Dokumente danach ins Leere zeigen. Ein Verschieben lässt die
 Verweise unberührt, weil ein WikiLink auf den Dateinamen zeigt und nicht
-auf den Pfad — dort wird deshalb nicht gefragt.
+auf den Pfad. Deshalb wird dort nicht gefragt.
 
 ### Markdown-Editor
 
-Im rechten Panel lässt sich jede `.md`-Datei direkt bearbeiten. Die
-Mode-Umschaltung erfolgt über den Toolbar-Button „Bearbeiten" oder
+Im rechten Panel lässt sich jede `.md`-Datei direkt bearbeiten. Umgeschaltet
+wird über den Toolbar-Button „Bearbeiten" oder mit
 `Strg+E`. Im Edit-Modus zeigt eine Monospace-TextBox den Rohtext; die
 Tag-Leiste oben aktualisiert sich live nach 300 ms Debounce. Tags lassen
-sich manuell hinzufügen, entfernen oder umbenennen — neue Tags werden
+sich von Hand hinzufügen, entfernen oder umbenennen; neue Tags werden
 in einem verwalteten Kommentar-Block `<!-- mdexplorer-tags: #a #b -->`
 am Dateiende gepflegt. `Strg+S` speichert atomar (Temp-Datei +
 `File.Move`); das ursprüngliche Zeilenende (CRLF/LF) bleibt erhalten.
@@ -252,7 +252,7 @@ Externe Änderungen während einer Edit-Session werden vor dem Schreiben
 erkannt und blockieren das Speichern bis zur manuellen Auflösung.
 
 **Schreibschutz (Default):** Jede frisch geladene Datei ist gegen
-versehentliches Editieren gesperrt — Tippen, Tag-Hinzufügen, Tag-
+versehentliches Editieren gesperrt. Tippen, Tag-Hinzufügen, Tag-
 Entfernen und `Strg+S` bleiben wirkungslos. Der Button „🔒 Entsperren"
 in der Editor-Toolbar gibt die Datei zum Bearbeiten frei; „🔓 Sperren"
 schließt sie wieder ab.
@@ -277,12 +277,12 @@ lassen sich in der Panel-Kopfzeile umschalten.
 `Ansicht → Tag-Verwaltung…` öffnet einen modalen Dialog, der alle Tags
 mit Anzahl betroffener Dateien auflistet. Pro Auswahl:
 
-- **Umbenennen** — alle Vorkommen `#alt` werden zu `#neu` (Body +
+- **Umbenennen:** Alle Vorkommen `#alt` werden zu `#neu` (Body +
   YAML-Frontmatter `tags`-Listen).
-- **Zusammenführen** — der Quell-Tag verschwindet; sein Vorkommen wird
+- **Zusammenführen:** Der Quell-Tag verschwindet, sein Vorkommen wird
   durch den Ziel-Tag ersetzt. Duplikate im Frontmatter entfernt der
   Dialog automatisch.
-- **Löschen** — sämtliche Vorkommen werden aus Body und Frontmatter
+- **Löschen:** Sämtliche Vorkommen werden aus Body und Frontmatter
   entfernt.
 
 Vor jeder Operation zeigt ein Bestätigungsdialog die Anzahl betroffener
@@ -294,8 +294,8 @@ der `FileSystemWatcher` triggert anschließend automatisch den Re-Index.
 Auf großen Wurzeln (mehrere Tausend `.md`-Dateien) committed der Indexer den
 Initial-Scan in Batches: nach jeweils `Indexer.InitialScanBatchSize` Dateien
 (Default 100) erfolgt ein Zwischen-`SaveChanges`. Der „Alle Dateien"-Tab und
-der Folder-Tree aktualisieren sich nach jedem Batch automatisch — der Tab
-bleibt nicht mehr leer, bis der gesamte Scan durch ist.
+der Folder-Tree aktualisieren sich nach jedem Batch automatisch. So bleibt der Tab
+nicht mehr leer, bis der gesamte Scan durch ist.
 
 ### Betriebs-Status (Health-LED)
 
@@ -306,14 +306,14 @@ Klick auf die LED öffnet direkt den Live-Log-Viewer.
 
 Gibt es Dateien, die nicht verarbeitet werden können, nennt der ToolTip zusätzlich
 deren Anzahl („3 Dateien nicht verarbeitbar.") und die LED steht mindestens auf
-Gelb — auch dann, wenn im Log-Fenster längst nichts mehr dazu steht.
+Gelb, auch dann, wenn im Log-Fenster längst nichts mehr dazu steht.
 
 ### Dateien, die nicht verarbeitet werden können
 
 Manche Markdown-Dateien lassen sich nicht auswerten, etwa weil sie zu tief
 verschachtelt sind oder ihr Frontmatter kaputt ist. Eine solche Datei wird
 **einmal** mit vollem Fehlerbericht ins Protokoll geschrieben und danach in Ruhe
-gelassen — sie bekommt einen Vermerk mit ihrem Inhalt und der Fassung des
+gelassen. Sie bekommt einen Vermerk mit ihrem Inhalt und der Fassung des
 Auswerters. Erst wenn sich die Datei ändert oder eine neue Programmfassung läuft,
 wird es erneut versucht; klappt es dann, verschwindet der Vermerk von selbst.
 Alle übrigen Dateien werden davon nicht berührt.
@@ -324,7 +324,7 @@ Alle übrigen Dateien werden davon nicht berührt.
 dem In-Memory-Ringpuffer (Kapazität 2000). Die Toolbar bietet einen
 Minimum-Level-Filter (Alle bis Kritisch) und eine Substring-Suche über
 Nachricht und Quelle. Der „Exportieren…"-Button schreibt die aktuell sichtbaren
-Einträge als UTF-8-Datei. Der Sink läuft parallel zu File- und Debug-Sink — die
+Einträge als UTF-8-Datei. Der Sink läuft parallel zu File- und Debug-Sink, die
 Rotation der `logs\`-Dateien bleibt davon unberührt.
 
 ### Settings-Audit-Trail
@@ -346,8 +346,8 @@ Audit-Eintrag.
 des aktuellen Bestands. Knoten sind Markdown-Dateien, Kanten sind
 `[[WikiLink]]`-Referenzen aus dem Parser. Der Graph rendert in einer
 eingebetteten WebView2-Instanz; HTML, JavaScript und CSS sind als
-Embedded Resources im App-Modul abgelegt — keine externen CDNs,
-keine Netzwerkverbindung notwendig. Die Content-Security-Policy
+Embedded Resources im App-Modul abgelegt. Externe CDNs gibt es nicht, eine
+Netzwerkverbindung ist nicht nötig. Die Content-Security-Policy
 erzwingt `default-src 'none'` mit Nonce-basierter Skript-Whitelist.
 
 ### Update-Hinweis
@@ -355,12 +355,12 @@ erzwingt `default-src 'none'` mit Nonce-basierter Skript-Whitelist.
 Beim Start prüft die Anwendung einmal täglich, ob auf GitHub eine neuere
 Version veröffentlicht wurde (öffentliche Releases-API, ohne Anmeldung).
 Ist eine neuere Version verfügbar, erscheint oben im Hauptfenster eine
-dezente, schließbare Hinweisleiste mit Link auf die Release-Seite — es wird
-nichts automatisch heruntergeladen oder installiert. Die Prüfung lässt sich
+dezente, schließbare Hinweisleiste mit Link auf die Release-Seite. Von selbst wird
+dabei nichts heruntergeladen oder installiert. Die Prüfung lässt sich
 unter `Datei → Einstellungen… → Verhalten` mit „Beim Start nach Updates
 suchen" abschalten; ohne Netzverbindung verhält sich die Anwendung
 unverändert.
 
 ## Lizenz
 
-Veröffentlicht unter der [MIT-Lizenz](LICENSE) — © 2026 Rene Schustek.
+Veröffentlicht unter der [MIT-Lizenz](LICENSE), © 2026 Rene Schustek.

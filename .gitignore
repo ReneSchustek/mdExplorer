@@ -1,26 +1,11 @@
 # ============================================================
 # .gitignore – MdExplorer
 # ============================================================
-# Hinweis: rein lokale Arbeitsdateien stehen in der globalen Ignore-Liste
-# und müssen hier NICHT wiederholt werden.
-# ============================================================
-
-# ============================================================
-# Lokale Arbeitsvorlagen — nie committen
-# ============================================================
 
 # ============================================================
 # SCRIPTE nie committen
 # ============================================================
 *.ps1
-
-# ============================================================
-# Hinweis: reviews/ gehört NICHT in .gitignore
-# ============================================================
-# reviews/ wird auf DevBox in Git versioniert (Entwicklungshistorie).
-# GitHub-Export-Script schließt reviews/ automatisch aus.
-# Niemals reviews/ hier eintragen.
-# ============================================================
 
 # ============================================================
 # docs/ ist global ignoriert, in diesem Projekt aber gewollt
