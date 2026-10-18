@@ -118,7 +118,7 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
 
         // Vor dem ersten await: Aufrufer-Sync-Context erfassen, damit Subscriber später
         // wieder auf dem ursprünglichen Thread (z. B. WPF-UI-Dispatcher) zugestellt werden.
-        // Captive-Subscribers — etwa ObservableCollections an WPF-CollectionViews — würden
+        // Captive-Subscribers (etwa ObservableCollections an WPF-CollectionViews) würden
         // sonst auf einem ThreadPool-Worker mutiert (NotSupportedException).
         SynchronizationContext? capturedContext = SynchronizationContext.Current;
 
@@ -152,7 +152,7 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
 
         // Records-Equality reicht hier nicht: AppSettings enthält IReadOnlyList<string>-
         // Felder, deren Default-Vergleich Reference-Equality verwendet. Der Settings-Dialog
-        // erzeugt bei jedem OK-Klick neue Listen-Instanzen — ein Vergleich der Records schlüge
+        // erzeugt bei jedem OK-Klick neue Listen-Instanzen. Ein Vergleich der Records schlüge
         // dadurch jedes Mal an, obwohl inhaltlich nichts geändert ist, und triggerte
         // unnötigen Full-Rescan sowie Audit-Snapshot bei jedem Save.
         IReadOnlyList<SettingsChangeEntry> changes =
@@ -193,7 +193,7 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
     /// <summary>
     /// Stellt das <see cref="SettingsChanged"/>-Event auf dem zuvor erfassten
     /// <see cref="SynchronizationContext"/> zu. Fehlt der Context (z. B. Server-Background-Worker
-    /// oder Unit-Tests ohne Dispatcher), wird auf den ThreadPool ausgewichen — niemals
+    /// oder Unit-Tests ohne Dispatcher), wird auf den ThreadPool ausgewichen, niemals
     /// synchron auf dem fortsetzenden Worker, damit kein UI-Subscriber im falschen Thread läuft.
     /// </summary>
     private void RaiseSettingsChanged(
@@ -251,7 +251,7 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
 
         IReadOnlyList<string> roots = indexing.Roots ?? [];
         IReadOnlyList<string> exclusions = indexing.ExclusionPatterns ?? IndexingSettings.DefaultExclusionPatterns;
-        // Legacy-Settings kennen das Feld noch nicht — Deserialisierung liefert null.
+        // Legacy-Settings kennen das Feld noch nicht, die Deserialisierung liefert null.
         // Wir fallen still auf eine leere Liste zurück; der Nutzer behält seinen bisherigen Stand
         // und kann über das Folder-Tree-Kontextmenü neue UI-Ausschlüsse erzeugen.
         IReadOnlyList<string> uiExcluded = indexing.UiExcludedFolders ?? [];

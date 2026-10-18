@@ -27,9 +27,9 @@ Markdown-Beständen arbeiten und in ihnen schnell etwas wiederfinden
 möchten. Das Programm liest ein oder mehrere Verzeichnisse rekursiv
 ein, legt einen lokalen Index an und stellt drei Werkzeuge zur
 Verfügung: einen Datei-Browser, eine Volltext-Suche und eine HTML-
-Vorschau. Wer Dutzende oder Hunderte Notizen pflegt — sei es ein
+Vorschau. Wer Dutzende oder Hunderte Notizen pflegt, sei es ein
 persönliches Zettelkasten-System, eine technische Wissensbasis oder
-eine umfangreiche Projektdokumentation — bekommt mit MdExplorer einen
+eine umfangreiche Projektdokumentation, bekommt mit MdExplorer einen
 Überblick, den ein einfacher Datei-Explorer nicht liefert.
 
 MdExplorer ist ausdrücklich **kein Markdown-Editor mit großem
@@ -37,7 +37,7 @@ Funktionsumfang**. Es gibt zwar einen einfachen Bearbeiten-Modus, der
 für kurze Korrekturen und das Pflegen von Tags ausreicht, aber für
 ausführliches Schreiben bleibt ein dedizierter Editor (etwa Typora,
 Obsidian oder VS Code) die bessere Wahl. Genauso wenig ist MdExplorer
-ein Cloud-Dienst: alle Daten — Index, Einstellungen, Logs — bleiben
+ein Cloud-Dienst: alle Daten (Index, Einstellungen, Logs) bleiben
 auf dem lokalen Rechner. Es findet keine Synchronisierung statt und kein
 Telemetrie-Versand; ohne Internetverbindung arbeitet die Anwendung vollständig.
 
@@ -97,8 +97,8 @@ Dort finden sich die Datei `settings.json` mit den persistierten
 Einstellungen, die Datei `ui-layout.json` mit den Spaltenbreiten des
 Hauptfensters, die SQLite-Datenbank `app.db` mit dem FTS5-Suchindex
 und ein Unterverzeichnis `logs\` mit tageweise rotierten Logdateien.
-Wer die Anwendung deinstalliert, kann diesen Ordner gefahrlos löschen
-— umgekehrt lässt sich der gesamte Zustand durch Kopieren des Ordners
+Wer die Anwendung deinstalliert, kann diesen Ordner gefahrlos löschen;
+umgekehrt lässt sich der gesamte Zustand durch Kopieren des Ordners
 auf einen anderen Rechner mitnehmen.
 
 ## 3. Die Drei-Spalten-Oberfläche {#layout}
@@ -118,7 +118,7 @@ wählt diesen als Bezugspfad; ob die Trefferliste daraufhin auf
 Dateien innerhalb dieses Pfades eingeschränkt wird, steuert das
 Kontrollkästchen „Nur aktueller Ordner" unter dem Suchfeld (siehe
 Abschnitt 5). Per Rechtsklick lässt sich ein Ordner über das Kontextmenü
-„Indexierung pausieren" temporär aus dem Index nehmen — der Ordner
+„Indexierung pausieren" temporär aus dem Index nehmen; der Ordner
 und alle Unterordner werden grau dargestellt und beim nächsten
 Indexer-Lauf übersprungen. Der zweite Reiter „Alle Dateien" zeigt
 demgegenüber eine flache Liste aller indizierten Dateien ohne Baum-
@@ -144,13 +144,13 @@ gruppiert; nach Datum sortiert entfallen Gruppen und Leiste, weil ein
 Sprung auf „M" dann an beliebiger Stelle landen würde.
 
 Bleibt die Liste leer, sagt sie, warum: „Noch nichts indiziert" bei
-leerem Bestand, „Nichts gefunden" bei zu enger Suche — dort mit einer
-Schaltfläche, die Suche und Filter zurücknimmt — und „Die Liste konnte
+leerem Bestand, „Nichts gefunden" bei zu enger Suche (dort mit einer
+Schaltfläche, die Suche und Filter zurücknimmt) und „Die Liste konnte
 nicht geladen werden", wenn der Abruf gescheitert ist.
 
 Die **mittlere Spalte** ist die Trefferliste der Suche. Solange das
 Suchfeld leer ist, listet sie alle Dateien, die der aktive linke
-Reiter beisteuert — eingeschränkt auf eine konfigurierbare Treffer-
+Reiter beisteuert, eingeschränkt auf eine konfigurierbare Treffer-
 Höchstzahl. Sobald im Suchfeld am oberen Rand eine Anfrage steht,
 übernimmt die FTS5-Suche und liefert Snippets mit hervorgehobenen
 Treffern. Ein Klick auf einen Eintrag öffnet die Datei in der rechten
@@ -171,7 +171,7 @@ Konflikt manuell auflösen.
 Unter dem Dokument steht der Bereich **Zusammenhänge**. Er zeigt, worauf
 das Dokument verweist, welche Dokumente auf es verweisen, in welchem
 Ordner es liegt und welche Kennzeichnungen es trägt; jeder Eintrag führt
-weiter. Dort wird die Datei auch **umbenannt, verschoben oder gelöscht** —
+weiter. Dort wird die Datei auch **umbenannt, verschoben oder gelöscht**,
 im Zusammenhang, nicht in einer getrennten Verwaltungsseite. Vor dem
 Löschen und vor einer Umbenennung, die Verweise bricht, nennt die
 Rückfrage vorher, wie viele Dokumente danach ins Leere zeigen. Beim
@@ -190,7 +190,7 @@ Unter „Datei → Einstellungen → Darstellung" steht die Wahl zwischen
 Windows; die beiden anderen setzen sich darüber hinweg. Der Wechsel wirkt
 sofort und ohne Neustart.
 
-Die Wahl gilt für die **gesamte** Anwendung — auch für die Dokument-Vorschau,
+Die Wahl gilt für die **gesamte** Anwendung, auch für die Dokument-Vorschau,
 den Verweis-Graphen und die Titelleisten der Fenster. Wer „Dunkel" wählt,
 während Windows hell steht, bekommt deshalb keine weiße Fläche mitten in einer
 dunklen Anwendung.
@@ -207,7 +207,7 @@ aktiv wird: beim ersten Start mit konfigurierten Wurzeln, nach
 einen `FileSystemWatcher`, der Schreibzugriffe innerhalb der
 Wurzelpfade beobachtet. Zusätzlich läuft im konfigurierbaren Intervall
 (standardmäßig alle fünf Minuten) ein Soll/Ist-Abgleich, der
-Inkonsistenzen — etwa beim Aufwachen aus dem Standby — erkennt und
+Inkonsistenzen (etwa beim Aufwachen aus dem Standby) erkennt und
 auflöst.
 
 Beim Indexer-Lauf liest der Scanner die Verzeichnisse rekursiv, prüft
@@ -225,7 +225,7 @@ Filter-System. Zuerst gelten die **Glob-Ausschluss-Muster** aus der
 Muster lassen sich im Einstellungs-Dialog ergänzen. Danach kommt die
 **`.mdignore`-Hierarchie**: in jedem Verzeichnis unterhalb einer Wurzel
 darf eine Datei `.mdignore` liegen, die zusätzliche Ausschluss-Muster
-mit `.gitignore`-ähnlicher Syntax beisteuert. Die Wirkung ist additiv —
+mit `.gitignore`-ähnlicher Syntax beisteuert. Die Wirkung ist additiv:
 eine Datei gilt als ausgeschlossen, sobald **eine** Quelle sie matched.
 Drittens wirken die **UI-Pausen**: Ordner, die per Rechtsklick im
 Folder-Tree pausiert wurden, werden über einen Pfad-Präfix-Check
@@ -252,7 +252,7 @@ Rest komplett ausschließen:
 ```
 
 Und wer eine einzelne Datei trotz eines pauschalen Verbots im Index
-behalten will — typisches `.mdignore`-Szenario im Drafts-Ordner —
+behalten will (typisches `.mdignore`-Szenario im Drafts-Ordner)
 schreibt:
 
 ```text
@@ -270,13 +270,13 @@ Tag-Liste der Datei.
 
 ## 5. Suche und Vorschau {#suche}
 
-Die Suche basiert auf SQLite mit aktivierter **FTS5-Erweiterung** —
+Die Suche basiert auf SQLite mit aktivierter **FTS5-Erweiterung**,
 einer Volltext-Suchengine, die für textlastige Bestände auf
 Notizbuch-Skala konzipiert ist. Der Vorteil gegenüber einer schlichten
 `LIKE`-Suche zeigt sich an drei Stellen: erstens skaliert FTS5 auf
 zehntausende Dokumente ohne spürbare Verzögerung, zweitens versteht
 es Phrasen-, Wildcard- und Prefix-Anfragen, und drittens liefert es
-zusammen mit dem Treffer ein „Snippet" — einen kurzen Auszug rund um
+zusammen mit dem Treffer ein „Snippet", einen kurzen Auszug rund um
 die Fundstelle, mit hervorgehobenen Treffer-Begriffen.
 
 Im Suchfeld am oberen Rand der mittleren Spalte genügt das Tippen,
@@ -287,8 +287,8 @@ mit `Strg+F` von jedem Punkt der Anwendung aus; `Esc` leert das
 Suchfeld wieder.
 
 Die Anfrage darf aus mehreren Wörtern bestehen, die implizit mit
-„UND" verknüpft werden. Phrasen — Wortfolgen in genau dieser
-Reihenfolge — gehören in Anführungszeichen: die Suche `"Domain
+„UND" verknüpft werden. Phrasen (Wortfolgen in genau dieser
+Reihenfolge) gehören in Anführungszeichen: die Suche `"Domain
 Driven Design"` liefert ausschließlich Treffer, in denen alle drei
 Wörter in dieser Reihenfolge stehen. Wer den Anfang eines Worts
 sucht, ohne die genaue Endung zu kennen, hängt einen Stern an:
@@ -297,15 +297,15 @@ sucht, ohne die genaue Endung zu kennen, hängt einen Stern an:
 Drei spezielle Filter erweitern die Suche um Metadaten. Der Filter
 `tag:projekt` schränkt auf Dateien ein, die den Tag `projekt`
 tragen; mehrere Tag-Filter kombinieren sich mit „UND". Der negative
-Filter `-tag:archiv` schließt Dateien mit einem bestimmten Tag aus
-— hilfreich, um veraltete Notizen aus den Treffern fernzuhalten.
+Filter `-tag:archiv` schließt Dateien mit einem bestimmten Tag aus,
+hilfreich, um veraltete Notizen aus den Treffern fernzuhalten.
 Der Filter `path:notizen/2026` beschränkt auf Dateien unterhalb
 eines Pfad-Fragments. Alle Filter lassen sich frei mit Volltext-
 Suchbegriffen kombinieren: `tag:rezept salzig -tag:vegetarisch`
 findet salzige Rezepte ohne Vegetarisch-Tag.
 
 Unter dem Suchfeld liegt das Kontrollkästchen **„Nur aktueller
-Ordner"**. Ohne Haken — der Standard — sucht die Anwendung global
+Ordner"**. Ohne Haken (der Standard) sucht die Anwendung global
 über alle konfigurierten Wurzeln, unabhängig davon, welcher Ordner
 links im Baum markiert ist. Mit Haken beschränkt sie die Treffer auf
 den aktuell gewählten Ordner und dessen Unterordner; die Auswahl der
@@ -322,24 +322,24 @@ Ein Klick auf einen Treffer öffnet die Datei in der rechten Spalte.
 Die Vorschau rendert das Markdown in einer eingebetteten WebView2-
 Instanz. Frontmatter-Blöcke werden ausgeblendet, Code-Blöcke
 syntaxgefärbt dargestellt, und WikiLinks der Form `[[Notiz-Slug]]`
-werden als interne Links auf die Zieldatei aufgelöst — ein Klick
+werden als interne Links auf die Zieldatei aufgelöst; ein Klick
 darauf wechselt die Vorschau auf das Verlinkungsziel. Bilder werden
 relativ zur Quelldatei aufgelöst, sodass Markdown-Notizen mit
 Bildordnern unverändert dargestellt werden.
 
-Bilder von fremden Servern bleiben dabei aus — der Schalter dafür heißt
+Bilder von fremden Servern bleiben dabei aus. Der Schalter dafür heißt
 „Bilder aus dem Netz in der Vorschau laden" und steht unter
 `Einstellungen → Verhalten`. Der Grund: Ein Netzbild ruft beim Anzeigen einen
 fremden Server auf und verrät ihm, wann Sie welche Notiz geöffnet haben. Wer
 Abzeichen und Netzbilder sehen will, schaltet ihn ein; geladen werden dann
 ausschließlich Bildquellen, Skripte bleiben in jedem Fall gesperrt.
 
-Wer auf den Rohtext zugreifen möchte — sei es, um einen Schreibfehler
-zu korrigieren oder einen Tag zu ergänzen — wechselt mit `Strg+E`
+Wer auf den Rohtext zugreifen möchte, sei es, um einen Schreibfehler
+zu korrigieren oder einen Tag zu ergänzen, wechselt mit `Strg+E`
 oder dem Toolbar-Button auf den Bearbeiten-Modus. Eine Monospace-
 TextBox erlaubt dann direkte Änderungen; `Strg+S` schreibt sie
-atomar zurück in die Datei. Das ursprüngliche Zeilenende — CRLF
-unter Windows, LF aus einem Linux-Editor — bleibt erhalten, sodass
+atomar zurück in die Datei. Das ursprüngliche Zeilenende (CRLF
+unter Windows, LF aus einem Linux-Editor) bleibt erhalten, sodass
 sich Konflikte mit Versionskontroll-Systemen vermeiden lassen.
 
 ## 6. Tag-Cloud und Tag-Verwaltung {#tagcloud}
@@ -352,7 +352,7 @@ Anfang einer Datei: enthält er ein `tags:`-Feld als Liste oder
 kommaseparierten String, fließen seine Einträge in den Index.
 Die zweite Quelle sind **Inline-Hashtags** im Fließtext der Datei,
 also Sequenzen der Form `#thema`, `#projekt-x`, `#2026-q2`. Die
-Hashtag-Extraktion lässt sich im Einstellungs-Dialog deaktivieren —
+Hashtag-Extraktion lässt sich im Einstellungs-Dialog deaktivieren,
 sinnvoll für Bestände, in denen `#` häufig in Code-Blöcken oder als
 Markdown-Überschrift auftritt; Frontmatter-Tags bleiben in dem Fall
 unberührt.
@@ -361,14 +361,14 @@ Die **Tag-Cloud** in der optionalen vierten Spalte zeigt eine
 visuelle Übersicht der häufigsten Tags. Die Schriftgröße eines Tags
 skaliert **logarithmisch** mit seiner Verwendungshäufigkeit, sodass
 ein dreißigfach genutzter Tag rund doppelt so groß erscheint wie ein
-fünfmal genutzter — die lineare Skalierung würde häufige Tags
+fünfmal genutzter; die lineare Skalierung würde häufige Tags
 unhandlich groß darstellen. In der Panel-Kopfzeile lassen sich
 Sortierreihenfolge (Häufigkeit, Alphabetisch, Zuletzt verwendet) und
 ein „Long-Tail-Modus" umschalten, der auch selten verwendete Tags
 einblendet.
 
 Ein **Klick auf einen Tag** schreibt `tag:<slug>` ins Suchfeld und
-löst eine Suche aus — die Trefferliste zeigt anschließend alle
+löst eine Suche aus. Die Trefferliste zeigt anschließend alle
 Dateien mit diesem Tag. Mit gedrückter `Strg`-Taste verhält sich der
 Klick additiv: der Filter wird an die bestehende Suche angehängt, so
 lassen sich mehrere Tags kombinieren. Mit `Alt` wird der Tag
@@ -410,8 +410,8 @@ Verlinkungs-Anzahl: viele andere Dateien verweisen auf ihn, also
 wird er größer dargestellt. Diese Skalierung macht zentrale
 Notizen sofort sichtbar — eine „Übersicht"- oder „Index"-Datei,
 auf die viele Themen-Notizen zeigen, wird zum visuellen Anker.
-Knoten ohne eingehende oder ausgehende Verbindungen — sogenannte
-„Waisen" — sind kleine, isolierte Punkte am Rand des Layouts und
+Knoten ohne eingehende oder ausgehende Verbindungen (sogenannte
+„Waisen") sind kleine, isolierte Punkte am Rand des Layouts und
 zeigen oft Notizen, die im Zettelkasten nicht angebunden sind.
 
 Der **Graph reagiert auf Maus-Interaktionen**: mit der linken
@@ -428,12 +428,12 @@ Content-Security-Policy: nur ressourcen-eigene Skripte mit
 korrektem Nonce dürfen ausgeführt werden, externe Quellen sind per
 `default-src 'none'` blockiert. Die Übergabe der Graph-Daten ans
 JavaScript erfolgt über einen `<script type="application/json">`-
-Block — kein Inline-Code, keine Eval-Aufrufe.
+Block, kein Inline-Code, keine Eval-Aufrufe.
 
 ## 8. Häufig gestellte Fragen {#faq}
 
 **Wo liegen meine Daten?**
-Sämtliche Benutzerdaten — Einstellungen, Datenbank, Logs —
+Sämtliche Benutzerdaten (Einstellungen, Datenbank, Logs)
 liegen unterhalb von `%LOCALAPPDATA%\MdExplorer\`. Das entspricht
 auf einem Standard-Windows-System dem Pfad
 `C:\Users\<Benutzer>\AppData\Local\MdExplorer\`. Konkret findet sich
@@ -454,7 +454,7 @@ noch Ausschluss-Muster verloren.
 Der erste Anlaufpunkt ist das Logverzeichnis unter
 `%LOCALAPPDATA%\MdExplorer\logs\`. Dort liegen tagesweise rotierte
 Logdateien mit Zeitstempel, Log-Level und Ereignis-ID. Einträge der
-Stufe `Error` oder `Critical` weisen meist auf die Ursache hin —
+Stufe `Error` oder `Critical` weisen meist auf die Ursache hin,
 etwa eine korrupt gewordene SQLite-Datei oder einen unerreichbaren
 Index-Pfad nach einem getrennten Netzlaufwerk. Bei wiederkehrenden
 Problemen hilft das Löschen der `app.db`, um eine beschädigte
@@ -467,11 +467,11 @@ Frontmatter im YAML-Format am Datei-Anfang wird erkannt und
 ausgewertet, aber nicht in die Vorschau übernommen. Tabellen, Task-
 Listen, Code-Blöcke mit Sprachkennzeichnung, Fußnoten und automatische
 Link-Erkennung sind verfügbar; sehr exotische Erweiterungen einzelner
-Editoren — etwa Obsidian-spezifische Embed-Notationen — werden als
+Editoren (etwa Obsidian-spezifische Embed-Notationen) werden als
 Roh-Text dargestellt.
 
 **Wie kann ich meinen Bestand sichern?**
-Es genügt, das Verzeichnis mit den Markdown-Dateien zu sichern —
+Es genügt, das Verzeichnis mit den Markdown-Dateien zu sichern.
 Index und Einstellungen lassen sich aus den Quelldateien jederzeit
 neu aufbauen. Wer auch die Einstellungen und gepausten Ordner
 mitsichern möchte, nimmt zusätzlich die `settings.json` aus dem
@@ -479,9 +479,9 @@ Datenverzeichnis mit. Die SQLite-Datenbank ist hingegen reine
 Cache-Information und muss nicht ins Backup.
 
 **Wie melde ich Fehler oder Verbesserungswünsche?**
-Fehlermeldungen mit reproduzierbarer Beschreibung — am besten mit
+Fehlermeldungen mit reproduzierbarer Beschreibung (am besten mit
 einem Auszug aus dem aktuellen Log und einer Angabe der eingesetzten
-.NET- und Windows-Version — gehen an das Projekt-Repository. Ein
+.NET- und Windows-Version) gehen an das Projekt-Repository. Ein
 ergänzender Screenshot ist bei UI-Themen hilfreich; bei Indexierungs-
 oder Such-Fehlern ist ein anonymisiertes Datei-Beispiel
 aussagekräftiger als Worte allein.

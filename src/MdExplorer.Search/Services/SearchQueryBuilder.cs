@@ -9,7 +9,7 @@ namespace MdExplorer.Search.Services;
 /// Bare-Words werden grundsätzlich als FTS5-Strings quotiert (auch Operator-Reservierungen
 /// wie <c>AND</c>/<c>OR</c>/<c>NOT</c>/<c>NEAR</c> verlieren so ihre Bedeutung), Sonderzeichen
 /// werden gefiltert. Damit kann auch ein Versuch wie <c>'; DROP TABLE ...</c> keine FTS5-Sonderbedeutung
-/// erlangen — eskapierte Anführungszeichen werden über das FTS5-Doppelquoten-Schema neutralisiert.
+/// erlangen; eskapierte Anführungszeichen werden über das FTS5-Doppelquoten-Schema neutralisiert.
 /// Path-Filter werden nicht in MATCH eingebettet, sondern als separate Präfixfilter geliefert
 /// (die <c>Path</c>-Spalte ist <c>UNINDEXED</c>).
 /// RegEx-Vorfilter und Similarity-Modi sind in <see cref="SimilarityQueryBuilder"/> ausgelagert.
@@ -289,13 +289,13 @@ public sealed class SearchQueryBuilder : ISearchQueryBuilder
     }
 
     /// <summary>
-    /// Liest ein Wort bis zum nächsten Leerzeichen — oder bis zum nächsten Anführungszeichen.
+    /// Liest ein Wort bis zum nächsten Leerzeichen oder bis zum nächsten Anführungszeichen.
     /// </summary>
     /// <remarks>
     /// Ohne das Anführungszeichen als Ende läse diese Schleife <c>tag:"zwei teile"</c> als
     /// **ein** Wort <c>tag:"zwei</c>; der Wert gälte damit als mitgeliefert, und der Zweig, der
     /// ein Anführungszeichen nach dem Doppelpunkt lesen soll, würde nie erreicht. Heraus käme
-    /// <c>Tags:"zwei" AND "teile"</c> — die Einschränkung suchte ein Schlagwort namens
+    /// <c>Tags:"zwei" AND "teile"</c>; die Einschränkung suchte ein Schlagwort namens
     /// <c>zwei</c> und dazu, unabhängig davon, das Wort <c>teile</c> irgendwo im Text. Bei
     /// <c>path:"mein ordner"</c> stünde am Ende ein Pfad-Anfang <c>"mein</c>, samt
     /// Anführungszeichen.
@@ -312,7 +312,7 @@ public sealed class SearchQueryBuilder : ISearchQueryBuilder
                 break;
             }
 
-            // Ein Anführungszeichen beginnt immer eine Wortgruppe — hier endet das Wort davor.
+            // Ein Anführungszeichen beginnt immer eine Wortgruppe. Hier endet das Wort davor.
             // Am Zeilenanfang übernimmt das der Aufrufer; nach einem Doppelpunkt diese Stelle.
             if (character == '"')
             {

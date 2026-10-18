@@ -208,7 +208,7 @@ public sealed partial class MarkdownTagRewriter : IMarkdownTagRewriter
     {
         string[] tokens = inner.Split(',', StringSplitOptions.None);
         List<string> rewritten = new(tokens.Length);
-        // Dedupe über Slug — Merge-Operationen sollen keine Doppel-Einträge erzeugen.
+        // Dedupe über Slug: Merge-Operationen sollen keine Doppel-Einträge erzeugen.
         HashSet<string> seenSlugs = new(StringComparer.Ordinal);
         foreach (string token in tokens)
         {

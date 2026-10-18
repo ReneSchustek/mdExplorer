@@ -13,8 +13,8 @@ namespace MdExplorer.Core.Settings;
 /// <remarks>
 /// Sicherheits-Hinweis: Root-Pfade werden nicht gegen Symlink-Ziele kanonisiert.
 /// Ein Symlink kann damit auf Systempfade verweisen, ohne dass die Validierung das erkennt.
-/// MdExplorer geht davon aus, dass der Endanwender Vertrauen in seine eigene Workspace-Konfiguration hat —
-/// im Multi-User- oder Server-Kontext muss die kanonische Auflösung von Symlinks ergänzt werden.
+/// MdExplorer geht davon aus, dass der Endanwender Vertrauen in seine eigene Workspace-Konfiguration hat.
+/// Im Multi-User- oder Server-Kontext muss die kanonische Auflösung von Symlinks ergänzt werden.
 /// </remarks>
 public sealed class SettingsValidator
 {
@@ -143,7 +143,7 @@ public sealed class SettingsValidator
     }
 }
 
-/// <summary>Ergebnis einer Validierung — leere Liste = gültig.</summary>
+/// <summary>Ergebnis einer Validierung (leere Liste = gültig).</summary>
 /// <param name="Errors">Liste der Befunde (pro Property + Index).</param>
 public sealed record SettingsValidationResult(ImmutableArray<SettingsValidationError> Errors)
 {

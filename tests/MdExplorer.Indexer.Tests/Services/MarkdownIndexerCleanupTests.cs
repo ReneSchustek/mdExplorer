@@ -3,11 +3,11 @@ using MdExplorer.Indexer.Tests.Fakes;
 namespace MdExplorer.Indexer.Tests.Services;
 
 /// <summary>
-/// Hält fest, wann Einträge entfernt werden — und wann ausdrücklich nicht.
+/// Hält fest, wann Einträge entfernt werden, und wann ausdrücklich nicht.
 /// </summary>
 /// <remarks>
 /// Hinge der Aufräumdurchgang am Erfolg des Schreibens, ließe eine Datenbank-Spitze ihn ganz
-/// ausfallen, der Wächter beendete den Dienst, und danach liefe kein Abgleich mehr — weder
+/// ausfallen, der Wächter beendete den Dienst, und danach liefe kein Abgleich mehr, weder
 /// für neue Dateien noch für verschwundene. Verwaiste Einträge sammelten sich unbemerkt an.
 /// </remarks>
 public sealed class MarkdownIndexerCleanupTests
@@ -51,7 +51,7 @@ public sealed class MarkdownIndexerCleanupTests
         await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(3, harness.Repository.Snapshot.Count);
 
-        // Der Zugriff bricht nach der ersten Datei ab — die beiden anderen sind nicht
+        // Der Zugriff bricht nach der ersten Datei ab; die beiden anderen sind nicht
         // verschwunden, sie wurden nur nicht gesehen.
         harness.FileSystem.ThrowAfterEnumerating = 1;
 

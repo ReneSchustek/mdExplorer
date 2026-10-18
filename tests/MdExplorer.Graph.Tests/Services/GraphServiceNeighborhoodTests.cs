@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace MdExplorer.Graph.Tests.Services;
 
 /// <summary>
-/// Hält fest, dass die Verbindungen eines Dokuments nur die Nachbarschaft laden — und
+/// Hält fest, dass die Verbindungen eines Dokuments nur die Nachbarschaft laden, und
 /// trotzdem dasselbe liefern wie der Weg über den ganzen Bestand.
 /// </summary>
 /// <remarks>
@@ -59,7 +59,7 @@ public sealed class GraphServiceNeighborhoodTests
     }
 
     /// <remarks>
-    /// Aus 120 Dokumenten werden eine Handvoll. Die Zahl ist die Aussage — ohne sie wäre
+    /// Aus 120 Dokumenten werden eine Handvoll. Die Zahl ist die Aussage; ohne sie wäre
     /// „nur die Nachbarschaft" eine Behauptung.
     /// </remarks>
     [Fact]
@@ -79,7 +79,7 @@ public sealed class GraphServiceNeighborhoodTests
 
     /// <remarks>
     /// Der Vorfilter ist eine Textsuche und liefert zu viel: Ein Dokument, das
-    /// <c>„notiz-7-anhang"</c> nennt, enthält die Zeichenfolge <c>„notiz-7"</c> nicht — wohl
+    /// <c>„notiz-7-anhang"</c> nennt, enthält die Zeichenfolge <c>„notiz-7"</c> nicht, wohl
     /// aber eines, das <c>„notiz-70"</c>… deshalb sucht der Filter mit Anführungszeichen.
     /// Was trotzdem durchrutscht, muss beim Auswerten verschwinden.
     /// </remarks>
@@ -147,7 +147,7 @@ public sealed class GraphServiceNeighborhoodTests
         Guid.Parse((index + 1).ToString("D8", CultureInfo.InvariantCulture) + "-0000-0000-0000-000000000000");
 
     /// <summary>
-    /// Was der Weg über den ganzen Bestand liefern würde — als unabhängige Rechnung.
+    /// Was der Weg über den ganzen Bestand liefern würde, als unabhängige Rechnung.
     /// </summary>
     private static DocumentRelations FromFullSnapshot(GraphSourceData data, Guid markdownFileId)
     {

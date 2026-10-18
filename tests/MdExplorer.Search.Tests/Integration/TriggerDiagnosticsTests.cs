@@ -6,19 +6,19 @@ using Microsoft.Extensions.DependencyInjection;
 namespace MdExplorer.Search.Tests.Integration;
 
 /// <summary>
-/// Hält fest, wie eine gelöschte Datei aus dem Volltext verschwindet — und wann.
+/// Hält fest, wie eine gelöschte Datei aus dem Volltext verschwindet, und wann.
 /// </summary>
 /// <remarks>
 /// <para>
 /// <c>AFTER DELETE</c>-Auslöser, sofort und je Zeile, wären zu teuer: <c>MarkdownFileId</c>
 /// ist in der FTS5-Tabelle <c>UNINDEXED</c>, jede Bedingung darauf liest die ganze Tabelle.
-/// Gemessen rund 170 ms je gelöschter Datei — für 25.000 Einträge über eine Stunde.
+/// Gemessen rund 170 ms je gelöschter Datei, für 25.000 Einträge über eine Stunde.
 /// </para>
 /// <para>
 /// Deshalb räumt der Abgleich auf, und der läuft alle fünf Sekunden. Diese Prüfungen
 /// beschreiben beide Hälften des Handels: <b>unmittelbar nach dem Löschen steht die Zeile
 /// noch</b>, nach dem Abgleich ist sie weg. Wer das Fenster für einen Fehler hält, liest hier
-/// nach, dass es gewollt ist — dieselbe Frist gilt fürs Hinzufügen ohnehin.
+/// nach, dass es gewollt ist; dieselbe Frist gilt fürs Hinzufügen ohnehin.
 /// </para>
 /// <para>
 /// Ebenso hält die Datei fest: EF Core schreibt Guid-Werte als

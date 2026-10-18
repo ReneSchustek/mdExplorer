@@ -165,7 +165,7 @@ public sealed class LocalFileSystemTests : IDisposable
     }
 
     /// <remarks>
-    /// Fehlt das Zielverzeichnis, wird es angelegt. Sonst müsste jeder Aufrufer daran denken —
+    /// Fehlt das Zielverzeichnis, wird es angelegt. Sonst müsste jeder Aufrufer daran denken,
     /// und einer denkt nicht daran.
     /// </remarks>
     [Fact]
@@ -182,7 +182,7 @@ public sealed class LocalFileSystemTests : IDisposable
 
     /// <remarks>
     /// Der Punkt, an dem <c>overwrite: false</c> hängt: Ein vorhandenes Ziel muss den Vorgang
-    /// abbrechen. Andernfalls verschluckt ein Umbenennen eine fremde Datei — und beides,
+    /// abbrechen. Andernfalls verschluckt ein Umbenennen eine fremde Datei, und beides,
     /// Quelle und Ziel, ist danach nicht mehr da, wo es hingehört.
     /// </remarks>
     [Fact]
@@ -223,7 +223,7 @@ public sealed class LocalFileSystemTests : IDisposable
 
     /// <remarks>
     /// Wer löschen will, was schon weg ist, hat sein Ziel erreicht. Diese Zusage steht als
-    /// Kommentar im Code; hier steht sie als Prüfung — sonst hinge der Aufrufer an einer
+    /// Kommentar im Code; hier steht sie als Prüfung, sonst hinge der Aufrufer an einer
     /// Ausnahme für einen Zustand, den er sich gewünscht hat.
     /// </remarks>
     [Fact]

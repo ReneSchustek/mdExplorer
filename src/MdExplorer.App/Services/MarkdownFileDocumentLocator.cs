@@ -5,7 +5,7 @@ namespace MdExplorer.App.Services;
 
 /// <summary>
 /// Standard-Implementierung von <see cref="IDocumentLocator"/>. Öffnet pro Aufruf einen eigenen
-/// DI-Scope und delegiert an <see cref="IMarkdownFileRepository"/> — vermeidet das Captive-Dependency-
+/// DI-Scope und delegiert an <see cref="IMarkdownFileRepository"/> und vermeidet das Captive-Dependency-
 /// Antipattern (Singleton hält Scoped → DbContext lebt ewig).
 /// </summary>
 internal sealed class MarkdownFileDocumentLocator : IDocumentLocator

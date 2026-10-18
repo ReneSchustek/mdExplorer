@@ -25,7 +25,7 @@ internal sealed class MemorySink : ILogEventSink, IMemoryLogStore
     private readonly object _lock = new();
 
     /// <summary>
-    /// Sichtbar für Tests — Produktivcode geht über <see cref="Instance"/>,
+    /// Sichtbar für Tests; Produktivcode geht über <see cref="Instance"/>,
     /// damit der Serilog-Bootstrap und der DI-Container dieselbe Ringpuffer-Instanz teilen.
     /// </summary>
     internal MemorySink(int capacity)

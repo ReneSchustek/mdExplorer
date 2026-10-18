@@ -19,13 +19,13 @@ namespace MdExplorer.App.ViewModels;
 internal sealed partial class AllFilesViewModel : ObservableObject
 {
     /// <summary>Ab dieser Zahl sichtbarer Einträge erscheint die Sprungleiste.</summary>
-    /// <remarks>Darunter überblickt man die Liste ohne Sprungziel — die Leiste wäre nur Fläche.</remarks>
+    /// <remarks>Darunter überblickt man die Liste ohne Sprungziel; die Leiste wäre nur Fläche.</remarks>
     private const int JumpBarThreshold = 50;
 
-    /// <summary>Tage, die der Zeitraum „7 Tage" umfasst — einschließlich des laufenden.</summary>
+    /// <summary>Tage, die der Zeitraum „7 Tage" umfasst, einschließlich des laufenden.</summary>
     private const int SevenDayWindow = 7;
 
-    /// <summary>Tage, die der Zeitraum „30 Tage" umfasst — einschließlich des laufenden.</summary>
+    /// <summary>Tage, die der Zeitraum „30 Tage" umfasst, einschließlich des laufenden.</summary>
     private const int ThirtyDayWindow = 30;
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -36,7 +36,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf eine Abfrage,
+    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf eine Abfrage,
     /// die niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
@@ -54,13 +54,13 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     private AllFilesSortMode _sortMode = AllFilesSortMode.LastModified;
 
     /// <remarks>
-    /// Schützt vor dem zweiten Lauf, während der erste noch läuft — ein Ablaufmerker, kein
+    /// Schützt vor dem zweiten Lauf, während der erste noch läuft: ein Ablaufmerker, kein
     /// Anzeigezustand. Was die Ansicht zeigt, steht ausschließlich in <see cref="State"/>.
     /// </remarks>
     [ObservableProperty]
     private bool _isBusy;
 
-    /// <summary>Der Zustand, auf den die Ansicht reagiert — die einzige Quelle dafür.</summary>
+    /// <summary>Der Zustand, auf den die Ansicht reagiert, die einzige Quelle dafür.</summary>
     [ObservableProperty]
     private AllFilesListState _state = AllFilesListState.Loading;
 
@@ -110,7 +110,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// <summary>Löst einen Lade-Roundtrip aus.</summary>
     public AsyncRelayCommand RefreshCommand { get; }
 
-    /// <summary>Die Buchstaben der Sprungleiste — immer vollständig, nie gekürzt.</summary>
+    /// <summary>Die Buchstaben der Sprungleiste, immer vollständig, nie gekürzt.</summary>
     public IReadOnlyList<JumpLetterViewModel> JumpLetters { get; } =
         [.. AlphabetIndex.Letters.Select(letter => new JumpLetterViewModel(letter))];
 
@@ -120,7 +120,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// <summary>Springt zur Gruppe eines Buchstabens.</summary>
     public RelayCommand<string> JumpToLetterCommand { get; }
 
-    /// <summary>Die wählbaren Änderungszeiträume — feste Menge, deshalb als Umschalter.</summary>
+    /// <summary>Die wählbaren Änderungszeiträume: feste Menge, deshalb als Umschalter.</summary>
     public IReadOnlyList<PeriodFilterViewModel> PeriodFilters { get; }
 
     /// <summary>
@@ -128,7 +128,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Ein Filter, der wirkt, aber nicht zu sehen ist, erzeugt den Eindruck fehlender
-    /// Daten — und man sucht den Fehler dann in den Daten statt in der Einschränkung.
+    /// Daten, und man sucht den Fehler dann in den Daten statt in der Einschränkung.
     /// </remarks>
     public ObservableCollection<ActiveFilterViewModel> ActiveFilters { get; }
 
@@ -156,12 +156,12 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// <remarks>
     /// Nur bei alphabetischer Sortierung: Nach Datum sortiert stünde ein Sprung auf „M"
     /// an einer beliebigen Stelle der Liste. Und erst ab einer Bestandsgröße, ab der man
-    /// die Liste nicht mehr überblickt — darunter ist die Leiste nur zusätzliche Fläche.
+    /// die Liste nicht mehr überblickt; darunter ist die Leiste nur zusätzliche Fläche.
     /// </remarks>
     public bool IsJumpBarVisible => SortMode is AllFilesSortMode.Title or AllFilesSortMode.RelativePath
         && Items.Count >= JumpBarThreshold;
 
-    /// <summary>Es gibt überhaupt keine Einträge — unabhängig von Suche und Filter.</summary>
+    /// <summary>Es gibt überhaupt keine Einträge, unabhängig von Suche und Filter.</summary>
     public bool ShowsNothingAtAll => State == AllFilesListState.EmptyStock;
 
     /// <summary>Es gibt Einträge, aber keiner passt zu Suche und Filtern.</summary>
@@ -261,7 +261,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         UpdateJumpLetters(alphabetical);
         UpdateActiveFilters();
 
-        // Ein Zustand, aus dem sich alles ableitet — statt mehrerer Merker, die
+        // Ein Zustand, aus dem sich alles ableitet, statt mehrerer Merker, die
         // auseinanderlaufen können.
         State = (_allItems.Length, Items.Count) switch
         {
@@ -273,7 +273,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         OnPropertyChanged(nameof(IsJumpBarVisible));
     }
 
-    /// <summary>Die Einträge, die Suche und Filter passieren — in der gewählten Ordnung.</summary>
+    /// <summary>Die Einträge, die Suche und Filter passieren, in der gewählten Ordnung.</summary>
     private IEnumerable<AllFilesItemViewModel> SortedMatches()
     {
         string trimmed = SearchText?.Trim() ?? string.Empty;
@@ -298,7 +298,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         foreach (AllFilesItemViewModel item in sorted)
         {
             // Der Buchstabe folgt dem Schlüssel, nach dem sortiert wurde. Nach Datum
-            // sortiert gibt es keinen sinnvollen Buchstaben — dann bleibt die Beschriftung
+            // sortiert gibt es keinen sinnvollen Buchstaben; dann bleibt die Beschriftung
             // leer und die Ansicht zeigt keinen Gruppenkopf.
             item.GroupLabel = alphabetical
                 ? AlphabetIndex.LetterOf(SortKeyOf(item)).ToString(CultureInfo.InvariantCulture)
@@ -439,7 +439,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         _tagFilters.Clear();
         _period = AllFilesPeriod.Any;
 
-        // Setzt die Ansicht selbst dann neu zusammen, wenn der Suchtext schon leer war —
+        // Setzt die Ansicht selbst dann neu zusammen, wenn der Suchtext schon leer war,
         // sonst bliebe das Zurücknehmen der Filter ohne Wirkung.
         if (SearchText.Length == 0)
         {
@@ -500,14 +500,14 @@ internal sealed partial class JumpLetterViewModel : ObservableObject
     /// <summary>Der Buchstabe selbst.</summary>
     public char Letter { get; }
 
-    /// <summary>Der Buchstabe als Text — für Anzeige und Befehlsparameter.</summary>
+    /// <summary>Der Buchstabe als Text, für Anzeige und Befehlsparameter.</summary>
     public string Label { get; }
 }
 
 /// <summary>Was die Datei-Liste gerade zeigt.</summary>
 /// <remarks>
 /// Ein Zustand statt mehrerer bools nebeneinander: Zwei Merker, die sich widersprechen,
-/// ergeben eine Ansicht, die es laut Code nicht geben kann — und genau die sieht dann der
+/// ergeben eine Ansicht, die es laut Code nicht geben kann, und genau die sieht dann der
 /// Nutzer. Die Anzeige-Eigenschaften leiten sich hieraus ab.
 /// </remarks>
 internal enum AllFilesListState
@@ -548,7 +548,7 @@ internal sealed partial class PeriodFilterViewModel : ObservableObject
     public string Label { get; }
 }
 
-/// <summary>Ein Filter, der gerade wirkt — als entfernbarer Chip dargestellt.</summary>
+/// <summary>Ein Filter, der gerade wirkt, als entfernbarer Chip dargestellt.</summary>
 internal sealed class ActiveFilterViewModel
 {
     /// <summary>Erzeugt den Chip zu einem wirkenden Filter.</summary>
@@ -562,7 +562,7 @@ internal sealed class ActiveFilterViewModel
     /// <summary>Woran der Filter greift.</summary>
     public AllFilesFilterKind Kind { get; }
 
-    /// <summary>Der eingestellte Wert — Ordner, Kennzeichnung oder Zeitraum.</summary>
+    /// <summary>Der eingestellte Wert: Ordner, Kennzeichnung oder Zeitraum.</summary>
     public string Value { get; }
 
     /// <summary>Die Aufschrift des Chips.</summary>
@@ -641,10 +641,10 @@ internal sealed class AllFilesItemViewModel
     /// <summary>Pfad relativ zum konfigurierten Root.</summary>
     public string RelativePath { get; }
 
-    /// <summary>Vollqualifizierter Pfad — Eingabe für den Navigations-Locator.</summary>
+    /// <summary>Vollqualifizierter Pfad, Eingabe für den Navigations-Locator.</summary>
     public string AbsolutePath { get; }
 
-    /// <summary>Letzte Änderung auf Disk (UTC) — Grundlage für Sortierung und Zeitraumfilter.</summary>
+    /// <summary>Letzte Änderung auf Disk (UTC), Grundlage für Sortierung und Zeitraumfilter.</summary>
     public DateTime LastWriteTimeUtc { get; }
 
     /// <summary>
@@ -657,7 +657,7 @@ internal sealed class AllFilesItemViewModel
     public IReadOnlyList<string> TagSlugs { get; }
 
     /// <summary>
-    /// Beschriftung der Gruppe, in der dieser Eintrag steht — leer, wenn nicht gruppiert wird.
+    /// Beschriftung der Gruppe, in der dieser Eintrag steht; leer, wenn nicht gruppiert wird.
     /// </summary>
     public string GroupLabel { get; internal set; } = string.Empty;
 

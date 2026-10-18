@@ -11,7 +11,7 @@ namespace MdExplorer.App.Converters;
 /// in ein <see cref="TextBlock"/> mit hervorgehobenen <see cref="Run"/>-Elementen.
 /// </summary>
 /// <remarks>
-/// Bewusst kein <see cref="IValueConverter"/>, das <see cref="InlineCollection"/> liefert —
+/// Bewusst kein <see cref="IValueConverter"/>, das <see cref="InlineCollection"/> liefert:
 /// WPF erlaubt das Binding nur über <c>TextBlock</c>-Substitution. Diese Klasse implementiert
 /// <see cref="IValueConverter"/>, der direkt ein <see cref="TextBlock"/> baut.
 /// </remarks>
@@ -53,13 +53,13 @@ internal sealed class HighlightToInlinesConverter : IValueConverter
     /// </summary>
     /// <remarks>
     /// Beide Farben, nicht nur die Fläche: Ohne gesetzten Vordergrund erbt der Abschnitt die
-    /// Textfarbe der Umgebung — im dunklen Erscheinungsbild also helle Schrift auf hellem
+    /// Textfarbe der Umgebung, im dunklen Erscheinungsbild also helle Schrift auf hellem
     /// Grund, und die Trefferstelle ist genau die Stelle, die dann verschwindet.
     ///
     /// Über <see cref="FrameworkContentElement.SetResourceReference"/> und nicht über einen
     /// einmal gelesenen Pinsel: Der Verweis löst sich beim Tausch des Wörterbuchs neu auf,
-    /// ein gelesener Wert bliebe in der alten Belegung stehen. Fehlt die Ressource — etwa im
-    /// Test ohne laufende Anwendung —, bleibt die Eigenschaft ungesetzt und der Abschnitt
+    /// ein gelesener Wert bliebe in der alten Belegung stehen. Fehlt die Ressource (etwa im
+    /// Test ohne laufende Anwendung), bleibt die Eigenschaft ungesetzt und der Abschnitt
     /// erbt wie jeder andere Text.
     /// </remarks>
     internal static Run BuildHighlightRun(string text)

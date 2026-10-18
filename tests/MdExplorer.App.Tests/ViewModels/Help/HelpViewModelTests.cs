@@ -4,7 +4,7 @@ using MdExplorer.App.ViewModels.Help;
 namespace MdExplorer.App.Tests.ViewModels.Help;
 
 /// <summary>
-/// Prüft das Inhaltsverzeichnis des Hilfefensters. Es wird bei jedem Öffnen neu gesetzt —
+/// Prüft das Inhaltsverzeichnis des Hilfefensters. Es wird bei jedem Öffnen neu gesetzt;
 /// bliebe der alte Bestand stehen, zeigte die Liste Kapitel doppelt an.
 /// </summary>
 public sealed class HelpViewModelTests

@@ -10,7 +10,7 @@ namespace MdExplorer.Data.Migrations
     /// </summary>
     /// <remarks>
     /// Eine Datei, die der Parser nicht verarbeiten kann, bekam bis hierher kein Dokument und
-    /// galt damit dauerhaft als ungeparst — jeder Durchlauf las sie erneut und schrieb den
+    /// galt damit dauerhaft als ungeparst. Jeder Durchlauf las sie erneut und schrieb den
     /// vollen Aufrufstapel ins Protokoll. Der Vermerk hält Inhalt und Parser-Fassung fest, an
     /// denen der Versuch gescheitert ist; solange beides gleich bleibt, ruht die Datei.
     /// Der Cascade-Delete räumt den Vermerk mit der Datei weg.

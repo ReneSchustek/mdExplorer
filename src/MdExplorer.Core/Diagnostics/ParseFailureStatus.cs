@@ -4,8 +4,8 @@ namespace MdExplorer.Core.Diagnostics;
 
 /// <summary>
 /// Prozessweiter Zustandshalter für <see cref="IParseFailureStatus"/>. Als Singleton
-/// registriert: Der Parser läuft im Hintergrund und schreibt, die Oberfläche liest —
-/// deshalb ist der Zugriff gesperrt und <see cref="Changed"/> feuert außerhalb der Sperre.
+/// registriert: Der Parser läuft im Hintergrund und schreibt, die Oberfläche liest.
+/// Deshalb ist der Zugriff gesperrt und <see cref="Changed"/> feuert außerhalb der Sperre.
 /// </summary>
 public sealed class ParseFailureStatus : IParseFailureStatus
 {

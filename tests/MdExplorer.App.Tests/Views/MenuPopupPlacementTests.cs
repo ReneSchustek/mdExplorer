@@ -6,7 +6,7 @@ namespace MdExplorer.App.Tests.Views;
 
 /// <summary>
 /// Hält fest, wo das Aufklappteil eines Menütitels landet. Auf Rechnern, an denen Windows
-/// „Menüs rechtsbündig ausrichten" meldet, hängte WPF es an die rechte Kante des Titels —
+/// „Menüs rechtsbündig ausrichten" meldet, hängte WPF es an die rechte Kante des Titels;
 /// bei „Datei" ganz links lief es dadurch über den Fensterrand hinaus.
 /// </summary>
 public sealed class MenuPopupPlacementTests
@@ -28,7 +28,7 @@ public sealed class MenuPopupPlacementTests
     public void BelowLeftAligned_OffersAnUpwardFallback_ForTitlesNearTheScreenEdge()
     {
         // Reicht der Platz nach unten nicht, greift WPF auf den zweiten Vorschlag zurück.
-        // Ohne einen solchen bliebe nur die Voreinstellung — und damit der alte Versatz.
+        // Ohne einen solchen bliebe nur die Voreinstellung und damit der alte Versatz.
         CustomPopupPlacement[] vorschlaege = MenuPopupPlacement.BelowLeftAligned(PopupSize, TitleSize, default);
 
         Assert.Equal(2, vorschlaege.Length);

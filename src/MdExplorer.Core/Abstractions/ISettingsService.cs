@@ -5,7 +5,7 @@ namespace MdExplorer.Core.Abstractions;
 /// <summary>
 /// Liest und schreibt die persistente <see cref="AppSettings"/>-Datei.
 /// Implementierungen halten den aktuell gültigen Stand und benachrichtigen
-/// per <see cref="SettingsChanged"/>-Event über Änderungen — Module konsumieren
+/// per <see cref="SettingsChanged"/>-Event über Änderungen. Module konsumieren
 /// die Settings live ohne Re-Construction.
 /// </summary>
 public interface ISettingsService

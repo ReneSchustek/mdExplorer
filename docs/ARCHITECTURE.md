@@ -83,7 +83,7 @@ registriert Module über `Add*`-Erweiterungsmethoden und stellt den
 Die Gestaltungslinie liegt in `Themes/`: `Tokens.xaml` trägt Abstände, Radien
 und Typografie, `Light.xaml` und `Dark.xaml` je eine vollständige Farbbelegung
 mit demselben Schlüsselsatz, `ControlStyles.xaml` die Grundbelegung der
-Bedienelemente. Getauscht wird zur Laufzeit genau ein Wörterbuch — die Belegung.
+Bedienelemente. Getauscht wird zur Laufzeit genau ein Wörterbuch: die Belegung.
 Wiederverwendbare Bausteine (Suchfeld, Leerzustand, Sprungleiste) stehen als
 Steuerelemente in `Controls/`, nicht als abgeschriebenes Markup.
 
@@ -92,17 +92,17 @@ Steuerelemente in `Controls/`, nicht als abgeschriebenes Markup.
 Abstraktionen, Datenmodelle und Cross-Cutting-Services ohne externe
 Abhängigkeiten außer dem .NET-BCL und `Microsoft.Extensions.*`:
 
-- `Abstractions/` — `IFileSystem`, `ISettingsService`, Repository- und
+- `Abstractions/`: `IFileSystem`, `ISettingsService`, Repository- und
   Query-Interfaces
-- `Models/` — `AppSettings`, `MarkdownFile`, `Tag`, `MarkdownFileTag`,
+- `Models/`: `AppSettings`, `MarkdownFile`, `Tag`, `MarkdownFileTag`,
   `MarkdownDocument`, `ParseFailure`
-- `Settings/` — `JsonSettingsService`, `SettingsValidator`,
+- `Settings/`: `JsonSettingsService`, `SettingsValidator`,
   `MdIgnoreReader`
-- `FileSystem/` — `LocalFileSystem` (BCL-Wrapper)
-- `Text/` — `LineEndingDetector`, `Utf8Decoder`
-- `Diagnostics/` — `ParseFailureStatus` (Zahl der nicht verarbeitbaren Dateien
+- `FileSystem/`: `LocalFileSystem` (BCL-Wrapper)
+- `Text/`: `LineEndingDetector`, `Utf8Decoder`
+- `Diagnostics/`: `ParseFailureStatus` (Zahl der nicht verarbeitbaren Dateien
   für die Betriebsanzeige)
-- `AppPaths` — zentrale Pfade unterhalb `%LOCALAPPDATA%\MdExplorer\`
+- `AppPaths`: zentrale Pfade unterhalb `%LOCALAPPDATA%\MdExplorer\`
 
 ### MdExplorer.Data
 
@@ -142,7 +142,7 @@ und WPF-Thread-Synchronisierung (`EnableCollectionSynchronization`).
 Prüft über die GitHub-Releases-API auf neue Fassungen, lädt das
 Installationspaket und gleicht es gegen den veröffentlichten SHA-256 ab.
 Ohne Prüfwert wird nicht geladen, bei Abweichung die Datei verworfen statt
-ausgeführt — der Installer ist unsigniert, die Prüfsumme ist der einzige Beleg.
+ausgeführt. Der Installer ist unsigniert, die Prüfsumme ist der einzige Beleg.
 
 ## Querschnittsregeln
 

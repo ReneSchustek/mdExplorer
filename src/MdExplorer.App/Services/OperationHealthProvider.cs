@@ -10,7 +10,7 @@ namespace MdExplorer.App.Services;
 /// verarbeitbaren Dateien (<see cref="IParseFailureStatus"/>) und leitet daraus den
 /// aggregierten <see cref="OperationHealth"/>-Status ab. Reagiert auf jedes neue Log-Event
 /// und auf jede Änderung des Fehlschlag-Standes; feuert <see cref="Changed"/> nur bei
-/// tatsächlicher Stand-Änderung — UI-Bindings updaten dadurch nicht unnötig.
+/// tatsächlicher Stand-Änderung; UI-Bindings updaten dadurch nicht unnötig.
 /// </summary>
 internal sealed class OperationHealthProvider : IOperationHealthProvider, IDisposable
 {

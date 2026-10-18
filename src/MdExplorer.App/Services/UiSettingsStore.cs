@@ -8,7 +8,7 @@ namespace MdExplorer.App.Services;
 
 /// <summary>
 /// Persistiert UI-Settings (aktuell: Spaltenbreiten) als JSON in
-/// <c>%LOCALAPPDATA%\MdExplorer\ui-layout.json</c>. Liest robust — bei Fehlern wird
+/// <c>%LOCALAPPDATA%\MdExplorer\ui-layout.json</c>. Liest robust: Bei Fehlern wird
 /// <see cref="UiLayout.Default"/> zurückgegeben statt zu werfen, damit der Startup
 /// nie wegen kaputter Settings scheitert.
 /// </summary>
@@ -32,7 +32,7 @@ internal sealed partial class UiSettingsStore
     {
     }
 
-    /// <summary>Erzeugt den Store mit explizitem Pfad — für Tests.</summary>
+    /// <summary>Erzeugt den Store mit explizitem Pfad, für Tests.</summary>
     internal UiSettingsStore(string filePath, ILogger<UiSettingsStore> logger)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
@@ -44,7 +44,7 @@ internal sealed partial class UiSettingsStore
     /// <summary>Anzeigepfad für die Statusleiste.</summary>
     public string StorageLocation => _filePath;
 
-    /// <summary>Lädt das Layout — liefert <see cref="UiLayout.Default"/>, wenn nichts gespeichert ist.</summary>
+    /// <summary>Lädt das Layout und liefert <see cref="UiLayout.Default"/>, wenn nichts gespeichert ist.</summary>
     public UiLayout Load()
     {
         if (!File.Exists(_filePath))
@@ -69,7 +69,7 @@ internal sealed partial class UiSettingsStore
         }
     }
 
-    /// <summary>Speichert das Layout. Wirft niemals — Fehler werden geloggt.</summary>
+    /// <summary>Speichert das Layout. Wirft niemals; Fehler werden geloggt.</summary>
     public void Save(UiLayout layout)
     {
         ArgumentNullException.ThrowIfNull(layout);

@@ -92,7 +92,7 @@ public sealed class SearchViewModelEmptyStateTests
         Assert.True(sut.ShowsNoMatches);
 
         // Neue Eingabe: Die Antwort von eben gilt der vorigen Anfrage und sagt über diese
-        // nichts — bis die nächste Antwort da ist, wird nichts behauptet.
+        // nichts; bis die nächste Antwort da ist, wird nichts behauptet.
         sut.QueryText = "zweite";
 
         Assert.False(sut.ShowsNoMatches);
@@ -167,7 +167,7 @@ public sealed class SearchViewModelEmptyStateTests
         return services.BuildServiceProvider(validateScopes: true);
     }
 
-    /// <summary>Eine Suche, die scheitert — für den Zustand, den ein leeres Ergebnis verdeckt.</summary>
+    /// <summary>Eine Suche, die scheitert, für den Zustand, den ein leeres Ergebnis verdeckt.</summary>
     private sealed class FailingSearchService : ISearchService
     {
         public Task<IReadOnlyList<SearchResult>> SearchAsync(SearchQuery query, CancellationToken cancellationToken) =>

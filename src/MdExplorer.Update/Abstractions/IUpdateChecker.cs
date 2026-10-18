@@ -19,7 +19,7 @@ public interface IUpdateChecker
     /// </summary>
     /// <param name="force">
     /// <see langword="true"/> für eine vom Nutzer ausgelöste Prüfung. Die Drossel schützt die
-    /// GitHub-API vor häufigen Programmstarts — wer den Knopf drückt, erwartet dagegen eine
+    /// GitHub-API vor häufigen Programmstarts. Wer den Knopf drückt, erwartet dagegen eine
     /// echte Abfrage und keine stille Auskunft von gestern.
     /// </param>
     /// <param name="cancellationToken">Abbruch-Token; wird kooperativ beachtet.</param>

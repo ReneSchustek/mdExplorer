@@ -16,7 +16,7 @@ namespace MdExplorer.App.Tests.Services;
 /// <remarks>
 /// Der Kern ist nicht die einzelne Aktion, sondern dass Datei und Index danach dasselbe
 /// sagen. Ein Eintrag, der auf einen Pfad zeigt, den es nicht mehr gibt, führt jede Liste
-/// ins Leere — und man sucht den Fehler in der Anzeige statt im Vorgang.
+/// ins Leere, und man sucht den Fehler in der Anzeige statt im Vorgang.
 /// </remarks>
 public sealed class DocumentFileServiceTests
 {
@@ -218,7 +218,7 @@ public sealed class DocumentFileServiceTests
     /// Die Datei ist in einem anderen Programm offen und lässt sich nicht löschen. Entscheidend
     /// ist hier nicht die Meldung, sondern was **nicht** passiert: Der Index-Eintrag bleibt
     /// stehen. Ihn zu entfernen, während die Datei noch da ist, hieße sie unauffindbar zu
-    /// machen — der Vorgang wäre gescheitert und hätte trotzdem etwas kaputt gemacht.
+    /// machen; der Vorgang wäre gescheitert und hätte trotzdem etwas kaputt gemacht.
     /// </remarks>
     [Theory]
     [InlineData(typeof(IOException))]
@@ -239,7 +239,7 @@ public sealed class DocumentFileServiceTests
 
     /// <remarks>
     /// Alle drei Vorgänge greifen auf denselben Eintrag zu. Ist er zwischen dem Klick und dem
-    /// Ausführen verschwunden — der Aufräumdurchgang des Indexers läuft nebenher —, muss jeder
+    /// Ausführen verschwunden (der Aufräumdurchgang des Indexers läuft nebenher), muss jeder
     /// von ihnen das sagen, statt auf einem Nullwert weiterzuarbeiten.
     /// </remarks>
     [Fact]

@@ -9,12 +9,12 @@ namespace MdExplorer.Parser.Services;
 
 /// <summary>
 /// Extrahiert Hashtags (<c>#tag</c>) aus dem Markdig-AST. Inline-Code (<see cref="CodeInline"/>),
-/// Fenced-/Indented-Code-Blocks und das YAML-Frontmatter werden bewusst übergangen — Tags daraus zählen nicht.
+/// Fenced-/Indented-Code-Blocks und das YAML-Frontmatter werden bewusst übergangen; Tags daraus zählen nicht.
 /// </summary>
 /// <remarks>
 /// Der Settings-Schalter <see cref="Core.Models.IndexingSettings.AutoExtractHashtags"/>
 /// steuert die Body-Extraktion. Steht er auf <see langword="false"/>, liefert der Extractor
-/// eine leere Liste — Frontmatter-<c>tags</c>-Werte werden weiterhin vom <see cref="MarkdigParser"/>
+/// eine leere Liste. Frontmatter-<c>tags</c>-Werte werden weiterhin vom <see cref="MarkdigParser"/>
 /// hinzugefügt, weil sie explizit gesetzt sind.
 /// </remarks>
 public sealed partial class TagExtractor : ITagExtractor
@@ -43,7 +43,7 @@ public sealed partial class TagExtractor : ITagExtractor
         {
             return [];
         }
-        // Minimal-Pipeline: kein WikiLink-Render nötig, kein YAML-Frontmatter — ExtractFromAst überspringt
+        // Minimal-Pipeline: kein WikiLink-Render nötig, kein YAML-Frontmatter; ExtractFromAst überspringt
         // CodeBlocks ohnehin. Reduziert Allokationen pro Tastendruck.
         MarkdownDocument ast = Markdown.Parse(markdownText);
         return ExtractFromAstCore(ast);

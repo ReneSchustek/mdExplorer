@@ -6,7 +6,7 @@ namespace MdExplorer.Search.Models;
 /// </summary>
 public enum SimilarityMode
 {
-    /// <summary>Keine Erweiterung — Default-Verhalten ohne Stemming/NEAR/Synonyme.</summary>
+    /// <summary>Keine Erweiterung, Default-Verhalten ohne Stemming/NEAR/Synonyme.</summary>
     None = 0,
 
     /// <summary>Anfrage-Terme über deutschen Suffix-Stemmer auf Stamm reduzieren und mit Präfix-Wildcards anfragen.</summary>

@@ -4,7 +4,7 @@ using MdExplorer.Core.Models;
 namespace MdExplorer.App.ViewModels.Settings;
 
 /// <summary>
-/// ViewModel für den Tab „Darstellung" — Theme, Preview-Schriftgröße,
+/// ViewModel für den Tab „Darstellung": Theme, Preview-Schriftgröße,
 /// Anzahl der Suchtreffer pro Seite. Gibt die <see cref="AppearanceSettings"/>
 /// zurück, wenn der Anwender bestätigt.
 /// </summary>

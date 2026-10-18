@@ -9,7 +9,7 @@ namespace MdExplorer.Core.Tests.Models;
 /// <remarks>
 /// In einem gewachsenen Bestand stammen von 33.485 indizierten Dateien 26.008 aus Fremdcode.
 /// Der größte einzelne Posten sind Kernkopien, der zweitgrößte mit 3.906 Dateien die
-/// <c>vendor</c>-Ordner der PHP-Projekte — sie brauchen ein Muster wie <c>node_modules</c>.
+/// <c>vendor</c>-Ordner der PHP-Projekte; sie brauchen ein Muster wie <c>node_modules</c>.
 /// </remarks>
 public sealed class DefaultExclusionPatternTests
 {
@@ -28,7 +28,7 @@ public sealed class DefaultExclusionPatternTests
 
     /// <remarks>
     /// Die Gegenprobe: Ein Ausschluss, der zu viel greift, nimmt eigene Notizen mit. Ein
-    /// Ordner, der bloß so heißt wie ein Ausschluss, ist keiner — <c>vendor-notizen</c> ist
+    /// Ordner, der bloß so heißt wie ein Ausschluss, ist keiner: <c>vendor-notizen</c> ist
     /// eine eigene Ablage, kein Paketverzeichnis.
     /// </remarks>
     [Theory]

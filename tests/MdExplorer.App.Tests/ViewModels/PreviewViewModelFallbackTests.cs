@@ -25,7 +25,7 @@ public sealed class PreviewViewModelFallbackTests
     [Fact]
     public async Task LoadAsync_WithoutAFile_ShowsTheEmptyDocumentAndClearsTheCurrentId()
     {
-        // Guid.Empty steht für "nichts ausgewählt" — etwa nach dem Abwählen im Baum.
+        // Guid.Empty steht für "nichts ausgewählt", etwa nach dem Abwählen im Baum.
         FakeMarkdownDocumentRepository repo = new();
         using ServiceProvider provider = ErzeugeAnbieter(repo);
         PreviewViewModel sut = Erzeuge(provider);
@@ -70,7 +70,7 @@ public sealed class PreviewViewModelFallbackTests
 
         await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        // Die Datei gilt als angezeigt — sonst lädt die Oberfläche endlos dieselbe Datei nach.
+        // Die Datei gilt als angezeigt, sonst lädt die Oberfläche endlos dieselbe Datei nach.
         Assert.Equal(fileId, sut.CurrentDocumentId);
         Assert.Contains("Content-Security-Policy", sut.Html, StringComparison.Ordinal);
     }
@@ -160,7 +160,7 @@ public sealed class PreviewViewModelFallbackTests
         return ausgabe.ToArray();
     }
 
-    /// <summary><see cref="DbException"/> ist abstrakt — für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
+    /// <summary><see cref="DbException"/> ist abstrakt; für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
     private sealed class TestDbException : DbException
     {
         public TestDbException()

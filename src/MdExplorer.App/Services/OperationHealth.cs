@@ -7,12 +7,12 @@ namespace MdExplorer.App.Services;
 /// </summary>
 internal enum OperationHealth
 {
-    /// <summary>Alles im Normalbetrieb — grüne LED.</summary>
+    /// <summary>Alles im Normalbetrieb, grüne LED.</summary>
     Healthy = 0,
 
-    /// <summary>Recoverable-Problem (z. B. fehlgeschlagene Operation) — gelbe LED.</summary>
+    /// <summary>Recoverable-Problem (z. B. fehlgeschlagene Operation), gelbe LED.</summary>
     Warning = 1,
 
-    /// <summary>Kritischer Fehler — rote LED, sofortiger Drill-Down in den Log-Viewer.</summary>
+    /// <summary>Kritischer Fehler: rote LED, sofortiger Drill-Down in den Log-Viewer.</summary>
     Error = 2,
 }

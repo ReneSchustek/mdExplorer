@@ -149,7 +149,7 @@ public sealed class SettingsChangeBridgeTests
 
             Assert.Equal(1, indexer.CallCount);
 
-            // Zweiter Lauf — Bridge läuft weiter, Exception ist konsumiert.
+            // Zweiter Lauf: Bridge läuft weiter, Exception ist konsumiert.
             indexer.ThrowOnNextCall = null;
             settings.RaiseChanged(AppSettings.Default, AppSettings.Default);
             await WaitForAsync(() => indexer.CallCount >= 2, TimeSpan.FromSeconds(5)).ConfigureAwait(true);

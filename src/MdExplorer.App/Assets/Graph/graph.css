@@ -1,6 +1,6 @@
 /*
     Die Farben stehen als Variablen, nicht als feste Werte im Zeichencode: Das Fenster
-    zeigte sonst unabhängig vom Erscheinungsbild eine dunkle Fläche — im hellen Bild ein
+    zeigte sonst unabhängig vom Erscheinungsbild eine dunkle Fläche, im hellen Bild ein
     schwarzes Loch neben lauter weißen Flächen. Die helle Belegung steht am Wurzelelement,
     die dunkle wird gesetzt, wenn die Anwendung sie meldet.
 */

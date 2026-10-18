@@ -11,7 +11,7 @@ namespace MdExplorer.Update.Models;
 /// <para>
 /// Ohne Prüfwert wird <b>nicht</b> installiert. Der Installer ist nicht signiert; die Prüfsumme
 /// ist damit der einzige Beleg dafür, dass die heruntergeladene Datei die veröffentlichte ist.
-/// Ein Update ohne diesen Beleg wäre ein ungeprüfter Programmstart aus dem Netz — genau das,
+/// Ein Update ohne diesen Beleg wäre ein ungeprüfter Programmstart aus dem Netz, genau das,
 /// wogegen die Prüfung schützen soll.
 /// </para>
 /// </param>

@@ -7,7 +7,7 @@ namespace MdExplorer.Graph.Models;
 /// </summary>
 /// <param name="Nodes">Knoten (nach Filter / Trimmung).</param>
 /// <param name="Edges">Gerichtete Kanten zwischen den enthaltenen Knoten.</param>
-/// <param name="OriginalNodeCount">Anzahl Files in der Quelle, vor Filter und Trimmung —
+/// <param name="OriginalNodeCount">Anzahl Files in der Quelle, vor Filter und Trimmung,
 /// für die Status-Anzeige „X von Y dargestellt".</param>
 /// <param name="OriginalEdgeCount">Anzahl der aus den Quell-Dokumenten ableitbaren
 /// WikiLink-Kanten vor Filter und Trimmung.</param>
@@ -17,6 +17,6 @@ public sealed record GraphSnapshot(
     int OriginalNodeCount = 0,
     int OriginalEdgeCount = 0)
 {
-    /// <summary>Leerer Snapshot — verwendet, wenn der Index keine Dokumente enthält.</summary>
+    /// <summary>Leerer Snapshot, verwendet, wenn der Index keine Dokumente enthält.</summary>
     public static GraphSnapshot Empty { get; } = new([], [], 0, 0);
 }

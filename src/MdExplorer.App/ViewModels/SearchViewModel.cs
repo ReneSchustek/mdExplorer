@@ -55,7 +55,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     private readonly ILogger<SearchViewModel> _logger;
     private readonly IMessenger _messenger;
     private readonly Lock _gate = new();
-    // Object-Lock (kein System.Threading.Lock!) — EnableCollectionSynchronization erfordert
+    // Object-Lock (kein System.Threading.Lock!), denn EnableCollectionSynchronization erfordert
     // einen kompatiblen Monitor-Lock für das WPF-Binding (Memory: wpf_collection_sync_lock).
     private readonly object _resultsGate = new();
 
@@ -69,7 +69,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     [ObservableProperty]
     private SearchResultItemViewModel? _selectedResult;
 
-    /// <summary>Der Zustand, auf den die Ansicht reagiert — die einzige Quelle dafür.</summary>
+    /// <summary>Der Zustand, auf den die Ansicht reagiert, die einzige Quelle dafür.</summary>
     [ObservableProperty]
     private SearchListState _state = SearchListState.Idle;
 
@@ -90,7 +90,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     {
     }
 
-    /// <summary>Konstruktor mit anpassbarem Debounce — für Tests.</summary>
+    /// <summary>Konstruktor mit anpassbarem Debounce, für Tests.</summary>
     internal SearchViewModel(IServiceScopeFactory scopeFactory, TimeProvider timeProvider, IMessenger messenger, ILogger<SearchViewModel> logger, TimeSpan debounce)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
@@ -138,16 +138,16 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     /// <summary>Die Suche selbst ist gescheitert.</summary>
     /// <remarks>
     /// Bis hierher endete ein Fehlschlag still im Protokoll, und auf dem Schirm stand
-    /// „nichts gefunden" — dieselbe Aussage wie bei einer Anfrage ohne Treffer, obwohl
+    /// „nichts gefunden", dieselbe Aussage wie bei einer Anfrage ohne Treffer, obwohl
     /// niemand gesucht hat.
     /// </remarks>
     public bool ShowsSearchFailure => State == SearchListState.Failed;
 
-    /// <summary>Eine Anfrage ist unterwegs — trägt die Fortschrittsanzeige.</summary>
+    /// <summary>Eine Anfrage ist unterwegs und trägt die Fortschrittsanzeige.</summary>
     /// <remarks>
     /// Bewusst abgeleitet und nicht als eigener Merker geführt: Sonst gäbe es zwei Stellen,
     /// die dasselbe behaupten, und die eine läuft irgendwann der anderen davon. Der Zustand
-    /// beginnt schon mit dem Anschlag, nicht erst mit der Abfrage — die kurze Wartezeit bis
+    /// beginnt schon mit dem Anschlag, nicht erst mit der Abfrage; die kurze Wartezeit bis
     /// dahin gehört aus Sicht des Nutzers zur Suche.
     /// </remarks>
     public bool IsSearching => State == SearchListState.Searching;
@@ -155,7 +155,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     /// <summary>Optionaler Pfad-Prefix-Filter, der vom <see cref="FolderTreeViewModel"/> gespeist wird.</summary>
     public string? PathPrefixFilter { get; set; }
 
-    /// <summary>Sortierte Trefferliste — UI-Binding-Ziel.</summary>
+    /// <summary>Sortierte Trefferliste (UI-Binding-Ziel).</summary>
     public ObservableCollection<SearchResultItemViewModel> Results { get; }
 
     /// <summary>Wird gefeuert, wenn der Such-Lauf abgeschlossen ist (für Tests).</summary>
@@ -283,7 +283,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
 
         // Bewusst außerhalb der Sperre: Ein Empfänger von PropertyChanged darf zurückrufen,
         // ohne dass daraus ein Verklemmen wird. Und bis die Antwort da ist, wird über die
-        // neue Eingabe nichts behauptet — die vorige Antwort galt der vorigen Anfrage.
+        // neue Eingabe nichts behauptet. Die vorige Antwort galt der vorigen Anfrage.
         State = isBlank ? SearchListState.Idle : SearchListState.Searching;
     }
 
@@ -328,7 +328,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
         }
         catch (OperationCanceledException)
         {
-            // Suchlauf wurde durch neue Eingabe verdrängt — kein Fehler.
+            // Suchlauf wurde durch neue Eingabe verdrängt, kein Fehler.
         }
         catch (InvalidOperationException exception)
         {
@@ -353,10 +353,10 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
 
     private void ApplyResults(IReadOnlyList<SearchResult> incoming)
     {
-        // Nur scopen, wenn der Nutzer es aktiv eingeschaltet hat — sonst bleibt die Suche global.
+        // Nur scopen, wenn der Nutzer es aktiv eingeschaltet hat, sonst bleibt die Suche global.
         string? prefix = ScopeToSelectedFolder ? PathPrefixFilter : null;
         // Lock-Pflicht: EnableCollectionSynchronization erwartet, dass jeder Schreiber den
-        // gleichen Monitor-Lock hält — sonst kann WPF beim Reverse-Read (Dispatcher-Thread)
+        // gleichen Monitor-Lock hält, sonst kann WPF beim Reverse-Read (Dispatcher-Thread)
         // einen inkonsistenten Mittelzustand sehen.
         lock (_resultsGate)
         {
@@ -371,7 +371,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
             }
         }
 
-        // Ab hier steht eine Antwort zur aktuellen Eingabe — erst jetzt darf der Leerzustand
+        // Ab hier steht eine Antwort zur aktuellen Eingabe. Erst jetzt darf der Leerzustand
         // „nichts gefunden" sagen.
         State = Results.Count == 0 ? SearchListState.NoMatches : SearchListState.Results;
     }
@@ -396,7 +396,7 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
         }
         catch (ObjectDisposedException)
         {
-            // CTS war bereits beim Run-Ende disposed — kein Fehler.
+            // CTS war bereits beim Run-Ende disposed (kein Fehler).
         }
         cts.Dispose();
     }

@@ -5,7 +5,7 @@ namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
 /// Prüft die Randfälle der Eingabe-Übersetzung. Der Übersetzer muss auch halbfertige
-/// Eingaben verkraften — der Nutzer tippt, und nach jedem Zeichen läuft eine Suche.
+/// Eingaben verkraften, denn der Nutzer tippt, und nach jedem Zeichen läuft eine Suche.
 /// Eine Eingabe wie <c>tag:</c> oder ein offenes Anführungszeichen ist deshalb der
 /// Normalfall und darf keine ungültige FTS5-Anfrage erzeugen.
 /// </summary>
@@ -69,7 +69,7 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     public void Build_WithASpaceAfterTheTagPrefix_TreatsTheNextWordAsAPlainTerm()
     {
         // Der Wert muss direkt am Doppelpunkt hängen. Steht ein Leerzeichen dazwischen,
-        // gilt der Rest als gewöhnlicher Suchbegriff — das ist bewusst so, weil sonst ein
+        // gilt der Rest als gewöhnlicher Suchbegriff; das ist bewusst so, weil sonst ein
         // versehentliches Leerzeichen die Trefferliste unbemerkt auf einen Tag einengen würde.
         SearchQueryBuilder sut = new();
 
@@ -153,7 +153,7 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     [Fact]
     public void Build_WithAMinusInsideAWord_DoesNotNegate()
     {
-        // Nur ein Minus am Wortanfang bedeutet Ausschluss — sonst wäre jeder
+        // Nur ein Minus am Wortanfang bedeutet Ausschluss, sonst wäre jeder
         // Bindestrich-Begriff wie "e-mail" eine Verneinung.
         SearchQueryBuilder sut = new();
 
@@ -164,13 +164,13 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     /// <remarks>
     /// <para>
     /// <c>tag:"zwei woerter"</c> — die Wortgruppe muss als **ein** Wert beim Schlagwort
-    /// ankommen. Käme sie als zwei Dinge an — eine Einschränkung auf <c>zwei</c> und, davon
-    /// unabhängig, das zweite Wort irgendwo im Text —, enthielte die Trefferliste
+    /// ankommen. Käme sie als zwei Dinge an (eine Einschränkung auf <c>zwei</c> und, davon
+    /// unabhängig, das zweite Wort irgendwo im Text), enthielte die Trefferliste
     /// Dateien, die mit dem gesuchten Schlagwort nichts zu tun haben.
     /// </para>
     /// <para>
     /// Dass die Leerstelle dabei wegfällt, ist gewollt und kein zweiter Fehler: Ein Schlagwort
-    /// ist ein Slug und enthält keine. Der Wert ist danach ohne Treffer — aber die Anfrage
+    /// ist ein Slug und enthält keine. Der Wert ist danach ohne Treffer, aber die Anfrage
     /// fragt das, was dasteht, und nicht zwei Dinge auf einmal.
     /// </para>
     /// </remarks>
@@ -230,7 +230,7 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     }
 
     /// <remarks>
-    /// <c>tag:""</c> — angefangen und wieder gelöscht. Ein leerer Wert darf keine
+    /// <c>tag:""</c>, angefangen und wieder gelöscht. Ein leerer Wert darf keine
     /// Schlagwort-Einschränkung erzeugen, sondern gar nichts.
     /// </remarks>
     [Fact]

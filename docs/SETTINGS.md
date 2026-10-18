@@ -90,7 +90,7 @@ fehlende Felder mit Defaults aufgefüllt.
 | `searchDebounceMs` | `int` | `300` | 50–5000 | Wartezeit nach letztem Tastendruck, bevor die Suche feuert |
 | `indexerResyncIntervalSeconds` | `int` | `300` | 0–3600 | Intervall für den Soll/Ist-Abgleich des Indexers (`0` deaktiviert) |
 | `checkForUpdatesAtStartup` | `bool` | `true` | — | Prüft beim Start auf neue Fassungen. Die Drossel von 24 Stunden liegt im Update-Modul; die manuelle Prüfung im Einstellungs-Dialog übergeht sie |
-| `loadRemoteImagesInPreview` | `bool` | `false` | — | Lässt die Vorschau Bilder von fremden Servern laden. **Ab Werk aus**, und das ist eine Zusage: Die Anwendung arbeitet vollständig ohne Internetverbindung. Eingeschaltet erscheinen Abzeichen und Netzbilder — die aufgerufenen Server erfahren dann, wann welche Notiz geöffnet wurde. Geöffnet wird ausschließlich `img-src` und nur für `https`; Skripte bleiben gesperrt |
+| `loadRemoteImagesInPreview` | `bool` | `false` | — | Lässt die Vorschau Bilder von fremden Servern laden. **Ab Werk aus**, und das ist eine Zusage: Die Anwendung arbeitet vollständig ohne Internetverbindung. Eingeschaltet erscheinen Abzeichen und Netzbilder; die aufgerufenen Server erfahren dann, wann welche Notiz geöffnet wurde. Geöffnet wird ausschließlich `img-src` und nur für `https`; Skripte bleiben gesperrt |
 
 ## Glob-Muster und Negation
 
@@ -107,7 +107,7 @@ Vorwärts-Slashes gematcht.
 | `**/*.md` | Alle `.md`-Dateien rekursiv |
 | `**/drafts/**` | Alles unterhalb eines `drafts`-Ordners auf beliebiger Tiefe |
 | `archive/**` | Alles unterhalb des `archive`-Ordners im Root |
-| `!muster` | **Negation** — hebt einen Ausschluss wieder auf (Ausnahme) |
+| `!muster` | **Negation**: hebt einen Ausschluss wieder auf (Ausnahme) |
 
 **Semantik der Negation:** Ein Muster ohne `!` schließt Dateien aus,
 ein Muster mit `!` macht eine Ausnahme von einem zuvor passenden
@@ -143,11 +143,11 @@ Neben `exclusionPatterns` aus der `settings.json` wirken zwei weitere
 Mechanismen **additiv** (eine Datei gilt als ausgeschlossen, sobald
 **eine** Quelle sie matched):
 
-1. **`.mdignore`-Dateien** — werden hierarchisch aus dem Index-Root
+1. **`.mdignore`-Dateien** werden hierarchisch aus dem Index-Root
    in den jeweiligen Ordnerbaum gelesen. Syntax identisch zu
    `exclusionPatterns`. Praktisch für projekt-spezifische
    Ausschlüsse, die nicht zentral in der `settings.json` stehen sollen.
-2. **`uiExcludedFolders`** — absolute Pfade, die per Rechtsklick im
+2. **`uiExcludedFolders`**: absolute Pfade, die per Rechtsklick im
    Folder-Tree pausiert wurden. Wirken via Pfad-Präfix (alle Dateien
    unterhalb des Pfades), nicht via Glob.
 
@@ -156,9 +156,9 @@ Mechanismen **additiv** (eine Datei gilt als ausgeschlossen, sobald
 `Datei → Einstellungen…` oder `Strg+,` öffnet einen modalen Dialog
 mit drei Tabs:
 
-- **Indexierung** — `roots`, `exclusionPatterns`, `autoExtractHashtags`
-- **Darstellung** — `theme`, `previewFontSize`, `resultsPerPage`
-- **Verhalten** — `searchDebounceMs`, `indexerResyncIntervalSeconds`,
+- **Indexierung**: `roots`, `exclusionPatterns`, `autoExtractHashtags`
+- **Darstellung**: `theme`, `previewFontSize`, `resultsPerPage`
+- **Verhalten**: `searchDebounceMs`, `indexerResyncIntervalSeconds`,
   `checkForUpdatesAtStartup` samt Schaltfläche für die sofortige Prüfung,
   das Herunterladen und das Starten des Installationspakets,
   `loadRemoteImagesInPreview`
@@ -175,11 +175,11 @@ Migrations-Schritte auf:
 - Fehlende Sub-Objekte (`indexing`, `appearance`, `behavior`) werden
   mit deren Default-Werten ersetzt.
 - Fehlt `uiExcludedFolders` (Pre-Schema-2-Dateien), wird eine leere
-  Liste angenommen — bestehende UI-Pausen sind dann nicht
+  Liste angenommen; bestehende UI-Pausen sind dann nicht
   rekonstruierbar und müssen neu gesetzt werden.
 - Schema-Version `< 2` setzt `autoExtractHashtags = true`, um die
   bisherige Default-Semantik zu erhalten.
-- Schema-Version `< 3` setzt `checkForUpdatesAtStartup = true` — die
+- Schema-Version `< 3` setzt `checkForUpdatesAtStartup = true`, die
   Deserialisierung lieferte für ältere Dateien sonst `false` und damit das
   Gegenteil des dokumentierten Standards.
 

@@ -1,7 +1,7 @@
 namespace MdExplorer.Core.Models;
 
 /// <summary>
-/// Tag-Entität — eindeutig über <see cref="Slug"/>. Der <see cref="Name"/> behält die Original-Schreibweise
+/// Tag-Entität, eindeutig über <see cref="Slug"/>. Der <see cref="Name"/> behält die Original-Schreibweise
 /// (inkl. Umlauten), der Slug ist die normalisierte URL-/Vergleichs-Variante.
 /// </summary>
 public sealed class Tag
@@ -12,6 +12,6 @@ public sealed class Tag
     /// <summary>Original-Tag-Name in Ursprungsschreibweise.</summary>
     public required string Name { get; set; }
 
-    /// <summary>Eindeutiger, normalisierter Slug — Lowercase, Bindestriche statt Whitespace, Umlaute bleiben erhalten.</summary>
+    /// <summary>Eindeutiger, normalisierter Slug: Lowercase, Bindestriche statt Whitespace, Umlaute bleiben erhalten.</summary>
     public required string Slug { get; set; }
 }

@@ -7,7 +7,7 @@ namespace MdExplorer.Parser.Services;
 /// <summary>
 /// Erzeugt URL-/Vergleichs-Slugs aus Tag-/WikiLink-Namen.
 /// Lowercase via Invariant-Culture, Whitespace und Trennzeichen werden zu Bindestrich,
-/// Umlaute bleiben erhalten (Projekt-Regel — keine ae/oe/ue-Ersetzung).
+/// Umlaute bleiben erhalten (Projekt-Regel: keine ae/oe/ue-Ersetzung).
 /// Steuerzeichen und ASCII-Interpunktion fallen weg.
 /// </summary>
 public sealed class TagNormalizer : ITagNormalizer

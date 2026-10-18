@@ -15,7 +15,7 @@ public sealed class GraphOptions
 
     /// <summary>
     /// Ob Knoten ohne ein- oder ausgehende WikiLink-Kante in den Snapshot übernommen werden.
-    /// Default <see langword="false"/> — bei großen Repositories mit überwiegend isolierten
+    /// Default <see langword="false"/>, denn bei großen Repositories mit überwiegend isolierten
     /// Dokumenten (Changelogs, Vendor-Readmes) bleibt das Bild unbrauchbar, wenn isolierte Knoten
     /// mitgerendert werden.
     /// </summary>
@@ -24,7 +24,7 @@ public sealed class GraphOptions
     /// <summary>
     /// Harte Obergrenze für die Anzahl Knoten im Snapshot. Beim Überschreiten werden die
     /// Knoten nach Verbindungsgrad (eingehend + ausgehend) absteigend sortiert und die Top-N
-    /// behalten. Default 1000 — empirisches Maximum, ab dem das Cytoscape-Force-Layout im
+    /// behalten. Default 1000 als empirisches Maximum, ab dem das Cytoscape-Force-Layout im
     /// WebView2 noch interaktiv reagiert.
     /// </summary>
     [Range(1, MaxNodesUpperBound)]

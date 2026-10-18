@@ -52,7 +52,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
 
     /// <remarks>
     /// Der Kern der Abfrage: Von 40 Dokumenten dürfen nur die wenigen zurückkommen, die den
-    /// Knoten überhaupt betreffen. Die Zahl steht in der Zusicherung — sonst wäre der Test
+    /// Knoten überhaupt betreffen. Die Zahl steht in der Zusicherung, sonst wäre der Test
     /// auch dann grün, wenn wieder alles geladen würde.
     /// </remarks>
     [Fact]
@@ -80,7 +80,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
     }
 
     /// <remarks>
-    /// Das eigene Dokument muss auch dann dabei sein, wenn niemand auf es zeigt — sonst
+    /// Das eigene Dokument muss auch dann dabei sein, wenn niemand auf es zeigt, sonst
     /// verlöre der Knoten seine ausgehenden Verweise.
     /// </remarks>
     [Fact]
@@ -101,7 +101,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
     /// <remarks>
     /// <para>
     /// Die unangenehme Stelle: In einem <c>LIKE</c> sind <c>%</c> und <c>_</c> Platzhalter.
-    /// Käme ein Slug mit Unterstrich durch, träfe <c>a_b</c> auch <c>axb</c> — der Graph zöge
+    /// Käme ein Slug mit Unterstrich durch, träfe <c>a_b</c> auch <c>axb</c>; der Graph zöge
     /// eine Kante, die im Dokument nicht steht.
     /// </para>
     /// <para>
@@ -137,7 +137,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
     }
 
     /// <remarks>
-    /// Die drei kurzen Spalten sind der ganze Zweck der Methode — sie ersetzt das Laden des
+    /// Die drei kurzen Spalten sind der ganze Zweck der Methode. Sie ersetzt das Laden des
     /// vollen Schnappschusses. Der Test hält fest, dass sie die Dateien vollständig und in
     /// stabiler Reihenfolge liefert.
     /// </remarks>

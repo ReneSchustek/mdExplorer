@@ -38,10 +38,10 @@ public interface IFileSystem
     /// </summary>
     string GetDirectoryFinalPath(string path);
 
-    /// <summary>Liest den vollständigen Datei-Inhalt als Bytes — streamingbasiert.</summary>
+    /// <summary>Liest den vollständigen Datei-Inhalt als Bytes (streamingbasiert).</summary>
     Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken);
 
-    /// <summary>Liest den vollständigen Datei-Inhalt als Bytes synchron — für kleine Steuer-Dateien wie <c>.mdignore</c>.</summary>
+    /// <summary>Liest den vollständigen Datei-Inhalt als Bytes synchron, für kleine Steuer-Dateien wie <c>.mdignore</c>.</summary>
     byte[] ReadAllBytes(string path);
 
     /// <summary>
@@ -70,7 +70,7 @@ public interface IFileSystem
     /// </summary>
     /// <remarks>
     /// Überschreibt <b>nicht</b>: Ein vorhandenes Ziel ist ein Fehler und keine stille
-    /// Ersetzung — sonst verschwindet beim Umbenennen eine fremde Datei, und niemand erfährt
+    /// Ersetzung, sonst verschwindet beim Umbenennen eine fremde Datei, und niemand erfährt
     /// davon. Umbenennen und Verschieben sind derselbe Vorgang, nur mit anderem Zielpfad.
     /// </remarks>
     /// <param name="sourcePath">Bisheriger Pfad.</param>

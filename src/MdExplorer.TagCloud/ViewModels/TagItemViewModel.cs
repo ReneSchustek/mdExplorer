@@ -4,7 +4,7 @@ using MdExplorer.TagCloud.Models;
 namespace MdExplorer.TagCloud.ViewModels;
 
 /// <summary>
-/// Darstellungs-Adapter für einen einzelnen Tag in der Cloud. Immutable nach Konstruktion —
+/// Darstellungs-Adapter für einen einzelnen Tag in der Cloud. Immutable nach Konstruktion;
 /// die Größe wird vom Konverter im XAML berechnet, sodass das Item nur Roh-Daten trägt.
 /// </summary>
 public sealed partial class TagItemViewModel : ObservableObject
@@ -22,7 +22,7 @@ public sealed partial class TagItemViewModel : ObservableObject
     /// <summary>Original-Tag-Name (Anzeige).</summary>
     public string Name { get; }
 
-    /// <summary>Normalisierter Slug — für Filter und Stable-Sort.</summary>
+    /// <summary>Normalisierter Slug, für Filter und Stable-Sort.</summary>
     public string Slug { get; }
 
     /// <summary>Häufigkeit über alle Dateien.</summary>

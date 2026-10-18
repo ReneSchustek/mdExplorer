@@ -245,7 +245,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
     {
         // Regression: AppSettings ist ein Record; IReadOnlyList<string>-Felder fallen beim
         // Default-Equality auf Reference-Equality zurück. Der Settings-Dialog erzeugt bei
-        // jedem OK-Klick neue Listen-Instanzen — ohne strukturellen Vergleich würde der
+        // jedem OK-Klick neue Listen-Instanzen; ohne strukturellen Vergleich würde der
         // Dienst jedes Save als geändert melden und unnötigen Snapshot / SettingsChanged-Event
         // auslösen.
         string path = Path.Combine(_tempDir, "fresh-list.json");
@@ -329,7 +329,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
         };
 
         // Save bewusst von einem ThreadPool-Worker aus aufrufen, der keinen
-        // SynchronizationContext besitzt — gleicher Pfad wie Host-Background-Service.
+        // SynchronizationContext besitzt, gleicher Pfad wie Host-Background-Service.
         await Task.Run(async () =>
         {
             Assert.Null(SynchronizationContext.Current);
@@ -359,7 +359,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
 
     /// <summary>
     /// Speichert alle <see cref="SynchronizationContext.Post"/>-Aufrufe in einer
-    /// Queue und führt sie erst beim expliziten <see cref="DrainPending"/> aus —
+    /// Queue und führt sie erst beim expliziten <see cref="DrainPending"/> aus;
     /// so kann der Test verifizieren, dass das Event nicht synchron auf dem
     /// fortsetzenden Worker, sondern über den erfassten Context zugestellt wird.
     /// </summary>
@@ -404,8 +404,8 @@ public sealed class JsonSettingsServiceTests : IDisposable
     }
     /// <remarks>
     /// Vor dem ersten Laden muss <c>Current</c> etwas Brauchbares liefern. Wer die
-    /// Einstellungen liest, bevor die Datei gelesen wurde — beim Hochfahren nicht
-    /// ungewöhnlich —, darf keinen Nullwert bekommen.
+    /// Einstellungen liest, bevor die Datei gelesen wurde (beim Hochfahren nicht
+    /// ungewöhnlich), darf keinen Nullwert bekommen.
     /// </remarks>
     [Fact]
     public void Current_BeforeTheFirstLoad_IsTheDefaultSet()
@@ -421,7 +421,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
     }
 
     /// <remarks>
-    /// Die Datei liegt da, ist aber gesperrt — ein anderer Vorgang hält sie exklusiv. Das
+    /// Die Datei liegt da, ist aber gesperrt: ein anderer Vorgang hält sie exklusiv. Das
     /// darf den Start nicht kosten: Die Anwendung läuft mit den Voreinstellungen weiter,
     /// statt beim Hochfahren umzufallen.
     /// </remarks>
@@ -445,7 +445,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
 
     /// <remarks>
     /// Ohne Zuhörer darf das Speichern nichts anderes tun als speichern. Der Test hält fest,
-    /// dass der Weg ohne angemeldetes Ereignis derselbe bleibt — die Datei steht danach da.
+    /// dass der Weg ohne angemeldetes Ereignis derselbe bleibt; die Datei steht danach da.
     /// </remarks>
     [Fact]
     public async Task SaveAsync_WithoutAnyListener_StillWritesTheFile()
@@ -482,7 +482,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
 
     /// <remarks>
     /// Die Gegenprobe zum Test darüber: Nach dem Freigeben darf ein Speichern nicht
-    /// stillschweigend ins Leere laufen. Es scheitert — und zwar erkennbar.
+    /// stillschweigend ins Leere laufen. Es scheitert, und zwar erkennbar.
     /// </remarks>
     [Fact]
     public async Task SaveAsync_AfterDispose_Fails()

@@ -4,7 +4,7 @@ namespace MdExplorer.Search.Abstractions;
 
 /// <summary>
 /// Volltextsuche über alle indizierten Markdown-Inhalte (FTS5).
-/// Implementierungen müssen FTS5-Injection-frei sein — User-Input wird ausschließlich über
+/// Implementierungen müssen FTS5-Injection-frei sein: User-Input wird ausschließlich über
 /// <see cref="ISearchQueryBuilder"/> in eine sichere MATCH-Expression überführt.
 /// </summary>
 public interface ISearchService

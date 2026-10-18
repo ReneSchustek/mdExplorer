@@ -2,7 +2,7 @@ using MdExplorer.Core.Abstractions;
 
 namespace MdExplorer.App.Tests.Fakes;
 
-/// <summary>Test-Fake für <see cref="IDialogService"/> — protokolliert Aufrufe, liefert konfigurierte Antworten.</summary>
+/// <summary>Test-Fake für <see cref="IDialogService"/>: protokolliert Aufrufe, liefert konfigurierte Antworten.</summary>
 internal sealed class FakeDialogService : IDialogService
 {
     /// <summary>Wert, den <see cref="PickDirectory"/> zurückliefert (<see langword="null"/> = Abbruch).</summary>
@@ -27,7 +27,7 @@ internal sealed class FakeDialogService : IDialogService
     /// <inheritdoc />
     public void ShowError(string title, string message) => LastError = (title, message);
 
-    /// <summary>Der Text der letzten Rückfrage — dort steht, was der Nutzer erfahren hat.</summary>
+    /// <summary>Der Text der letzten Rückfrage; dort steht, was der Nutzer erfahren hat.</summary>
     public string LastConfirmMessage { get; private set; } = string.Empty;
 
     /// <inheritdoc />

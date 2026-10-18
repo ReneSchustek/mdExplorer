@@ -7,7 +7,7 @@ namespace MdExplorer.Core.Models;
 /// <c>%LOCALAPPDATA%\MdExplorer\</c>. Ist die Datei nicht vorhanden oder
 /// das Schema veraltet, liefert <see cref="Default"/> einen vollständigen Default-Stand.
 /// </summary>
-/// <param name="SchemaVersion">Versionsnummer des persistierten Schemas — erlaubt Migrations-Pipeline.</param>
+/// <param name="SchemaVersion">Versionsnummer des persistierten Schemas, erlaubt Migrations-Pipeline.</param>
 /// <param name="Indexing">Indexierungsbezogene Einstellungen (Roots + Excludes).</param>
 /// <param name="Appearance">Darstellungsbezogene Einstellungen.</param>
 /// <param name="Behavior">Verhaltensbezogene Einstellungen.</param>
@@ -52,7 +52,7 @@ public sealed record IndexingSettings(
     /// <remarks>
     /// Die ersten fünf sind Ordner von Werkzeugen und Versionsverwaltung. <c>vendor</c> hält
     /// Markdown-Dateien fremder Pakete fern: In einem gewachsenen Bestand lagen dort 3.906
-    /// davon — Dokumentation, die niemand hier sucht und die jede Trefferliste überlagert. Es
+    /// davon, Dokumentation, die niemand hier sucht und die jede Trefferliste überlagert. Es
     /// ist der Ordnername, den PHP, Ruby und Go gleichermaßen verwenden; <c>node_modules</c>
     /// ist dasselbe für JavaScript.
     /// </remarks>
@@ -66,7 +66,7 @@ public sealed record IndexingSettings(
         "**/.vs/**",
     ];
 
-    /// <summary>Defaultiert mit leerer Root-Liste, Standard-Ausschlüssen und ohne UI-Ausschlüsse — Auto-Tagging an.</summary>
+    /// <summary>Defaultiert mit leerer Root-Liste, Standard-Ausschlüssen und ohne UI-Ausschlüsse, Auto-Tagging an.</summary>
     public static IndexingSettings Default => new([], DefaultExclusionPatterns, [], true);
 }
 
@@ -100,12 +100,12 @@ public sealed record AppearanceSettings(
 /// <para>
 /// Ab Werk <see langword="false"/>, und das ist eine Zusage, keine Vorsichtsmaßnahme: Die
 /// Anwendung arbeitet vollständig ohne Internetverbindung. Ein Bild aus dem Netz in einer
-/// Notiz würde beim Öffnen der Vorschau einen fremden Server aufrufen — und ihm damit
+/// Notiz würde beim Öffnen der Vorschau einen fremden Server aufrufen und ihm damit
 /// verraten, wann welche Notiz angesehen wurde.
 /// </para>
 /// <para>
 /// Wer die Abzeichen eines README sehen will, schaltet es ein. Dann steht in der Vorschau,
-/// was im Dokument steht — samt der Anfragen, die dazugehören.
+/// was im Dokument steht, samt der Anfragen, die dazugehören.
 /// </para>
 /// </remarks>
 public sealed record BehaviorSettings(

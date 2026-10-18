@@ -5,7 +5,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!--
         Sprungleiste der Linie. Sie springt, sie filtert nicht: Ein Klick auf „M" rollt zur
-        Gruppe M, der übrige Bestand bleibt sichtbar — wer filtert, verliert beim Stöbern
+        Gruppe M, der übrige Bestand bleibt sichtbar. Wer filtert, verliert beim Stöbern
         genau den Überblick, den er behalten will.
 
         Buchstaben ohne Einträge sind deaktiviert, nicht ausgeblendet. Eine Leiste, die ihre

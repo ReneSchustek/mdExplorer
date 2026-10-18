@@ -11,7 +11,7 @@ namespace MdExplorer.Parser.Services;
 
 /// <summary>
 /// Treibt die vollständige Markdown-Verarbeitung: Markdig-AST aufbauen, Frontmatter/Tags/WikiLinks extrahieren,
-/// HTML rendern (HTML-Roh-Inputs deaktiviert — XSS-sicher), GZip-komprimieren und alles in <see cref="ParseResult"/> verpacken.
+/// HTML rendern (HTML-Roh-Inputs deaktiviert, XSS-sicher), GZip-komprimieren und alles in <see cref="ParseResult"/> verpacken.
 /// </summary>
 public sealed class MarkdigParser : IMarkdownParser
 {
@@ -82,7 +82,7 @@ public sealed class MarkdigParser : IMarkdownParser
     // Beide Fassungen stehen in der Kennung, weil beide das Ergebnis bestimmen: Markdig
     // entscheidet über die Verschachtelungsgrenze, unsere eigene Kette über Frontmatter,
     // Schlagworte und WikiLinks. Ein Vermerk über einen Fehlschlag bindet dadurch nur so
-    // lange, wie die Fassung unverändert bleibt — nach einem Update läuft der Versuch von
+    // lange, wie die Fassung unverändert bleibt. Nach einem Update läuft der Versuch von
     // selbst wieder an, ohne dass jemand die Datei anfassen muss.
     private static string BuildEngineVersion()
     {
@@ -127,7 +127,7 @@ public sealed class MarkdigParser : IMarkdownParser
         HashSet<string> seenSlugs = new(StringComparer.Ordinal);
         foreach (string raw in rawNames)
         {
-            // Ein Name, der keinen Slug hergibt, wird ausgelassen — nicht gemeldet. Er kommt aus
+            // Ein Name, der keinen Slug hergibt, wird ausgelassen, nicht gemeldet. Er kommt aus
             // fremdem Text; das ist ein Ergebnis, keine Störung.
             if (!_tagNormalizer.TryToSlug(raw, out string slug))
             {

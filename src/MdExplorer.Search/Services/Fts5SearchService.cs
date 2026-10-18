@@ -104,7 +104,7 @@ public sealed partial class Fts5SearchService : ISearchService
         Fts5QueryPlan plan = _similarityBuilder.BuildRegexPrefilter(query.Text);
         if (string.IsNullOrWhiteSpace(plan.MatchExpression))
         {
-            // Kein Wort-Token im Pattern (z. B. ".+") — RegEx ist im aktuellen FTS5-Schema nicht ohne Full-Scan adressierbar.
+            // Kein Wort-Token im Pattern (z. B. ".+"): RegEx ist im aktuellen FTS5-Schema nicht ohne Full-Scan adressierbar.
             // Wir lehnen die Anfrage bewusst ab, statt einen unbegrenzten Tabellen-Scan auszulösen.
             LogRegexWithoutPrefilter(_logger, query.Text);
             return [];

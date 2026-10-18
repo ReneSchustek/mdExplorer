@@ -4,11 +4,11 @@ using Microsoft.Web.WebView2.Core;
 namespace MdExplorer.App.Services;
 
 /// <summary>
-/// Liefert die eine Browser-Umgebung der Anwendung — mit dem Benutzerdatenverzeichnis unter
+/// Liefert die eine Browser-Umgebung der Anwendung, mit dem Benutzerdatenverzeichnis unter
 /// <c>%LOCALAPPDATA%</c>.
 /// </summary>
 /// <remarks>
-/// Ohne ausdrückliches Verzeichnis schreibt die Browser-Komponente neben die Programmdatei —
+/// Ohne ausdrückliches Verzeichnis schreibt die Browser-Komponente neben die Programmdatei,
 /// nach einer Installation also dorthin, wo der Benutzer nicht schreiben darf. Die Umgebung
 /// wird einmal erzeugt und geteilt; zwei Umgebungen auf demselben Verzeichnis sind nicht
 /// zulässig.

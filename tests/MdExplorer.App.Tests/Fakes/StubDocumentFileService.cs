@@ -7,7 +7,7 @@ namespace MdExplorer.App.Tests.Fakes;
 /// </summary>
 /// <remarks>
 /// Für Tests, die den Zusammenhangs-Bereich brauchen, aber keine Datei-Vorgänge prüfen.
-/// Wer die Vorgänge prüfen will, nutzt <see cref="RecordingDocumentFileService"/> — ein
+/// Wer die Vorgänge prüfen will, nutzt <see cref="RecordingDocumentFileService"/>, ein
 /// Dienst, der still das Richtige tut, würde Fehler in den Aufrufen verdecken.
 /// </remarks>
 internal sealed class StubDocumentFileService : IDocumentFileService

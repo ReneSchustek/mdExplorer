@@ -181,7 +181,7 @@ internal sealed partial class HelpWindow : Window
     private async void OnDomContentLoaded(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2DOMContentLoadedEventArgs args)
     {
         _isWebViewReady = true;
-        // Erster Scroll-Versuch nach DOM-ready — vorher gibt es kein Layout, also kein Ziel.
+        // Erster Scroll-Versuch nach DOM-ready, denn vorher gibt es kein Layout, also kein Ziel.
         if (!string.IsNullOrEmpty(_pendingSlug))
         {
             await ScrollToSlugAsync(_pendingSlug).ConfigureAwait(true);

@@ -74,11 +74,11 @@ public sealed partial class TagManagementViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            // Refresh wurde abgebrochen — kein Fehler.
+            // Refresh wurde abgebrochen, kein Fehler.
         }
         catch (DbException exception)
         {
-            // SQLite-Spitze — Status setzen, Liste auf Vorstand lassen.
+            // SQLite-Spitze: Status setzen, Liste auf Vorstand lassen.
             LogRefreshFailed(_logger, exception);
             StatusMessage = "Tag-Liste konnte nicht geladen werden — siehe Log.";
         }
@@ -220,7 +220,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
             }
             catch (DbException reloadException)
             {
-                // Reload-Fehler darf das Op-Feedback nicht verschlucken — nur loggen.
+                // Reload-Fehler darf das Op-Feedback nicht verschlucken, nur loggen.
                 LogRefreshFailed(_logger, reloadException);
             }
             StatusMessage = string.Create(
@@ -229,7 +229,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            // Operation wurde abgebrochen — kein Fehler.
+            // Operation wurde abgebrochen; kein Fehler.
         }
         catch (DbException exception)
         {

@@ -7,7 +7,7 @@ namespace MdExplorer.Core.Settings;
 /// <summary>
 /// Strukturierter JSON-Diff zwischen zwei <see cref="MdExplorer.Core.Models.AppSettings"/>-
 /// Snapshots. Trifft pro geänderter Property einen <see cref="SettingsChangeEntry"/>.
-/// Rein funktional — kein State, keine Seiteneffekte.
+/// Rein funktional: kein State, keine Seiteneffekte.
 /// </summary>
 public static class SettingsDiff
 {

@@ -9,7 +9,7 @@ namespace MdExplorer.Data.Tests;
 
 /// <summary>
 /// Edge-Case-Coverage für die EF-Core-Repositories. Integration-Tests
-/// gegen In-Memory-SQLite — testen leere Inputs, Duplikat-Detection, NULL-Argumente
+/// gegen In-Memory-SQLite; testen leere Inputs, Duplikat-Detection, NULL-Argumente
 /// und ReplaceFileTagsAsync-Sonderfälle.
 /// </summary>
 public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
@@ -146,7 +146,7 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     {
         // Befund: das Repo deduppt nicht. EF-Change-Tracker fängt das Duplikat
         // im Composite-Key {MarkdownFileId, TagId} bereits beim AddAsync ab. Caller müssen
-        // dedupplizieren oder eine InvalidOperationException erwarten — dokumentiertes Verhalten.
+        // dedupplizieren oder eine InvalidOperationException erwarten (dokumentiertes Verhalten).
         Guid fileId = await SeedFileWithTwoTagsAsync().ConfigureAwait(true);
         Guid singleTagId = await _dbContext.Set<Tag>().Select(t => t.Id).FirstAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 

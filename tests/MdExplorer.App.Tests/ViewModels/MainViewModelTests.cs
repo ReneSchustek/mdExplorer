@@ -29,7 +29,7 @@ namespace MdExplorer.App.Tests.ViewModels;
 /// <summary>Unit-Tests des <see cref="MainViewModel"/> mit produktiven Child-ViewModels.</summary>
 public sealed class MainViewModelTests
 {
-    /// <summary>Der Registerindex des Suchbereichs — dieselbe Zahl wie im ViewModel.</summary>
+    /// <summary>Der Registerindex des Suchbereichs, dieselbe Zahl wie im ViewModel.</summary>
     private const int SearchTabIndex = 2;
 
     private static readonly DateTime FixedUtc = new(2026, 6, 12, 8, 0, 0, DateTimeKind.Utc);
@@ -57,7 +57,7 @@ public sealed class MainViewModelTests
 
         harness.Main.Dispose();
 
-        // FolderTree-PropertyChanged ist deabonniert — Search.PathPrefixFilter wird nicht mehr durchgereicht.
+        // FolderTree-PropertyChanged ist deabonniert; Search.PathPrefixFilter wird nicht mehr durchgereicht.
         harness.FolderTree.SelectedPathPrefix = "/danach";
         Assert.Equal("/initial", harness.Search.PathPrefixFilter);
 
@@ -499,7 +499,7 @@ public sealed class MainViewModelTests
         /// </summary>
         public Exception? FailOnAbsolutePath { get; set; }
 
-        /// <summary>Zählt die Pfad-Auflösungen — die Navigation läuft ohne Rückgabewert.</summary>
+        /// <summary>Zählt die Pfad-Auflösungen, denn die Navigation läuft ohne Rückgabewert.</summary>
         public int AbsolutePathCallCount { get; private set; }
 
         public void SetWikiLink(string target, Guid id) => _wikiLinks[target] = id;
@@ -541,7 +541,7 @@ public sealed class MainViewModelTests
         private DateTimeOffset _now = new(DateTime.SpecifyKind(initialUtc, DateTimeKind.Utc), TimeSpan.Zero);
 
         /// <summary>
-        /// Feste Zone statt der des Prüfrechners — sonst hinge das Ergebnis davon ab,
+        /// Feste Zone statt der des Prüfrechners, sonst hinge das Ergebnis davon ab,
         /// wo die Suite läuft.
         /// </summary>
         public override TimeZoneInfo LocalTimeZone => TestZone;
@@ -620,7 +620,7 @@ public sealed class MainViewModelTests
 
     /// <summary>
     /// Ein Zusammenhangs-Bereich ohne Datenquelle: Diese Tests prüfen die Verdrahtung der
-    /// Spalten, nicht die Verbindungen eines Dokuments — die haben eigene Tests.
+    /// Spalten, nicht die Verbindungen eines Dokuments; die haben eigene Tests.
     /// </summary>
     private static DocumentRelationsViewModel NoRelations()
     {
@@ -633,7 +633,7 @@ public sealed class MainViewModelTests
             NullLogger<DocumentRelationsViewModel>.Instance);
     }
     /// <summary>
-    /// Die Verdrahtung zwischen den Bereichen — geprüft, nicht angenommen.
+    /// Die Verdrahtung zwischen den Bereichen, geprüft, nicht angenommen.
     /// </summary>
     /// <remarks>
     /// Sechs Ereignisse verbinden die Unterbereiche mit dem Hauptfenster. Sie sind je zwei
@@ -717,8 +717,8 @@ otizen\ziel.md";
     }
 
     /// <remarks>
-    /// Ohne Eintrag — der Befehl kann mit <see langword="null"/> ausgelöst werden, wenn die
-    /// Liste gerade leer ist — darf nichts geöffnet werden.
+    /// Ohne Eintrag (der Befehl kann mit <see langword="null"/> ausgelöst werden, wenn die
+    /// Liste gerade leer ist) darf nichts geöffnet werden.
     /// </remarks>
     [Fact]
     public void OpenRelated_WithoutAnEntry_OpensNothing()

@@ -8,7 +8,7 @@ namespace MdExplorer.Data.Repositories;
 public sealed class ParseFailureRepository(MdExplorerDbContext dbContext) : IParseFailureRepository
 {
     /// <summary>
-    /// Maximalgröße für SQLite-IN-Listen — dieselbe defensive Schwelle wie im
+    /// Maximalgröße für SQLite-IN-Listen, dieselbe defensive Schwelle wie im
     /// <see cref="MarkdownDocumentRepository"/>.
     /// </summary>
     private const int SqliteInListBatchSize = 500;
@@ -28,7 +28,7 @@ public sealed class ParseFailureRepository(MdExplorerDbContext dbContext) : IPar
 
         Guid[] ids = [.. markdownFileIds];
         Dictionary<Guid, ParseFailure> result = new(ids.Length);
-        // Getrackt (kein AsNoTracking) — RecordAsync mutiert einen bereits geladenen Vermerk,
+        // Getrackt (kein AsNoTracking), denn RecordAsync mutiert einen bereits geladenen Vermerk,
         // statt ihn erneut abzufragen; ein Detached-Ergebnis würde diese Änderung verlieren.
         foreach (Guid[] chunk in ids.Chunk(SqliteInListBatchSize))
         {

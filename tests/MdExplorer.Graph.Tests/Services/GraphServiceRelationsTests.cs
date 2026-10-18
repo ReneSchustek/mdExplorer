@@ -108,7 +108,7 @@ public sealed class GraphServiceRelationsTests
     public async Task GetRelationsAsync_IsUnaffectedByTheGraphNodeLimit()
     {
         // Die Obergrenze dient der Darstellbarkeit eines Bildes. Was an einem Dokument hängt,
-        // darf sie nicht beschneiden — sonst fehlte ein Weg, ohne dass jemand es merkt.
+        // darf sie nicht beschneiden, sonst fehlte ein Weg, ohne dass jemand es merkt.
         GraphService sut = Build(Sample(), new GraphOptions { IncludeIsolatedNodes = true, MaxNodes = 1 });
 
         DocumentRelations relations = await sut.GetRelationsAsync(IndexId, TestContext.Current.CancellationToken).ConfigureAwait(true);

@@ -5,7 +5,7 @@ namespace MdExplorer.App.Tests.Services.Help;
 
 /// <summary>
 /// Integrationstests gegen das echte eingebettete Handbuch. Der Service liest
-/// die Ressource aus der App-Assembly — wir wollen sicherstellen, dass die
+/// die Ressource aus der App-Assembly; wir wollen sicherstellen, dass die
 /// stabilen Slugs aus <see cref="HelpContext"/> tatsächlich im Handbuch
 /// vorkommen, der HTML-Output Anker enthält und der Plaintext nicht leer ist.
 /// </summary>

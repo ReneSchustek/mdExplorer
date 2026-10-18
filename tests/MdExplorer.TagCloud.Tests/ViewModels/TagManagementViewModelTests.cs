@@ -241,7 +241,7 @@ public sealed class TagManagementViewModelTests
     [Fact]
     public async Task RefreshCommand_WhenTheDatabaseIsBusy_KeepsTheListAndReportsIt()
     {
-        // Die zuvor geladene Liste muss stehen bleiben — ein leeres Fenster sähe so aus,
+        // Die zuvor geladene Liste muss stehen bleiben; ein leeres Fenster sähe so aus,
         // als gäbe es gar keine Tags mehr.
         FakeStatisticsService statsService = new();
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
@@ -276,7 +276,7 @@ public sealed class TagManagementViewModelTests
     [Fact]
     public async Task DeleteCommand_WhenTheDatabaseIsBusy_ReportsTheFailureAndStaysUsable()
     {
-        // Ohne Rückmeldung sieht der Nutzer nur, dass sich nichts tut — und löscht erneut.
+        // Ohne Rückmeldung sieht der Nutzer nur, dass sich nichts tut, und löscht erneut.
         FakeStatisticsService statsService = new();
         FakeManagementService managementService = new()
         {
@@ -298,7 +298,7 @@ public sealed class TagManagementViewModelTests
     public async Task DeleteCommand_WhenTheReloadFails_StillReportsTheResult()
     {
         // Der Schreibvorgang war erfolgreich. Scheitert danach nur das Nachladen der Liste,
-        // darf die Erfolgsmeldung nicht verloren gehen — sonst hält der Nutzer den
+        // darf die Erfolgsmeldung nicht verloren gehen, sonst hält der Nutzer den
         // Löschvorgang fälschlich für gescheitert und wiederholt ihn.
         FakeStatisticsService statsService = new();
         FakeManagementService managementService = new();
@@ -336,7 +336,7 @@ public sealed class TagManagementViewModelTests
         Assert.False(sut.IsBusy);
     }
 
-    /// <summary><see cref="System.Data.Common.DbException"/> ist abstrakt — der Fehlerpfad braucht eine eigene Ausprägung.</summary>
+    /// <summary><see cref="System.Data.Common.DbException"/> ist abstrakt; der Fehlerpfad braucht eine eigene Ausprägung.</summary>
     private sealed class TestDbException : System.Data.Common.DbException
     {
         public TestDbException()
@@ -363,7 +363,7 @@ public sealed class TagManagementViewModelTests
 
         public void SetSnapshot(params TagStatistic[] tags) => _snapshot = tags;
 
-        /// <summary>Fehler, den der nächste Abruf liefert — für den Ausweichpfad beim Nachladen.</summary>
+        /// <summary>Fehler, den der nächste Abruf liefert, für den Ausweichpfad beim Nachladen.</summary>
         public Exception? Failure { get; set; }
 
         public Task<IReadOnlyList<TagStatistic>> GetTopTagsAsync(int topN, CancellationToken cancellationToken)

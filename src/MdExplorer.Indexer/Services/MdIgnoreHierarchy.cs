@@ -6,7 +6,7 @@ namespace MdExplorer.Indexer.Services;
 /// <summary>
 /// Liefert pro Verzeichnis die Glob-Muster aller <c>.mdignore</c>-Dateien
 /// zwischen Root und Verzeichnis selbst (Eltern zuerst, dann das eigene).
-/// Das Ergebnis wird thread-sicher gecacht — kein I/O bei zweitem Aufruf
+/// Das Ergebnis wird thread-sicher gecacht, kein I/O bei zweitem Aufruf
 /// für dasselbe Verzeichnis, bis <see cref="Clear"/> aufgerufen wird.
 /// </summary>
 public sealed class MdIgnoreHierarchy
@@ -23,7 +23,7 @@ public sealed class MdIgnoreHierarchy
 
     /// <summary>
     /// Liefert die kumulativ aggregierten Glob-Muster, die im angegebenen Verzeichnis
-    /// gelten — beginnend mit Mustern aus <paramref name="rootAbsolutePath"/> bis hinunter
+    /// gelten, beginnend mit Mustern aus <paramref name="rootAbsolutePath"/> bis hinunter
     /// zu <paramref name="directoryAbsolutePath"/>.
     /// </summary>
     public IReadOnlyList<string> GetPatternsFor(string rootAbsolutePath, string directoryAbsolutePath)

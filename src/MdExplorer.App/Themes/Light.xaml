@@ -1,10 +1,10 @@
 <!--
     Helle Belegung der Gestaltungslinie. Die Farbwerte stammen aus der Marke und nicht
-    aus diesem Projekt — wer sie ändert, ändert sie zuerst dort.
+    aus diesem Projekt. Wer sie ändert, ändert sie zuerst dort.
 
     Light.xaml und Dark.xaml führen denselben Satz Schlüssel, nur mit anderen Farben.
     Nur so lässt sich das Erscheinungsbild zur Laufzeit tauschen, ohne dass eine Bindung
-    ins Leere greift. Wer hier einen Schlüssel ergänzt, ergänzt ihn auch in Dark.xaml —
+    ins Leere greift. Wer hier einen Schlüssel ergänzt, ergänzt ihn auch in Dark.xaml;
     ein Test hält das fest.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -82,7 +82,7 @@
     <!-- ── Hinweise ─────────────────────────────────────────────────────── -->
     <!--
         Fläche, Rand und Text sind getrennt, weil der Text auf der Fläche lesbar bleiben
-        muss. Die Farbe allein trägt die Aussage nie — daneben steht immer ein Wort oder
+        muss. Die Farbe allein trägt die Aussage nie; daneben steht immer ein Wort oder
         ein Zeichen.
     -->
     <SolidColorBrush x:Key="NoticeWarningBackgroundBrush" Color="#FFF8E1" />

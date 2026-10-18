@@ -10,6 +10,6 @@ namespace MdExplorer.Graph.Models;
 /// oder leer bedeutet kein Filter.</param>
 public sealed record GraphFilter(string? PathPrefix = null)
 {
-    /// <summary>Kein Filter — alle Files aus dem Source-Snapshot werden berücksichtigt.</summary>
+    /// <summary>Kein Filter: Alle Files aus dem Source-Snapshot werden berücksichtigt.</summary>
     public static GraphFilter None { get; } = new();
 }

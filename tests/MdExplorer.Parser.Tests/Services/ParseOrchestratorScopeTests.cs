@@ -19,7 +19,7 @@ namespace MdExplorer.Parser.Tests.Services;
 /// Liefe ein ganzer Durchlauf in einem einzigen Bereich, sammelte der Änderungsverfolger
 /// jedes Dokument und jedes Schlagwort des gesamten Bestands, und jedes Schreiben durchliefe
 /// alles bereits Verfolgte. Über 29.889 Dateien sind das 9 GB Arbeitsspeicher und ein
-/// Stapel, der von einer Sekunde auf zweieinhalb Minuten anwächst — der Durchlauf käme nie
+/// Stapel, der von einer Sekunde auf zweieinhalb Minuten anwächst; der Durchlauf käme nie
 /// ans Ende, und damit liefe auch der Aufräumdurchgang des Indexers nie.
 /// </remarks>
 public sealed class ParseOrchestratorScopeTests
@@ -65,7 +65,7 @@ public sealed class ParseOrchestratorScopeTests
         // Erwartet: ein Lesebereich, einer je Stapel, einer fürs Aufräumen und einer für den
         // Betriebs-Stand am Ende.
         // Die Zahl hängt damit an der Stapelgröße, nicht am Bestand. Ohne den eigenen
-        // Bereich je Stapel stünde hier immer 2 — egal wie groß der Bestand wird.
+        // Bereich je Stapel stünde hier immer 2, egal wie groß der Bestand wird.
         ScopeCountingHarness harness = new(batchSize);
         for (int i = 0; i < fileCount; i++)
         {
@@ -132,7 +132,7 @@ public sealed class ParseOrchestratorScopeTests
         }
     }
 
-    /// <summary>Zählt, wie oft ein Bereich aufgemacht wurde — mehr braucht die Zusicherung nicht.</summary>
+    /// <summary>Zählt, wie oft ein Bereich aufgemacht wurde; mehr braucht die Zusicherung nicht.</summary>
     private sealed class CountingScopeFactory(IServiceScopeFactory inner) : IServiceScopeFactory
     {
         public int Created { get; private set; }

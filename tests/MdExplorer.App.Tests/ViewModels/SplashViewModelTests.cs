@@ -4,7 +4,7 @@ using MdExplorer.App.ViewModels;
 namespace MdExplorer.App.Tests.ViewModels;
 
 /// <summary>
-/// Prüft die Anzeige des Startbilds. Es ist das Erste, was der Nutzer sieht — und die
+/// Prüft die Anzeige des Startbilds. Es ist das Erste, was der Nutzer sieht, und die
 /// Versionsanzeige darf den beim Bauen angehängten Commit-Hash nicht mitzeigen.
 /// </summary>
 public sealed class SplashViewModelTests

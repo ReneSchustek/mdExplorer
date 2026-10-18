@@ -45,7 +45,7 @@ public sealed partial class GlobExclusionFilter : IExclusionFilter, IDisposable
 
         string normalizedFile = Path.GetFullPath(absoluteFilePath);
         string normalizedRoot = Path.GetFullPath(rootAbsolutePath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        // Datei muss zwingend unterhalb des Roots liegen — sonst keine Aussage möglich.
+        // Datei muss zwingend unterhalb des Roots liegen, sonst ist keine Aussage möglich.
         // Präfix-Vergleich ohne Separator-Terminator würde "C:\Roots-evil" als unter "C:\Roots" zählen.
         if (!IsUnderRoot(normalizedFile, normalizedRoot))
         {

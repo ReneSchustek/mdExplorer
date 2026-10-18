@@ -127,7 +127,7 @@ public sealed class TagManagementServiceTests
     public async Task RenameAsync_OnFileWithoutOccurrence_CountsAsUnchanged()
     {
         InMemoryFileSystem fs = new();
-        // Datei wird laut Index zwar referenziert, im aktuellen Text aber nicht mehr — z. B. weil
+        // Datei wird laut Index zwar referenziert, im aktuellen Text aber nicht mehr, z. B. weil
         // sie zwischen Index-Lauf und Operation verändert wurde. Soll keinen Schreib-Roundtrip auslösen.
         fs.AddFile(@"C:\notes\a.md", "Kein passender Hashtag im Body.");
         FakeTagFileLookupQuery query = new();
@@ -166,7 +166,7 @@ public sealed class TagManagementServiceTests
 
         // Die Zusicherung liegt auf der Vollständigkeit: Alle hundert Dateien sind
         // angefasst, keine mit Fehler, und der Inhalt stimmt (Schleife unten). Das
-        // Dateisystem ist hier im Speicher, die Operation dauert Millisekunden — die
+        // Dateisystem ist hier im Speicher, die Operation dauert Millisekunden; die
         // Zeitgrenze prüft deshalb keine Geschwindigkeit, sondern erkennt einen echten
         // Stillstand. Ein knappes Budget würde an dieser Stelle nur die Auslastung der
         // Maschine messen, weil im vollständigen Lauf neun Testprozesse gleichzeitig

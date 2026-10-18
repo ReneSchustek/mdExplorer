@@ -7,7 +7,7 @@ namespace MdExplorer.App.Services;
 /// Reine Funktionen zur CRUD-Pflege von Hashtag-Tokens (<c>#tag</c>) in einem
 /// Markdown-Dokument. Insertion-Strategie: ein verwalteter HTML-Kommentar-Block
 /// <c>&lt;!-- mdexplorer-tags: #a #b --&gt;</c> am Dateiende. Roh-Text bleibt
-/// ansonsten unangetastet — Roundtrip-fähig.
+/// ansonsten unangetastet (Roundtrip-fähig).
 /// </summary>
 internal static partial class TagDocumentEditor
 {
@@ -98,7 +98,7 @@ internal static partial class TagDocumentEditor
         RegexOptions.CultureInvariant)]
     private static partial Regex ManagedBlockRegex();
 
-    // Die Grenzen kommen aus HashtagPattern — derselben Stelle, aus der auch Extractor und
+    // Die Grenzen kommen aus HashtagPattern, derselben Stelle, aus der auch Extractor und
     // Rewriter lesen. Eine eigene Abschrift hier liefe bei der nächsten Änderung still auseinander.
     private static Regex BuildHashtagRegex(string tagName) => HashtagPattern.ForTag(tagName);
 

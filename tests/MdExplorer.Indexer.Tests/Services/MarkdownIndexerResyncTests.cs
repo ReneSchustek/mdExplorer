@@ -3,7 +3,7 @@ namespace MdExplorer.Indexer.Tests.Services;
 /// <summary>
 /// Prüft die zwei Selbstheilungs-Mechanismen des Indexers: den periodischen Abgleich und
 /// das Wiederholen beim Lesen. Beide fangen Fälle auf, die die Dateisystem-Überwachung
-/// nicht meldet — eine Datei, die während einer Netzwerktrennung entsteht, und eine, die
+/// nicht meldet: eine Datei, die während einer Netzwerktrennung entsteht, und eine, die
 /// im Moment des Lesens von einem anderen Programm gesperrt ist. Ohne sie fehlt die Datei
 /// dauerhaft im Bestand, ohne dass irgendwo ein Fehler sichtbar würde.
 /// </summary>
@@ -23,7 +23,7 @@ public sealed class MarkdownIndexerResyncTests
             await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
             string pfad = Path.Combine(IndexerTestHarness.DefaultRoot, "still-entstanden.md");
 
-            // Direkt am Dateisystem vorbei an der Überwachung — genau der Fall, den der
+            // Direkt am Dateisystem vorbei an der Überwachung, genau der Fall, den der
             // periodische Abgleich auffangen soll.
             harness.FileSystem.AddFile(pfad, "# Still entstanden", FesteZeit);
 
@@ -75,7 +75,7 @@ public sealed class MarkdownIndexerResyncTests
     public async Task ResyncLoop_WhenTheIntervalIsZero_DoesNotRun()
     {
         // Abgleich abgeschaltet: Eine an der Überwachung vorbei entstandene Datei bleibt
-        // dann bewusst unbemerkt — sonst wäre die Einstellung wirkungslos.
+        // dann bewusst unbemerkt, sonst wäre die Einstellung wirkungslos.
         IndexerTestHarness harness = IndexerTestHarness.Create(resyncInterval: TimeSpan.Zero);
         await using (harness.ConfigureAwait(true))
         {
@@ -162,7 +162,7 @@ public sealed class MarkdownIndexerResyncTests
         return bedingung();
     }
 
-    /// <summary>Treibt die Uhr weiter, bis der Durchlauf fertig ist — die Wartezeit zwischen
+    /// <summary>Treibt die Uhr weiter, bis der Durchlauf fertig ist; die Wartezeit zwischen
     /// zwei Leseversuchen läuft ebenfalls über den Zeitgeber.</summary>
     private static async Task TreibeUhrBisFertigAsync(IndexerTestHarness harness, Task lauf)
     {

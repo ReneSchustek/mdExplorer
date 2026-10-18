@@ -14,7 +14,7 @@ public sealed class WikiLinkExtension : IMarkdownExtension
     private readonly SlugResolver _slugResolver;
 
     /// <summary>Erzeugt die Extension mit dem übergebenen Slug-Bilder.</summary>
-    /// <param name="slugResolver">Bildet den Slug — und meldet, wenn der Zielname keinen hergibt.</param>
+    /// <param name="slugResolver">Bildet den Slug und meldet, wenn der Zielname keinen hergibt.</param>
     public WikiLinkExtension(SlugResolver slugResolver)
     {
         ArgumentNullException.ThrowIfNull(slugResolver);

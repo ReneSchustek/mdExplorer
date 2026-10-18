@@ -16,7 +16,7 @@ public interface IGraphService
     Task<GraphSnapshot> BuildSnapshotAsync(GraphFilter filter, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Liefert die Verbindungen eines einzelnen Dokuments — in beide Richtungen.
+    /// Liefert die Verbindungen eines einzelnen Dokuments, in beide Richtungen.
     /// </summary>
     /// <remarks>
     /// Bewusst hier und nicht als eigener Dienst: Die Auflösung eines WikiLink-Ziels auf eine

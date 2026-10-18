@@ -18,7 +18,7 @@ public static class SnippetExtractor
     /// <summary>
     /// Liefert die Highlight-Positionen, die das Snippet als Markup enthält.
     /// Markierungen werden im Ergebnis-Index dort gemessen, wo sie für den Aufrufer
-    /// auch im Markup-Text liegen — der <c>&lt;mark&gt;</c>-Marker zählt mit.
+    /// auch im Markup-Text liegen; der <c>&lt;mark&gt;</c>-Marker zählt mit.
     /// </summary>
     /// <param name="snippet">FTS5-Snippet inklusive Markup-Marker.</param>
     /// <returns>Liste der erkannten Highlights mit Start-Position und Länge.</returns>

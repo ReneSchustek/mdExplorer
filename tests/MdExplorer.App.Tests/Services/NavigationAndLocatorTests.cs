@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace MdExplorer.App.Tests.Services;
 
-/// <summary>Tests für den <see cref="MarkdownFileDocumentLocator"/> — WikiLink-Auflösung.</summary>
+/// <summary>Tests für den <see cref="MarkdownFileDocumentLocator"/> (WikiLink-Auflösung).</summary>
 public sealed class NavigationAndLocatorTests
 {
     [Fact]
@@ -82,7 +82,7 @@ public sealed class NavigationAndLocatorTests
     [Fact]
     public async Task GetAbsolutePathAsync_WithoutAnId_ReturnsNullWithoutTouchingTheDatabase()
     {
-        // Guid.Empty bedeutet "nichts ausgewählt" — dafür lohnt kein Datenbank-Zugriff.
+        // Guid.Empty bedeutet "nichts ausgewählt"; dafür lohnt kein Datenbank-Zugriff.
         FakeMarkdownFileRepository repo = new();
         using ServiceProvider provider = BuildProvider(repo);
         MarkdownFileDocumentLocator locator = new(provider.GetRequiredService<IServiceScopeFactory>());

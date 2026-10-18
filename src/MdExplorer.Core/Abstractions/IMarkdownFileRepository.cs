@@ -24,7 +24,7 @@ public interface IMarkdownFileRepository
     /// </summary>
     Task<Guid?> FindIdByFileNameAsync(string fileNameWithoutExtension, CancellationToken cancellationToken);
 
-    /// <summary>Zählt alle Dateien im Index — Statusleiste in der UI.</summary>
+    /// <summary>Zählt alle Dateien im Index (Statusleiste in der UI).</summary>
     Task<int> CountAsync(CancellationToken cancellationToken);
 
     /// <summary>Fügt eine neue Datei hinzu.</summary>
@@ -37,7 +37,7 @@ public interface IMarkdownFileRepository
     void Remove(MarkdownFile entity);
 
     /// <summary>
-    /// Entfernt viele Dateien auf einmal — unmittelbar, ohne <see cref="SaveChangesAsync"/>.
+    /// Entfernt viele Dateien auf einmal, unmittelbar und ohne <see cref="SaveChangesAsync"/>.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -49,8 +49,8 @@ public interface IMarkdownFileRepository
     /// </para>
     /// <para>
     /// Diese Methode geht den anderen Weg: Sie setzt die Löschung als Anweisung ab, portionsweise
-    /// und ohne Änderungsverfolgung. Was an den Einträgen hängt — Dokumente, Zuordnungen und der
-    /// Volltext —, fällt über die Regeln der Datenbank mit weg; das ist dort hinterlegt und nicht
+    /// und ohne Änderungsverfolgung. Was an den Einträgen hängt (Dokumente, Zuordnungen und der
+    /// Volltext), fällt über die Regeln der Datenbank mit weg; das ist dort hinterlegt und nicht
     /// hier. Weil jede Portion für sich abgeschlossen wird, ist ein abgebrochener Durchgang kein
     /// Schaden: Der nächste Abgleich holt den Rest.
     /// </para>

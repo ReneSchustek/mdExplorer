@@ -40,12 +40,12 @@ public interface ISearchIndexStorage
 }
 
 /// <summary>Ein vollständiger Eintrag, der in den FTS5-Index geschrieben werden soll.</summary>
-/// <param name="MarkdownFileId">Identität — Schlüssel zur 1:1-Verbindung mit dem Dokument.</param>
+/// <param name="MarkdownFileId">Identität, Schlüssel zur 1:1-Verbindung mit dem Dokument.</param>
 /// <param name="Title">Titel-Spalte des Index.</param>
 /// <param name="Body">Plaintext-Body (z. B. Frontmatter-gestripptes Markdown).</param>
 /// <param name="Tags">Leerzeichen-getrennte Tag-Namen.</param>
 /// <param name="Frontmatter">Flachgeklopfter Frontmatter-Text (Key Value-Folge).</param>
-/// <param name="Path">Relativer Pfad — UNINDEXED-Spalte, dient als Pfad-Filter.</param>
+/// <param name="Path">Relativer Pfad (UNINDEXED-Spalte), dient als Pfad-Filter.</param>
 /// <param name="SourceContentHash">Quell-Hash zur Idempotenz-Prüfung.</param>
 public sealed record SearchIndexEntry(
     Guid MarkdownFileId,
@@ -82,7 +82,7 @@ public sealed record SearchIndexQuery(
 /// <param name="Path">Pfad-Spalte (relativ).</param>
 /// <param name="Title">Titel-Spalte.</param>
 /// <param name="Snippet">Vom FTS5-Snippet erzeugter Auszug mit <c>&lt;mark&gt;</c>-Markern.</param>
-/// <param name="Score">bm25-Score — kleiner = relevanter.</param>
+/// <param name="Score">bm25-Score; kleiner = relevanter.</param>
 public sealed record SearchIndexHit(
     Guid MarkdownFileId,
     string Path,

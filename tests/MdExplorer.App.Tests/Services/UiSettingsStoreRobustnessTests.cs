@@ -7,7 +7,7 @@ namespace MdExplorer.App.Tests.Services;
 /// <summary>
 /// Prüft, dass eine beschädigte oder unzugängliche Layout-Datei den Programmstart nicht
 /// verhindert. Der Speicher liegt in <c>%LOCALAPPDATA%</c> und kann durch einen abgebrochenen
-/// Schreibvorgang halb geschrieben zurückbleiben — würde das Laden dann werfen, käme die
+/// Schreibvorgang halb geschrieben zurückbleiben. Würde das Laden dann werfen, käme die
 /// Anwendung nie bis zum Hauptfenster.
 /// </summary>
 public sealed class UiSettingsStoreRobustnessTests : IDisposable
@@ -31,7 +31,7 @@ public sealed class UiSettingsStoreRobustnessTests : IDisposable
     [Fact]
     public void Load_OnJsonNull_FallsBackToTheDefaultLayout()
     {
-        // "null" ist gültiges JSON, ergibt aber kein Layout — ohne die Absicherung
+        // "null" ist gültiges JSON, ergibt aber kein Layout; ohne die Absicherung
         // liefe die Oberfläche mit Breite 0 an.
         _ = Directory.CreateDirectory(_ordner);
         File.WriteAllText(DateiPfad, "null");
@@ -85,7 +85,7 @@ public sealed class UiSettingsStoreRobustnessTests : IDisposable
     public void Save_WhenTheFileIsLockedByAnotherProcess_DoesNotThrow()
     {
         // Gespeichert wird beim Schließen des Fensters. Ein Schreibfehler darf das
-        // Beenden nicht aufhalten — der Verlust der Spaltenbreiten ist verschmerzbar.
+        // Beenden nicht aufhalten, der Verlust der Spaltenbreiten ist verschmerzbar.
         _ = Directory.CreateDirectory(_ordner);
         File.WriteAllText(DateiPfad, "{}");
         UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);

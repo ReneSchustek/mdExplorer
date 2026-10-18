@@ -111,7 +111,7 @@ public sealed class SearchQueryBuilderTests
     [Fact]
     public void Build_OnSqlInjection_NeutralizesMetacharacters()
     {
-        // Reserve-Wörter (DROP, TABLE, ...) sind in FTS5 unkritisch, sobald sie gequotet vorliegen —
+        // Reserve-Wörter (DROP, TABLE, ...) sind in FTS5 unkritisch, sobald sie gequotet vorliegen;
         // sie verlieren ihre Operator-Bedeutung. SQL-Sonderzeichen (Semikolon, Kommentar-Marker)
         // dürfen jedoch nicht ungeschützt durchreichen.
         Fts5QueryPlan plan = _sut.Build("'; DROP TABLE MarkdownSearchIndex --");
@@ -119,7 +119,7 @@ public sealed class SearchQueryBuilderTests
         Assert.DoesNotContain(";", plan.MatchExpression, StringComparison.Ordinal);
         Assert.DoesNotContain("--", plan.MatchExpression, StringComparison.Ordinal);
         Assert.DoesNotContain("'", plan.MatchExpression, StringComparison.Ordinal);
-        // Reserve-Wörter müssen gequotet sein (FTS5-String) — nicht als Bareword-Operatoren.
+        // Reserve-Wörter müssen gequotet sein (FTS5-String), nicht als Bareword-Operatoren.
         Assert.Contains("\"DROP\"", plan.MatchExpression, StringComparison.Ordinal);
         Assert.Contains("\"TABLE\"", plan.MatchExpression, StringComparison.Ordinal);
     }
@@ -169,7 +169,7 @@ public sealed class SearchQueryBuilderTests
     [Fact]
     public void Build_OnPhraseWithSpecialChars_StripsSpecialChars()
     {
-        // Phrasen werden bewusst NICHT sanitisiert (FTS5-Tokenizer normalisiert beim Indexieren) —
+        // Phrasen werden bewusst NICHT sanitisiert (FTS5-Tokenizer normalisiert beim Indexieren);
         // Anführungszeichen bleiben über das Doppelquoten-Schema neutralisiert.
         Fts5QueryPlan plan = _sut.Build("\"foo;bar\"");
 

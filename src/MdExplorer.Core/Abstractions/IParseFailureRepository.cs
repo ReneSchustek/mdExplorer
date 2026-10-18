@@ -19,18 +19,18 @@ public interface IParseFailureRepository
 
     /// <summary>
     /// Legt den Vermerk für die Datei an oder überschreibt den vorhandenen. Höchstens ein
-    /// Vermerk je Datei — ein zweiter Fehlschlag ersetzt den ersten.
+    /// Vermerk je Datei: Ein zweiter Fehlschlag ersetzt den ersten.
     /// </summary>
     /// <param name="failure">Vermerk mit aktuellem Hash, Parser-Fassung und Grund.</param>
     /// <param name="cancellationToken">Abbruchsteuerung.</param>
     Task RecordAsync(ParseFailure failure, CancellationToken cancellationToken);
 
-    /// <summary>Entfernt die Vermerke der angegebenen Dateien — aufzurufen, sobald eine Datei wieder parsbar ist.</summary>
+    /// <summary>Entfernt die Vermerke der angegebenen Dateien. Aufzurufen, sobald eine Datei wieder parsbar ist.</summary>
     /// <param name="markdownFileIds">Betroffene <c>MarkdownFile.Id</c>s.</param>
     /// <param name="cancellationToken">Abbruchsteuerung.</param>
     Task RemoveAsync(IReadOnlyCollection<Guid> markdownFileIds, CancellationToken cancellationToken);
 
-    /// <summary>Zählt die aktuell nicht verarbeitbaren Dateien — Grundlage für den Betriebs-Status.</summary>
+    /// <summary>Zählt die aktuell nicht verarbeitbaren Dateien als Grundlage für den Betriebs-Status.</summary>
     /// <param name="cancellationToken">Abbruchsteuerung.</param>
     Task<int> CountAsync(CancellationToken cancellationToken);
 

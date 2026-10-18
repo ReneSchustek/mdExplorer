@@ -50,7 +50,7 @@
                        Margin="24,2,0,0" />
         </StackPanel>
 
-        <!-- Update-Abschnitt: Prüfen und Installieren. Bewusst zweistufig — installiert
+        <!-- Update-Abschnitt: Prüfen und Installieren. Bewusst zweistufig: Installiert
              wird erst auf ausdrücklichen zweiten Klick. -->
         <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,16,0,0"
                     DataContext="{Binding Update}">

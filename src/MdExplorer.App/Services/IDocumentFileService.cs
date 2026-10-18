@@ -1,7 +1,7 @@
 namespace MdExplorer.App.Services;
 
 /// <summary>
-/// Führt Umbenennen, Verschieben und Löschen eines Dokuments aus — Datei und Index zusammen.
+/// Führt Umbenennen, Verschieben und Löschen eines Dokuments aus, Datei und Index zusammen.
 /// </summary>
 /// <remarks>
 /// Beides gehört zusammen, weil beides auseinanderlaufen kann: Eine umbenannte Datei, deren
@@ -15,14 +15,14 @@ internal interface IDocumentFileService
     /// </summary>
     /// <remarks>
     /// Vor dem Klick, nicht danach: Wer erst hinterher erfährt, dass sieben Dokumente ins
-    /// Leere zeigen, kann es nicht mehr abwählen. Gilt für das Löschen wie fürs Umbenennen —
+    /// Leere zeigen, kann es nicht mehr abwählen. Gilt für das Löschen wie fürs Umbenennen:
     /// ein WikiLink zeigt auf den Dateinamen, und der ändert sich bei beidem.
     /// </remarks>
     Task<DocumentImpact> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken);
 
     /// <summary>Benennt die Datei um; der Ordner bleibt derselbe.</summary>
     /// <param name="markdownFileId">Das Dokument.</param>
-    /// <param name="newFileName">Neuer Name — mit oder ohne Erweiterung <c>.md</c>.</param>
+    /// <param name="newFileName">Neuer Name, mit oder ohne Erweiterung <c>.md</c>.</param>
     /// <param name="cancellationToken">Abbruchmerker.</param>
     Task<DocumentFileResult> RenameAsync(Guid markdownFileId, string newFileName, CancellationToken cancellationToken);
 
@@ -49,7 +49,7 @@ internal sealed record DocumentImpact(string Title, int IncomingLinkCount)
 
 /// <summary>Ausgang eines Vorgangs an Datei und Index.</summary>
 /// <param name="Succeeded">Ob der Vorgang vollständig durchlief.</param>
-/// <param name="Message">Was passiert ist — für die Statuszeile, in ganzen Sätzen.</param>
+/// <param name="Message">Was passiert ist, für die Statuszeile, in ganzen Sätzen.</param>
 /// <param name="NewAbsolutePath">Der neue Pfad, sofern die Datei noch existiert.</param>
 internal sealed record DocumentFileResult(bool Succeeded, string Message, string? NewAbsolutePath)
 {

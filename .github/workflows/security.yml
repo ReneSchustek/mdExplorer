@@ -48,13 +48,13 @@ jobs:
     name: Dependency Review (SCA)
     runs-on: ubuntu-latest
     # Die Aktion vergleicht zwei Stände miteinander. Beim Pull Request kennt sie beide
-    # selbst, beim Push nicht — dort werden sie unten ausdrücklich übergeben. Ein neu
+    # selbst, beim Push nicht. Dort werden sie unten ausdrücklich übergeben. Ein neu
     # angelegter Branch trägt als Vorgänger die Null-SHA und hat nichts zu vergleichen.
     # Bei Zeitplan und Handauslösung bleibt der Job übersprungen: eine Diff-Prüfung ohne
     # Diff gibt es nicht. Dort prüfen der Job „NuGet Vulnerability Audit" über den
     # vollständigen Paketstand und die Dependabot-Alerts, die neue Advisories auch ohne
     # Lauf melden. Für private Repositories verlangt die Aktion Advanced Security und
-    # bricht sonst ab — die Sichtbarkeitsbedingung sichert gegen einen späteren Wechsel.
+    # bricht sonst ab. Die Sichtbarkeitsbedingung sichert gegen einen späteren Wechsel.
     if: >-
       github.event.repository.visibility == 'public'
       && (github.event_name == 'pull_request'
@@ -125,7 +125,7 @@ jobs:
 
       # Bewusst der direkte Aufruf statt der Action: Die Action leitet den zu prüfenden
       # Bereich aus dem Push-Ereignis ab und bildet dabei `<erster-commit>^`. Für den
-      # Wurzel-Commit gibt es keinen Vorgänger — dann bricht git ab und der Scan läuft
+      # Wurzel-Commit gibt es keinen Vorgänger, dann bricht git ab und der Scan läuft
       # überhaupt nicht, meldet aber „kein Fund". Ein Scan, der still nichts prüft, ist
       # schlechter als keiner. `detect` ohne Bereichsangabe prüft immer die vollständige
       # Historie und ist von der Beschaffenheit des Pushes unabhängig.

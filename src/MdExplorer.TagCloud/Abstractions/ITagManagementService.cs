@@ -9,7 +9,7 @@ namespace MdExplorer.TagCloud.Abstractions;
 public interface ITagManagementService
 {
     /// <summary>
-    /// Liefert die Liste der Dateien, die den angegebenen Slug referenzieren — für die
+    /// Liefert die Liste der Dateien, die den angegebenen Slug referenzieren, für die
     /// Vorschau im Tag-Management-Fenster.
     /// </summary>
     Task<TagPreview> GetPreviewAsync(string slug, CancellationToken cancellationToken);
@@ -35,7 +35,7 @@ public interface ITagManagementService
     Task<TagRewriteResult> DeleteAsync(string slug, CancellationToken cancellationToken);
 }
 
-/// <summary>Vorschau einer Tag-Operation — Anzahl + erste paar Dateipfade.</summary>
+/// <summary>Vorschau einer Tag-Operation: Anzahl + erste paar Dateipfade.</summary>
 /// <param name="Slug">Betroffener Slug.</param>
 /// <param name="FileCount">Anzahl betroffener Dateien.</param>
 /// <param name="SamplePaths">Erste 10 relativen Pfade (alphabetisch) für die UI.</param>

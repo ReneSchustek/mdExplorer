@@ -75,7 +75,7 @@ public static class AppPaths
     /// Verzeichnis für die Benutzerdaten der eingebetteten Browser-Ansichten.
     /// </summary>
     /// <remarks>
-    /// Ohne ausdrückliche Angabe schreibt die Browser-Komponente neben die Programmdatei —
+    /// Ohne ausdrückliche Angabe schreibt die Browser-Komponente neben die Programmdatei,
     /// nach einer Installation also dorthin, wo ein Benutzer keine Rechte hat.
     /// </remarks>
     public static string GetWebView2DataDirectory() =>

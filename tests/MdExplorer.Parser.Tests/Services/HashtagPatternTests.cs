@@ -25,7 +25,7 @@ public sealed class HashtagPatternTests
 
     /// <remarks>
     /// Der eigentliche Befund. Was der eine nicht ersetzen kann, darf der andere nicht
-    /// aufnehmen — sonst laufen Datei und Index auseinander.
+    /// aufnehmen, sonst laufen Datei und Index auseinander.
     /// </remarks>
     [Theory]
     [InlineData("Ein #notizé mitten im Wort.")]
@@ -39,7 +39,7 @@ public sealed class HashtagPatternTests
     }
 
     /// <remarks>
-    /// Der Bindestrich am Ende gehört noch zum Treffer — der Slug-Erzeuger schneidet ihn ab,
+    /// Der Bindestrich am Ende gehört noch zum Treffer; der Slug-Erzeuger schneidet ihn ab,
     /// und beide Seiten kommen damit auf dieselbe Kennung. Kein Auseinanderlaufen, deshalb
     /// hier ausdrücklich als erlaubter Fall festgehalten.
     /// </remarks>
@@ -65,7 +65,7 @@ public sealed class HashtagPatternTests
 
     /// <remarks>
     /// Farbwerte erfüllen jede Bedingung eines Schlagworts: erstes Zeichen ein Buchstabe, der
-    /// Rest erlaubt. Der Index trug 42 davon, <c>#F59E0B</c> allein an 21 Dateien — und
+    /// Rest erlaubt. Der Index trug 42 davon, <c>#F59E0B</c> allein an 21 Dateien, und
     /// getroffen hat es ausgerechnet die Dokumentation der Gestaltungslinie.
     /// </remarks>
     [Theory]

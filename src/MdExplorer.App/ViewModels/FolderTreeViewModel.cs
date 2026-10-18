@@ -41,7 +41,7 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
     /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
@@ -197,7 +197,7 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     /// <summary>
     /// Bildet einen absoluten Knotenpfad auf den <em>indexrelativen</em> Prefix ab, gegen den
     /// <c>SearchViewModel</c> die Treffer filtert. Der Index speichert Pfade relativ zur Wurzel
-    /// (<c>Path.GetRelativePath(root, …)</c>), darum darf der Filter nicht der absolute Pfad sein —
+    /// (<c>Path.GetRelativePath(root, …)</c>), darum darf der Filter nicht der absolute Pfad sein,
     /// sonst greift <c>StartsWith</c> nie und die Trefferliste bleibt leer. Wird die Wurzel selbst
     /// (oder ein Pfad ausserhalb aller Roots) selektiert, liefert die Methode <c>null</c>: dann gilt
     /// kein Filter und die Suche bleibt global. Der angehängte Separator verhindert, dass ein
@@ -235,7 +235,7 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
             RebuildRoots(args.Current.Indexing.Roots);
             return;
         }
-        // Roots unverändert — nur Exklusions-Flags propagieren, damit der Tree nicht kollabiert.
+        // Roots unverändert; nur Exklusions-Flags propagieren, damit der Tree nicht kollabiert.
         foreach (TreeNodeViewModel root in Roots)
         {
             RefreshExclusionState(root, parentIsExcluded: false);

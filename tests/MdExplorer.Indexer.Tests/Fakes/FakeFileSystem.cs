@@ -78,7 +78,7 @@ internal sealed class FakeFileSystem : IFileSystem
     /// </summary>
     /// <remarks>
     /// Bildet den halb gelesenen Baum nach: ein Verzeichnis, auf das der Zugriff mitten im
-    /// Lauf verweigert wird. Der Indexer darf danach keine Einträge entfernen — was er
+    /// Lauf verweigert wird. Der Indexer darf danach keine Einträge entfernen; was er
     /// nicht gelesen hat, sähe sonst wie gelöscht aus.
     /// </remarks>
     public int? ThrowAfterEnumerating { get; set; }
@@ -182,7 +182,7 @@ internal sealed class FakeFileSystem : IFileSystem
     /// <summary>
     /// Lässt die nächsten <paramref name="times"/> Lesezugriffe auf <paramref name="path"/>
     /// mit einem E/A-Fehler scheitern. Bildet die kurzzeitige Sperre nach, die entsteht,
-    /// wenn ein anderes Programm die Datei gerade schreibt — der Indexer muss das durch
+    /// wenn ein anderes Programm die Datei gerade schreibt, und der Indexer muss das durch
     /// Wiederholen überbrücken statt die Datei zu verlieren.
     /// </summary>
     public void FailOpenRead(string path, int times)

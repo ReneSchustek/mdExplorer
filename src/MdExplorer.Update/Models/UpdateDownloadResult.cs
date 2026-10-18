@@ -10,7 +10,7 @@ public enum UpdateDownloadStatus
     DownloadFailed = 1,
 
     /// <summary>
-    /// Der berechnete Hash weicht vom veröffentlichten ab. Die Datei wird verworfen —
+    /// Der berechnete Hash weicht vom veröffentlichten ab. Die Datei wird verworfen:
     /// eine Abweichung bedeutet entweder einen abgebrochenen Download oder eine
     /// manipulierte Datei, und beide Fälle darf man nicht ausführen.
     /// </summary>

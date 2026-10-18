@@ -64,7 +64,7 @@
         <!--
             Drei Lagen, die eine Trefferliste allein nicht auseinanderhält: noch nicht gesucht,
             gesucht und nichts gefunden, oder Treffer. Die ersten beiden brauchen verschiedene
-            Sätze — sonst hält der Nutzer seinen Bestand für leer.
+            Sätze, sonst hält der Nutzer seinen Bestand für leer.
         -->
         <Grid>
             <ListBox ItemsSource="{Binding Results}"

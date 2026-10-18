@@ -4,7 +4,7 @@ using MdExplorer.Core.Models;
 namespace MdExplorer.App.ViewModels.Settings;
 
 /// <summary>
-/// ViewModel für den Tab „Verhalten" — Such-Debounce und Indexer-Resync-Intervall.
+/// ViewModel für den Tab „Verhalten": Such-Debounce und Indexer-Resync-Intervall.
 /// </summary>
 internal sealed partial class BehaviorTabViewModel : ObservableObject
 {

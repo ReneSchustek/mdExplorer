@@ -10,7 +10,7 @@ namespace MdExplorer.App.Services;
 /// <remarks>
 /// Getauscht wird genau ein Wörterbuch: die Belegung. Abstände, Radien und Schriftgrößen
 /// bleiben stehen, weil sie mit dem Erscheinungsbild nichts zu tun haben. Der Austausch
-/// erfolgt über die Position in der Liste, damit die Reihenfolge erhalten bleibt — ein
+/// erfolgt über die Position in der Liste, damit die Reihenfolge erhalten bleibt; ein
 /// Anhängen ans Ende würde später geladene Wörterbücher überschreiben.
 /// </remarks>
 internal sealed class ThemeApplier
@@ -36,8 +36,8 @@ internal sealed class ThemeApplier
     /// </summary>
     /// <remarks>
     /// Das Laden ist herausgezogen, weil eine Ressourcenadresse nur innerhalb einer
-    /// laufenden Anwendung auflösbar ist. Auswahl und Austausch — das, woran ein Fehler
-    /// die halbe Oberfläche unlesbar macht — bleiben so ohne Fenster prüfbar.
+    /// laufenden Anwendung auflösbar ist. Auswahl und Austausch (das, woran ein Fehler
+    /// die halbe Oberfläche unlesbar macht) bleiben so ohne Fenster prüfbar.
     /// </remarks>
     public ThemeApplier(IEffectiveThemeProvider effectiveTheme, Func<Uri, ResourceDictionary> paletteLoader)
     {

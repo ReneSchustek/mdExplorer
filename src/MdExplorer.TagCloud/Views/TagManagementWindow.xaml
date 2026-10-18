@@ -15,7 +15,7 @@
     <!--
         Die Ressourcen stehen vorn, nicht am Ende: WPF löst einen StaticResource-Verweis
         beim Lesen auf. Stand der Block hinter dem Inhalt, war der Schlüssel an der
-        Verwendungsstelle noch unbekannt — das Fenster ließ sich gar nicht öffnen.
+        Verwendungsstelle noch unbekannt; das Fenster ließ sich gar nicht öffnen.
     -->
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />

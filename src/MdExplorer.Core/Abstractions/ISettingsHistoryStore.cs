@@ -16,8 +16,8 @@ public interface ISettingsHistoryStore
     /// </summary>
     /// <param name="previous">Stand vor dem Save.</param>
     /// <param name="current">Stand nach dem Save.</param>
-    /// <param name="previousJson">Serialisierte Form von <paramref name="previous"/> — Basis für den Diff.</param>
-    /// <param name="currentJson">Serialisierte Form von <paramref name="current"/> — wird identisch in die Snapshot-Datei geschrieben.</param>
+    /// <param name="previousJson">Serialisierte Form von <paramref name="previous"/> als Basis für den Diff.</param>
+    /// <param name="currentJson">Serialisierte Form von <paramref name="current"/>. Wird identisch in die Snapshot-Datei geschrieben.</param>
     /// <param name="timestamp">Festgehaltener Zeitpunkt (UTC). Wird sowohl im Snapshot-Dateinamen als auch im Audit-Log gespeichert.</param>
     /// <param name="cancellationToken">Abbrechbar bei Host-Stop.</param>
     Task RecordAsync(

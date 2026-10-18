@@ -120,7 +120,7 @@ public sealed class ParseFailureThrottlingTests
         _ = harness.AddSource("/r/bad.md", "hash-1", BadContent);
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
-        // Eine neue Parser-Fassung hebt den Vermerk auf — die Datei könnte jetzt parsbar sein.
+        // Eine neue Parser-Fassung hebt den Vermerk auf, denn die Datei könnte jetzt parsbar sein.
         // Scheitert sie erneut am selben Inhalt, steht der Stapel längst im Protokoll.
         harness.Parser.EngineVersion = "test-engine/2";
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);

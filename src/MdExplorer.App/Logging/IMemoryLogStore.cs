@@ -12,7 +12,7 @@ internal interface IMemoryLogStore
 
     /// <summary>Wird unmittelbar nach jedem hinzugefügten Eintrag gefeuert.</summary>
     /// <remarks>
-    /// Handler werden auf dem schreibenden Thread aufgerufen — UI-Konsumenten
+    /// Handler werden auf dem schreibenden Thread aufgerufen; UI-Konsumenten
     /// müssen selbst auf den Dispatcher marshallen.
     /// </remarks>
     event EventHandler<LogEntry>? EntryAdded;

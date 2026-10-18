@@ -22,7 +22,7 @@ public enum FileSystemEventKind
 /// </summary>
 /// <param name="Kind">Ereignisart.</param>
 /// <param name="Path">Aktueller Pfad der Datei.</param>
-/// <param name="OldPath">Bei <see cref="FileSystemEventKind.Renamed"/> der vorherige Pfad — sonst <see langword="null"/>.</param>
+/// <param name="OldPath">Bei <see cref="FileSystemEventKind.Renamed"/> der vorherige Pfad, sonst <see langword="null"/>.</param>
 /// <param name="Root">Index-Wurzel, unter der das Ereignis aufgetreten ist.</param>
 public sealed record FileSystemEvent(FileSystemEventKind Kind, string Path, string? OldPath, string Root);
 

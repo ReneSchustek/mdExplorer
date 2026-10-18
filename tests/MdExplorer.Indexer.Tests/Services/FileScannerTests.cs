@@ -81,7 +81,7 @@ public sealed class FileScannerTests
         fs.AddDirectory(@$"{Root}\dir2");
         fs.AddFile(@$"{Root}\dir1\file1.md", "# 1", FixedWrite);
         fs.AddFile(@$"{Root}\dir2\file2.md", "# 2", FixedWrite);
-        // Wechselseitige Junctions — würde die Default-Recursive-Enumeration in eine Endlosschleife treiben.
+        // Wechselseitige Junctions: würde die Default-Recursive-Enumeration in eine Endlosschleife treiben.
         fs.AddSymlink(@$"{Root}\dir1\loop", @$"{Root}\dir2");
         fs.AddSymlink(@$"{Root}\dir2\loop", @$"{Root}\dir1");
 
@@ -110,7 +110,7 @@ public sealed class FileScannerTests
 
         List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
 
-        // Keine Datei doppelt — Zyklus über Besucher-Set unterbrochen.
+        // Keine Datei doppelt, Zyklus über Besucher-Set unterbrochen.
         Assert.Equal(2, result.Count);
         Assert.Contains(@$"{Root}\dir1\file1.md", result);
         Assert.Contains(@$"{Root}\dir2\file2.md", result);
@@ -123,7 +123,7 @@ public sealed class FileScannerTests
         fs.AddDirectory(Root);
         fs.AddDirectory(@"C:\Anderswo");
         fs.AddFile(@"C:\Anderswo\extern.md", "# Extern", FixedWrite);
-        // Linkziel liegt ausserhalb des Roots — soll bei Default-Setting nicht indiziert werden.
+        // Linkziel liegt außerhalb des Roots; soll bei Default-Setting nicht indiziert werden.
         fs.AddSymlink(@$"{Root}\link", @"C:\Anderswo");
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: false);

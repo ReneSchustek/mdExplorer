@@ -6,7 +6,7 @@ namespace MdExplorer.App.Services;
 
 /// <summary>
 /// Liest das Windows-Apps-Theme aus der Registry (<c>HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize</c>).
-/// Wert <c>AppsUseLightTheme=0</c> bedeutet Dark-Mode. Wirft niemals — bei Lese-Fehlern
+/// Wert <c>AppsUseLightTheme=0</c> bedeutet Dark-Mode. Wirft niemals; bei Lese-Fehlern
 /// wird Light-Mode angenommen (sicherer Default für Lesbarkeit).
 /// </summary>
 [ExcludeFromCodeCoverage]

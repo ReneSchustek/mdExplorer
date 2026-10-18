@@ -43,7 +43,7 @@ internal static class EditorFindHelper
             return null;
         }
         StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-        // LastIndexOf erwartet einen Start-Index vom Ende her — wir suchen "vor" endIndex,
+        // LastIndexOf erwartet einen Start-Index vom Ende her; wir suchen "vor" endIndex,
         // also bis endIndex - 1 inklusive. Wenn endIndex <= 0, direkt Wrap-Around.
         int boundary = Math.Min(endIndex, text.Length);
         int hit = boundary > 0 ? text.LastIndexOf(query, boundary - 1, boundary, comparison) : -1;

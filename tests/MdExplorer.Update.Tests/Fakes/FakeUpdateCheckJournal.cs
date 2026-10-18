@@ -11,7 +11,7 @@ internal sealed class FakeUpdateCheckJournal : IUpdateCheckJournal
     /// <summary>Der aktuell gespeicherte letzte Prüfzeitpunkt.</summary>
     public DateTimeOffset? LastCheck { get; private set; }
 
-    /// <summary>Anzahl der Schreibvorgänge — erlaubt die Prüfung, ob der Throttle persistiert wurde.</summary>
+    /// <summary>Anzahl der Schreibvorgänge; erlaubt die Prüfung, ob der Throttle persistiert wurde.</summary>
     public int WriteCount { get; private set; }
 
     /// <inheritdoc />

@@ -128,7 +128,7 @@ internal sealed partial class PreviewPanel : UserControl
     /// <remarks>
     /// Nur lesend und ohne fremde Herkunft (<c>DenyCors</c>): Die Vorschau soll Bilder
     /// anzeigen, nicht mit dem Dateisystem sprechen. Eine frühere Abbildung wird jedes Mal
-    /// gelöst — sonst zeigte das nächste Dokument die Bilder des vorigen.
+    /// gelöst, sonst zeigte das nächste Dokument die Bilder des vorigen.
     /// </remarks>
     private void MapDocumentFolder()
     {
@@ -138,7 +138,7 @@ internal sealed partial class PreviewPanel : UserControl
         }
         catch (ArgumentException)
         {
-            // Es gab noch keine Abbildung — kein Grund, etwas zu melden.
+            // Es gab noch keine Abbildung, also kein Grund, etwas zu melden.
         }
 
         if (DataContext is not PreviewViewModel viewModel
@@ -168,7 +168,7 @@ internal sealed partial class PreviewPanel : UserControl
     private void ConfigureCoreSettings()
     {
         CoreWebView2Settings settings = Browser.CoreWebView2.Settings;
-        // Preview ist reines HTML+CSS — Skripte und postMessage sind weder nötig noch erwünscht.
+        // Preview ist reines HTML+CSS. Skripte und postMessage sind weder nötig noch erwünscht.
         settings.IsScriptEnabled = false;
         settings.IsWebMessageEnabled = false;
         settings.AreDefaultContextMenusEnabled = false;

@@ -11,13 +11,13 @@ namespace MdExplorer.App.Tests.Services;
 /// <para>
 /// Die Vorschau wird per <c>NavigateToString</c> geladen; die Basis-Adresse ist damit
 /// <c>about:blank</c>. Ein relativer Pfad wie <c>docs/screenshots/suche.png</c> hat dort
-/// nichts, worauf er sich beziehen könnte — <b>ohne Umschreiben bliebe jedes Bild einer
+/// nichts, worauf er sich beziehen könnte: <b>ohne Umschreiben bliebe jedes Bild einer
 /// Notiz unsichtbar</b>, auch die Aufnahmen im eigenen README.
 /// </para>
 /// <para>
 /// Was <b>nicht</b> angefasst wird, steht hier genauso fest: Ein Bild aus dem Netz bleibt
 /// stehen und wird von der Sicherheitsregel abgewiesen. Die drei Abzeichen oben im README
-/// sind deshalb weiterhin leer — das ist die Entscheidung „keine Netzwerkquellen in der
+/// sind deshalb weiterhin leer; das ist die Entscheidung „keine Netzwerkquellen in der
 /// Vorschau", nicht ein zweiter Fehler.
 /// </para>
 /// </remarks>
@@ -107,7 +107,7 @@ public sealed class PreviewImageSourceTests
         string html = sut.Build("<img src=\"https://img.shields.io/badge/x.svg\">");
 
         Assert.Contains("img-src 'self' data: https:", html, StringComparison.Ordinal);
-        // Geöffnet wird ausschließlich die Bildquelle — alles Übrige bleibt gesperrt.
+        // Geöffnet wird ausschließlich die Bildquelle, alles Übrige bleibt gesperrt.
         Assert.Contains("script-src 'none'", html, StringComparison.Ordinal);
         Assert.Contains("default-src 'none'", html, StringComparison.Ordinal);
     }

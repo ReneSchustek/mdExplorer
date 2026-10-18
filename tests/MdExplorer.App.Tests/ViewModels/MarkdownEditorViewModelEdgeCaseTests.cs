@@ -218,7 +218,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     [Fact]
     public async Task Constructor_WithConfirmationDialog_UsesTheDefaultDebounce()
     {
-        // Der Weg, den die Anwendung selbst nimmt — mit Bestätigungsdialog und ohne
+        // Der Weg, den die Anwendung selbst nimmt, mit Bestätigungsdialog und ohne
         // ausdrücklich gesetzte Verzögerung.
         FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
         using MarkdownEditorViewModel sut = new(

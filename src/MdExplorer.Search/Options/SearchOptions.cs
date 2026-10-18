@@ -78,7 +78,7 @@ public sealed class SearchOptions
 
     /// <summary>
     /// Obergrenze für die Anzahl FTS5-Vorfilter-Treffer, die im RegEx-Modus
-    /// gegen das Pattern materialisiert werden. Default 5000 — schützt
+    /// gegen das Pattern materialisiert werden. Default 5000, schützt
     /// vor RAM-Explosion bei zu weichen Patterns wie <c>.+</c>.
     /// </summary>
     [Range(1, MaxRegexCandidateLimit)]
@@ -100,7 +100,7 @@ public sealed class SearchOptions
 
     /// <summary>
     /// Token-Distanz für den FTS5-<c>NEAR</c>-Operator im Similarity-Modus.
-    /// Default 5 — wirkt wie ein „im selben Satz"-Filter.
+    /// Default 5; wirkt wie ein „im selben Satz"-Filter.
     /// </summary>
     [Range(1, MaxNearProximityWindow)]
     public int NearProximityWindow { get; set; } = 5;

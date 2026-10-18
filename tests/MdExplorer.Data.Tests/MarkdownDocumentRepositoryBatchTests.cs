@@ -51,7 +51,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
             hashes[Guid.NewGuid()] = $"hash-{i}";
         }
 
-        // Sollte ohne SqliteException "too many SQL variables" zurückkommen — alle Ids fehlen in der leeren DB.
+        // Sollte ohne SqliteException "too many SQL variables" zurückkommen; alle Ids fehlen in der leeren DB.
         IReadOnlyList<Guid> result = await _documentRepository
             .GetStaleOrMissingAsync(hashes, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
@@ -69,7 +69,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
             ids.Add(Guid.NewGuid());
         }
 
-        // Alle Ids fehlen in der leeren DB — darf ohne SqliteException "too many SQL variables" zurückkommen.
+        // Alle Ids fehlen in der leeren DB: darf ohne SqliteException "too many SQL variables" zurückkommen.
         IReadOnlyDictionary<Guid, MarkdownDocument> result = await _documentRepository
             .GetByMarkdownFileIdsAsync(ids, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);

@@ -8,7 +8,7 @@ namespace MdExplorer.Parser.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Drei Stellen brauchen sie — der Extractor, der Rewriter und der Dokument-Editor. Stünde
+/// Drei Stellen brauchen sie: der Extractor, der Rewriter und der Dokument-Editor. Stünde
 /// sie an jeder einzeln, wiche eine davon früher oder später ab: Kennt der Extractor keine
 /// abschließende Bedingung, der Rewriter aber schon, wird bei <c>#notizé</c> <c>notiz</c>
 /// indiziert und nichts umbenannt. Datei und Index liefen auseinander, ohne Meldung.
@@ -23,8 +23,8 @@ public static partial class HashtagPattern
     /// Vollständiger Ausdruck mit benannter Gruppe <c>name</c>.
     /// </summary>
     /// <remarks>
-    /// Vorne kein Wortzeichen und kein zweites <c>#</c> — sonst würde jede Raute mitten im
-    /// Wort zählen. Hinten kein Wortzeichen und kein Bindestrich — sonst bliebe bei einer
+    /// Vorne kein Wortzeichen und kein zweites <c>#</c>, sonst würde jede Raute mitten im
+    /// Wort zählen. Hinten kein Wortzeichen und kein Bindestrich, sonst bliebe bei einer
     /// Umbenennung der Rest des Wortes stehen. Als <c>const</c>, damit ihn beide Module dem
     /// Quelltext-Erzeuger von <see cref="GeneratedRegexAttribute"/> übergeben können.
     /// </remarks>
@@ -38,14 +38,14 @@ public static partial class HashtagPattern
     /// Zeitgrenze für einen einzelnen Lauf des Ausdrucks.
     /// </summary>
     /// <remarks>
-    /// Der Ausdruck kennt keine Verschachtelung und kann nicht katastrophal zurücksetzen —
+    /// Der Ausdruck kennt keine Verschachtelung und kann nicht katastrophal zurücksetzen;
     /// die Grenze ist trotzdem gesetzt: Sie kostet nichts und macht den Fall unmöglich, dass
     /// eine spätere Änderung am Muster genau das einführt.
     /// </remarks>
     private static readonly TimeSpan MatchTimeout = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// Baut den Ausdruck für ein einzelnes Schlagwort — gleiche Grenzen, fester Name.
+    /// Baut den Ausdruck für ein einzelnes Schlagwort, mit gleichen Grenzen und festem Namen.
     /// </summary>
     /// <param name="tagName">Der Name ohne führende Raute.</param>
     /// <returns>Ein Ausdruck, der genau dieses Schlagwort trifft.</returns>
@@ -66,7 +66,7 @@ public static partial class HashtagPattern
     /// <para>
     /// <c>#F59E0B</c> erfüllt jede Bedingung eines Schlagworts: erstes Zeichen ein Buchstabe,
     /// der Rest erlaubt. Der Index trug deshalb 42 solcher „Schlagworte", eines davon an
-    /// 21 Dateien — und getroffen hat es ausgerechnet die Dokumentation der Gestaltungslinie.
+    /// 21 Dateien, und getroffen hat es ausgerechnet die Dokumentation der Gestaltungslinie.
     /// </para>
     /// <para>
     /// Der Preis ist zu nennen und nicht zu verschweigen: Ein gewolltes <c>#facade</c> oder

@@ -29,7 +29,7 @@ public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
             .Options;
 
         _dbContext = new MdExplorerDbContext(options);
-        // Volle Migration statt EnsureCreated — die FTS5-Virtual-Table entsteht erst per Sql-Migration.
+        // Volle Migration statt EnsureCreated, denn die FTS5-Virtual-Table entsteht erst per Sql-Migration.
         _dbContext.Database.Migrate();
         _sut = new SqliteSearchIndexStorage(_dbContext);
     }

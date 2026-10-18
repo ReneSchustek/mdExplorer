@@ -65,14 +65,14 @@ public sealed partial class TagCloudRefreshService : BackgroundService
         catch (ArgumentException exception)
         {
             // Ein korrupter Tag-Wert (z. B. ein leerer Slug aus migrierten Altdaten)
-            // wirft ArgumentException im Tag-Statistics-Pfad — Refresh überspringen, nächster Tick
+            // wirft ArgumentException im Tag-Statistics-Pfad: Refresh überspringen, nächster Tick
             // versucht es erneut.
             LogRefreshFailure(_logger, exception);
             return;
         }
         catch (DbException exception)
         {
-            // SQLite-Spitze nach Retry-Budget — Service läuft weiter,
+            // SQLite-Spitze nach Retry-Budget; Service läuft weiter,
             // nächster Periodic-Tick versucht es erneut.
             LogRefreshFailure(_logger, exception);
             return;
@@ -103,7 +103,7 @@ public sealed partial class TagCloudRefreshService : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            // Host-Shutdown — kein Fehler.
+            // Host-Shutdown, kein Fehler.
         }
         catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex))
         {

@@ -26,7 +26,7 @@ internal sealed class ContentBasedThrowingParser : IMarkdownParser
 
     public string EngineVersion { get; set; } = InitialEngineVersion;
 
-    // Zählt jeden Aufruf — die Zahl belegt, dass eine bekannte unparsbare Datei gar nicht
+    // Zählt jeden Aufruf; die Zahl belegt, dass eine bekannte unparsbare Datei gar nicht
     // erst wieder beim Parser ankommt.
     public int ParseCallCount { get; private set; }
 

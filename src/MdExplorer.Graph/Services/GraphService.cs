@@ -99,8 +99,8 @@ public sealed partial class GraphService : IGraphService
         }
 
         // Nur die Nachbarschaft, nicht der ganze Bestand: Die Datei-Stammdaten sind drei kurze
-        // Spalten und werden für die Auflösung von Name auf Datei gebraucht. Die Verweis-Listen
-        // — die teure Hälfte — holt der Anbieter nur für das Dokument selbst und für die, die
+        // Spalten und werden für die Auflösung von Name auf Datei gebraucht. Die Verweis-Listen (die
+        // teure Hälfte) holt der Anbieter nur für das Dokument selbst und für die, die
         // es nennen. Die Auflösung bleibt dieselbe Funktion wie beim vollen Graphen; nur die
         // Menge, auf der sie arbeitet, ist kleiner.
         IReadOnlyList<GraphSourceFile> files = await _sourceProvider
@@ -254,7 +254,7 @@ public sealed partial class GraphService : IGraphService
     private static partial void LogSnapshotTrimmed(ILogger logger, int originalCount, int retainedCount);
 
     /// <summary>
-    /// Baut die vollständige Kantenmenge über den gesamten Source-Snapshot (vor Filtern) — löst
+    /// Baut die vollständige Kantenmenge über den gesamten Source-Snapshot (vor Filtern). Löst
     /// WikiLink-Slugs gegen den Index auf, verwirft Self-Loops und Verweise auf unbekannte Ziele.
     /// Dient auch der Status-Anzeige „X von Y dargestellt".
     /// </summary>
@@ -270,7 +270,7 @@ public sealed partial class GraphService : IGraphService
             foreach (string slug in ExtractSlugs(document.OutlinksJson))
             {
                 // TryToSlug statt ToSlug: ein WikiLink-Ziel aus reinen Sonderzeichen (z. B. [[+]])
-                // liefert keinen Slug — überspringen statt den ganzen Graph-Build abstürzen zu lassen.
+                // liefert keinen Slug. Überspringen statt den ganzen Graph-Build abstürzen zu lassen.
                 if (!_slugNormalizer.TryToSlug(slug, out string normalized))
                 {
                     continue;
@@ -377,8 +377,8 @@ public sealed partial class GraphService : IGraphService
         Dictionary<string, Guid> index = new(files.Count, StringComparer.Ordinal);
         foreach (GraphSourceFile file in files)
         {
-            // TryToSlug: ein Dateiname aus reinen Sonderzeichen (z. B. "#.md" — unter Windows gültig)
-            // liefert keinen Slug — überspringen statt eine ArgumentException nach oben zu werfen.
+            // TryToSlug: ein Dateiname aus reinen Sonderzeichen (z. B. "#.md", unter Windows gültig)
+            // liefert keinen Slug; überspringen statt eine ArgumentException nach oben zu werfen.
             if (!_slugNormalizer.TryToSlug(file.FileNameWithoutExtension, out string slug))
             {
                 continue;

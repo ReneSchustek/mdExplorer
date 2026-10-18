@@ -6,7 +6,7 @@ namespace MdExplorer.App.Services;
 
 /// <summary>
 /// WPF-Implementierung von <see cref="IFileSaveDialogService"/> auf Basis von
-/// <see cref="SaveFileDialog"/>. Ohne Owner-Window — die <c>ShowDialog()</c>-
+/// <see cref="SaveFileDialog"/>. Ohne Owner-Window: Die <c>ShowDialog()</c>-
 /// Variante reicht für modale Speichern-Dialoge, die der jeweils aktive
 /// Top-Level-Owner automatisch über die WPF-Fokus-Hierarchie erbt.
 /// </summary>

@@ -10,7 +10,7 @@ internal sealed class FakeMarkdownDocumentRepository : IMarkdownDocumentReposito
 
     /// <summary>
     /// Fehler, den <see cref="GetByMarkdownFileIdAsync"/> statt eines Ergebnisses liefert.
-    /// Nötig, um die Ausweichpfade der Vorschau zu prüfen — eine Datenbank-Spitze lässt sich
+    /// Nötig, um die Ausweichpfade der Vorschau zu prüfen; eine Datenbank-Spitze lässt sich
     /// mit einem In-Memory-Bestand sonst nicht nachstellen.
     /// </summary>
     public Exception? FailOnGet { get; set; }

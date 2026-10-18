@@ -99,7 +99,7 @@ public sealed class MdIgnoreHierarchyTests
     private static MdIgnoreHierarchy NewHierarchy(IFileSystem fileSystem) =>
         new(new MdIgnoreReader(fileSystem));
 
-    /// <summary>Variante mit Read-Counter — eigenes Mini-Filesystem für Caching-Tests.</summary>
+    /// <summary>Variante mit Read-Counter: eigenes Mini-Filesystem für Caching-Tests.</summary>
     private sealed class CountingFileSystem : IFileSystem
     {
         private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);

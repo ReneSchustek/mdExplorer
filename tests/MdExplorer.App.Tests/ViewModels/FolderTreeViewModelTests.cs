@@ -89,7 +89,7 @@ public sealed class FolderTreeViewModelTests
     [Fact]
     public void OnSubfolderSelected_SetsRelativePathPrefix()
     {
-        // Ein Unterordner schränkt die Suche ein — der Filter muss relativ zur Wurzel sein
+        // Ein Unterordner schränkt die Suche ein; der Filter muss relativ zur Wurzel sein
         // (mit Separator-Endung), damit er gegen die relativen Index-Pfade matcht.
         string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
         _ = Directory.CreateDirectory(Path.Combine(tempRoot, "Sub1"));

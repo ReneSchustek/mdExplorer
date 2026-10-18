@@ -32,7 +32,7 @@ public static class DataServiceCollectionExtensions
             DatabaseOptions databaseOptions = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
             SqlitePragmaInterceptor pragmaInterceptor = serviceProvider.GetRequiredService<SqlitePragmaInterceptor>();
 
-            // Cache-Modus bewusst auf Default/Private — Shared-Cache erzeugt
+            // Cache-Modus bewusst auf Default/Private, denn Shared-Cache erzeugt
             // SQLITE_LOCKED_SHAREDCACHE (Extended-Code 262) sobald zwei Scopes
             // parallel auf dieselben Tabellen zugreifen. WAL plus busy_timeout
             // (im Pragma-Interceptor) löst Reader/Writer-Parallelität sauber.

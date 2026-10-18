@@ -8,7 +8,7 @@ namespace MdExplorer.Graph.Tests.Fakes;
 /// <remarks>
 /// Der Vorfilter für die Nachbarschaft bildet die Textsuche der Datenschicht nach: Er sucht
 /// den Slug in Anführungszeichen in der Verweis-Liste. Damit prüfen die Tests dasselbe
-/// Verhalten, das die Datenbank liefert — einschließlich der Fehltreffer, die der Aufrufer
+/// Verhalten, das die Datenbank liefert, einschließlich der Fehltreffer, die der Aufrufer
 /// beim Auswerten verwerfen muss.
 /// </remarks>
 internal sealed class FakeGraphSourceProvider(GraphSourceData data) : IGraphSourceProvider

@@ -10,7 +10,7 @@ namespace MdExplorer.Parser.Tests.Services;
 /// Edge-Case-Tests für den <see cref="MarkdigParser"/>. Decken die
 /// pathologischen Eingaben ab, an denen das Renderer-Limit von Markdig greift,
 /// und sichern die Resilienz gegen ungewöhnliche
-/// Eingaben ab — leerer Input, Whitespace-only, BOM, sehr lange Zeilen,
+/// Eingaben ab: leerer Input, Whitespace-only, BOM, sehr lange Zeilen,
 /// Surrogate-Pairs, Null-Byte, kaputtes YAML.
 /// </summary>
 public sealed class MarkdigParserEdgeCasesTests
@@ -48,7 +48,7 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnInputWithUtf8Bom_StripsBomAndParsesBody()
     {
-        // U+FEFF (BOM) am Anfang — Markdig sollte das tolerieren, der Body-Header bleibt erkennbar.
+        // U+FEFF (BOM) am Anfang; Markdig sollte das tolerieren, der Body-Header bleibt erkennbar.
         string withBom = "﻿# Titel\n\nText mit #tag.";
 
         ParseResult result = _sut.Parse(withBom);
@@ -88,12 +88,12 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnNullByteInBody_DoesNotCrash()
     {
-        // C0-Control NUL — pathologisch, sollte aber den Parser nicht killen.
+        // C0-Control NUL, pathologisch, sollte aber den Parser nicht killen.
         string withNul = "# Titel\n\nText mit \0 in der Mitte.";
 
         ParseResult result = _sut.Parse(withNul);
 
-        // Inhalt landet entweder mit oder ohne NUL im HTML — wichtig ist nur, dass kein Throw kommt.
+        // Inhalt landet entweder mit oder ohne NUL im HTML. Wichtig ist nur, dass kein Throw kommt.
         Assert.NotNull(result.RenderedHtmlGz.ToArray());
     }
 
@@ -137,7 +137,7 @@ public sealed class MarkdigParserEdgeCasesTests
 
         // Der Test misst Wanduhrzeit, und die hängt davon ab, wie viele Testprozesse
         // sich gerade dieselben Kerne teilen. Ein knappes Budget prüft deshalb nicht
-        // den Parser, sondern die Auslastung der Maschine — und fällt genau dann um,
+        // den Parser, sondern die Auslastung der Maschine, und fällt genau dann um,
         // wenn ohnehin alles läuft. Zugesichert wird hier darum das, was unabhängig
         // von der Last gilt: Der Parser kommt bei 5 MB zum Ende und liefert ein
         // vollständiges Ergebnis, statt in einem quadratischen Pfad stehen zu bleiben.
@@ -152,7 +152,7 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnRepeatedEmphasisMarkers_DoesNotCrash()
     {
-        // 200 abwechselnde Emphasis-Marker — Markdig wählt seine eigenen
+        // 200 abwechselnde Emphasis-Marker; Markdig wählt seine eigenen
         // Pairing-Heuristiken, soll aber nicht crashen.
         StringBuilder builder = new(800);
         for (int i = 0; i < 200; i++)
@@ -168,10 +168,10 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnDeeplyNestedDelimiters_EitherThrowsArgumentExceptionOrSucceeds()
     {
-        // 1500 verschachtelte `[`-`]`-Paare. Markdigs Renderer hat ein Depth-Limit
-        // — dieser Test dokumentiert das Verhalten:
+        // 1500 verschachtelte `[`-`]`-Paare. Markdigs Renderer hat ein Depth-Limit;
+        // dieser Test dokumentiert das Verhalten:
         //   - Entweder rendert Markdig sauber durch (kleinere Tiefe).
-        //   - Oder es wirft ArgumentException("depth limit exceeded") — dann fangen
+        //   - Oder es wirft ArgumentException("depth limit exceeded"); dann fangen
         //     wir das in ParseOrchestrator.
         // Beide Pfade sind akzeptabel; wichtig ist, dass keine andere Exception kommt.
         StringBuilder builder = new(3000);
@@ -199,7 +199,7 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnInputWithMixedLineEndings_NormalizesAndParses()
     {
-        // \r, \r\n, \n in einem Dokument — Markdig akzeptiert das, wir wollen sicherstellen,
+        // \r, \r\n, \n in einem Dokument: Markdig akzeptiert das, wir wollen sicherstellen,
         // dass die Tag-Extraktion alle Tags findet.
         const string Markdown = "Header\r\n\r\n#tag1 erste Zeile.\rText\n#tag2 dritte Zeile.";
 
@@ -229,10 +229,10 @@ public sealed class MarkdigParserEdgeCasesTests
     /// Ein Verweis, dessen Ziel keinen Slug hergibt, darf das Dokument nicht kosten.
     /// </summary>
     /// <remarks>
-    /// In einer Datei steht <c>[[…]]</c> — drei Punkte als Auslassungszeichen, ein Satzzeichen.
+    /// In einer Datei steht <c>[[…]]</c>, drei Punkte als Auslassungszeichen, ein Satzzeichen.
     /// Verlangte der Renderer dafür einen Slug und bekäme eine Ausnahme, verwürfe der Wächter
     /// **die ganze Datei**. Sie fehlte im Index, ohne dass jemand sie vermisst.
-    /// Der Verweis führt nirgendwohin — das ist richtig. Der Text bleibt lesbar — das ist der Punkt.
+    /// Der Verweis führt nirgendwohin; das ist richtig. Der Text bleibt lesbar: das ist der Punkt.
     /// </remarks>
     [Theory]
     [InlineData("[[…]]")]

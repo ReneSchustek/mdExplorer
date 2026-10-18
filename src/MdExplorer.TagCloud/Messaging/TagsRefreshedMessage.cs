@@ -4,7 +4,7 @@ using MdExplorer.TagCloud.Models;
 namespace MdExplorer.TagCloud.Messaging;
 
 /// <summary>
-/// Nachricht — die Hintergrund-Aktualisierung der Tag-Statistik ist fertig und
+/// Nachricht: die Hintergrund-Aktualisierung der Tag-Statistik ist fertig und
 /// liefert eine neue Snapshot-Liste. Der Empfänger (i. d. R. das
 /// <c>TagCloudViewModel</c>) ersetzt sein <see cref="ObservableCollection{T}"/> auf
 /// dem UI-Thread.

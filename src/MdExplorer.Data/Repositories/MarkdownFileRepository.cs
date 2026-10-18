@@ -15,8 +15,8 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     /// Wie viele Schlüssel höchstens in eine Löschanweisung gehen.
     /// </summary>
     /// <remarks>
-    /// SQLite lässt je Anweisung eine begrenzte Zahl gebundener Werte zu — voreingestellt
-    /// 32.766. 500 hält deutlichen Abstand dazu und macht jede Portion für sich schnell genug,
+    /// SQLite lässt je Anweisung eine begrenzte Zahl gebundener Werte zu (voreingestellt
+    /// 32.766). 500 hält deutlichen Abstand dazu und macht jede Portion für sich schnell genug,
     /// dass ein Abbruch nur wenig Arbeit kostet.
     /// </remarks>
     private const int DeleteChunkSize = 500;
@@ -27,7 +27,7 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     public async Task<MarkdownFile?> GetByAbsolutePathAsync(string absolutePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
-        // Der Vergleich ist case-insensitiv, weil die Spalte NOCASE-Collation trägt — die
+        // Der Vergleich ist case-insensitiv, weil die Spalte NOCASE-Collation trägt; die
         // Abfrage nutzt weiterhin den Unique-Index (kein Full-Scan, kein EF.Functions.Collate).
         return await _dbContext.Set<MarkdownFile>()
             .FirstOrDefaultAsync(file => file.AbsolutePath == absolutePath, cancellationToken)
@@ -52,10 +52,10 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootAbsolutePath);
         // Trailing-Separator-Terminator verhindert, dass z.B. der Root "C:\Notes" auch Dateien
-        // unter "C:\Notes-evil\..." matcht — beide hätten sonst gleiche StartsWith-Prefix-Präfixe.
+        // unter "C:\Notes-evil\..." matcht, denn beide hätten sonst gleiche StartsWith-Prefix-Präfixe.
         string trimmedRoot = rootAbsolutePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string prefix = trimmedRoot + Path.DirectorySeparatorChar;
-        // AsNoTracking: das Repo liefert Read-Only-Sichten — falls Remove(entity) nötig wird,
+        // AsNoTracking: das Repo liefert Read-Only-Sichten. Falls Remove(entity) nötig wird,
         // hängt der Caller die Entität per Update/Remove an. Spart Change-Tracker-Overhead
         // bei Bulk-Scans (Initial-Indexer-Lauf, Background-Re-Sync).
         List<MarkdownFile> result = await _dbContext.Set<MarkdownFile>()
@@ -101,14 +101,14 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     public void Remove(MarkdownFile entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        // GetAllUnderRootAsync liefert AsNoTracking-Entities — die müssen vor Remove
-        // an den Change-Tracker angehängt werden. Bevorzugt eine bereits getrackte Kopie
+        // GetAllUnderRootAsync liefert AsNoTracking-Entities, die vor Remove
+        // an den Change-Tracker angehängt werden müssen. Bevorzugt eine bereits getrackte Kopie
         // mit derselben Id (sonst wirft Attach IdentityConflict, wenn der Caller die Entity
         // im selben Scope schon angelegt/geladen hat).
         //
         // FindEntry statt einer Suche über Local: Die Suche läuft die Liste der bereits
         // vorgemerkten Entitäten jedes Mal von vorne durch. Bei einem Aufräumdurchgang mit n
-        // Entfernungen sind das n²/2 Vergleiche — ein Lauf über 27.000 verwaiste Einträge
+        // Entfernungen sind das n²/2 Vergleiche: Ein Lauf über 27.000 verwaiste Einträge
         // bleibt damit 20 Minuten lang bei voller Rechenlast stehen, ohne eine Zeile zu
         // schreiben. FindEntry greift auf die Identitätstabelle zu und braucht
         // dafür konstante Zeit.

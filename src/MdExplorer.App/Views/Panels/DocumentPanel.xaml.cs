@@ -11,7 +11,7 @@ namespace MdExplorer.App.Views.Panels;
 /// <summary>
 /// Container-Panel der rechten Spalte. Bettet die <see cref="PreviewPanel"/>-Instanz für den
 /// Read-Modus ein und blendet im Edit-Modus die monospace TextBox des Editors ein. Die
-/// Mode-Logik liegt vollständig im <see cref="DocumentPanelViewModel"/> — der Code-Behind
+/// Mode-Logik liegt vollständig im <see cref="DocumentPanelViewModel"/>, der Code-Behind
 /// kümmert sich nur um den View-Aufbau und Tastenkürzel (Ctrl+E / Ctrl+S / Ctrl+F).
 /// </summary>
 [ExcludeFromCodeCoverage]
@@ -121,7 +121,7 @@ internal sealed partial class DocumentPanel : UserControl
             return;
         }
         EditorTextBox.Select(hit.StartIndex, hit.Length);
-        // Sicherstellen, dass der Treffer ins Sichtfeld scrollt — TextBox.ScrollToLine erwartet eine Zeile.
+        // Sicherstellen, dass der Treffer ins Sichtfeld scrollt; TextBox.ScrollToLine erwartet eine Zeile.
         int line = source.AsSpan(0, hit.StartIndex).Count('\n');
         EditorTextBox.ScrollToLine(line);
         UpdateFindStatus($"Treffer bei {hit.StartIndex}");

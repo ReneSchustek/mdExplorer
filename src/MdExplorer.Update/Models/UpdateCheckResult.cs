@@ -1,7 +1,7 @@
 namespace MdExplorer.Update.Models;
 
 /// <summary>
-/// Ergebnis einer Update-Prüfung. Trägt die installierte und — sofern ermittelt — die
+/// Ergebnis einer Update-Prüfung. Trägt die installierte und (sofern ermittelt) die
 /// neueste Version sowie die Release-URL für die Benachrichtigung.
 /// </summary>
 /// <param name="Status">Kategorie des Ergebnisses.</param>
@@ -23,7 +23,7 @@ public sealed record UpdateCheckResult(
     public bool IsUpdateAvailable => Status == UpdateCheckStatus.UpdateAvailable;
 
     /// <summary>
-    /// <see langword="true"/>, wenn ein Update vorliegt, das sich auch installieren lässt —
+    /// <see langword="true"/>, wenn ein Update vorliegt, das sich auch installieren lässt,
     /// also ein Paket mit belegbarer Prüfsumme.
     /// </summary>
     public bool IsInstallable => IsUpdateAvailable && Asset is { IsVerifiable: true };

@@ -36,7 +36,7 @@ internal sealed partial class EmptyState
         typeof(EmptyState),
         new PropertyMetadata(null));
 
-    /// <summary>Die Aufschrift der Schaltfläche — sie muss benennen, was zurückgeht.</summary>
+    /// <summary>Die Aufschrift der Schaltfläche. Sie muss benennen, was zurückgeht.</summary>
     /// <remarks>
     /// Wo neben der Suche auch Filter wirken, wäre „Suche zurücksetzen" die halbe Wahrheit:
     /// Der Nutzer drückt und sieht immer noch nichts, weil ein Filter stehen blieb.

@@ -8,7 +8,7 @@ namespace MdExplorer.App.Tests.Views;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Alles aus WPF verlangt einen Thread im Einzelfaden-Modus — der Testläufer stellt keinen.
+/// Alles aus WPF verlangt einen Thread im Einzelfaden-Modus; der Testläufer stellt keinen.
 /// Ohne diesen Umweg lässt sich kein einziges Bedienelement erzeugen, und die Bausteine der
 /// Gestaltungslinie blieben ungeprüft.
 /// </para>
