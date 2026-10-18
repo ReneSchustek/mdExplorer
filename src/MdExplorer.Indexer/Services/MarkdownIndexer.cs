@@ -209,11 +209,10 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Das Entfernen hängt <b>nicht</b> mehr daran, ob jeder Stapel geschrieben werden
-    /// konnte. Eine Datenbank-Spitze beim Schreiben ließ vorher den zweiten Schritt ganz
-    /// ausfallen, der Wächter beendete den Dienst, und danach lief kein Abgleich mehr —
-    /// weder für neue Dateien noch für verschwundene. Das ist die mutmaßliche Ursache der
-    /// 5.975 verwaisten Einträge vom 16.08.2026.
+    /// Das Entfernen hängt <b>nicht</b> daran, ob jeder Stapel geschrieben werden konnte.
+    /// Sonst ließe eine Datenbank-Spitze beim Schreiben den zweiten Schritt ganz ausfallen,
+    /// der Wächter beendete den Dienst, und danach liefe kein Abgleich mehr — weder für neue
+    /// Dateien noch für verschwundene. Verwaiste Einträge sammelten sich unbemerkt an.
     /// </para>
     /// <para>
     /// Was dagegen sehr wohl gilt: <b>Ein halb gelesener Baum darf nichts entfernen.</b>
@@ -314,8 +313,8 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     /// <summary>Schreibt einen Stapel — ein Fehlschlag beendet den Lauf nicht.</summary>
     /// <remarks>
     /// Eine Datenbank-Spitze kostet den Stapel, nicht den Durchgang: Die Dateien stehen
-    /// weiter auf der Platte und werden beim nächsten Abgleich erneut angeboten. Vorher riss
-    /// ein einzelner Fehlschlag den gesamten Dienst mit.
+    /// weiter auf der Platte und werden beim nächsten Abgleich erneut angeboten. Ohne diesen
+    /// Schutz risse ein einzelner Fehlschlag den gesamten Dienst mit.
     /// </remarks>
     private async Task CommitBatchAsync(
         IMarkdownFileRepository repository,

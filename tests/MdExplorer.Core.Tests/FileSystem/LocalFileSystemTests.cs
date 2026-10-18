@@ -149,9 +149,7 @@ public sealed class LocalFileSystemTests : IDisposable
     }
     /// <remarks>
     /// Verschieben und Löschen sind die beiden Vorgänge, die etwas kaputt machen können.
-    /// Sie standen bis zum 16.08.2026 ohne einen einzigen Test da — bemerkt beim Nachrechnen
-    /// der Abdeckung, nicht durch einen Fehler. Das ist der unangenehmere der beiden Wege,
-    /// auf denen so etwas auffällt.
+    /// Ohne eigenen Test fiele ein Fehler darin erst auf, wenn eine Notiz verloren ist.
     /// </remarks>
     [Fact]
     public void MoveFile_MovesTheContentAndLeavesNothingBehind()

@@ -9,10 +9,10 @@ namespace MdExplorer.Parser.Tests.Services;
 /// vollständig protokolliert und danach in Ruhe gelassen wird.
 /// </summary>
 /// <remarks>
-/// Vor dieser Absicherung erfüllte eine gescheiterte Datei die Auswahlbedingung nach jedem
-/// Fehlschlag unverändert und stand fünf Sekunden später wieder im Stapel. Gemessen an einer
-/// Protokolldatei vom 17.08.2026: 1.948 Fehlversuche an einer einzigen Datei, 517.491
-/// Stapelzeilen, 97,1 Prozent der Datei. Jede echte Diagnose war damit weggerollt.
+/// Ohne diese Absicherung erfüllte eine gescheiterte Datei die Auswahlbedingung nach jedem
+/// Fehlschlag unverändert und stünde fünf Sekunden später wieder im Stapel. In einer
+/// gemessenen Protokolldatei waren das 1.948 Fehlversuche an einer einzigen Datei, 517.491
+/// Stapelzeilen, 97,1 Prozent der Datei. Jede echte Diagnose rollte damit weg.
 /// </remarks>
 public sealed class ParseFailureThrottlingTests
 {

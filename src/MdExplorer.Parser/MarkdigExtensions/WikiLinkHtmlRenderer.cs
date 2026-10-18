@@ -27,8 +27,8 @@ public sealed class WikiLinkHtmlRenderer : HtmlObjectRenderer<WikiLinkInline>
     /// <remarks>
     /// Gibt der Zielname keinen Slug her — <c>[[…]]</c>, <c>[[+]]</c> —, bleibt der Anzeigetext
     /// stehen, aber ohne Verweis. Es gibt kein Ziel, also gibt es keinen Link; der Satz drumherum
-    /// ist davon nicht betroffen. Vorher warf diese Stelle, und weil der Renderer das ganze
-    /// Dokument schreibt, verlor ein Satzzeichen die ganze Datei.
+    /// ist davon nicht betroffen. Würfe diese Stelle, verlöre ein Satzzeichen die ganze Datei,
+    /// weil der Renderer das ganze Dokument schreibt.
     /// </remarks>
     protected override void Write(HtmlRenderer renderer, WikiLinkInline obj)
     {

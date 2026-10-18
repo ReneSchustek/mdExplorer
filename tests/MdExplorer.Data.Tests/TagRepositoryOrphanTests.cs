@@ -11,10 +11,8 @@ namespace MdExplorer.Data.Tests;
 /// </summary>
 /// <remarks>
 /// Ein Schlagwort ist abgeleitet — es entsteht, weil eine Datei es nennt. Nennt es keine
-/// mehr, blieb die Zeile bisher für immer stehen: Die Auswertung für die Wolke verbindet
-/// über die Zuordnungen und lässt sie weg, also fiel sie niemandem auf. Sichtbar wurde das
-/// erst an 45 Farbwerten, die vor der heutigen Regel als Schlagwort in den Index geraten
-/// waren.
+/// mehr, bliebe die Zeile ohne Aufräumen für immer stehen: Die Auswertung für die Wolke
+/// verbindet über die Zuordnungen und lässt sie weg, also fiele sie niemandem auf.
 /// </remarks>
 public sealed class TagRepositoryOrphanTests : IAsyncDisposable
 {

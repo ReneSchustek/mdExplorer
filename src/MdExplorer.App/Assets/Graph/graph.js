@@ -65,7 +65,7 @@
             canvas.height = canvas.clientHeight;
             // Das Setzen der Größe leert die Fläche. Solange die Simulation läuft, füllt sie
             // der nächste Durchlauf wieder — danach nicht mehr: Wer das Fenster später
-            // vergrößerte, sah einen leeren Graphen. Deshalb hier neu zeichnen.
+            // vergrößert, sähe ohne diesen Aufruf einen leeren Graphen. Deshalb hier neu zeichnen.
             draw();
         }
         resize();

@@ -56,8 +56,8 @@ internal sealed partial class PreviewViewModel : ObservableObject
         _scopeFactory = scopeFactory;
         _htmlBuilder = htmlBuilder;
         _logger = logger;
-        // Auch die leere Vorschau trägt die Farben des Erscheinungsbilds. Vorher stand hier
-        // ein blankes HTML-Gerüst — im Dunkeln eine weiße Fläche über die halbe Anwendung.
+        // Auch die leere Vorschau trägt die Farben des Erscheinungsbilds. Ein blankes
+        // HTML-Gerüst wäre im Dunkeln eine weiße Fläche über die halbe Anwendung.
         _html = htmlBuilder.BuildEmpty();
     }
 

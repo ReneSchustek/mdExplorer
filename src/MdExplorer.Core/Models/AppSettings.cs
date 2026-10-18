@@ -50,11 +50,11 @@ public sealed record IndexingSettings(
     /// Default-Ausschlussmuster.
     /// </summary>
     /// <remarks>
-    /// Die ersten fünf übernehmen die früheren hartverdrahteten Ordnernamen. <c>vendor</c> kam
-    /// am 16.08.2026 dazu: Die Auswertung eines gewachsenen Bestands fand dort 3.906
-    /// Markdown-Dateien fremder Pakete — Dokumentation, die niemand hier sucht und die jede
-    /// Trefferliste überlagert. Es ist der Ordnername, den PHP, Ruby und Go gleichermaßen
-    /// verwenden; <c>node_modules</c> ist dasselbe für JavaScript und stand längst hier.
+    /// Die ersten fünf sind Ordner von Werkzeugen und Versionsverwaltung. <c>vendor</c> hält
+    /// Markdown-Dateien fremder Pakete fern: In einem gewachsenen Bestand lagen dort 3.906
+    /// davon — Dokumentation, die niemand hier sucht und die jede Trefferliste überlagert. Es
+    /// ist der Ordnername, den PHP, Ruby und Go gleichermaßen verwenden; <c>node_modules</c>
+    /// ist dasselbe für JavaScript.
     /// </remarks>
     public static readonly IReadOnlyList<string> DefaultExclusionPatterns =
     [

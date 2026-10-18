@@ -106,11 +106,11 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
         // mit derselben Id (sonst wirft Attach IdentityConflict, wenn der Caller die Entity
         // im selben Scope schon angelegt/geladen hat).
         //
-        // FindEntry statt einer Suche über Local: Die Suche lief die Liste der bereits
+        // FindEntry statt einer Suche über Local: Die Suche läuft die Liste der bereits
         // vorgemerkten Entitäten jedes Mal von vorne durch. Bei einem Aufräumdurchgang mit n
-        // Entfernungen sind das n²/2 Vergleiche — am 16.08.2026 blieb ein Lauf über 27.000
-        // verwaiste Einträge deshalb 20 Minuten lang bei voller Rechenlast stehen, ohne eine
-        // Zeile zu schreiben. FindEntry greift auf die Identitätstabelle zu und braucht
+        // Entfernungen sind das n²/2 Vergleiche — ein Lauf über 27.000 verwaiste Einträge
+        // bleibt damit 20 Minuten lang bei voller Rechenlast stehen, ohne eine Zeile zu
+        // schreiben. FindEntry greift auf die Identitätstabelle zu und braucht
         // dafür konstante Zeit.
         MarkdownFile? alreadyTracked = _dbContext.Set<MarkdownFile>().Local.FindEntry(entity.Id)?.Entity;
         if (alreadyTracked is not null)

@@ -292,13 +292,13 @@ public sealed class SearchQueryBuilder : ISearchQueryBuilder
     /// Liest ein Wort bis zum nächsten Leerzeichen — oder bis zum nächsten Anführungszeichen.
     /// </summary>
     /// <remarks>
-    /// Das Anführungszeichen als Ende kam am 16.08.2026 dazu. Vorher las diese Schleife
-    /// <c>tag:"zwei woerter"</c> als **ein** Wort <c>tag:"zwei</c>; der Wert galt damit als
-    /// mitgeliefert, und der Zweig, der ein Anführungszeichen nach dem Doppelpunkt lesen
-    /// sollte, wurde nie erreicht. Heraus kam <c>Tags:"zwei" AND "woerter"</c> — die
-    /// Einschränkung suchte ein Schlagwort namens <c>zwei</c> und dazu, unabhängig davon, das
-    /// Wort <c>woerter</c> irgendwo im Text. Bei <c>path:"mein ordner"</c> stand am Ende ein
-    /// Pfad-Anfang <c>"mein</c>, samt Anführungszeichen.
+    /// Ohne das Anführungszeichen als Ende läse diese Schleife <c>tag:"zwei teile"</c> als
+    /// **ein** Wort <c>tag:"zwei</c>; der Wert gälte damit als mitgeliefert, und der Zweig, der
+    /// ein Anführungszeichen nach dem Doppelpunkt lesen soll, würde nie erreicht. Heraus käme
+    /// <c>Tags:"zwei" AND "teile"</c> — die Einschränkung suchte ein Schlagwort namens
+    /// <c>zwei</c> und dazu, unabhängig davon, das Wort <c>teile</c> irgendwo im Text. Bei
+    /// <c>path:"mein ordner"</c> stünde am Ende ein Pfad-Anfang <c>"mein</c>, samt
+    /// Anführungszeichen.
     /// </remarks>
     private static (string Value, int Next) ConsumeWord(string input, int startIndex)
     {

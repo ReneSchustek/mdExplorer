@@ -99,7 +99,7 @@ internal static partial class TagDocumentEditor
     private static partial Regex ManagedBlockRegex();
 
     // Die Grenzen kommen aus HashtagPattern — derselben Stelle, aus der auch Extractor und
-    // Rewriter lesen. Eine eigene Abschrift lief hier bis zum 16.08.2026 mit.
+    // Rewriter lesen. Eine eigene Abschrift hier liefe bei der nächsten Änderung still auseinander.
     private static Regex BuildHashtagRegex(string tagName) => HashtagPattern.ForTag(tagName);
 
     private static string CleanupEmptyManagedBlock(string text)

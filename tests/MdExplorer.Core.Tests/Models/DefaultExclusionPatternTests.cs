@@ -7,10 +7,9 @@ namespace MdExplorer.Core.Tests.Models;
 /// Hält fest, was die Voreinstellung vom Index fernhält.
 /// </summary>
 /// <remarks>
-/// Anlass ist die Auswertung eines gewachsenen Bestands am 16.08.2026: Von 33.485 indizierten
-/// Dateien stammten 26.008 aus Fremdcode. Der größte einzelne Posten waren Kernkopien, der
-/// zweitgrößte mit 3.906 Dateien die <c>vendor</c>-Ordner der PHP-Projekte — für die es kein
-/// Muster gab, obwohl <c>node_modules</c> seit jeher eines hat.
+/// In einem gewachsenen Bestand stammen von 33.485 indizierten Dateien 26.008 aus Fremdcode.
+/// Der größte einzelne Posten sind Kernkopien, der zweitgrößte mit 3.906 Dateien die
+/// <c>vendor</c>-Ordner der PHP-Projekte — sie brauchen ein Muster wie <c>node_modules</c>.
 /// </remarks>
 public sealed class DefaultExclusionPatternTests
 {

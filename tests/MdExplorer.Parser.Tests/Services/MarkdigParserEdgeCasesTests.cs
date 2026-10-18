@@ -8,8 +8,8 @@ namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
 /// Edge-Case-Tests für den <see cref="MarkdigParser"/>. Decken die
-/// pathologischen Eingaben ab, die vom User-Report 2026-06-12 hochgespült wurden
-/// (Markdig-Renderer-Limit) und sichern die Resilienz gegen ungewöhnliche
+/// pathologischen Eingaben ab, an denen das Renderer-Limit von Markdig greift,
+/// und sichern die Resilienz gegen ungewöhnliche
 /// Eingaben ab — leerer Input, Whitespace-only, BOM, sehr lange Zeilen,
 /// Surrogate-Pairs, Null-Byte, kaputtes YAML.
 /// </summary>
@@ -229,10 +229,9 @@ public sealed class MarkdigParserEdgeCasesTests
     /// Ein Verweis, dessen Ziel keinen Slug hergibt, darf das Dokument nicht kosten.
     /// </summary>
     /// <remarks>
-    /// Gefunden am 16.08.2026 beim Durchlauf über einen gewachsenen Bestand: In einer Datei
-    /// stand <c>[[…]]</c> — drei Punkte als Auslassungszeichen, ein Satzzeichen. Der Renderer
-    /// verlangte dafür einen Slug, bekam eine Ausnahme, und der Wächter verwarf daraufhin
-    /// **die ganze Datei**. Sie fehlte im Index, ohne dass jemand sie gesucht hätte.
+    /// In einer Datei steht <c>[[…]]</c> — drei Punkte als Auslassungszeichen, ein Satzzeichen.
+    /// Verlangte der Renderer dafür einen Slug und bekäme eine Ausnahme, verwürfe der Wächter
+    /// **die ganze Datei**. Sie fehlte im Index, ohne dass jemand sie vermisst.
     /// Der Verweis führt nirgendwohin — das ist richtig. Der Text bleibt lesbar — das ist der Punkt.
     /// </remarks>
     [Theory]

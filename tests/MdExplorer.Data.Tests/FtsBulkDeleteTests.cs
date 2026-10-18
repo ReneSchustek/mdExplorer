@@ -12,12 +12,12 @@ namespace MdExplorer.Data.Tests;
 /// <remarks>
 /// <para>
 /// <c>MarkdownFileId</c> ist in der FTS5-Tabelle <c>UNINDEXED</c>. Jede Bedingung darauf
-/// liest die ganze Tabelle — einzeln gelöscht kostete das am 16.08.2026 rund 170 ms je
-/// Datei, also über eine Stunde für die 25.000 Einträge, die nach dem Setzen der
-/// Ausschlussmuster wegfielen. Dieselben 200 Dateien in einem Zug: 0,3 Sekunden.
+/// liest die ganze Tabelle — einzeln gelöscht kostet das rund 170 ms je Datei, also über
+/// eine Stunde für 25.000 Einträge, die nach dem Setzen der Ausschlussmuster wegfallen.
+/// 200 Dateien in einem Zug: 0,3 Sekunden.
 /// </para>
 /// <para>
-/// Die beiden Aufräum-Auslöser sind deshalb weg. Was sie sicherten, sichert der
+/// Deshalb gibt es keine Aufräum-Auslöser. Was sie sichern würden, sichert der
 /// Volltext-Abgleich alle fünf Sekunden — dieselbe Frist, die fürs Hinzufügen ohnehin gilt.
 /// </para>
 /// </remarks>

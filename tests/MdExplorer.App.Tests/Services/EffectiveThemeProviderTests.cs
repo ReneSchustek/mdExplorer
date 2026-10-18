@@ -8,9 +8,9 @@ namespace MdExplorer.App.Tests.Services;
 /// Tests für die Frage, welches Erscheinungsbild gilt.
 /// </summary>
 /// <remarks>
-/// Die Regel lag vorher an zwei Stellen: einmal für die Oberfläche, einmal für die
-/// Vorschau — und die zweite fragte nur Windows. Wer „Dunkel" wählte, während Windows
-/// hell steht, bekam eine weiße Fläche mitten in einer dunklen Anwendung.
+/// Oberfläche und Vorschau fragen dieselbe Regel. Fragte die Vorschau nur Windows, bekäme,
+/// wer „Dunkel" wählt, während Windows hell steht, eine weiße Fläche mitten in einer
+/// dunklen Anwendung.
 /// </remarks>
 public sealed class EffectiveThemeProviderTests
 {

@@ -103,8 +103,8 @@ public sealed class GestaltungslinieGuardTests
     /// <remarks>
     /// Eine Ansicht ist nicht nur ihr Markup. Wer die Farbe eine Ebene tiefer schreibt —
     /// in den Code hinter der Ansicht oder in einen Wandler —, umgeht jede Prüfung, die
-    /// XAML liest. Genau so kam die Trefferhervorhebung der Suche zu ihrem festen Gelbton,
-    /// und genau deshalb war sie im dunklen Erscheinungsbild nicht mehr lesbar.
+    /// XAML liest. Eine Trefferhervorhebung mit festem Gelbton im Wandler etwa bliebe im
+    /// dunklen Erscheinungsbild unlesbar, ohne dass eine XAML-Prüfung anschlägt.
     /// </remarks>
     [Fact]
     public void CodeBehindAndConvertersContainNoColorValues()
@@ -271,13 +271,13 @@ public sealed class GestaltungslinieGuardTests
     /// WPF schaltet die Virtualisierung ab, sobald eine Liste einen <c>GroupStyle</c> trägt —
     /// es sei denn, <c>VirtualizingPanel.IsVirtualizingWhenGrouping</c> steht ausdrücklich auf
     /// <c>True</c>. Das gilt auch dann, wenn <c>IsVirtualizing="True"</c> danebensteht; genau
-    /// diese Kombination sah in der Dateiliste richtig aus und war es nicht.
+    /// diese Kombination sieht in einer Liste richtig aus und ist es nicht.
     /// </para>
     /// <para>
-    /// Am 16.08.2026 hieß das über 29.889 Einträge: 185.218 <c>TextBlock</c>, 2,4 Millionen
-    /// <c>GlyphRun</c> und über 5 GB im Speicherabbild — die Anwendung baute jede Zeile des
-    /// gesamten Bestands auf, auch die 29.870, die niemand sieht. Der Bau meldete nichts, die
-    /// Tests auch nicht: Es ist eine Voreinstellung, kein Fehler im Code.
+    /// Über 29.889 Einträge heißt das: 185.218 <c>TextBlock</c>, 2,4 Millionen
+    /// <c>GlyphRun</c> und über 5 GB im Speicherabbild — die Anwendung baut jede Zeile des
+    /// gesamten Bestands auf, auch die 29.870, die niemand sieht. Der Bau meldet nichts, die
+    /// übrigen Tests auch nicht: Es ist eine Voreinstellung, kein Fehler im Code.
     /// </para>
     /// </remarks>
     [Fact]

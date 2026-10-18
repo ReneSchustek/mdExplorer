@@ -14,8 +14,8 @@ namespace MdExplorer.Graph.Tests.Services;
 /// trotzdem dasselbe liefern wie der Weg über den ganzen Bestand.
 /// </summary>
 /// <remarks>
-/// Der Umbau vom 16.08.2026 tauscht Umfang gegen Umfang, nicht Logik gegen Logik: Die
-/// Auflösung von Name auf Datei bleibt dieselbe Funktion. Genau das muss belegt sein, sonst
+/// Der Weg über die Nachbarschaft tauscht Umfang gegen Umfang, nicht Logik gegen Logik: Die
+/// Auflösung von Name auf Datei ist dieselbe Funktion. Genau das muss belegt sein, sonst
 /// tauscht man ein Leistungsproblem gegen zwei Auflösungen, die auseinanderlaufen.
 /// </remarks>
 public sealed class GraphServiceNeighborhoodTests
@@ -42,8 +42,8 @@ public sealed class GraphServiceNeighborhoodTests
     }
 
     /// <remarks>
-    /// Die eigentliche Zusage des Umbaus. Ohne diese Prüfung wäre der Aufruf still wieder
-    /// beim vollen Bestand gelandet, sobald jemand die Bequemlichkeit sucht.
+    /// Die eigentliche Zusage des Nachbarschaftswegs. Ohne diese Prüfung landete der Aufruf
+    /// still beim vollen Bestand, sobald jemand die Bequemlichkeit sucht.
     /// </remarks>
     [Fact]
     public async Task RelationsNeverAskForTheFullSnapshot()

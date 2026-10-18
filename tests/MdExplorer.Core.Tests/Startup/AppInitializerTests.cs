@@ -65,8 +65,8 @@ public sealed class AppInitializerTests
     /// Ein einzelnes Vorstellen an einer geratenen Stelle genügt nicht: Wer die Uhr
     /// vorstellt, bevor der Wartende seinen Timer angemeldet hat, stellt an ihm vorbei —
     /// der Timer beginnt danach von vorn, und die Zeit, auf die er wartet, kommt nie.
-    /// Genau daran blieb am 11.08.2026 ein vollständiger Testlauf dreizehn Minuten stehen,
-    /// während die Zusammenfassung daneben „bestanden" für die übrigen Tests meldete.
+    /// Ein vollständiger Testlauf bliebe daran minutenlang stehen, während die Zusammenfassung
+    /// daneben „bestanden" für die übrigen Tests meldet.
     /// Das <see cref="Task.Yield"/> vor jedem Schritt gibt den Fortsetzungen Gelegenheit,
     /// ihre Timer zu setzen.
     /// </remarks>

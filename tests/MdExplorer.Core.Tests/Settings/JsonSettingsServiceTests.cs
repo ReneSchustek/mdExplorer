@@ -247,7 +247,7 @@ public sealed class JsonSettingsServiceTests : IDisposable
         // Default-Equality auf Reference-Equality zurück. Der Settings-Dialog erzeugt bei
         // jedem OK-Klick neue Listen-Instanzen — ohne strukturellen Vergleich würde der
         // Dienst jedes Save als geändert melden und unnötigen Snapshot / SettingsChanged-Event
-        // auslösen (Befund 2026-06-10).
+        // auslösen.
         string path = Path.Combine(_tempDir, "fresh-list.json");
         string historyDir = Path.Combine(_tempDir, "fresh-list-history");
         string auditLog = Path.Combine(_tempDir, "fresh-list-audit.log");

@@ -191,7 +191,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
         }
 
         // Speichern mit Bestätigungs-Dialog. Wenn kein Dialog-Service injiziert ist
-        // (z. B. Tests), wird der Speichervorgang ohne Confirm fortgesetzt — die alte Semantik.
+        // (z. B. Tests), wird der Speichervorgang ohne Confirm fortgesetzt.
         if (_confirmationDialog is not null && !_confirmationDialog.ConfirmSave())
         {
             StatusMessage = "Speichern abgebrochen.";

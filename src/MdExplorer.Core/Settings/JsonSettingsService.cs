@@ -152,9 +152,9 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
 
         // Records-Equality reicht hier nicht: AppSettings enthält IReadOnlyList<string>-
         // Felder, deren Default-Vergleich Reference-Equality verwendet. Der Settings-Dialog
-        // erzeugt bei jedem OK-Klick neue Listen-Instanzen — die alte Prüfung schlug
-        // dadurch jedes Mal an, obwohl inhaltlich nichts geändert war, und triggerte
-        // unnötigen Full-Rescan sowie Audit-Snapshot bei jedem Save (Befund 2026-06-10).
+        // erzeugt bei jedem OK-Klick neue Listen-Instanzen — ein Vergleich der Records schlüge
+        // dadurch jedes Mal an, obwohl inhaltlich nichts geändert ist, und triggerte
+        // unnötigen Full-Rescan sowie Audit-Snapshot bei jedem Save.
         IReadOnlyList<SettingsChangeEntry> changes =
             SettingsDiff.Compute(serializedPrevious, serializedCurrent);
         if (changes.Count == 0)
@@ -256,7 +256,7 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
         // und kann über das Folder-Tree-Kontextmenü neue UI-Ausschlüsse erzeugen.
         IReadOnlyList<string> uiExcluded = indexing.UiExcludedFolders ?? [];
         // Schema-Version 2 hat AutoExtractHashtags. Ältere Dateien liefern Default(bool)=false
-        // aus der Deserialisierung, was die bisherige Auto-Tagging-Semantik (immer aktiv) verletzen würde.
+        // aus der Deserialisierung, was der Bedeutung dieser Dateien (Auto-Tagging immer aktiv) widerspräche.
         // Wir setzen daher für Schema-Versionen < 2 den dokumentierten Standard true.
         bool autoExtractHashtags = input.SchemaVersion < 2
             || indexing.AutoExtractHashtags;

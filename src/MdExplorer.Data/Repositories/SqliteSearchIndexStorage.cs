@@ -12,7 +12,7 @@ namespace MdExplorer.Data.Repositories;
 /// SQLite/FTS5-Implementierung von <see cref="ISearchIndexStorage"/>. Kapselt das gesamte
 /// SQL der <c>MarkdownSearchIndex</c>-Tabelle, damit das Search-Modul weder EF Core noch
 /// <see cref="SqliteConnection"/> direkt kennt. Die Verbindung wird aus dem
-/// <see cref="MdExplorerDbContext"/> entliehen — analog zum bisherigen Maintainer-Verhalten.
+/// <see cref="MdExplorerDbContext"/> entliehen, damit die Anweisungen dieselbe Verbindung nutzen wie die übrigen Zugriffe des Bereichs.
 /// </summary>
 public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
 {
@@ -137,8 +137,8 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
             {
                 // In einem Zug statt Zeile für Zeile. "MarkdownFileId" ist in der
                 // FTS5-Tabelle UNINDEXED — jede Bedingung darauf liest die ganze Tabelle.
-                // Einzeln gelöscht kostete das am 16.08.2026 rund 170 ms je Datei; über
-                // 25.000 verwaiste Einträge waren das mehr als eine Stunde. Eine Anweisung
+                // Einzeln gelöscht kostet das rund 170 ms je Datei; über 25.000 verwaiste
+                // Einträge wäre das mehr als eine Stunde. Eine Anweisung
                 // je Portion liest die Tabelle einmal für 500 Dateien statt 500-mal.
                 await DeleteByFileIdsAsync(connection, transaction, deletes, cancellationToken).ConfigureAwait(false);
 

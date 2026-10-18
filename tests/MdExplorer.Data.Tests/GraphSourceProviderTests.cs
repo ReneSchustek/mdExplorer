@@ -19,8 +19,8 @@ namespace MdExplorer.Data.Tests;
 /// dieser Weg verhindern soll.
 /// </para>
 /// <para>
-/// Angelegt am 16.08.2026 zusammen mit dem Umbau, der den Graphen nur noch die Nachbarschaft
-/// eines Knotens laden lässt statt den ganzen Bestand.
+/// Der Graph lädt nur die Nachbarschaft eines Knotens, nicht den ganzen Bestand; diese
+/// Tests halten fest, dass die Abfrage genau das tut.
 /// </para>
 /// </remarks>
 public sealed class GraphSourceProviderTests : IAsyncDisposable
@@ -51,7 +51,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
     }
 
     /// <remarks>
-    /// Der Kern des Umbaus: Von 40 Dokumenten dürfen nur die wenigen zurückkommen, die den
+    /// Der Kern der Abfrage: Von 40 Dokumenten dürfen nur die wenigen zurückkommen, die den
     /// Knoten überhaupt betreffen. Die Zahl steht in der Zusicherung — sonst wäre der Test
     /// auch dann grün, wenn wieder alles geladen würde.
     /// </remarks>

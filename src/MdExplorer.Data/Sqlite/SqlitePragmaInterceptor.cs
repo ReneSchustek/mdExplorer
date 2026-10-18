@@ -25,9 +25,8 @@ public sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
     /// </summary>
     /// <remarks>
     /// Als Liste und nicht als sechs gleiche Blöcke: Der nächste Eintrag ist dann eine Zeile
-    /// statt sieben. Die Wartezeit kommt aus <see cref="BusyTimeoutMilliseconds"/> — sie stand
-    /// bis zum 16.08.2026 ein zweites Mal im Text des Befehls, und wer die Konstante änderte,
-    /// änderte nichts.
+    /// statt sieben. Die Wartezeit kommt aus <see cref="BusyTimeoutMilliseconds"/> — stünde sie
+    /// ein zweites Mal im Text des Befehls, änderte, wer die Konstante ändert, nichts.
     /// </remarks>
     private static readonly string[] PragmaStatements =
     [

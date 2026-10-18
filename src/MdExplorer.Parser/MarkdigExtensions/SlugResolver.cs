@@ -5,11 +5,10 @@ namespace MdExplorer.Parser.MarkdigExtensions;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Der Rückgabewert ist der eigentliche Punkt dieser Signatur. Bis zum 16.08.2026 reichte hier
-/// ein <c>Func&lt;string, string&gt;</c>, das im Zweifel eine Ausnahme warf. Ein Verweis wie
-/// <c>[[…]]</c> — drei Punkte als Auslassungszeichen — hat damit den Renderer abgebrochen, und
-/// weil der Renderer das ganze Dokument schreibt, fiel die **ganze Datei** aus dem Index. Ein
-/// Satzzeichen kostete ein Dokument.
+/// Der Rückgabewert ist der eigentliche Punkt dieser Signatur. Ein <c>Func&lt;string, string&gt;</c>,
+/// das im Zweifel eine Ausnahme wirft, bräche bei einem Verweis wie <c>[[…]]</c> — drei Punkte
+/// als Auslassungszeichen — den Renderer ab, und weil der Renderer das ganze Dokument schreibt,
+/// fiele die **ganze Datei** aus dem Index. Ein Satzzeichen kostete ein Dokument.
 /// </para>
 /// <para>
 /// Ein Zielname kommt aus fremdem Text. Dass er unbrauchbar ist, ist deshalb kein Fehler,
