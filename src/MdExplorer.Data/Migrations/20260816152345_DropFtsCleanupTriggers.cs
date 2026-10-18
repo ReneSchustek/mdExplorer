@@ -12,7 +12,7 @@ namespace MdExplorer.Data.Migrations
     /// Die Auslöser räumten nach jedem Löschen einer Datei die zugehörige Zeile aus
     /// <c>MarkdownSearchIndex</c>. Der Gedanke war richtig, der Preis nicht: Die Spalte
     /// <c>MarkdownFileId</c> ist in der FTS5-Tabelle <c>UNINDEXED</c>, jede Bedingung darauf
-    /// liest also die ganze Tabelle. Gemessen am 16.08.2026 über einen Bestand von 29.889
+    /// liest also die ganze Tabelle. Gemessen über einen Bestand von 29.889
     /// Dateien: <b>rund 170 ms je gelöschter Datei</b>. Für die 25.000 Einträge, die nach dem
     /// Setzen der Ausschlussmuster wegfallen mussten, wären das über eine Stunde gewesen —
     /// dieselben 200 Dateien ohne Auslöser und mit einer Anweisung je Portion: 0,3 Sekunden.

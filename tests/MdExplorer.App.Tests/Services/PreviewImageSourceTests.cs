@@ -11,8 +11,8 @@ namespace MdExplorer.App.Tests.Services;
 /// <para>
 /// Die Vorschau wird per <c>NavigateToString</c> geladen; die Basis-Adresse ist damit
 /// <c>about:blank</c>. Ein relativer Pfad wie <c>docs/screenshots/suche.png</c> hat dort
-/// nichts, worauf er sich beziehen könnte — <b>kein Bild einer Notiz war je zu sehen</b>,
-/// und aufgefallen ist es erst am 16.08.2026 an den vier Aufnahmen im eigenen README.
+/// nichts, worauf er sich beziehen könnte — <b>ohne Umschreiben bliebe jedes Bild einer
+/// Notiz unsichtbar</b>, auch die Aufnahmen im eigenen README.
 /// </para>
 /// <para>
 /// Was <b>nicht</b> angefasst wird, steht hier genauso fest: Ein Bild aus dem Netz bleibt

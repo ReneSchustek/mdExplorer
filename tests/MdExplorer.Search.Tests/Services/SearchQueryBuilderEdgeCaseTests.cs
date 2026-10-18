@@ -164,10 +164,9 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     /// <remarks>
     /// <para>
     /// <c>tag:"zwei woerter"</c> — die Wortgruppe muss als **ein** Wert beim Schlagwort
-    /// ankommen. Bis zum 16.08.2026 kam sie als zwei Dinge an: eine Einschränkung auf
-    /// <c>zwei</c> und, davon unabhängig, das Wort <c>woerter</c> irgendwo im Text. Die
-    /// Trefferliste enthielt damit Dateien, die mit dem gesuchten Schlagwort nichts zu tun
-    /// hatten.
+    /// ankommen. Käme sie als zwei Dinge an — eine Einschränkung auf <c>zwei</c> und, davon
+    /// unabhängig, das zweite Wort irgendwo im Text —, enthielte die Trefferliste
+    /// Dateien, die mit dem gesuchten Schlagwort nichts zu tun haben.
     /// </para>
     /// <para>
     /// Dass die Leerstelle dabei wegfällt, ist gewollt und kein zweiter Fehler: Ein Schlagwort

@@ -12,9 +12,9 @@ namespace MdExplorer.App.Tests.Views;
 /// Hält fest, dass die Trefferhervorhebung der Suche der Farbbelegung folgt.
 /// </summary>
 /// <remarks>
-/// Anlass ist ein Befund vom 16.08.2026: Der Wandler setzte einen festen hellen Gelbton und
-/// keine Vordergrundfarbe. Im dunklen Erscheinungsbild stand damit helle Schrift auf hellem
-/// Grund — unlesbar war ausgerechnet die Stelle, wegen der man hinsieht.
+/// Setzte der Wandler einen festen hellen Gelbton und keine Vordergrundfarbe, stünde im
+/// dunklen Erscheinungsbild helle Schrift auf hellem Grund — unlesbar wäre ausgerechnet die
+/// Stelle, wegen der man hinsieht.
 /// </remarks>
 public sealed class HighlightToInlinesConverterTests
 {

@@ -103,12 +103,12 @@ public sealed partial class ParseOrchestrator : BackgroundService
         BatchOutcome total = default;
 
         // Zwei Bereiche, mit Absicht: Der Lesebereich hält die laufende Aufzählung offen, jeder
-        // Stapel schreibt in einem eigenen. Vorher lief der ganze Durchlauf in einem einzigen
-        // Bereich — der Änderungsverfolger sammelte dann jedes Dokument und jedes Schlagwort
-        // des gesamten Bestands, und `SaveChangesAsync` durchlief bei jedem Stapel alles bereits
-        // Verfolgte. Über 29.889 Dateien hieß das am 16.08.2026: 9 GB Arbeitsspeicher und ein
-        // Stapel, der von einer Sekunde auf zweieinhalb Minuten anwuchs. Der Indexer macht es
-        // aus demselben Grund seit jeher so.
+        // Stapel schreibt in einem eigenen. Liefe der ganze Durchlauf in einem einzigen
+        // Bereich, sammelte der Änderungsverfolger jedes Dokument und jedes Schlagwort des
+        // gesamten Bestands, und `SaveChangesAsync` durchliefe bei jedem Stapel alles bereits
+        // Verfolgte. Über 29.889 Dateien heißt das: 9 GB Arbeitsspeicher und ein Stapel, der von
+        // einer Sekunde auf zweieinhalb Minuten anwächst. Der Indexer macht es aus demselben
+        // Grund so.
         AsyncServiceScope readScope = _scopeFactory.CreateAsyncScope();
         await using (readScope.ConfigureAwait(false))
         {
@@ -132,9 +132,9 @@ public sealed partial class ParseOrchestrator : BackgroundService
 
         // Bewusst bei jedem Durchlauf, nicht nur wenn etwas geschrieben wurde: Ein Schlagwort
         // verliert seine letzte Datei meist gar nicht durch den Parser, sondern weil der
-        // Indexer die Datei entfernt hat. Am 16.08.2026 blieben nach dem Wegräumen von 14.081
-        // Einträgen 249 Schlagworte ohne Datei stehen — der Parser hatte nichts zu tun und
-        // räumte deshalb auch nicht auf. Die Abfrage ist ein Anti-Join über eine kleine
+        // Indexer die Datei entfernt hat. Räumte nur ein Durchlauf mit Arbeit auf, blieben nach
+        // dem Wegräumen vieler Einträge Schlagworte ohne Datei stehen — der Parser hätte nichts
+        // zu tun und räumte deshalb auch nicht auf. Die Abfrage ist ein Anti-Join über eine kleine
         // Tabelle; sie kostet nichts.
         await RemoveOrphanedTagsAsync(cancellationToken).ConfigureAwait(false);
         await ReportUnparsableCountAsync(total.FailuresChanged, cancellationToken).ConfigureAwait(false);

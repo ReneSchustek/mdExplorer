@@ -4,8 +4,8 @@ namespace MdExplorer.Indexer.Tests.Fakes;
 
 /// <summary>
 /// Exclusion-Filter, der einen Pfad ausschließt, wenn einer der Pfad-Segmente
-/// in der konfigurierten Ordnerliste vorkommt. Ersetzt im Test den alten
-/// HashSet-Mechanismus aus <see cref="MdExplorer.Indexer.Options.IndexerOptions"/>.
+/// in der konfigurierten Ordnerliste vorkommt. Hält Tests, die nur einen Ordner
+/// ausblenden wollen, frei von Glob-Mustern und <c>.mdignore</c>-Dateien.
 /// </summary>
 internal sealed class StubExclusionFilter : IExclusionFilter
 {

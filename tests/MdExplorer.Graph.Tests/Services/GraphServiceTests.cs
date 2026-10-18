@@ -223,8 +223,8 @@ public sealed class GraphServiceTests
     public async Task BuildSnapshotAsync_OnNonSluggableFileNameAndLinkTarget_DoesNotThrow()
     {
         // Regression: Ein Dateiname bzw. WikiLink-Ziel aus reinen Sonderzeichen
-        // ("#.md" — unter Windows gültig, [[+]]) löste früher eine ArgumentException aus
-        // TagNormalizer.ToSlug aus und brachte den gesamten Graph-Build zum Absturz.
+        // ("#.md" — unter Windows gültig, [[+]]) darf keine ArgumentException aus
+        // TagNormalizer.ToSlug auslösen, sonst stürzt der gesamte Graph-Build ab.
         Guid symbolId = new("88888888-8888-8888-8888-888888888888");
         FakeGraphSourceProvider provider = new(new GraphSourceData(
             [

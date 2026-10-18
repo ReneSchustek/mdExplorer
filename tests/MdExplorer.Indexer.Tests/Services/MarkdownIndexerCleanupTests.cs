@@ -6,11 +6,9 @@ namespace MdExplorer.Indexer.Tests.Services;
 /// Hält fest, wann Einträge entfernt werden — und wann ausdrücklich nicht.
 /// </summary>
 /// <remarks>
-/// Bis zum 16.08.2026 hing der Aufräumdurchgang am Erfolg des Schreibens: Eine
-/// Datenbank-Spitze ließ ihn ganz ausfallen, der Wächter beendete den Dienst, und danach lief
-/// kein Abgleich mehr — weder für neue Dateien noch für verschwundene. Das ist die
-/// mutmaßliche Ursache der 5.975 verwaisten Einträge, die die Auswertung der Arbeitsdatenbank
-/// am selben Tag fand.
+/// Hinge der Aufräumdurchgang am Erfolg des Schreibens, ließe eine Datenbank-Spitze ihn ganz
+/// ausfallen, der Wächter beendete den Dienst, und danach liefe kein Abgleich mehr — weder
+/// für neue Dateien noch für verschwundene. Verwaiste Einträge sammelten sich unbemerkt an.
 /// </remarks>
 public sealed class MarkdownIndexerCleanupTests
 {
@@ -40,7 +38,7 @@ public sealed class MarkdownIndexerCleanupTests
     }
 
     /// <remarks>
-    /// Die Gegenbedingung, ohne die der Umbau gefährlich wäre: Was nicht gelesen wurde, sieht
+    /// Die Gegenbedingung, ohne die das unabhängige Aufräumen gefährlich wäre: Was nicht gelesen wurde, sieht
     /// aus wie gelöscht. Ein halb gelesener Baum darf deshalb nichts entfernen.
     /// </remarks>
     [Fact]

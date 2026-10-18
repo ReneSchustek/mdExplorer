@@ -102,7 +102,7 @@ public sealed class ParseOrchestratorTests
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("shared"));
     }
 
-    // Reproduktion des Markdig-Depth-Limit-Crashs (User-Report 2026-06-12).
+    // Markdig wirft bei zu tief verschachtelten Eingaben (Depth-Limit).
     // Wir testen die Resilienz des Orchestrators gegen ein einzelnes File, das beim Parser
     // ArgumentException wirft (z. B. depth-limit-exceeded aus Markdig). Ohne Catch
     // killt das den Parser-Service nach dem ersten schlechten File.
@@ -173,7 +173,7 @@ public sealed class ParseOrchestratorTests
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("weiter"));
     }
 
-    // Reproduktions-Test für das UNIQUE-constraint-Fehlerbild aus dem User-Report.
+    // Zwei Dateien mit demselben neuen Schlagwort im selben Stapel.
     // Ohne Batch-Cache würde tagRepo.AddAsync(Tag{Slug="shared"}) zweimal aufgerufen (pro Datei)
     // und SaveChanges einen UNIQUE constraint failed: Tags.Slug werfen.
     [Fact]
@@ -192,9 +192,8 @@ public sealed class ParseOrchestratorTests
         Assert.Equal(linkA, linkB);
     }
 
-    // Regression: Vor der Batch-Umstellung rief PersistDocumentAsync pro Datei einen
-    // GetByMarkdownFileIdAsync-Point-Lookup (N+1). Jetzt lädt ProcessBatchAsync die
-    // existierenden Dokumente einmal gesammelt — Point-Lookup-Zähler muss 0 bleiben.
+    // ProcessBatchAsync lädt die existierenden Dokumente einmal gesammelt. Ein
+    // GetByMarkdownFileIdAsync-Point-Lookup je Datei wäre ein N+1 — der Zähler muss 0 bleiben.
     [Fact]
     public async Task ProcessBatch_LoadsExistingDocumentsInSingleBatch_WithoutPerFilePointLookup()
     {

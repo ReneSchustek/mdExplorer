@@ -83,9 +83,9 @@ public sealed class GraphWindowHtmlBuilderTests
     [InlineData(true, "dark")]
     public void BuildHtml_MarksTheRequestedAppearance(bool isDarkMode, string erwartet)
     {
-        // Die Zeichenfläche stand fest auf Dunkel — im hellen Erscheinungsbild ein
-        // schwarzes Feld neben lauter hellen Flächen. Jetzt trägt das Dokument selbst,
-        // welche Belegung gilt, und das Stylesheet setzt die Farben dazu.
+        // Das Dokument trägt selbst, welche Belegung gilt, und das Stylesheet setzt die
+        // Farben dazu. Eine fest dunkle Zeichenfläche wäre im hellen Erscheinungsbild ein
+        // schwarzes Feld neben lauter hellen Flächen.
         string html = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode);
 
         Assert.Contains($"data-theme=\"{erwartet}\"", html, StringComparison.Ordinal);

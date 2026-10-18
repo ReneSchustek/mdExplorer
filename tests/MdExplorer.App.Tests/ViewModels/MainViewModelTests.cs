@@ -124,8 +124,8 @@ public sealed class MainViewModelTests
     [Fact]
     public void LastIndexerRun_IsShownInTheLocalTimeZone()
     {
-        // In der Statusleiste stand bisher UTC. Wer nachsieht, wann zuletzt indiziert
-        // wurde, vergleicht das aber mit seiner eigenen Uhr.
+        // Kein UTC in der Statusleiste: Wer nachsieht, wann zuletzt indiziert wurde,
+        // vergleicht das mit seiner eigenen Uhr.
         using TestHarness harness = new();
         List<string> changed = [];
         harness.Main.PropertyChanged += (_, args) => changed.Add(args.PropertyName ?? string.Empty);
@@ -637,7 +637,7 @@ public sealed class MainViewModelTests
     /// </summary>
     /// <remarks>
     /// Sechs Ereignisse verbinden die Unterbereiche mit dem Hauptfenster. Sie sind je zwei
-    /// Zeilen lang und standen bis zum 16.08.2026 ohne Prüfung da. Genau solche Zeilen fallen
+    /// Zeilen lang, und genau solche Zeilen fallen
     /// bei einem Umbau still weg: Der Bau bleibt grün, der Klick tut nur nichts mehr.
     /// </remarks>
     [Fact]

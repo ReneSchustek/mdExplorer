@@ -26,9 +26,9 @@ public interface ITagRepository
     /// verbindet über die Zuordnungen und lässt sie weg —, aber sie bleibt für immer stehen.
     /// </para>
     /// <para>
-    /// Sichtbar wurde das am 16.08.2026 an 45 Farbwerten, die als Schlagwort in den Index
-    /// geraten waren. Die Regel dagegen stand längst im Code; die Zeilen aus der Zeit davor
-    /// hätte niemand mehr weggeräumt.
+    /// Die Regel, was ein Schlagwort ist, verhindert neue falsche Zeilen, räumt aber keine
+    /// bestehenden weg. Ohne diesen Aufräumschritt blieben etwa Farbwerte, die als Schlagwort
+    /// in den Index geraten sind, dort für immer stehen.
     /// </para>
     /// </remarks>
     /// <returns>Die Anzahl entfernter Schlagworte.</returns>

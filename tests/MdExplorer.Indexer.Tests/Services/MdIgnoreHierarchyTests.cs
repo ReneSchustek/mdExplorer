@@ -6,8 +6,8 @@ using MdExplorer.Indexer.Tests.Fakes;
 namespace MdExplorer.Indexer.Tests.Services;
 
 /// <summary>
-/// Direkt-Tests für <see cref="MdIgnoreHierarchy"/> — bisher nur indirekt
-/// über <c>GlobExclusionFilterTests</c> abgedeckt.
+/// Direkt-Tests für <see cref="MdIgnoreHierarchy"/>, zusätzlich zur indirekten Abdeckung
+/// über <c>GlobExclusionFilterTests</c>.
 /// </summary>
 public sealed class MdIgnoreHierarchyTests
 {

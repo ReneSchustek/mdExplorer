@@ -8,10 +8,9 @@ namespace MdExplorer.Parser.Tests.Services;
 /// Hält fest, dass Indizierung und Umbenennung dieselbe Regel benutzen.
 /// </summary>
 /// <remarks>
-/// Bis zum 16.08.2026 taten sie es nicht: Der Extractor kannte keine abschließende Bedingung,
-/// der Rewriter schon. Bei <c>#notizé</c> hieß das — indiziert wurde <c>notiz</c>, umbenannt
-/// wurde nichts. Die Datei behielt den alten Namen, der Index bekam ihn beim nächsten Lauf
-/// erneut, und niemand erfuhr davon.
+/// Kennt der Extractor keine abschließende Bedingung, der Rewriter aber schon, wird bei
+/// <c>#notizé</c> <c>notiz</c> indiziert und nichts umbenannt. Die Datei behielte den alten
+/// Namen, der Index bekäme ihn beim nächsten Lauf erneut, und niemand erführe davon.
 /// </remarks>
 public sealed class HashtagPatternTests
 {

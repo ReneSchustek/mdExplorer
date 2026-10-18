@@ -12,10 +12,6 @@ namespace MdExplorer.App.Tests.Views;
 /// Ohne diesen Umweg lässt sich kein einziges Bedienelement erzeugen, und die Bausteine der
 /// Gestaltungslinie blieben ungeprüft.
 /// </para>
-/// <para>
-/// Herausgezogen am 16.08.2026 aus <c>HighlightToInlinesConverterTests</c>, als der zweite
-/// Aufrufer dazukam.
-/// </para>
 /// </remarks>
 internal static class StaRunner
 {

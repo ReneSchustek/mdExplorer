@@ -16,12 +16,11 @@ namespace MdExplorer.Parser.Tests.Services;
 /// Hält fest, dass jeder Stapel in einem eigenen Bereich schreibt.
 /// </summary>
 /// <remarks>
-/// Bis zum 16.08.2026 lief ein ganzer Durchlauf in einem einzigen Bereich. Der
-/// Änderungsverfolger sammelte damit jedes Dokument und jedes Schlagwort des gesamten
-/// Bestands, und jedes Schreiben durchlief alles bereits Verfolgte. Über 29.889 Dateien
-/// waren das 9 GB Arbeitsspeicher und ein Stapel, der von einer Sekunde auf zweieinhalb
-/// Minuten anwuchs — der Durchlauf kam nie ans Ende, und damit lief auch der
-/// Aufräumdurchgang des Indexers nie.
+/// Liefe ein ganzer Durchlauf in einem einzigen Bereich, sammelte der Änderungsverfolger
+/// jedes Dokument und jedes Schlagwort des gesamten Bestands, und jedes Schreiben durchliefe
+/// alles bereits Verfolgte. Über 29.889 Dateien sind das 9 GB Arbeitsspeicher und ein
+/// Stapel, der von einer Sekunde auf zweieinhalb Minuten anwächst — der Durchlauf käme nie
+/// ans Ende, und damit liefe auch der Aufräumdurchgang des Indexers nie.
 /// </remarks>
 public sealed class ParseOrchestratorScopeTests
 {

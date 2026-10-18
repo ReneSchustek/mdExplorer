@@ -7,8 +7,7 @@ namespace MdExplorer.App.Tests.Fakes;
 /// </summary>
 /// <remarks>
 /// <see cref="DbException"/> ist abstrakt; die Fehlerpfade, die auf sie hören, brauchen
-/// trotzdem eine. Herausgezogen am 16.08.2026, als der zweite Testfall dieselbe Ausprägung
-/// gebraucht hätte.
+/// trotzdem eine. Als eigene Klasse dient sie jedem Testfall, der diese Ausprägung braucht.
 /// </remarks>
 internal sealed class TestDbException : DbException
 {

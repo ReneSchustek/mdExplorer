@@ -294,8 +294,8 @@ der `FileSystemWatcher` triggert anschließend automatisch den Re-Index.
 Auf großen Wurzeln (mehrere Tausend `.md`-Dateien) committed der Indexer den
 Initial-Scan in Batches: nach jeweils `Indexer.InitialScanBatchSize` Dateien
 (Default 100) erfolgt ein Zwischen-`SaveChanges`. Der „Alle Dateien"-Tab und
-der Folder-Tree aktualisieren sich nach jedem Batch automatisch. So bleibt der Tab
-nicht mehr leer, bis der gesamte Scan durch ist.
+der Folder-Tree aktualisieren sich nach jedem Batch automatisch. So füllt sich der Tab
+schon während des Scans, statt bis zu dessen Ende leer zu bleiben.
 
 ### Betriebs-Status (Health-LED)
 

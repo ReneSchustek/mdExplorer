@@ -195,7 +195,7 @@ public sealed class Fts5SearchServiceIntegrationTests
     [Fact]
     public async Task Maintainer_OnDocumentDeletion_RemovesTheHit()
     {
-        // Seit dem 16.08.2026 räumt der Abgleich auf statt eines Auslösers je Zeile — die
+        // Der Abgleich räumt auf, kein Auslöser je Zeile — die
         // Begründung steht in TriggerDiagnosticsTests. Für die Suche zählt das Ergebnis:
         // Nach dem nächsten Abgleich ist der Treffer weg.
         SearchTestHarness harness = new();

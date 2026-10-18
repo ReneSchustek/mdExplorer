@@ -10,19 +10,18 @@ namespace MdExplorer.Search.Tests.Integration;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Bis zum 16.08.2026 taten das zwei <c>AFTER DELETE</c>-Auslöser, sofort und je Zeile. Der
-/// Preis war zu hoch: <c>MarkdownFileId</c> ist in der FTS5-Tabelle <c>UNINDEXED</c>, jede
-/// Bedingung darauf liest die ganze Tabelle. Gemessen rund 170 ms je gelöschter Datei — für
-/// 25.000 Einträge über eine Stunde.
+/// <c>AFTER DELETE</c>-Auslöser, sofort und je Zeile, wären zu teuer: <c>MarkdownFileId</c>
+/// ist in der FTS5-Tabelle <c>UNINDEXED</c>, jede Bedingung darauf liest die ganze Tabelle.
+/// Gemessen rund 170 ms je gelöschter Datei — für 25.000 Einträge über eine Stunde.
 /// </para>
 /// <para>
-/// Jetzt räumt der Abgleich auf, und der läuft alle fünf Sekunden. Diese Prüfungen
+/// Deshalb räumt der Abgleich auf, und der läuft alle fünf Sekunden. Diese Prüfungen
 /// beschreiben beide Hälften des Handels: <b>unmittelbar nach dem Löschen steht die Zeile
 /// noch</b>, nach dem Abgleich ist sie weg. Wer das Fenster für einen Fehler hält, liest hier
 /// nach, dass es gewollt ist — dieselbe Frist gilt fürs Hinzufügen ohnehin.
 /// </para>
 /// <para>
-/// Der ursprüngliche Anlass dieser Datei gilt unverändert: EF Core schreibt Guid-Werte als
+/// Ebenso hält die Datei fest: EF Core schreibt Guid-Werte als
 /// Uppercase-<c>D</c>-TEXT, die Collation ist BINARY. Wer im Volltext ein anderes Format
 /// verwendet, findet seine eigene Zeile nicht wieder.
 /// </para>

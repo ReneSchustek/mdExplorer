@@ -259,10 +259,10 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Am 16.08.2026 blieb genau das stehen: Der Index enthielt 33.886 Einträge, davon rund
-    /// 27.000 für Dateien, die es nicht mehr gab. Der Aufräumdurchgang lief 20 Minuten mit
-    /// voller Rechenlast und schrieb **keine einzige Zeile**. Ursache war diese Methode: Sie
-    /// durchsuchte für jede Entfernung die Liste der bereits vorgemerkten Entitäten von vorne.
+    /// Bei 33.886 Einträgen, davon rund 27.000 für Dateien, die es nicht mehr gibt, liefe der
+    /// Aufräumdurchgang sonst 20 Minuten mit voller Rechenlast und schriebe **keine einzige
+    /// Zeile** — dann, wenn diese Methode für jede Entfernung die Liste der bereits
+    /// vorgemerkten Entitäten von vorne durchsucht.
     /// Bei n Entfernungen sind das n²/2 Vergleiche — bei 27.000 rund 360 Millionen, und die
     /// Vormerkung selbst kostet noch einmal.
     /// </para>

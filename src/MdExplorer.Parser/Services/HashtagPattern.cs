@@ -8,10 +8,10 @@ namespace MdExplorer.Parser.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Sie stand bis zum 16.08.2026 an drei Stellen — im Extractor, im Rewriter und im
-/// Dokument-Editor — und an einer davon anders. Der Extractor kannte keine abschließende
-/// Bedingung, der Rewriter schon. Bei <c>#notizé</c> hieß das: indiziert wurde
-/// <c>notiz</c>, umbenannt wurde nichts. Datei und Index liefen auseinander, ohne Meldung.
+/// Drei Stellen brauchen sie — der Extractor, der Rewriter und der Dokument-Editor. Stünde
+/// sie an jeder einzeln, wiche eine davon früher oder später ab: Kennt der Extractor keine
+/// abschließende Bedingung, der Rewriter aber schon, wird bei <c>#notizé</c> <c>notiz</c>
+/// indiziert und nichts umbenannt. Datei und Index liefen auseinander, ohne Meldung.
 /// </para>
 /// <para>
 /// Deshalb hier und nur hier. Wer die Regel ändert, ändert sie für alle drei.

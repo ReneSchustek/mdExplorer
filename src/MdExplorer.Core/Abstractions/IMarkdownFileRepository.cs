@@ -43,9 +43,9 @@ public interface IMarkdownFileRepository
     /// <para>
     /// Der Aufräumdurchgang entfernt keine drei Einträge, sondern Zehntausende. Über
     /// <see cref="Remove"/> hieße das: jede Entität einzeln anhängen, vormerken und dabei
-    /// jedes Mal den gesamten bereits vorgemerkten Bestand abgleichen lassen. Am 16.08.2026
-    /// blieb ein Lauf über 27.000 verwaiste Einträge deshalb zweimal hintereinander bei voller
-    /// Rechenlast stehen, ohne eine einzige Zeile zu schreiben.
+    /// jedes Mal den gesamten bereits vorgemerkten Bestand abgleichen lassen. Bei 27.000
+    /// verwaisten Einträgen bleibt ein Lauf so bei voller Rechenlast stehen, ohne eine einzige
+    /// Zeile zu schreiben.
     /// </para>
     /// <para>
     /// Diese Methode geht den anderen Weg: Sie setzt die Löschung als Anweisung ab, portionsweise
