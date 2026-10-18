@@ -8,7 +8,7 @@ namespace MdExplorer.App.Tests.Services;
 /// Tests für den <see cref="ThemeApplier"/>.
 /// </summary>
 /// <remarks>
-/// Geprüft werden Auswahl und Austausch, nicht das Auflösen der Ressourcenadressen —
+/// Geprüft werden Auswahl und Austausch, nicht das Auflösen der Ressourcenadressen;
 /// letzteres geht nur in einer laufenden Anwendung. Ein zweiter Eintrag statt eines
 /// Austauschs wäre der teure Fehler: Er ließe die alte Belegung stehen, und welche
 /// gewinnt, hinge an der Reihenfolge.
@@ -96,7 +96,7 @@ public sealed class ThemeApplierTests
     }
 
     /// <summary>
-    /// Steht für eine bereits geladene Belegung — erkennbar an ihrem Merkmalsschlüssel.
+    /// Steht für eine bereits geladene Belegung, erkennbar an ihrem Merkmalsschlüssel.
     /// </summary>
     private static ResourceDictionary PaletteStandIn(string marker) => new() { { PaletteMarkerKey, marker } };
 

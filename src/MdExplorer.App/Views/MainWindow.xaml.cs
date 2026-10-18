@@ -170,7 +170,7 @@ internal sealed partial class MainWindow : Window
         }
         catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or System.IO.FileNotFoundException)
         {
-            // Kein Standardbrowser oder Start verweigert — der Hinweis bleibt sichtbar,
+            // Kein Standardbrowser oder Start verweigert: Der Hinweis bleibt sichtbar,
             // der Nutzer kann die URL manuell öffnen. Bewusst nicht-fatal.
         }
     }
@@ -199,7 +199,7 @@ internal sealed partial class MainWindow : Window
     private async Task ShowHelpWindowAsync(string slug)
     {
         // Wenn das Fenster bereits offen ist, holen wir es nur in den Vordergrund
-        // und navigieren zum gewünschten Slug — ein zweites Fenster wäre verwirrend.
+        // und navigieren zum gewünschten Slug, denn ein zweites Fenster wäre verwirrend.
         if (_activeHelpWindow is not null)
         {
             if (_activeHelpWindow.WindowState == WindowState.Minimized)
@@ -284,11 +284,11 @@ internal sealed partial class MainWindow : Window
         _viewModel.Dispose();
     }
 
-    /// <summary>Strg+F-Pfad — schaltet auf den Such-Tab und fokussiert das Suchfeld.</summary>
+    /// <summary>Strg+F-Pfad: schaltet auf den Such-Tab und fokussiert das Suchfeld.</summary>
     private void FocusSearch()
     {
         _viewModel.LeftTabIndex = SearchTabIndex;
-        // TabControl wechselt den ContentPresenter — Focus muss nach dem Binding-Roundtrip kommen.
+        // TabControl wechselt den ContentPresenter; Focus muss nach dem Binding-Roundtrip kommen.
         _ = Dispatcher.BeginInvoke(SearchPanelControl.FocusQueryBox, System.Windows.Threading.DispatcherPriority.Input);
     }
 
@@ -315,7 +315,7 @@ internal sealed partial class MainWindow : Window
             ? new GridLength(_restoredTagCloudColumnWidth, GridUnitType.Pixel)
             : new GridLength(0.0);
         // Die Mindestbreite schlägt die Breite: Ohne diese Zeile bleibt die Spalte trotz
-        // Breite 0 stehen — beim Ausblenden blieb ein 180 px breiter leerer Streifen am
+        // Breite 0 stehen. Beim Ausblenden blieb ein 180 px breiter leerer Streifen am
         // rechten Rand, der im dunklen Erscheinungsbild hell aufleuchtete.
         TagCloudColumn.MinWidth = visible ? DefaultTagCloudMinWidth : 0.0;
         TagCloudSplitter.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;

@@ -1,4 +1,4 @@
-// MdExplorer-Graph-Renderer — vanilla JS Force-Directed-Layout auf <canvas>.
+// MdExplorer-Graph-Renderer: vanilla JS Force-Directed-Layout auf <canvas>.
 // Bewusst d3-frei: keine externen Skripte, keine CDN-Aufrufe.
 // Algorithmus: simples Spring-Modell (Repulsion zwischen allen Knoten + Federn entlang der Kanten),
 // 300 Iterationen oder bis Energy < epsilon. Zoom & Pan via Maus.
@@ -14,7 +14,7 @@
     const NODE_RADIUS_BASE = 5;
     const NODE_RADIUS_SCALE = 4;
 
-    // Die Zeichenfläche kennt kein CSS — sie bekommt jede Farbe als Wert übergeben.
+    // Die Zeichenfläche kennt kein CSS. Sie bekommt jede Farbe als Wert übergeben.
     // Deshalb werden die Variablen des Stylesheets einmal ausgelesen; so steht die
     // Belegung an einer Stelle und gilt für Fläche, Kanten, Knoten und Beschriftung.
     function readPalette() {
@@ -64,7 +64,7 @@
             canvas.width = canvas.clientWidth;
             canvas.height = canvas.clientHeight;
             // Das Setzen der Größe leert die Fläche. Solange die Simulation läuft, füllt sie
-            // der nächste Durchlauf wieder — danach nicht mehr: Wer das Fenster später
+            // der nächste Durchlauf wieder, danach nicht mehr: Wer das Fenster später
             // vergrößert, sähe ohne diesen Aufruf einen leeren Graphen. Deshalb hier neu zeichnen.
             draw();
         }

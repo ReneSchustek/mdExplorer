@@ -27,7 +27,7 @@ public interface IUpdateInstaller
     /// <param name="installerPath">Pfad aus einem erfolgreichen <see cref="DownloadAndVerifyAsync"/>.</param>
     /// <returns><see langword="true"/>, wenn der Start gelang.</returns>
     /// <remarks>
-    /// Beendet die Anwendung <b>nicht</b> selbst — das entscheidet die Oberfläche, die noch
+    /// Beendet die Anwendung <b>nicht</b> selbst; das entscheidet die Oberfläche, die noch
     /// ungespeicherte Arbeit kennt.
     /// </remarks>
     bool StartInstaller(string installerPath);

@@ -7,7 +7,7 @@ namespace MdExplorer.Graph.Services;
 /// Serialisiert einen <see cref="GraphSnapshot"/> in das vom JS-Frontend
 /// erwartete Format: <c>{ "nodes": [...], "edges": [...] }</c> mit
 /// camelCase-Property-Namen. Es wird absichtlich kein d3-spezifisches
-/// Format verwendet — das Frontend kann jede vanilla-Force-Implementierung
+/// Format verwendet, das Frontend kann jede vanilla-Force-Implementierung
 /// damit füttern.
 /// </summary>
 public static class GraphJsonBuilder

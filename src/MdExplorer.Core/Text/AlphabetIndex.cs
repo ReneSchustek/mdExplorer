@@ -8,7 +8,7 @@ namespace MdExplorer.Core.Text;
 /// Sprungleiste steht.
 /// </summary>
 /// <remarks>
-/// Der Buchstabe entsteht aus dem Schlüssel, nach dem tatsächlich sortiert wird — nicht
+/// Der Buchstabe entsteht aus dem Schlüssel, nach dem tatsächlich sortiert wird, nicht
 /// aus dem Anzeigenamen. Wird nach Pfad sortiert, aber nach Titel gesprungen, landet der
 /// Sprung bei einem Eintrag, der dort gar nicht steht.
 /// </remarks>
@@ -33,7 +33,7 @@ public static class AlphabetIndex
     /// <returns>Ein Buchstabe von <c>A</c> bis <c>Z</c> oder <see cref="OtherLetter"/>.</returns>
     /// <remarks>
     /// Umlaute laufen auf ihren Grundbuchstaben (<c>Ä</c> auf <c>A</c>, <c>ß</c> auf
-    /// <c>S</c>) — sonst stünde ein Dokument namens „Änderungen" unter einem Buchstaben,
+    /// <c>S</c>), sonst stünde ein Dokument namens „Änderungen" unter einem Buchstaben,
     /// den die Leiste gar nicht führt. Alles, was kein lateinischer Buchstabe ist, sammelt
     /// sich unter <see cref="OtherLetter"/>; das betrifft Ziffern ebenso wie Schriften,
     /// die dieses Alphabet nicht verwenden.

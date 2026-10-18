@@ -15,7 +15,7 @@
                 <ResourceDictionary Source="/Themes/Light.xaml" />
                 <!--
                     Zuletzt, weil die Styles auf beides zugreifen. Ohne sie nähme jedes
-                    Bedienelement ohne eigene Farbe die Voreinstellung des Rahmenwerks —
+                    Bedienelement ohne eigene Farbe die Voreinstellung des Rahmenwerks,
                     und die halbe Oberfläche bliebe im Dunklen hell.
                 -->
                 <ResourceDictionary Source="/Themes/ControlStyles.xaml" />

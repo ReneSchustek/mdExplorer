@@ -18,7 +18,7 @@ namespace MdExplorer.App.ViewModels;
 /// </summary>
 /// <remarks>
 /// Der Prüfsatz der Gestaltungslinie lautet: von jedem Ding zu jedem verwandten Ding, ohne
-/// Umweg über eine Suche. Deshalb ist hier jeder Eintrag ein Weg und keine Angabe — wer eine
+/// Umweg über eine Suche. Deshalb ist hier jeder Eintrag ein Weg und keine Angabe. Wer eine
 /// Zeile liest und danach doch suchen muss, hat nichts gewonnen.
 /// </remarks>
 internal sealed partial class DocumentRelationsViewModel : ObservableObject
@@ -33,7 +33,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
     /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
@@ -51,7 +51,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     [ObservableProperty]
     private string _newName = string.Empty;
 
-    /// <summary>Was der letzte Vorgang bewirkt hat — in einem Satz.</summary>
+    /// <summary>Was der letzte Vorgang bewirkt hat, in einem Satz.</summary>
     [ObservableProperty]
     private string _operationMessage = string.Empty;
 
@@ -111,7 +111,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     /// <summary>Zeigt, was dieselbe Kennzeichnung trägt.</summary>
     public RelayCommand<string> ShowTagCommand { get; }
 
-    /// <summary>Benennt die Datei um — aus dem Zusammenhang heraus, ohne Verwaltungsseite.</summary>
+    /// <summary>Benennt die Datei um, aus dem Zusammenhang heraus, ohne Verwaltungsseite.</summary>
     public AsyncRelayCommand RenameCommand { get; }
 
     /// <summary>Verschiebt die Datei in ein anderes Verzeichnis.</summary>
@@ -130,7 +130,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     /// <summary>Es ist kein Dokument geöffnet.</summary>
     public bool ShowsNoDocument => State == DocumentRelationsState.NoDocument;
 
-    /// <summary>Es ist ein Dokument geöffnet — der Bereich zeigt sich überhaupt.</summary>
+    /// <summary>Es ist ein Dokument geöffnet; der Bereich zeigt sich überhaupt.</summary>
     public bool HasDocument => State != DocumentRelationsState.NoDocument;
 
     /// <summary>Das Dokument verweist auf etwas.</summary>
@@ -167,7 +167,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     /// Lädt die Verbindungen eines Dokuments.
     /// </summary>
     /// <param name="markdownFileId">Das geöffnete Dokument.</param>
-    /// <param name="tags">Seine Kennzeichnungen — sie stehen im Text und nicht im Graphen.</param>
+    /// <param name="tags">Seine Kennzeichnungen. Sie stehen im Text und nicht im Graphen.</param>
     /// <param name="cancellationToken">Abbruchmerker.</param>
     public async Task LoadAsync(Guid markdownFileId, IReadOnlyList<string> tags, CancellationToken cancellationToken)
     {
@@ -200,7 +200,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
-            // Der Nutzer hat weitergeklickt — die Antwort gilt einem Dokument, das nicht mehr offen ist.
+            // Der Nutzer hat weitergeklickt; die Antwort gilt einem Dokument, das nicht mehr offen ist.
         }
         catch (InvalidOperationException exception)
         {
@@ -256,7 +256,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Nachgefragt wird nur, wenn etwas daran hängt: Ein WikiLink zeigt auf den Dateinamen,
-    /// und der ändert sich hier — die Verweise anderer Dokumente brechen also. Hängt nichts
+    /// und der ändert sich hier; die Verweise anderer Dokumente brechen also. Hängt nichts
     /// daran, wäre eine Rückfrage bloß Gewöhnung daran, Rückfragen wegzuklicken.
     /// </remarks>
     private async Task RenameAsync()
@@ -299,7 +299,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Die Rückfrage nennt, wie viele Dokumente danach ins Leere zeigen. Wer das erst
-    /// hinterher erfährt, kann es nicht mehr abwählen — und ein Verweis, der stillschweigend
+    /// hinterher erfährt, kann es nicht mehr abwählen, und ein Verweis, der stillschweigend
     /// bricht, fällt erst Monate später auf.
     /// </remarks>
     private async Task DeleteAsync()
@@ -419,13 +419,13 @@ internal sealed class RelatedDocumentViewModel
         RelativePath = document.RelativePath;
     }
 
-    /// <summary>Stabiler Schlüssel — Eingang für das Öffnen.</summary>
+    /// <summary>Stabiler Schlüssel, Eingang für das Öffnen.</summary>
     public Guid MarkdownFileId { get; }
 
     /// <summary>Dateiname ohne Erweiterung.</summary>
     public string Title { get; }
 
-    /// <summary>Pfad relativ zur Wurzel — unterscheidet gleichnamige Dateien.</summary>
+    /// <summary>Pfad relativ zur Wurzel; unterscheidet gleichnamige Dateien.</summary>
     public string RelativePath { get; }
 }
 
@@ -438,7 +438,7 @@ internal enum DocumentRelationsState
     /// <summary>Die Verbindungen werden ermittelt.</summary>
     Loading = 1,
 
-    /// <summary>Das Dokument steht für sich — keine Verweise, keine Kennzeichnungen.</summary>
+    /// <summary>Das Dokument steht für sich: keine Verweise, keine Kennzeichnungen.</summary>
     NothingRelated = 2,
 
     /// <summary>Es gibt Verbindungen zu zeigen.</summary>

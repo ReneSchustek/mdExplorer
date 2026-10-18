@@ -24,7 +24,7 @@ namespace MdExplorer.App;
 
 /// <summary>
 /// WPF-Einstiegspunkt. Verwaltet Generic Host, SplashWindow und Hauptfenster.
-/// Klasse ist intern — kein CA1724-Konflikt mit dem Namespace, weil sie nicht öffentlich exportiert wird.
+/// Klasse ist intern; kein CA1724-Konflikt mit dem Namespace, weil sie nicht öffentlich exportiert wird.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class App : System.Windows.Application
@@ -116,7 +116,7 @@ internal sealed partial class App : System.Windows.Application
         _splashWindow.Show();
 
         // Schema-Migration muss VOR _host.StartAsync laufen, weil BackgroundServices
-        // (ParseOrchestrator, Fts5IndexMaintainer) sofort beim Start lesen — auf
+        // (ParseOrchestrator, Fts5IndexMaintainer) sofort beim Start lesen. Auf
         // einer frischen Datenbank würden sie sonst auf fehlende Tabellen treffen.
         splashViewModel.StatusText = "Datenbank wird vorbereitet …";
         AppInitializer initializer = _host.Services.GetRequiredService<AppInitializer>();
@@ -140,7 +140,7 @@ internal sealed partial class App : System.Windows.Application
     /// </summary>
     /// <remarks>
     /// Erst nach dem Start des Wirts, weil vorher weder Einstellungen noch Dienste
-    /// bereitstehen. Das Startbild trägt deshalb Markenfarben statt Belegungsfarben —
+    /// bereitstehen. Das Startbild trägt deshalb Markenfarben statt Belegungsfarben;
     /// es ist zu diesem Zeitpunkt bereits sichtbar.
     /// </remarks>
     private void ApplyThemeAndFollowChanges()
@@ -155,7 +155,7 @@ internal sealed partial class App : System.Windows.Application
 
         // Jedes Fenster, sobald es steht: Die Titelleiste zeichnet Windows, und es fragt
         // dafür nicht die Anwendung. Ein Klassen-Ereignis erspart, jedes Fenster einzeln
-        // anzufassen — auch die, die es künftig gibt.
+        // anzufassen, auch die, die es künftig gibt.
         EventManager.RegisterClassHandler(
             typeof(Window),
             FrameworkElement.LoadedEvent,
@@ -183,7 +183,7 @@ internal sealed partial class App : System.Windows.Application
             {
                 applier.Apply(Resources.MergedDictionaries);
                 // Die Vorschau ist ein fertiges HTML-Dokument und hört auf keinen
-                // Wörterbuch-Tausch — sie wird ausdrücklich neu aufgebaut.
+                // Wörterbuch-Tausch. Sie wird ausdrücklich neu aufgebaut.
                 preview.RebuildForTheme();
                 // Ebenso die Titelleisten der bereits offenen Fenster.
                 foreach (Window offen in Windows)
@@ -207,7 +207,7 @@ internal sealed partial class App : System.Windows.Application
         }
         catch (InvalidOperationException)
         {
-            // SplashWindow war noch nicht initialisiert — ignorierbar.
+            // SplashWindow war noch nicht initialisiert (ignorierbar).
         }
 
         _ = MessageBox.Show(
@@ -251,7 +251,7 @@ internal sealed partial class App : System.Windows.Application
 
     private void ShowUnhandledExceptionDialog(Exception exception, bool isTerminating)
     {
-        // Dialog soll auf dem UI-Thread laufen — Background-Threads dispatchen synchron.
+        // Dialog soll auf dem UI-Thread laufen; Background-Threads dispatchen synchron.
         if (Dispatcher is null)
         {
             return;

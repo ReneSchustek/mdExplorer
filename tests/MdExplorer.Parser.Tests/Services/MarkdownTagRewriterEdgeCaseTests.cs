@@ -4,7 +4,7 @@ namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
 /// Prüft die Randfälle des Tag-Umschreibens. Der Umschreiber greift direkt in Dateien des
-/// Nutzers ein — jeder Fall, in dem er einen Block falsch erkennt, verändert oder zerstört
+/// Nutzers ein; jeder Fall, in dem er einen Block falsch erkennt, verändert oder zerstört
 /// fremden Inhalt. Deshalb sind hier vor allem die Formen abgedeckt, die <em>keine</em>
 /// Änderung auslösen dürfen: halbe Frontmatter-Blöcke, leere Einträge und Zeichenfolgen,
 /// die zwar wie ein Tag aussehen, aber keinen gültigen Bezeichner ergeben.
@@ -69,7 +69,7 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
     [Fact]
     public void Apply_WithAClosingDotsMarker_RecognizesTheFrontmatter()
     {
-        // YAML erlaubt "..." als Abschluss — wird der nicht erkannt, bliebe der Block ungeändert.
+        // YAML erlaubt "..." als Abschluss. Wird der nicht erkannt, bliebe der Block ungeändert.
         const string Markdown = "---\ntags: [alpha]\n...\nText.\n";
 
         string ergebnis = _sut.Apply(Markdown, Umbenennen());

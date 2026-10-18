@@ -14,13 +14,13 @@ namespace MdExplorer.Data.Migrations
     /// <c>MarkdownFileId</c> ist in der FTS5-Tabelle <c>UNINDEXED</c>, jede Bedingung darauf
     /// liest also die ganze Tabelle. Gemessen über einen Bestand von 29.889
     /// Dateien: <b>rund 170 ms je gelöschter Datei</b>. Für die 25.000 Einträge, die nach dem
-    /// Setzen der Ausschlussmuster wegfallen mussten, wären das über eine Stunde gewesen —
+    /// Setzen der Ausschlussmuster wegfallen mussten, wären das über eine Stunde gewesen;
     /// dieselben 200 Dateien ohne Auslöser und mit einer Anweisung je Portion: 0,3 Sekunden.
     /// </para>
     /// <para>
     /// Die Zeilen bleiben trotzdem nicht stehen: Der Volltext-Abgleich läuft alle fünf
     /// Sekunden und entfernt, was zu keiner Datei mehr gehört. Damit gilt fürs Entfernen
-    /// dieselbe Frist wie fürs Hinzufügen — ein Fenster von Sekunden, kein Dauerzustand.
+    /// dieselbe Frist wie fürs Hinzufügen: ein Fenster von Sekunden, kein Dauerzustand.
     /// </para>
     /// </remarks>
     public partial class DropFtsCleanupTriggers : Migration

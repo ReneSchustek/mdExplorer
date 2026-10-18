@@ -9,7 +9,7 @@ namespace MdExplorer.Update.Services;
 /// Datei-basierte Implementierung von <see cref="IUpdateCheckJournal"/>. Persistiert den
 /// Zeitstempel der letzten Prüfung als kleine JSON-Datei und schreibt atomar (<c>.tmp</c> +
 /// <see cref="File.Move(string, string, bool)"/>). Lese- und Schreibfehler werden bewusst
-/// verschluckt — ein fehlendes Journal darf den Programmstart niemals stören.
+/// verschluckt, denn ein fehlendes Journal darf den Programmstart niemals stören.
 /// </summary>
 public sealed partial class JsonFileUpdateCheckJournal : IUpdateCheckJournal
 {

@@ -12,13 +12,13 @@ namespace MdExplorer.Data.Tests;
 /// <remarks>
 /// <para>
 /// <c>MarkdownFileId</c> ist in der FTS5-Tabelle <c>UNINDEXED</c>. Jede Bedingung darauf
-/// liest die ganze Tabelle — einzeln gelöscht kostet das rund 170 ms je Datei, also über
+/// liest die ganze Tabelle; einzeln gelöscht kostet das rund 170 ms je Datei, also über
 /// eine Stunde für 25.000 Einträge, die nach dem Setzen der Ausschlussmuster wegfallen.
 /// 200 Dateien in einem Zug: 0,3 Sekunden.
 /// </para>
 /// <para>
 /// Deshalb gibt es keine Aufräum-Auslöser. Was sie sichern würden, sichert der
-/// Volltext-Abgleich alle fünf Sekunden — dieselbe Frist, die fürs Hinzufügen ohnehin gilt.
+/// Volltext-Abgleich alle fünf Sekunden, dieselbe Frist, die fürs Hinzufügen ohnehin gilt.
 /// </para>
 /// </remarks>
 public sealed class FtsBulkDeleteTests : IAsyncDisposable
@@ -98,7 +98,7 @@ public sealed class FtsBulkDeleteTests : IAsyncDisposable
     [Fact]
     public async Task ApplyChangesAsync_OverMoreThanOnePortion_RemovesAll()
     {
-        // Mehr als die Portionsgröße von 500 — die Schleife über die Portionen darf keine
+        // Mehr als die Portionsgröße von 500; die Schleife über die Portionen darf keine
         // Datei unterschlagen.
         Guid[] ids = [.. Enumerable.Range(0, 620).Select(_ => Guid.NewGuid())];
         await _sut.ApplyChangesAsync(

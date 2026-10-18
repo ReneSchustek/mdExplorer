@@ -25,7 +25,7 @@ public sealed class GraphWindowHtmlBuilderTests
         string policy = cspMatch.Groups[1].Value;
         string scriptSrc = ExtractDirective(policy, "script-src");
         Assert.Contains("'nonce-", scriptSrc, StringComparison.Ordinal);
-        // Skripte werden ausschließlich über die Nonce autorisiert — kein 'unsafe-inline' zulässig.
+        // Skripte werden ausschließlich über die Nonce autorisiert, kein 'unsafe-inline' zulässig.
         Assert.DoesNotContain("'unsafe-inline'", scriptSrc, StringComparison.Ordinal);
     }
 
@@ -108,7 +108,7 @@ public sealed class GraphWindowHtmlBuilderTests
     public void BuildHtml_RedrawsAfterAResize()
     {
         // Ohne diesen Aufruf blieb die Fläche leer, sobald das Fenster nach dem Auslaufen
-        // der Simulation vergrößert wurde — das Setzen der Größe leert sie.
+        // der Simulation vergrößert wurde; das Setzen der Größe leert sie.
         string html = GraphWindow.BuildHtml(MinimalSnapshot, isDarkMode: false);
 
         int resizeStart = html.IndexOf("function resize()", StringComparison.Ordinal);

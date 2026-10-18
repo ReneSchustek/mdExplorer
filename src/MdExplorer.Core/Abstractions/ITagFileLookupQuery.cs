@@ -21,5 +21,5 @@ public interface ITagFileLookupQuery
 /// <summary>Aggregat-Zeile für <see cref="ITagFileLookupQuery"/>.</summary>
 /// <param name="MarkdownFileId">Primärschlüssel der betroffenen Datei.</param>
 /// <param name="AbsolutePath">Vollständiger Pfad im Datei-System.</param>
-/// <param name="RelativePath">Pfad relativ zum Index-Root — für Anzeige.</param>
+/// <param name="RelativePath">Pfad relativ zum Index-Root, für die Anzeige.</param>
 public sealed record TagFileLookupRow(Guid MarkdownFileId, string AbsolutePath, string RelativePath);

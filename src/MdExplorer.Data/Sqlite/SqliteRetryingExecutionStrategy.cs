@@ -7,7 +7,7 @@ namespace MdExplorer.Data.Sqlite;
 /// EF-Core-Execution-Strategy mit exponentiellem Backoff für transiente
 /// SQLite-Lock-Konflikte. Pendant zu <c>SqlServerRetryingExecutionStrategy</c>.
 /// Wiederholt Operationen, die mit <c>SQLITE_BUSY</c> (5) oder
-/// <c>SQLITE_LOCKED</c> (6) abgebrochen wurden — also wenn der
+/// <c>SQLITE_LOCKED</c> (6) abgebrochen wurden, also wenn der
 /// <c>busy_timeout</c> nicht ausgereicht hat, um den Lock abzuwarten.
 /// </summary>
 /// <remarks>

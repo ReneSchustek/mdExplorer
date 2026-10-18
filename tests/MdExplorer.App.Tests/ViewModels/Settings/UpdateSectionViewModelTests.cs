@@ -157,7 +157,7 @@ public sealed class UpdateSectionViewModelTests
     }
     /// <remarks>
     /// Der wichtigste Satz des ganzen Bereichs: Wenn die Quelle nicht erreichbar war, weiß die
-    /// Anwendung **nicht**, ob eine neuere Fassung existiert — und muss das sagen. Ein „Sie
+    /// Anwendung **nicht**, ob eine neuere Fassung existiert, und muss das sagen. Ein „Sie
     /// sind aktuell" wäre an dieser Stelle eine Behauptung, die niemand geprüft hat.
     /// </remarks>
     [Fact]
@@ -201,7 +201,7 @@ public sealed class UpdateSectionViewModelTests
     /// <remarks>
     /// Die Prüfsumme stimmte, aber das Installationsprogramm ließ sich nicht starten. Dann muss
     /// der Pfad zur geprüften Datei in der Meldung stehen: Sie ist heruntergeladen und in
-    /// Ordnung, nur der letzte Schritt fehlt — und den kann der Nutzer selbst gehen.
+    /// Ordnung, nur der letzte Schritt fehlt, und den kann der Nutzer selbst gehen.
     /// </remarks>
     [Fact]
     public async Task InstallCommand_WhenTheInstallerWillNotStart_NamesTheVerifiedFile()

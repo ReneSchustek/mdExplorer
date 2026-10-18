@@ -9,7 +9,7 @@ namespace MdExplorer.Data.Sqlite;
 /// Aktiviert WAL-Modus, lockert Synchronisation auf <c>NORMAL</c>, setzt
 /// einen Lock-Wartepuffer (<c>busy_timeout</c>), hält temporäre Strukturen
 /// im RAM, vergrößert den Page-Cache und schaltet Foreign Keys ein.
-/// <c>busy_timeout</c> ist Pflicht — ohne ihn meldet SQLite parallele
+/// <c>busy_timeout</c> ist Pflicht, denn ohne ihn meldet SQLite parallele
 /// Writer sofort mit <c>SQLITE_BUSY</c>/<c>SQLITE_LOCKED</c> statt zu warten.
 /// </summary>
 public sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
@@ -25,7 +25,7 @@ public sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
     /// </summary>
     /// <remarks>
     /// Als Liste und nicht als sechs gleiche Blöcke: Der nächste Eintrag ist dann eine Zeile
-    /// statt sieben. Die Wartezeit kommt aus <see cref="BusyTimeoutMilliseconds"/> — stünde sie
+    /// statt sieben. Die Wartezeit kommt aus <see cref="BusyTimeoutMilliseconds"/>. Stünde sie
     /// ein zweites Mal im Text des Befehls, änderte, wer die Konstante ändert, nichts.
     /// </remarks>
     private static readonly string[] PragmaStatements =
@@ -62,7 +62,7 @@ public sealed class SqlitePragmaInterceptor : DbConnectionInterceptor
         foreach (string statement in PragmaStatements)
         {
             using DbCommand command = connection.CreateCommand();
-            // CA2100: Der Text stammt ausschließlich aus der obigen Liste — kein Wert von
+            // CA2100: Der Text stammt ausschließlich aus der obigen Liste, kein Wert von
             // außen, keine Verkettung zur Laufzeit.
 #pragma warning disable CA2100
             command.CommandText = statement;

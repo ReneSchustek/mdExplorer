@@ -156,7 +156,7 @@ public sealed class FileWatcherCoordinatorTests
     }
 
     /// <remarks>
-    /// Nach dem Freigeben darf kein Start mehr durchgehen — sonst hinge ein Wächter an einem
+    /// Nach dem Freigeben darf kein Start mehr durchgehen, sonst hinge ein Wächter an einem
     /// Kanal, den niemand mehr liest.
     /// </remarks>
     [Fact]
@@ -172,7 +172,7 @@ public sealed class FileWatcherCoordinatorTests
     }
 
     /// <remarks>
-    /// Zweimal freigeben ist harmlos — der zweite Aufruf kommt vom Container, der erste vom
+    /// Zweimal freigeben ist harmlos. Der zweite Aufruf kommt vom Container, der erste vom
     /// ordentlichen Herunterfahren.
     /// </remarks>
     [Fact]

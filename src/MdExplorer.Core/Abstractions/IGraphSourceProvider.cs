@@ -14,7 +14,7 @@ public interface IGraphSourceProvider
     Task<GraphSourceData> LoadAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Lädt nur die Datei-Stammdaten — ohne die Verweis-Listen der Dokumente.
+    /// Lädt nur die Datei-Stammdaten, ohne die Verweis-Listen der Dokumente.
     /// </summary>
     /// <remarks>
     /// Drei kurze Spalten je Datei. Die teure Hälfte des Snapshots sind die Verweis-Listen,
@@ -34,11 +34,11 @@ public interface IGraphSourceProvider
     /// </para>
     /// <para>
     /// Ein Slug besteht nach <c>ITagNormalizer</c> nur aus Buchstaben, Ziffern und
-    /// Bindestrichen — Platzhalterzeichen einer Textsuche können darin nicht vorkommen.
+    /// Bindestrichen. Platzhalterzeichen einer Textsuche können darin nicht vorkommen.
     /// </para>
     /// </remarks>
     /// <param name="markdownFileId">Das Dokument, um dessen Verbindungen es geht.</param>
-    /// <param name="targetSlug">Sein Slug — danach suchen die Verweis-Listen der anderen.</param>
+    /// <param name="targetSlug">Sein Slug; danach suchen die Verweis-Listen der anderen.</param>
     /// <param name="cancellationToken">Abbruchsteuerung.</param>
     Task<IReadOnlyList<GraphSourceDocument>> LoadNeighborhoodDocumentsAsync(
         Guid markdownFileId,
@@ -55,7 +55,7 @@ public sealed record GraphSourceData(
 
 /// <summary>Minimal-Repräsentation einer indizierten Markdown-Datei für den Graph.</summary>
 /// <param name="Id">Stabiler Schlüssel.</param>
-/// <param name="FileNameWithoutExtension">Dateiname ohne Erweiterung — Basis für die Slug-Auflösung.</param>
+/// <param name="FileNameWithoutExtension">Dateiname ohne Erweiterung als Basis für die Slug-Auflösung.</param>
 /// <param name="RelativePath">Pfad relativ zum Root.</param>
 public sealed record GraphSourceFile(
     Guid Id,

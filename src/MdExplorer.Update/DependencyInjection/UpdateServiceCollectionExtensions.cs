@@ -43,7 +43,7 @@ public static class UpdateServiceCollectionExtensions
             .AddHttpClient<IUpdateChecker, GitHubUpdateChecker>(ConfigureGitHubClient);
 
         // Eigener, benannter Client für den Paket-Download: Der API-Client trägt ein knappes
-        // Timeout und GitHub-spezifische Header — für eine 45-MB-Datei wäre beides falsch.
+        // Timeout und GitHub-spezifische Header; für eine 45-MB-Datei wäre beides falsch.
         _ = services.AddHttpClient(DownloadClientName, ConfigureDownloadClient);
 
         _ = services.AddTransient<IUpdateInstaller>(sp => new HttpUpdateInstaller(

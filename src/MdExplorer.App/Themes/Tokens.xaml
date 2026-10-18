@@ -1,7 +1,7 @@
 <!--
     Theme-unabhängige Bausteine: Abstände, Radien, Typografie.
 
-    Diese Werte gelten in Hell und Dunkel gleichermaßen — nur Farben wechseln mit dem
+    Diese Werte gelten in Hell und Dunkel gleichermaßen, nur Farben wechseln mit dem
     Erscheinungsbild. Deshalb stehen sie hier und nicht in Light.xaml/Dark.xaml.
     Ansichten binden sie über StaticResource, weil sie sich zur Laufzeit nie ändern.
 -->

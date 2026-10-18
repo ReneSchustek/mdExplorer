@@ -11,19 +11,19 @@ public sealed class MarkdownDocument
     /// <summary>Primärschlüssel.</summary>
     public Guid Id { get; set; }
 
-    /// <summary>Fremdschlüssel auf <see cref="MarkdownFile.Id"/> (Unique — 1:1-Beziehung).</summary>
+    /// <summary>Fremdschlüssel auf <see cref="MarkdownFile.Id"/> (Unique, 1:1-Beziehung).</summary>
     public Guid MarkdownFileId { get; set; }
 
-    /// <summary>Navigation auf die zugehörige <see cref="Models.MarkdownFile"/> — für EF-Core-Cascade-Delete und Fluent-Mapping.</summary>
+    /// <summary>Navigation auf die zugehörige <see cref="Models.MarkdownFile"/> für EF-Core-Cascade-Delete und Fluent-Mapping.</summary>
     public MarkdownFile? MarkdownFile { get; set; }
 
-    /// <summary>Hash des Quell-Markdowns zum Parse-Zeitpunkt — Grundlage für Idempotenz-Prüfung.</summary>
+    /// <summary>Hash des Quell-Markdowns zum Parse-Zeitpunkt als Grundlage für Idempotenz-Prüfung.</summary>
     public required string SourceContentHash { get; set; }
 
     /// <summary>Frontmatter serialisiert als JSON (Schlüssel-Wert-Paare, Werte als String).</summary>
     public required string FrontmatterJson { get; set; }
 
-    /// <summary>GZip-komprimiertes, gerendertes HTML — kapselt das interne <c>byte[]</c> hinter <see cref="ReadOnlyMemory{T}"/>, EF-Mapping greift über das Backing-Field zu.</summary>
+    /// <summary>GZip-komprimiertes, gerendertes HTML. Kapselt das interne <c>byte[]</c> hinter <see cref="ReadOnlyMemory{T}"/>, EF-Mapping greift über das Backing-Field zu.</summary>
     public ReadOnlyMemory<byte> RenderedHtmlGz => _renderedHtmlGz;
 
     /// <summary>Outlinks (WikiLink-Zielslugs) serialisiert als JSON-Array.</summary>
@@ -32,7 +32,7 @@ public sealed class MarkdownDocument
     /// <summary>Zeitpunkt des letzten erfolgreichen Parses (UTC).</summary>
     public DateTime ParsedAtUtc { get; set; }
 
-    /// <summary>Setzt den HTML-Blob aus einem Span — verzichtet auf ein öffentliches <c>byte[]</c>-Property (CA1819).</summary>
+    /// <summary>Setzt den HTML-Blob aus einem Span und verzichtet auf ein öffentliches <c>byte[]</c>-Property (CA1819).</summary>
     public void SetRenderedHtmlGz(ReadOnlySpan<byte> bytes)
     {
         _renderedHtmlGz = bytes.ToArray();

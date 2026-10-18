@@ -10,7 +10,7 @@ namespace MdExplorer.App.Tests.ViewModels.Help;
 /// </summary>
 public sealed class AboutViewModelTests
 {
-    /// <summary>Feste Zone für die Prüfung — zwei Stunden vor UTC, ohne Sommerzeitsprünge.</summary>
+    /// <summary>Feste Zone für die Prüfung, zwei Stunden vor UTC, ohne Sommerzeitsprünge.</summary>
     private static readonly TimeZoneInfo TestZone =
         TimeZoneInfo.CreateCustomTimeZone("MdExplorer-TestZone", TimeSpan.FromHours(2), "TestZone", "TestZone");
 
@@ -82,7 +82,7 @@ public sealed class AboutViewModelTests
 
         AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
-        // Der Eintrag darf nur sichtbar sein, wenn eine echte Adresse hinterlegt ist —
+        // Der Eintrag darf nur sichtbar sein, wenn eine echte Adresse hinterlegt ist;
         // ein toter Link im Dialog wäre schlimmer als gar keiner.
         Assert.Equal(SupportDonation.IsConfigured, sut.IsDonationVisible);
         Assert.Equal(SupportDonation.PayPalUrl, sut.DonationUrl, StringComparer.Ordinal);

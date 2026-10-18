@@ -13,7 +13,7 @@ namespace MdExplorer.App.Tests.Views;
 /// </summary>
 /// <remarks>
 /// Setzte der Wandler einen festen hellen Gelbton und keine Vordergrundfarbe, stünde im
-/// dunklen Erscheinungsbild helle Schrift auf hellem Grund — unlesbar wäre ausgerechnet die
+/// dunklen Erscheinungsbild helle Schrift auf hellem Grund. Unlesbar wäre ausgerechnet die
 /// Stelle, wegen der man hinsieht.
 /// </remarks>
 public sealed class HighlightToInlinesConverterTests
@@ -106,7 +106,7 @@ public sealed class HighlightToInlinesConverterTests
     /// <remarks>
     /// <see cref="TextBlock"/> ist ein <see cref="FrameworkElement"/> und verlangt beim
     /// Erzeugen einen STA-Thread; der Testläufer stellt einen MTA-Thread. Und weil ein
-    /// WPF-Objekt seinem erzeugenden Thread gehört, muss auch die Zusicherung dort laufen —
+    /// WPF-Objekt seinem erzeugenden Thread gehört, muss auch die Zusicherung dort laufen,
     /// deshalb die ganze Prüfung und nicht nur der Aufbau. Ein eigener Thread ist billiger
     /// als eine Sonderregel für die gesamte Suite.
     /// </remarks>

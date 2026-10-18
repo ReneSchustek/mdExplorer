@@ -151,7 +151,7 @@ public sealed class MarkdownIndexerTests
             () => harness.Repository.SaveCallCount > saveCountBeforeBad,
             Timeout).ConfigureAwait(true);
 
-        // Service muss noch laufen — zweiter Event landet im Repo.
+        // Service muss noch laufen; zweiter Event landet im Repo.
         harness.FileSystem.AddFile(@"C:\Wurzel\good.md", "Good", FixedWrite);
         harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
             new FileSystemEvent(FileSystemEventKind.Created, @"C:\Wurzel\good.md", OldPath: null, IndexerTestHarness.DefaultRoot));

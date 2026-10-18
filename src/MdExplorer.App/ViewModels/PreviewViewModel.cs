@@ -23,7 +23,7 @@ internal sealed partial class PreviewViewModel : ObservableObject
     private readonly PreviewHtmlBuilder _htmlBuilder;
     private readonly ILogger<PreviewViewModel> _logger;
 
-    /// <summary>Der zuletzt angezeigte Inhalt — Grundlage für einen Neuaufbau.</summary>
+    /// <summary>Der zuletzt angezeigte Inhalt, Grundlage für einen Neuaufbau.</summary>
     private string _body = string.Empty;
 
     [ObservableProperty]
@@ -33,7 +33,7 @@ internal sealed partial class PreviewViewModel : ObservableObject
     private Guid? _currentDocumentId;
 
     /// <summary>
-    /// Der Ordner, in dem das angezeigte Dokument liegt — oder <see langword="null"/>.
+    /// Der Ordner, in dem das angezeigte Dokument liegt, oder <see langword="null"/>.
     /// </summary>
     /// <remarks>
     /// Die Ansicht bildet ihn auf den virtuellen Ordner der Vorschau ab. Ohne ihn bleibt
@@ -75,7 +75,7 @@ internal sealed partial class PreviewViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Setzt das HTML direkt — wird vom <see cref="DocumentPanelViewModel"/> nach einem Save aufgerufen,
+    /// Setzt das HTML direkt; wird vom <see cref="DocumentPanelViewModel"/> nach einem Save aufgerufen,
     /// damit die Preview innerhalb der 2-s-Schwelle aktualisiert ist, ohne auf den Hintergrund-Indexer zu warten.
     /// </summary>
     public void SetHtml(string fullHtml)
@@ -106,7 +106,7 @@ internal sealed partial class PreviewViewModel : ObservableObject
         }
         catch (DbException exception)
         {
-            // SQLite-Spitze beim Preview-Lookup — leeres Dokument anzeigen.
+            // SQLite-Spitze beim Preview-Lookup: leeres Dokument anzeigen.
             LogPreviewLoadFailed(_logger, markdownFileId, exception);
             _body = string.Empty;
             Html = _htmlBuilder.BuildEmpty();
@@ -151,7 +151,7 @@ internal sealed partial class PreviewViewModel : ObservableObject
     private static partial void LogPreviewLoadFailed(ILogger logger, Guid markdownFileId, Exception exception);
 
     /// <summary>
-    /// Liest den Ordner der Datei — ein Fehlschlag kostet die Bilder, nicht die Vorschau.
+    /// Liest den Ordner der Datei. Ein Fehlschlag kostet die Bilder, nicht die Vorschau.
     /// </summary>
     /// <remarks>
     /// Bewusst <c>GetService</c> statt <c>GetRequiredService</c>: Der Ordner ist für relative

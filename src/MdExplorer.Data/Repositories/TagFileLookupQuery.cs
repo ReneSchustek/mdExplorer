@@ -8,7 +8,7 @@ namespace MdExplorer.Data.Repositories;
 /// EF-Core-Implementierung von <see cref="ITagFileLookupQuery"/>. Vermeidet Change-Tracking
 /// per <see cref="EntityFrameworkQueryableExtensions.AsNoTracking{TEntity}"/> und nutzt den
 /// B-Tree-Index auf <c>MarkdownFileTags.TagId</c>. Liefert in einem JOIN-Schritt
-/// — kein N+1.
+/// (kein N+1).
 /// </summary>
 public sealed class TagFileLookupQuery : ITagFileLookupQuery
 {

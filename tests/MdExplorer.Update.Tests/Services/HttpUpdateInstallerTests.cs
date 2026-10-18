@@ -86,7 +86,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         Assert.Equal(UpdateDownloadStatus.ChecksumMismatch, result.Status);
         Assert.Null(result.InstallerPath);
         Assert.False(result.IsVerified);
-        // Die Datei darf nicht liegen bleiben — sonst könnte sie jemand von Hand starten.
+        // Die Datei darf nicht liegen bleiben, sonst könnte sie jemand von Hand starten.
         Assert.Empty(Directory.GetFiles(_downloadDirectory));
     }
 
@@ -242,7 +242,7 @@ public sealed class HttpUpdateInstallerTests : IDisposable
     {
         // Der Ablageordner liegt unter %LOCALAPPDATA% und kann durch eine gleichnamige Datei
         // oder eine Richtlinie blockiert sein. Dann darf nichts geladen und erst recht nichts
-        // ausgeführt werden — die Meldung muss den Grund benennen.
+        // ausgeführt werden; die Meldung muss den Grund benennen.
         string blockierterPfad = Path.Combine(Path.GetTempPath(), "MdExplorerInstallerTests-blockiert-" + Guid.NewGuid().ToString("N"));
         await File.WriteAllTextAsync(blockierterPfad, "keine Mappe", TestContext.Current.CancellationToken).ConfigureAwait(true);
         try

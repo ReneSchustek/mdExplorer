@@ -16,7 +16,7 @@ public static class TagCloudServiceCollectionExtensions
     /// Registriert <see cref="ITagStatisticsService"/> und den Hintergrund-Refresh-Service.
     /// Der Caller muss <c>AddData()</c> bereits registriert haben, damit der
     /// <c>MdExplorerDbContext</c> über einen Scope auflösbar ist. Der
-    /// <see cref="IMessenger"/> wird einmalig als Singleton angelegt — bereits registrierte
+    /// <see cref="IMessenger"/> wird einmalig als Singleton angelegt; bereits registrierte
     /// Implementierungen werden respektiert.
     /// </summary>
     public static IServiceCollection AddTagCloud(this IServiceCollection services)

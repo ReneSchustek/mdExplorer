@@ -8,7 +8,7 @@ namespace MdExplorer.Data.Migrations
     /// <summary>
     /// Stellt die FTS5-Cleanup-Trigger her, die durch das EF-Core-Recreate-Pattern in
     /// <see cref="AddParserForeignKeys"/> implizit gedroppt wurden. SQLite kennt kein
-    /// "ALTER TABLE ADD FOREIGN KEY" — EF baut die Tabelle dafür neu auf und verliert
+    /// "ALTER TABLE ADD FOREIGN KEY", EF baut die Tabelle dafür neu auf und verliert
     /// dabei alle Trigger. Diese Folge-Migration läuft nach dem Rebuild und legt sie
     /// idempotent neu an.
     /// </summary>
@@ -54,7 +54,7 @@ namespace MdExplorer.Data.Migrations
         {
             ArgumentNullException.ThrowIfNull(migrationBuilder);
 
-            // Nach Down sind die Trigger überflüssig — die ihnen zugrunde liegenden FKs
+            // Nach Down sind die Trigger überflüssig, denn die ihnen zugrunde liegenden FKs
             // verschwinden, der Schema-Zustand entspricht wieder dem Pre-AddParserForeignKeys-Stand.
             _ = migrationBuilder.Sql(DropDeleteDocumentTriggerSql);
             _ = migrationBuilder.Sql(DropDeleteFileTriggerSql);

@@ -22,7 +22,7 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
     /// <summary>
     /// Bricht laufende Vorgänge ab, wenn der Dialog geschlossen wird. Ohne das liefe ein
     /// begonnener Download weiter und meldete am Ende an ein Fenster, das es nicht mehr
-    /// gibt — das Installationsprogramm startete dann, ohne dass die Anwendung endet.
+    /// gibt; das Installationsprogramm startete dann, ohne dass die Anwendung endet.
     /// </summary>
     private readonly CancellationTokenSource _cancellation = new();
 
@@ -133,7 +133,7 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
 
         try
         {
-            // force: Der Nutzer hat den Knopf gedrückt — die Drossel gilt nur für die
+            // force: Der Nutzer hat den Knopf gedrückt; die Drossel gilt nur für die
             // automatische Prüfung beim Start.
             UpdateCheckResult result = await _checker
                 .CheckForUpdateAsync(force: true, _cancellation.Token)

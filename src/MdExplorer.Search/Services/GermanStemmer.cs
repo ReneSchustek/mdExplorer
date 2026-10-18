@@ -2,20 +2,20 @@ namespace MdExplorer.Search.Services;
 
 /// <summary>
 /// Leichtgewichtiger Suffix-Stripper für deutsche Wörter. Ersetzt keinen
-/// vollwertigen Snowball-Stemmer — reduziert lediglich häufige Endungen, damit FTS5-
+/// vollwertigen Snowball-Stemmer und reduziert lediglich häufige Endungen, damit FTS5-
 /// Präfix-Wildcards die wichtigsten Wortformen einsammeln.
 /// </summary>
 /// <remarks>
 /// Bewusste Vereinfachungen:
-/// — Keine Doppel-Konsonanten-Reduktion (laufens → laufen, nicht lauf).
-/// — Keine Umlaut-Behandlung (FTS5-Tokenizer <c>remove_diacritics 1</c> deckt das ab).
-/// — Mindestlänge 3 Zeichen pro Stamm, sonst gibt es das Wort unverändert zurück.
+/// Keine Doppel-Konsonanten-Reduktion (laufens → laufen, nicht lauf).
+/// Keine Umlaut-Behandlung (FTS5-Tokenizer <c>remove_diacritics 1</c> deckt das ab).
+/// Mindestlänge 3 Zeichen pro Stamm, sonst gibt es das Wort unverändert zurück.
 /// </remarks>
 internal static class GermanStemmer
 {
     private const int MinStemLength = 3;
 
-    // Reihenfolge: längere Suffixe zuerst — sonst frisst „-en" das „-ungen" weg.
+    // Reihenfolge: längere Suffixe zuerst, sonst frisst „-en" das „-ungen" weg.
     private static readonly string[] Suffixes =
     [
         "ungen",

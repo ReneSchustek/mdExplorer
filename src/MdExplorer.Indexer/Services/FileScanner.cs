@@ -10,8 +10,8 @@ namespace MdExplorer.Indexer.Services;
 /// Rein iterativer Markdown-Scanner, vollständig über <see cref="IFileSystem"/> entkoppelt.
 /// Delegiert die Ausschluss-Logik an einen <see cref="IExclusionFilter"/>, der Settings und
 /// <c>.mdignore</c>-Hierarchie kombiniert. Steigt verzeichnisweise per BFS ab und überspringt
-/// Symlinks / NTFS-Junctions (Reparse-Points) gemäß <see cref="IndexerOptions.FollowSymlinks"/>
-/// — verhindert Endlosschleifen und Mehrfach-Indizierung.
+/// Symlinks / NTFS-Junctions (Reparse-Points) gemäß <see cref="IndexerOptions.FollowSymlinks"/>.
+/// Das verhindert Endlosschleifen und Mehrfach-Indizierung.
 /// </summary>
 public sealed partial class FileScanner : IFileScanner
 {

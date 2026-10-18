@@ -11,7 +11,7 @@ namespace MdExplorer.Data.Tests;
 /// <summary>
 /// Verifiziert die DB-Kompatibilität der NOCASE-Collation-Migration: eine bestehende Datenbank
 /// (migriert bis zur Vorgänger-Migration, mit Daten befüllt) muss sauber auf den neuen Stand
-/// wandern — Zeilen bleiben erhalten, der Lookup wird case-insensitiv und der beim Tabellen-Rebuild
+/// wandern: Zeilen bleiben erhalten, der Lookup wird case-insensitiv und der beim Tabellen-Rebuild
 /// gedroppte FTS5-Cleanup-Trigger auf <c>MarkdownFiles</c> ist danach wieder vorhanden.
 /// </summary>
 public sealed class AbsolutePathNoCaseMigrationTests : IAsyncDisposable
@@ -20,7 +20,7 @@ public sealed class AbsolutePathNoCaseMigrationTests : IAsyncDisposable
     private const string PreviousMigration = "20260609172327_RestoreFtsCleanupTriggersAfterRebuild";
     private const string FileTriggerName = "trg_MarkdownFiles_AD_FtsCleanup";
 
-    // Der Stand, auf dem der Auslöser zuletzt existierte. Danach fällt er weg — die
+    // Der Stand, auf dem der Auslöser zuletzt existierte. Danach fällt er weg; die
     // Begründung steht in der Migration DropFtsCleanupTriggers.
     private const string TriggerRestoredMigration = "20260722051331_RestoreFileTriggerAfterNoCaseRebuild";
 
@@ -67,7 +67,7 @@ public sealed class AbsolutePathNoCaseMigrationTests : IAsyncDisposable
         Assert.True(await TriggerExistsAsync(FileTriggerName).ConfigureAwait(true));
 
         // 5. Auf den neuesten Stand: Der Auslöser ist weg, die Zeile bleibt. Erstes Argument
-        // ist das Ziel der Migration — null heißt „bis zum neuesten Stand".
+        // ist das Ziel der Migration; null heißt „bis zum neuesten Stand".
         await migrator.MigrateAsync(null, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.False(await TriggerExistsAsync(FileTriggerName).ConfigureAwait(true));
         Assert.Equal(fileId, await FindIdByPathAsync(@"c:\notes\mixedcase.md").ConfigureAwait(true));

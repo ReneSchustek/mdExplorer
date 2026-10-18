@@ -10,7 +10,7 @@ internal interface IOperationHealthProvider
     /// <summary>Aktuelle aggregierte Bewertung.</summary>
     OperationHealth Current { get; }
 
-    /// <summary>Begründungstext für den Tooltip — eine Zeile pro Subsystem mit eigenem Status.</summary>
+    /// <summary>Begründungstext für den Tooltip: eine Zeile pro Subsystem mit eigenem Status.</summary>
     string Detail { get; }
 
     /// <summary>Wird gefeuert, sobald sich <see cref="Current"/> oder <see cref="Detail"/> ändert.</summary>

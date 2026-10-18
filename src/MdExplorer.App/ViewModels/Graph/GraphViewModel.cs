@@ -28,7 +28,7 @@ internal sealed partial class GraphViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
     /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;

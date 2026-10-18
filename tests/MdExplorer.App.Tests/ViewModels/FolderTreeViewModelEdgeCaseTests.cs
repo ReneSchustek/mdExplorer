@@ -9,7 +9,7 @@ namespace MdExplorer.App.Tests.ViewModels;
 /// <summary>
 /// Prüft die Randfälle des Ordnerbaums: Reaktion auf Einstellungsänderungen, Kommandos auf
 /// ungeeigneten Knoten und den Ausweichpfad, wenn die Einstellungen nicht geschrieben werden
-/// können. Diese Wege sind im Betrieb unauffällig — genau deshalb fällt eine Regression hier
+/// können. Diese Wege sind im Betrieb unauffällig, genau deshalb fällt eine Regression hier
 /// erst dann auf, wenn der Baum beim Ändern der Wurzeln stehen bleibt oder zusammenklappt.
 /// </summary>
 public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
@@ -152,7 +152,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
     [Fact]
     public async Task SettingsChange_WithADifferentRoot_RebuildsTheTree()
     {
-        // Gleiche Anzahl, anderer Pfad — ein reiner Anzahl-Vergleich würde das übersehen
+        // Gleiche Anzahl, anderer Pfad; ein reiner Anzahl-Vergleich würde das übersehen
         // und den Baum auf der alten Wurzel stehen lassen.
         string wurzelA = ErzeugeOrdner("a");
         string wurzelB = ErzeugeOrdner("b");
@@ -244,7 +244,7 @@ public sealed class FolderTreeViewModelEdgeCaseTests : IDisposable
     public async Task Expand_WithAnExclusionFilter_HidesTheMatchingFiles()
     {
         // Der Ausschluss-Filter hält Entwurfsdateien aus dem Baum heraus, damit die
-        // Anzeige zum Index passt — sonst klickt der Nutzer auf Dateien ohne Treffer.
+        // Anzeige zum Index passt, sonst klickt der Nutzer auf Dateien ohne Treffer.
         string wurzel = ErzeugeOrdner("wurzel");
         await File.WriteAllTextAsync(Path.Combine(wurzel, "sichtbar.md"), "# Sichtbar", TestContext.Current.CancellationToken).ConfigureAwait(true);
         await File.WriteAllTextAsync(Path.Combine(wurzel, "entwurf.md"), "# Entwurf", TestContext.Current.CancellationToken).ConfigureAwait(true);

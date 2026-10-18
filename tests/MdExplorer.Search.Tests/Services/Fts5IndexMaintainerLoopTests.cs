@@ -12,7 +12,7 @@ namespace MdExplorer.Search.Tests.Services;
 /// <summary>
 /// Prüft den Hintergrunddienst-Anteil des <see cref="Fts5IndexMaintainer"/>: die Polling-Schleife
 /// und den Weg von der Quelldatei bis zum Index-Eintrag. Die Schleife entscheidet darüber, ob der
-/// Index überhaupt jemals nachgezogen wird — und ob ein einzelner Fehlschlag den Dienst beendet oder
+/// Index überhaupt jemals nachgezogen wird, und ob ein einzelner Fehlschlag den Dienst beendet oder
 /// nur einen Durchlauf kostet. Beides ist ohne Test nicht zu sehen, weil es keinen Rückgabewert hat.
 /// Die Zeit kommt aus einem <see cref="FakeTimeProvider"/>, damit kein Test auf echte Sekunden wartet.
 /// </summary>
@@ -27,7 +27,7 @@ public sealed class Fts5IndexMaintainerLoopTests
     public async Task ExecuteAsync_OnStart_SynchronizesBeforeTheFirstTick()
     {
         // Ohne den Vorab-Lauf bliebe der Index nach dem Programmstart eine volle
-        // Intervall-Länge veraltet — sichtbar als "Suche findet die gerade erst
+        // Intervall-Länge veraltet, sichtbar als "Suche findet die gerade erst
         // geöffnete Datei nicht".
         Schleifenumgebung u = new();
         await using (u.ConfigureAwait(true))
@@ -91,7 +91,7 @@ public sealed class Fts5IndexMaintainerLoopTests
     public async Task ExecuteAsync_WhenSynchronizationFailsWithDbException_KeepsPolling()
     {
         // Eine Datenbank-Spitze darf den Dienst nicht beenden, sonst bleibt der Index bis zum
-        // nächsten Programmstart stehen — und niemand bemerkt es.
+        // nächsten Programmstart stehen, und niemand bemerkt es.
         Schleifenumgebung u = new(new TestDbException("Datenbank belegt"));
         await using (u.ConfigureAwait(true))
         {
@@ -177,7 +177,7 @@ public sealed class Fts5IndexMaintainerLoopTests
 
             Assert.Equal(1, changed);
             SearchIndexEntry eintrag = Assert.Single(u.Speicher.Entries);
-            // Der Frontmatter-Block gehört in die eigene Spalte, nicht in den Fließtext —
+            // Der Frontmatter-Block gehört in die eigene Spalte, nicht in den Fließtext,
             // sonst treffen Suchen nach "title" jedes Dokument.
             Assert.Equal("Der eigentliche Text.", eintrag.Body, StringComparer.Ordinal);
         }
@@ -358,7 +358,7 @@ public sealed class Fts5IndexMaintainerLoopTests
         /// Wartet, bis mindestens <paramref name="anzahl"/> Synchronisationen gelaufen sind, und
         /// treibt dabei die Uhr weiter. Das Vorstellen geschieht in der Schleife statt einmalig,
         /// weil sonst ein Tick verloren gehen kann, solange die Schleife den Zeitgeber noch nicht
-        /// erreicht hat — der Test würde dann je nach Maschinenlast unterschiedlich ausgehen.
+        /// erreicht hat; der Test würde dann je nach Maschinenlast unterschiedlich ausgehen.
         /// </summary>
         public async Task<bool> WarteAufLaeufeAsync(int anzahl)
         {
@@ -502,7 +502,7 @@ public sealed class Fts5IndexMaintainerLoopTests
             throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
     }
 
-    /// <summary><see cref="DbException"/> ist abstrakt — für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
+    /// <summary><see cref="DbException"/> ist abstrakt; für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
     private sealed class TestDbException : DbException
     {
         public TestDbException()

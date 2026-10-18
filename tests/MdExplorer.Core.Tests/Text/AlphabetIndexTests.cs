@@ -31,7 +31,7 @@ public sealed class AlphabetIndexTests
     public void LetterOf_OnSharpS_ReturnsS()
     {
         // „ß" lässt sich nicht in Grundbuchstabe plus Zeichen zerlegen und braucht deshalb
-        // eine eigene Zuordnung — sonst landete es unter „Sonstiges".
+        // eine eigene Zuordnung, sonst landete es unter „Sonstiges".
         Assert.Equal('S', AlphabetIndex.LetterOf("ßonderfall"));
     }
 
@@ -66,7 +66,7 @@ public sealed class AlphabetIndexTests
     /// <remarks>
     /// Die Leiste ändert ihre Breite nie: Sie führt immer alle Buchstaben, auch die ohne
     /// Einträge. Eine Leiste, die je nach Bestand anders aussieht, ist kein verlässlicher
-    /// Anlaufpunkt — deshalb hält dieser Test die feste Länge fest.
+    /// Anlaufpunkt; deshalb hält dieser Test die feste Länge fest.
     /// </remarks>
     [Fact]
     public void Letters_AreStableRegardlessOfContent()

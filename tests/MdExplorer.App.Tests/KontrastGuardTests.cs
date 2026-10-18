@@ -8,7 +8,7 @@ namespace MdExplorer.App.Tests;
 /// Hält die Lesbarkeit in beiden Belegungen.
 /// </summary>
 /// <remarks>
-/// Kontrast ist die einzige Zusicherung der Gestaltungslinie, die man ausrechnen kann — und
+/// Kontrast ist die einzige Zusicherung der Gestaltungslinie, die man ausrechnen kann, und
 /// die man deshalb nicht dem Augenmaß überlassen muss. Ein Blick auf den Bildschirm findet
 /// eine Paarung, die knapp unter der Grenze liegt, verlässlich nicht; diese Prüfung schon.
 /// Gerechnet wird nach WCAG 2.1: relative Leuchtdichte, Verhältnis (heller + 0,05) zu
@@ -19,7 +19,7 @@ public sealed class KontrastGuardTests
     /// <summary>Mindestverhältnis für Text.</summary>
     private const double TextMinimum = 4.5;
 
-    /// <summary>Mindestverhältnis für Bedienelemente — auch im ruhenden Zustand.</summary>
+    /// <summary>Mindestverhältnis für Bedienelemente, auch im ruhenden Zustand.</summary>
     private const double ControlMinimum = 3.0;
 
     public static TheoryData<string, string, string, double> TextPairs => new()

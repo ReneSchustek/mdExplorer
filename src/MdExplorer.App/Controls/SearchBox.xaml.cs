@@ -8,7 +8,7 @@ namespace MdExplorer.App.Controls;
 /// </summary>
 /// <remarks>
 /// Als Steuerelement und nicht als abgeschriebenes Markup: Wer den Baustein fertig
-/// vorfindet, baut ihn nicht nach — und die Wiedererkennung überlebt die dritte Seite.
+/// vorfindet, baut ihn nicht nach, und die Wiedererkennung überlebt die dritte Seite.
 /// </remarks>
 internal sealed partial class SearchBox
 {
@@ -19,7 +19,7 @@ internal sealed partial class SearchBox
         typeof(SearchBox),
         new FrameworkPropertyMetadata(string.Empty, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
 
-    /// <summary>Sagt, was durchsucht wird — nicht bloß „Suchen".</summary>
+    /// <summary>Sagt, was durchsucht wird, nicht bloß „Suchen".</summary>
     public static readonly DependencyProperty PlaceholderProperty = DependencyProperty.Register(
         nameof(Placeholder),
         typeof(string),
@@ -48,7 +48,7 @@ internal sealed partial class SearchBox
 
     /// <summary>Setzt den Eingabefokus ins Feld und wählt den Inhalt aus.</summary>
     /// <remarks>
-    /// Wer über das Tastenkürzel herkommt, will tippen und nicht erst löschen — deshalb ist
+    /// Wer über das Tastenkürzel herkommt, will tippen und nicht erst löschen. Deshalb ist
     /// der bisherige Inhalt gleich markiert.
     /// </remarks>
     public void FocusInput()

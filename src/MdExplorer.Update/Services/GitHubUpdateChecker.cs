@@ -13,7 +13,7 @@ namespace MdExplorer.Update.Services;
 /// und vergleicht deren Tag mit der installierten Version. Vorgeschaltet ist eine Throttle-Logik
 /// über <see cref="IUpdateCheckJournal"/>: innerhalb des konfigurierten Intervalls wird gar nicht
 /// erst über das Netz gegangen. Sämtliche Netz- und Parser-Fehler werden zu
-/// <see cref="UpdateCheckStatus.Failed"/> degradiert — der Aufrufer bekommt nie eine Ausnahme.
+/// <see cref="UpdateCheckStatus.Failed"/> degradiert; der Aufrufer bekommt nie eine Ausnahme.
 /// </summary>
 public sealed partial class GitHubUpdateChecker : IUpdateChecker
 {
@@ -162,7 +162,7 @@ public sealed partial class GitHubUpdateChecker : IUpdateChecker
     /// <summary>
     /// Sucht im Release das Installationspaket und die zugehörige Prüfsummen-Datei und lädt
     /// deren Inhalt. Fehlt eines von beidem, liefert die Methode ein Paket ohne Prüfwert
-    /// (oder <see langword="null"/>) — installiert wird dann nicht, der Weg über die
+    /// (oder <see langword="null"/>); installiert wird dann nicht, der Weg über die
     /// Release-Seite bleibt.
     /// </summary>
     private async Task<UpdateAsset?> ResolveAssetAsync(GitHubRelease release, CancellationToken cancellationToken)

@@ -8,7 +8,7 @@ namespace MdExplorer.Data.Repositories;
 public sealed class TagRepository(MdExplorerDbContext dbContext) : ITagRepository
 {
     /// <summary>
-    /// Maximalgröße für SQLite-IN-Listen — gleiche Begründung wie in
+    /// Maximalgröße für SQLite-IN-Listen, gleiche Begründung wie in
     /// <see cref="MarkdownDocumentRepository"/>: defensiv unter dem 999-Parameter-Limit alter SQLite-Builds.
     /// </summary>
     private const int SqliteInListBatchSize = 500;

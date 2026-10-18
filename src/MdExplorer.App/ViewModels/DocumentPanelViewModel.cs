@@ -16,7 +16,7 @@ namespace MdExplorer.App.ViewModels;
 /// Container-ViewModel der rechten Spalte. Verwaltet den Mode-Switch zwischen
 /// <see cref="DocumentPanelMode.Read"/> (WebView2-Vorschau) und <see cref="DocumentPanelMode.Edit"/>
 /// (Markdown-Editor) und übernimmt nach dem Speichern die direkte Vorschau-Aktualisierung
-/// gegen den aktuellen Editor-Text — damit Akzeptanzkriterium 4 (Preview &lt;= 2 s nach Save)
+/// gegen den aktuellen Editor-Text, damit Akzeptanzkriterium 4 (Preview &lt;= 2 s nach Save)
 /// unabhängig vom Hintergrund-Indexer eingehalten wird.
 /// </summary>
 internal sealed partial class DocumentPanelViewModel : ObservableObject, IDisposable
@@ -102,17 +102,17 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         }
         catch (OperationCanceledException)
         {
-            // Load wurde abgebrochen — kein Fehler.
+            // Load wurde abgebrochen, kein Fehler.
         }
         catch (DbException exception)
         {
-            // SQLite-Spitze beim Document-Lookup — Panel bleibt leer.
+            // SQLite-Spitze beim Document-Lookup: Panel bleibt leer.
             LogLoadFailed(_logger, markdownFileId, exception);
         }
     }
 
     /// <summary>
-    /// Lädt eine Datei direkt vom Dateisystem — Fallback für Klicks auf Markdown-Dateien,
+    /// Lädt eine Datei direkt vom Dateisystem: Fallback für Klicks auf Markdown-Dateien,
     /// die der Indexer noch nicht erfasst hat. Wenn die Datei bereits in der DB liegt,
     /// wird der überlieferte ID-Pfad bevorzugt (Tag-Persistenz, Outlink-Resolution).
     /// </summary>
@@ -139,7 +139,7 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         Mode = Mode == DocumentPanelMode.Read ? DocumentPanelMode.Edit : DocumentPanelMode.Read;
     }
 
-    /// <summary>Speichert den Editor — wird vom MainWindow über Ctrl+S aufgerufen.</summary>
+    /// <summary>Speichert den Editor. Wird vom MainWindow über Ctrl+S aufgerufen.</summary>
     [RelayCommand]
     public Task SaveAsync(CancellationToken cancellationToken) => Editor.SaveAsync(cancellationToken);
 
@@ -213,7 +213,7 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         Preview.SetHtml(_htmlBuilder.Build(body));
         // Editor übernimmt den Rohtext via LoadDirectAsync. Eine künstliche Guid wäre
         // im Conflict-Check unsicher, deshalb läuft der Editor in einem Read-Only-Modus
-        // ohne MarkdownFileId — Save bleibt gesperrt, bis der Indexer die Datei kennt.
+        // ohne MarkdownFileId; Save bleibt gesperrt, bis der Indexer die Datei kennt.
         await Editor.LoadDirectAsync(absolutePath, text, cancellationToken).ConfigureAwait(true);
         LogDirectLoadCompleted(_logger, absolutePath);
     }

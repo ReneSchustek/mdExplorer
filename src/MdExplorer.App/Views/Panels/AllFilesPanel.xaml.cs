@@ -57,7 +57,7 @@ internal sealed partial class AllFilesPanel : UserControl
     /// Gruppiert die Liste sichtbar nach der Beschriftung, der auch die Sprungleiste folgt.
     /// </summary>
     /// <remarks>
-    /// Ohne sichtbare Gruppen führt ein Sprung ins Nichts — man landet an einer Stelle, die
+    /// Ohne sichtbare Gruppen führt ein Sprung ins Nichts: Man landet an einer Stelle, die
     /// sich von jeder anderen nicht unterscheidet.
     /// </remarks>
     private static void GroupByLabel(AllFilesViewModel viewModel)
@@ -105,7 +105,7 @@ internal sealed partial class AllFilesPanel : UserControl
         }
 
         // Rollen statt filtern: Der übrige Bestand bleibt sichtbar, und wer stöbert, behält
-        // den Überblick. Die Auswahl bleibt unangetastet — ein Sprung ist kein Öffnen.
+        // den Überblick. Die Auswahl bleibt unangetastet, denn ein Sprung ist kein Öffnen.
         ItemsList.ScrollIntoView(first);
     }
 

@@ -60,7 +60,7 @@ internal sealed partial class LogViewerViewModel : ObservableObject, IDisposable
     /// <summary>Backing-Collection für die Live-Log-Liste.</summary>
     public ObservableCollection<LogEntry> Entries { get; }
 
-    /// <summary>Gefilterte Sicht auf <see cref="Entries"/> — Bindet die UI direkt.</summary>
+    /// <summary>Gefilterte Sicht auf <see cref="Entries"/>. Bindet die UI direkt.</summary>
     public ICollectionView FilteredView { get; }
 
     /// <summary>Auswahl-Tabelle für die Level-Filter-ComboBox.</summary>
@@ -82,7 +82,7 @@ internal sealed partial class LogViewerViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _searchQuery = string.Empty;
 
-    /// <summary>Anzahl der nach Filter sichtbaren Einträge — für die Statuszeile.</summary>
+    /// <summary>Anzahl der nach Filter sichtbaren Einträge, für die Statuszeile.</summary>
     public int VisibleCount
     {
         get
@@ -196,7 +196,7 @@ internal sealed partial class LogViewerViewModel : ObservableObject, IDisposable
     private void AppendEntry(LogEntry entry)
     {
         Entries.Add(entry);
-        // Spiegelt die harte Ring-Buffer-Grenze des Sinks — bewahrt UI vor
+        // Spiegelt die harte Ring-Buffer-Grenze des Sinks und bewahrt UI vor
         // unbegrenzter Liste, wenn das Fenster länger offen bleibt.
         while (Entries.Count > _store.Capacity)
         {
@@ -208,6 +208,6 @@ internal sealed partial class LogViewerViewModel : ObservableObject, IDisposable
 }
 
 /// <summary>Auswahleintrag der Level-Filter-ComboBox.</summary>
-/// <param name="MinimumLevel">Untere Grenze — Einträge mit niedrigerem Level werden ausgeblendet.</param>
+/// <param name="MinimumLevel">Untere Grenze: Einträge mit niedrigerem Level werden ausgeblendet.</param>
 /// <param name="Display">Anzeige-Label.</param>
 internal sealed record LogLevelFilter(LogLevel MinimumLevel, string Display);

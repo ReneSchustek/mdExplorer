@@ -81,7 +81,7 @@ public sealed class MarkdownFileRepositoryIntegrationTests : IAsyncDisposable
     [Fact]
     public async Task GetByAbsolutePathAsync_OnDifferentCasing_FindsExistingRow()
     {
-        // NOCASE-Spalte: der gespeicherte Pfad muss auch bei abweichender Casing gefunden werden —
+        // NOCASE-Spalte: der gespeicherte Pfad muss auch bei abweichender Casing gefunden werden,
         // sonst legt der Indexer-Upsert unter Windows ein Duplikat statt eines Updates an.
         MarkdownFile entity = NewFile(@"C:\Wurzel\Datei.md", "Hash");
         await _sut.AddAsync(entity, TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -189,7 +189,7 @@ public sealed class MarkdownFileRepositoryIntegrationTests : IAsyncDisposable
 
         Assert.Empty(_dbContext.Set<MarkdownDocument>().AsNoTracking().Where(d => d.MarkdownFileId == entity.Id));
         Assert.Empty(_dbContext.Set<MarkdownFileTag>().AsNoTracking().Where(link => link.MarkdownFileId == entity.Id));
-        // Tag selbst bleibt — Cascade nur in eine Richtung (File → FileTag, nicht Tag → FileTag).
+        // Tag selbst bleibt; Cascade nur in eine Richtung (File → FileTag, nicht Tag → FileTag).
         Assert.NotNull(await _dbContext.Set<Tag>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == tagId, TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 

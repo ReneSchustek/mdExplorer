@@ -90,7 +90,7 @@ public sealed class TagStatisticsServiceTests
         //
         // Gewertet wird die *kleinste* der Messungen, nicht Median und p95. Innerhalb der
         // Assembly ist die Parallelität abgeschaltet, gegen die acht übrigen Testprozesse
-        // hilft das aber nicht: Wer verdrängt wird, misst länger — und beide Kennzahlen
+        // hilft das aber nicht: Wer verdrängt wird, misst länger, und beide Kennzahlen
         // steigen mit, obwohl an der Abfrage nichts langsamer geworden ist. Verkürzen kann
         // eine Störung eine Messung dagegen nicht. Das Minimum ist damit der einzige der
         // drei Werte, der etwas über die Abfrage aussagt statt über die Auslastung.
@@ -105,7 +105,7 @@ public sealed class TagStatisticsServiceTests
             DateTime baseTime = new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc);
             await harness.SeedLargeDatasetAsync(documentCount: 10_000, distinctTagCount: 200, baseTime).ConfigureAwait(true);
 
-            // Warm-Up — fünf Vor-Iterationen decken EF-Metadaten, SQLite-Page-Cache, JIT und
+            // Warm-Up: fünf Vor-Iterationen decken EF-Metadaten, SQLite-Page-Cache, JIT und
             // GC-Stabilisierung ab; sollte das Tail-Spike-Risiko der ersten paar gemessenen
             // Iterationen praktisch eliminieren.
             for (int warm = 0; warm < 5; warm++)

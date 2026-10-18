@@ -20,7 +20,7 @@ public sealed class MarkdownIndexerEdgeCaseTests
 
         await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        // Ohne Wurzel gibt es nichts zu beobachten — der Dienst darf dann auch keinen
+        // Ohne Wurzel gibt es nichts zu beobachten; der Dienst darf dann auch keinen
         // Beobachter anlegen, statt leer weiterzulaufen.
         Assert.Empty(harness.WatcherFactory.Watchers);
 
@@ -54,7 +54,7 @@ public sealed class MarkdownIndexerEdgeCaseTests
     [Fact]
     public async Task ExecuteAsync_WithMissingRootDirectory_IgnoresIt()
     {
-        // Die Wurzel steht in den Einstellungen, das Verzeichnis gibt es aber nicht — etwa
+        // Die Wurzel steht in den Einstellungen, das Verzeichnis gibt es aber nicht, etwa
         // ein abgezogenes Netzlaufwerk. Der Indexer darf daran nicht scheitern.
         await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: [IndexerTestHarness.DefaultRoot]);
         await harness.Settings.SaveAsync(
@@ -116,7 +116,7 @@ public sealed class MarkdownIndexerEdgeCaseTests
     public async Task OnRenameWhereTargetDoesNotExist_RemovesTheOldEntry()
     {
         // Umbenennung aus dem beobachteten Bereich heraus: Das Ziel liegt nicht mehr da,
-        // wo der Indexer schaut — der alte Eintrag muss verschwinden statt zu verwaisen.
+        // wo der Indexer schaut. Der alte Eintrag muss verschwinden statt zu verwaisen.
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\alt.md", "Inhalt", FixedWrite);
 

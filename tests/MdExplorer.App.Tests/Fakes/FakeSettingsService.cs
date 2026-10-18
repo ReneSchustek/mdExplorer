@@ -3,7 +3,7 @@ using MdExplorer.Core.Models;
 
 namespace MdExplorer.App.Tests.Fakes;
 
-/// <summary>Test-Fake für <see cref="ISettingsService"/> — hält den Stand im Speicher, protokolliert Saves.</summary>
+/// <summary>Test-Fake für <see cref="ISettingsService"/>: hält den Stand im Speicher, protokolliert Saves.</summary>
 internal sealed class FakeSettingsService : ISettingsService
 {
     /// <summary>Erzeugt den Fake mit einem Ausgangs-Stand.</summary>

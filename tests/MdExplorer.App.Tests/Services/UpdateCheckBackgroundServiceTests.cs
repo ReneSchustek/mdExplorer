@@ -70,7 +70,7 @@ public sealed class UpdateCheckBackgroundServiceTests : IDisposable
     public async Task ExecuteAsync_AfterTheStartupDelay_RunsTheCheck()
     {
         // Der Versatz beim Start gibt Hauptfenster und erstem Indexer-Lauf Vorrang. Die
-        // Prüfung muss danach aber tatsächlich laufen — sonst fände der Nutzer nie
+        // Prüfung muss danach aber tatsächlich laufen, sonst fände der Nutzer nie
         // heraus, dass eine neue Fassung bereitsteht.
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl));
         StrongReferenceMessenger messenger = new();

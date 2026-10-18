@@ -143,14 +143,14 @@ public sealed class MarkdigParserTests
     {
         string markdown = BuildLargeMarkdown(targetBytes: 10 * 1024);
 
-        // Warm-up — JIT, Markdig static init, GZip pipeline.
+        // Warm-up: JIT, Markdig static init, GZip pipeline.
         _ = _sut.Parse(markdown);
 
         // Gemessen wird die kleinste von mehreren Zeiten, nicht eine einzelne. Beim
         // vollständigen Lauf teilen sich neun Testprozesse dieselben Kerne, und eine
         // Verdrängung kann eine Messung nur verlängern, nie verkürzen. Das Minimum
         // schätzt damit die ungestörte Laufzeit: Es fällt, wenn der Parser schneller
-        // wird, steigt bei einer echten Regression — und bleibt von der Auslastung
+        // wird, steigt bei einer echten Regression und bleibt von der Auslastung
         // der Maschine unbeeindruckt.
         long bestMilliseconds = long.MaxValue;
         ParseResult result = null!;

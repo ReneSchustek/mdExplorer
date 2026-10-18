@@ -35,7 +35,7 @@ public sealed class MarkdownDocumentRepository(MdExplorerDbContext dbContext) : 
 
         Guid[] ids = [.. markdownFileIds];
         Dictionary<Guid, MarkdownDocument> result = new(ids.Length);
-        // Getrackt (kein AsNoTracking) — der Aufrufer mutiert die geladenen Dokumente und ruft
+        // Getrackt (kein AsNoTracking), denn der Aufrufer mutiert die geladenen Dokumente und ruft
         // anschließend Update/SaveChanges; ein Detached-Ergebnis würde die Änderungen verlieren.
         foreach (Guid[] chunk in ids.Chunk(SqliteInListBatchSize))
         {

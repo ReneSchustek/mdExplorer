@@ -230,7 +230,7 @@ public sealed class DocumentPanelViewModelTests
     private static byte[] GzipBytes(string text) => Gzip(text);
 
     /// <summary>
-    /// Ein Zusammenhangs-Bereich ohne Datenquelle — diese Tests prüfen den Ladeweg des
+    /// Ein Zusammenhangs-Bereich ohne Datenquelle. Diese Tests prüfen den Ladeweg des
     /// Dokuments, nicht seine Verbindungen. Die haben eigene Tests.
     /// </summary>
     private static DocumentRelationsViewModel NoRelations()
@@ -259,7 +259,7 @@ public sealed class DocumentPanelViewModelTests
         public Task<Guid?> FindByAbsolutePathAsync(string absoluteFilePath, CancellationToken cancellationToken) =>
             Task.FromResult<Guid?>(_indexedPaths.TryGetValue(absoluteFilePath, out Guid id) ? id : null);
 
-        /// <summary>Der Fehler, den die Pfad-Auflösung meldet — für die Datenbank-Spitze.</summary>
+        /// <summary>Der Fehler, den die Pfad-Auflösung meldet, für die Datenbank-Spitze.</summary>
         public Exception? FailOnGetPath { get; set; }
 
         public Task<string?> GetAbsolutePathAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
@@ -279,7 +279,7 @@ public sealed class DocumentPanelViewModelTests
 
         public void SetParseResult(string bodyHtml) => _bodyHtml = bodyHtml;
 
-        /// <summary>Der Fehler, den das Übersetzen meldet — für ein Dokument, das Markdig abweist.</summary>
+        /// <summary>Der Fehler, den das Übersetzen meldet, für ein Dokument, das Markdig abweist.</summary>
         public Exception? FailOnParse { get; set; }
 
         public ParseResult Parse(string markdownText)
@@ -314,7 +314,7 @@ public sealed class DocumentPanelViewModelTests
         }
     }
     /// <remarks>
-    /// Eine Datenbank-Spitze beim Nachschlagen des Pfades darf den Bereich leer lassen — aber
+    /// Eine Datenbank-Spitze beim Nachschlagen des Pfades darf den Bereich leer lassen, aber
     /// nicht die Anwendung mitnehmen. Der Nutzer klickt in der Liste; ein Absturz an dieser
     /// Stelle wäre die teuerste denkbare Antwort auf einen Klick.
     /// </remarks>
@@ -357,7 +357,7 @@ public sealed class DocumentPanelViewModelTests
 
     /// <remarks>
     /// Der Ausweichpfad liest die Datei selbst. Ist sie gesperrt oder inzwischen weg, bleibt
-    /// die Vorschau leer — und der Klick bleibt folgenlos statt tödlich.
+    /// die Vorschau leer, und der Klick bleibt folgenlos statt tödlich.
     /// </remarks>
     [Fact]
     public async Task LoadByPathAsync_WhenTheFileCannotBeRead_LeavesThePreviewEmpty()
@@ -377,7 +377,7 @@ public sealed class DocumentPanelViewModelTests
 
     /// <remarks>
     /// Nach dem Speichern wird die Vorschau aus dem gespeicherten Text neu gebaut. Weist
-    /// Markdig den Text ab — zu tief verschachtelt —, darf das den Speichervorgang nicht
+    /// Markdig den Text ab (zu tief verschachtelt), darf das den Speichervorgang nicht
     /// nachträglich zum Fehler machen: Die Datei liegt zu diesem Zeitpunkt bereits auf der
     /// Platte. Der Nutzer hat gespeichert; ihm jetzt eine Ausnahme zu zeigen, wäre eine
     /// Lüge über den Zustand seiner Datei.

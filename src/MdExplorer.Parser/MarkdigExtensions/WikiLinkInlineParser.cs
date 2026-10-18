@@ -74,7 +74,7 @@ public sealed class WikiLinkInlineParser : InlineParser
         return false;
     }
 
-    // Split-Phase — trim + optional Pipe-Split + Empty-Guards.
+    // Split-Phase: trim + optional Pipe-Split + Empty-Guards.
     private static bool SplitTargetAndDisplay(string rawContent, out string target, out string display)
     {
         string raw = rawContent.Trim();
@@ -98,7 +98,7 @@ public sealed class WikiLinkInlineParser : InlineParser
         return target.Length > 0 && display.Length > 0;
     }
 
-    // Emit-Phase — Source-Position ermitteln, Slice weiterschieben, Inline-Knoten setzen.
+    // Emit-Phase: Source-Position ermitteln, Slice weiterschieben, Inline-Knoten setzen.
     private static void EmitInline(
         InlineProcessor processor,
         ref StringSlice slice,

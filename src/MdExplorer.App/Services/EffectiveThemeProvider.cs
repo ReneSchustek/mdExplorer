@@ -8,7 +8,7 @@ namespace MdExplorer.App.Services;
 /// </summary>
 /// <remarks>
 /// Die einzige Stelle, an der diese Frage beantwortet wird. Zwei Stellen, die dasselbe
-/// entscheiden, laufen irgendwann auseinander — und man sieht es erst an der einen Fläche,
+/// entscheiden, laufen irgendwann auseinander, und man sieht es erst an der einen Fläche,
 /// die dann hell stehen bleibt.
 /// </remarks>
 internal sealed class EffectiveThemeProvider : IEffectiveThemeProvider

@@ -14,7 +14,7 @@ public interface ISimilarityQueryBuilder
     /// Erzeugt einen FTS5-Vorfilter aus einem RegEx-Pattern. Extrahiert
     /// alle Wort-Tokens (<c>\w{2,}</c>) und verbindet sie per <c>OR</c> mit Präfix-
     /// Wildcards. Liefert leere Match-Expression, wenn das Pattern keinen Token-Anker
-    /// enthält (z. B. <c>.+</c>) — der Service interpretiert das als „alle Dokumente
+    /// enthält (z. B. <c>.+</c>); der Service interpretiert das als „alle Dokumente
     /// kandidieren".
     /// </summary>
     Fts5QueryPlan BuildRegexPrefilter(string regexPattern);

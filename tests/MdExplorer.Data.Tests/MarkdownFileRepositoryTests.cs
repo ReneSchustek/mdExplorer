@@ -203,7 +203,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     public async Task Remove_WithDetachedCopy_DeletesTheRow()
     {
         // GetAllUnderRootAsync liefert nicht verfolgte Entitäten. Wer eine davon entfernen
-        // will, übergibt genau so eine Kopie — das muss funktionieren, ohne dass der Aufrufer
+        // will, übergibt genau so eine Kopie, und das muss funktionieren, ohne dass der Aufrufer
         // sich um den Änderungsverfolger kümmern muss.
         MarkdownFile angelegt = await AnlegenAsync(@"C:\Notes\lose.md", "lose.md", "lose");
         _dbContext.ChangeTracker.Clear();
@@ -261,20 +261,20 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     /// <para>
     /// Bei 33.886 Einträgen, davon rund 27.000 für Dateien, die es nicht mehr gibt, liefe der
     /// Aufräumdurchgang sonst 20 Minuten mit voller Rechenlast und schriebe **keine einzige
-    /// Zeile** — dann, wenn diese Methode für jede Entfernung die Liste der bereits
+    /// Zeile**, dann, wenn diese Methode für jede Entfernung die Liste der bereits
     /// vorgemerkten Entitäten von vorne durchsucht.
-    /// Bei n Entfernungen sind das n²/2 Vergleiche — bei 27.000 rund 360 Millionen, und die
+    /// Bei n Entfernungen sind das n²/2 Vergleiche, bei 27.000 rund 360 Millionen, und die
     /// Vormerkung selbst kostet noch einmal.
     /// </para>
     /// <para>
-    /// Dieser Test läuft über 3.000 Einträge — genug, damit ein quadratischer Weg spürbar
+    /// Dieser Test läuft über 3.000 Einträge, genug, damit ein quadratischer Weg spürbar
     /// wird, und wenig genug, dass die Suite schnell bleibt. Er prüft vor allem, dass am Ende
     /// wirklich alle Zeilen weg sind. Eine Zusicherung auf Sekunden steht bewusst **nicht**
     /// hier: Sie fiele unter paralleler Ausführung um und sagte über die Ordnung nichts aus.
     /// </para>
     /// <para>
     /// Gemessen wurde einmalig mit 20.000 Einträgen: 2 Minuten 25 Sekunden für Anlegen und
-    /// Entfernen zusammen — die Zeit steckt danach in SQLite, nicht mehr in der Suche.
+    /// Entfernen zusammen; die Zeit steckt danach in SQLite, nicht mehr in der Suche.
     /// </para>
     /// </remarks>
     [Fact]
@@ -322,13 +322,13 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
     /// <remarks>
     /// <para>
     /// Der Punkt, an dem dieser Weg gefährlich wäre: Er geht an der Änderungsverfolgung vorbei
-    /// und setzt die Löschung direkt ab. Was an einer Datei hängt — das übersetzte Dokument,
-    /// die Zuordnung zu Schlagworten, der Volltext-Eintrag — verschwindet damit nicht mehr,
+    /// und setzt die Löschung direkt ab. Was an einer Datei hängt (das übersetzte Dokument,
+    /// die Zuordnung zu Schlagworten, der Volltext-Eintrag) verschwindet damit nicht mehr,
     /// weil das Rahmenwerk es mitzieht, sondern weil die Datenbank es tut.
     /// </para>
     /// <para>
     /// Genau das prüft dieser Test. Wäre die Weitergabe nur im Rahmenwerk hinterlegt und nicht
-    /// im Schema, bliebe hier ein Dokument ohne Datei zurück — und die Suche fände es weiter.
+    /// im Schema, bliebe hier ein Dokument ohne Datei zurück, und die Suche fände es weiter.
     /// </para>
     /// </remarks>
     [Fact]
@@ -356,7 +356,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
 
     /// <remarks>
     /// Mehr Schlüssel, als in eine Anweisung passen: Der Weg zerlegt sie in Portionen. Der Test
-    /// hält fest, dass dabei keiner verlorengeht — die Portionsgrenze ist genau die Stelle, an
+    /// hält fest, dass dabei keiner verlorengeht; die Portionsgrenze ist genau die Stelle, an
     /// der ein Abschneidefehler unbemerkt bliebe.
     /// </remarks>
     [Fact]
@@ -365,7 +365,7 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
         const int Anzahl = 1_200;
         List<Guid> ids = [];
         // Ab eins: Der Nullwert ergäbe einen leeren Schlüssel, und den ersetzt das Rahmenwerk
-        // beim Anlegen durch einen eigenen — die Liste zeigte danach ins Leere.
+        // beim Anlegen durch einen eigenen; die Liste zeigte danach ins Leere.
         for (int i = 1; i <= Anzahl; i++)
         {
             MarkdownFile datei = Datei(i);

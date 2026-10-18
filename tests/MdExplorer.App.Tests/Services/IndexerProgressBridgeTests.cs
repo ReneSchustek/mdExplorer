@@ -9,7 +9,7 @@ namespace MdExplorer.App.Tests.Services;
 
 /// <summary>
 /// Sichert die Brücke zwischen <see cref="IIndexer.InitialScanProgress"/> und
-/// <see cref="AllFilesViewModel.RefreshAsync"/> ab — Subscription-Lifecycle,
+/// <see cref="AllFilesViewModel.RefreshAsync"/> ab: Subscription-Lifecycle,
 /// Dispatcher-Marshalling, Fehler-Toleranz und IsBusy-Guard.
 /// </summary>
 public sealed class IndexerProgressBridgeTests
@@ -98,7 +98,7 @@ public sealed class IndexerProgressBridgeTests
         Assert.Equal(1, query.CallCount);
         Assert.False(allFiles.IsBusy);
 
-        // Zweites Event muss trotz vorherigem Fehler durchgehen — Bridge bleibt subscribed.
+        // Zweites Event muss trotz vorherigem Fehler durchgehen; Bridge bleibt subscribed.
         indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 2, isCompleted: false));
         await WaitForIdleAsync(allFiles).ConfigureAwait(true);
 
@@ -144,7 +144,7 @@ public sealed class IndexerProgressBridgeTests
 
     private static async Task WaitForIdleAsync(AllFilesViewModel allFiles)
     {
-        // Bridge feuert RefreshAsync fire-and-forget — abwarten bis IsBusy zurückfällt.
+        // Bridge feuert RefreshAsync fire-and-forget; abwarten bis IsBusy zurückfällt.
         TimeSpan timeout = TimeSpan.FromSeconds(2);
         DateTime deadline = DateTime.UtcNow + timeout;
         while (allFiles.IsBusy && DateTime.UtcNow < deadline)

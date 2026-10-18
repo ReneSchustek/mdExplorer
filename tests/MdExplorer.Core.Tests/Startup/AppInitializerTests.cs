@@ -16,7 +16,7 @@ public sealed class AppInitializerTests
 
     /// <summary>
     /// Echtes Zeitbudget als Notausstieg. Läuft es ab, scheitert der Test mit einer
-    /// Zeitüberschreitung — statt den ganzen Lauf anzuhalten.
+    /// Zeitüberschreitung, statt den ganzen Lauf anzuhalten.
     /// </summary>
     private static readonly TimeSpan RealTimeBudget = TimeSpan.FromSeconds(10);
 
@@ -51,7 +51,7 @@ public sealed class AppInitializerTests
 
         await AdvanceUntilCompletedAsync(timeProvider, migrator.WaitUntilCompletedAsync()).ConfigureAwait(true);
 
-        // Ohne weiteres Vorstellen der Uhr fertig werden — das ist die Aussage dieses Tests:
+        // Ohne weiteres Vorstellen der Uhr fertig werden. Das ist die Aussage dieses Tests:
         // Die Migration hat die Mindestdauer bereits überschritten, es wird nicht mehr gewartet.
         await initialization.WaitAsync(RealTimeBudget, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -63,7 +63,7 @@ public sealed class AppInitializerTests
     /// </summary>
     /// <remarks>
     /// Ein einzelnes Vorstellen an einer geratenen Stelle genügt nicht: Wer die Uhr
-    /// vorstellt, bevor der Wartende seinen Timer angemeldet hat, stellt an ihm vorbei —
+    /// vorstellt, bevor der Wartende seinen Timer angemeldet hat, stellt an ihm vorbei;
     /// der Timer beginnt danach von vorn, und die Zeit, auf die er wartet, kommt nie.
     /// Ein vollständiger Testlauf bliebe daran minutenlang stehen, während die Zusammenfassung
     /// daneben „bestanden" für die übrigen Tests meldet.

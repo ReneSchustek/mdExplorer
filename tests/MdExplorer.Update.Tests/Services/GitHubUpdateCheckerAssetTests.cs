@@ -10,7 +10,7 @@ namespace MdExplorer.Update.Tests.Services;
 
 /// <summary>
 /// Prüft, wie der Checker das Installationspaket und dessen Prüfsumme aus einem Release
-/// ermittelt. Der Prüfwert entscheidet darüber, ob überhaupt installiert werden darf —
+/// ermittelt. Der Prüfwert entscheidet darüber, ob überhaupt installiert werden darf;
 /// fehlt oder taugt er nicht, muss das Ergebnis „nicht installierbar" lauten statt zu raten.
 /// </summary>
 public sealed class GitHubUpdateCheckerAssetTests : IDisposable
@@ -57,7 +57,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
         Assert.NotNull(result.Asset);
         Assert.Null(result.Asset!.ExpectedSha256);
         Assert.False(result.Asset.IsVerifiable);
-        // Ohne Prüfwert darf nicht installiert werden — der Weg über die Release-Seite bleibt.
+        // Ohne Prüfwert darf nicht installiert werden; der Weg über die Release-Seite bleibt.
         Assert.False(result.IsInstallable);
     }
 
@@ -133,7 +133,7 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     [Fact]
     public async Task CheckForUpdate_WithChecksumFileContainingFileName_ReadsOnlyTheHash()
     {
-        // Das übliche Format ist "<hex>  <dateiname>" — der Dateiname darf nicht mitgelesen werden.
+        // Das übliche Format ist "<hex>  <dateiname>"; der Dateiname darf nicht mitgelesen werden.
         GitHubUpdateChecker checker = CreateChecker(
             ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: $"{GueltigerHash} *MdExplorer-1.0.0-setup.exe\n"));
 

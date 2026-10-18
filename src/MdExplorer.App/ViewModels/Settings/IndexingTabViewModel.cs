@@ -7,7 +7,7 @@ using MdExplorer.Core.Models;
 namespace MdExplorer.App.ViewModels.Settings;
 
 /// <summary>
-/// ViewModel für den Tab „Indexierung" — verwaltet die Roots-Liste und die
+/// ViewModel für den Tab „Indexierung", verwaltet die Roots-Liste und die
 /// Ausschluss-Muster-Liste. Beide Listen sind <see cref="ObservableCollection{T}"/>,
 /// damit die UI automatisch mitzieht.
 /// </summary>

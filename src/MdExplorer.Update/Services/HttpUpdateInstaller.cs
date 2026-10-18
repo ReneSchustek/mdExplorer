@@ -11,7 +11,7 @@ namespace MdExplorer.Update.Services;
 /// veröffentlichten SHA-256-Wert und startet es auf Anforderung.
 /// <para>
 /// Der Installer ist nicht signiert. Die Prüfsumme ist damit der einzige Beleg, dass die
-/// geladene Datei die veröffentlichte ist — deshalb wird ohne Prüfwert gar nicht erst geladen
+/// geladene Datei die veröffentlichte ist. Deshalb wird ohne Prüfwert gar nicht erst geladen
 /// und bei Abweichung die Datei gelöscht statt gestartet.
 /// </para>
 /// </summary>
@@ -160,7 +160,7 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
                 continue;
             }
 
-            // Nur bei tatsächlichem Prozentwechsel melden — sonst flutet der Fortschritt die UI.
+            // Nur bei tatsächlichem Prozentwechsel melden, sonst flutet der Fortschritt die UI.
             int percent = (int)(written * 100 / total.Value);
             if (percent != lastPercent)
             {

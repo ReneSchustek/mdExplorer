@@ -22,8 +22,8 @@ public interface ITagRepository
     /// <remarks>
     /// <para>
     /// Ein Schlagwort ist abgeleitet: Es entsteht, weil eine Datei es nennt. Nennt es keine
-    /// mehr, ist die Zeile Datenmüll. Sichtbar wird sie nicht — die Auswertung für die Wolke
-    /// verbindet über die Zuordnungen und lässt sie weg —, aber sie bleibt für immer stehen.
+    /// mehr, ist die Zeile Datenmüll. Sichtbar wird sie nicht (die Auswertung für die Wolke
+    /// verbindet über die Zuordnungen und lässt sie weg), aber sie bleibt für immer stehen.
     /// </para>
     /// <para>
     /// Die Regel, was ein Schlagwort ist, verhindert neue falsche Zeilen, räumt aber keine

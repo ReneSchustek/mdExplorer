@@ -208,7 +208,7 @@ public sealed class DocumentRelationsViewModelTests
     [Fact]
     public async Task RenameCommand_WithIncomingLinks_AsksBeforeBreakingThem()
     {
-        // Ein WikiLink zeigt auf den Dateinamen — beim Umbenennen bricht er, beim
+        // Ein WikiLink zeigt auf den Dateinamen; beim Umbenennen bricht er, beim
         // Verschieben nicht. Genau darum wird hier gefragt und beim Verschieben nicht.
         RecordingDocumentFileService fileService = new() { Impact = new DocumentImpact("Offen", 2) };
         FakeDialogService dialog = new() { ConfirmResult = false };
@@ -353,7 +353,7 @@ public sealed class DocumentRelationsViewModelTests
             Task.FromResult(relations);
     }
 
-    /// <summary>Ein Graph, der nicht antwortet — die Lage, die wie „nichts verknüpft" aussieht.</summary>
+    /// <summary>Ein Graph, der nicht antwortet, die Lage, die wie „nichts verknüpft" aussieht.</summary>
     private sealed class FailingGraphService : IGraphService
     {
         public Task<GraphSnapshot> BuildSnapshotAsync(GraphFilter filter, CancellationToken cancellationToken) =>

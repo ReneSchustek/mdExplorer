@@ -24,7 +24,7 @@ namespace MdExplorer.Parser.Services;
 /// </summary>
 public sealed partial class ParseOrchestrator : BackgroundService
 {
-    /// <summary>Obergrenze für den gespeicherten Fehlschlag-Grund — passend zur Spaltenlänge.</summary>
+    /// <summary>Obergrenze für den gespeicherten Fehlschlag-Grund, passend zur Spaltenlänge.</summary>
     private const int FailureReasonMaxLength = 512;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -90,7 +90,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
         {
             // Defense-in-Depth. Falls eine Markdig-/Yaml-/JSON-Exception über den
             // ParseOneAsync-Catch hinausschlüpft (z. B. aus einem Sub-Renderer oder einem
-            // Frontmatter-Pfad), bleibt der Periodic-Tick-Loop am Leben — nächster Tick
+            // Frontmatter-Pfad), bleibt der Periodic-Tick-Loop am Leben. Der nächste Tick
             // versucht es erneut, ohne dass ein einziges kaputtes File den Service killt.
             LogPollFailed(_logger, ex);
         }
@@ -133,7 +133,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
         // Bewusst bei jedem Durchlauf, nicht nur wenn etwas geschrieben wurde: Ein Schlagwort
         // verliert seine letzte Datei meist gar nicht durch den Parser, sondern weil der
         // Indexer die Datei entfernt hat. Räumte nur ein Durchlauf mit Arbeit auf, blieben nach
-        // dem Wegräumen vieler Einträge Schlagworte ohne Datei stehen — der Parser hätte nichts
+        // dem Wegräumen vieler Einträge Schlagworte ohne Datei stehen: Der Parser hätte nichts
         // zu tun und räumte deshalb auch nicht auf. Die Abfrage ist ein Anti-Join über eine kleine
         // Tabelle; sie kostet nichts.
         await RemoveOrphanedTagsAsync(cancellationToken).ConfigureAwait(false);
@@ -240,7 +240,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
         await tagRepo.ReplaceFileTagsAsync(entry.Snapshot.Id, tagIds, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Kürzt Ausnahmetyp und Meldung auf die Spaltenlänge — der volle Stapel steht im Protokoll.</summary>
+    /// <summary>Kürzt Ausnahmetyp und Meldung auf die Spaltenlänge; der volle Stapel steht im Protokoll.</summary>
     private static string BuildFailureReason(Exception exception)
     {
         string reason = string.Create(CultureInfo.InvariantCulture, $"{exception.GetType().Name}: {exception.Message}");
@@ -255,7 +255,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
     /// <summary>
     /// Ohne diese Prüfung stünde eine unparsbare Datei bei jedem Tick wieder im Stapel: Sie
     /// bekommt kein Dokument, bleibt damit dauerhaft veraltet und wurde bis dahin alle paar
-    /// Sekunden neu gelesen, dekodiert und durch den Parser geschickt — für ein Ergebnis, das
+    /// Sekunden neu gelesen, dekodiert und durch den Parser geschickt, für ein Ergebnis, das
     /// längst feststand.
     /// </summary>
     private static bool NeedsParseAttempt(
@@ -283,7 +283,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
     /// <summary>
     /// Meldet die Zahl der nicht verarbeitbaren Dateien an die Betriebsanzeige. Gezählt wird nur
     /// beim ersten Durchlauf und danach, wenn dieser Durchlauf einen Vermerk angelegt oder
-    /// aufgehoben hat — sonst wäre es alle paar Sekunden dieselbe Abfrage mit demselben Ergebnis.
+    /// aufgehoben hat, sonst wäre es alle paar Sekunden dieselbe Abfrage mit demselben Ergebnis.
     /// </summary>
     private async Task ReportUnparsableCountAsync(bool failuresChanged, CancellationToken cancellationToken)
     {
@@ -302,7 +302,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
         }
     }
 
-    /// <summary>Schreibt einen Stapel in einem eigenen Bereich — der Verfolger stirbt mit ihm.</summary>
+    /// <summary>Schreibt einen Stapel in einem eigenen Bereich, der Verfolger stirbt mit ihm.</summary>
     private async Task<BatchOutcome> ProcessBatchInOwnScopeAsync(
         List<MarkdownSourceSnapshot> batch,
         CancellationToken cancellationToken)
@@ -365,13 +365,13 @@ public sealed partial class ParseOrchestrator : BackgroundService
         List<ParsedEntry> results,
         CancellationToken cancellationToken)
     {
-        // Existierende Dokumente einmal je Batch laden statt pro Datei per Point-Lookup — die
+        // Existierende Dokumente einmal je Batch laden statt pro Datei per Point-Lookup, denn die
         // Ziel-Ids stehen zum Batch-Start bereits fest. PersistDocumentAsync konsumiert daraus.
         Guid[] resultIds = [.. results.Select(entry => entry.Snapshot.Id)];
         IReadOnlyDictionary<Guid, MarkdownDocument> existingByFileId =
             await docRepo.GetByMarkdownFileIdsAsync(resultIds, cancellationToken).ConfigureAwait(false);
 
-        // Tag-Cache für den ganzen Batch — sonst ruft jede Datei einen frischen
+        // Tag-Cache für den ganzen Batch, sonst ruft jede Datei einen frischen
         // GetBySlugsAsync auf und addiert denselben Slug doppelt; SaveChanges scheitert dann mit
         // SqliteException 19 (UNIQUE constraint failed: Tags.Slug). Wir sammeln die Slugs einmal,
         // resolven die existierenden Tags in einem einzigen Roundtrip und legen die fehlenden
@@ -423,7 +423,7 @@ public sealed partial class ParseOrchestrator : BackgroundService
 
     /// <summary>
     /// Der volle Aufrufstapel geht genau einmal je Datei und Inhalt ins Protokoll. Der Renderer
-    /// arbeitet rekursiv — ein einziger Stapel dieser Sorte ist rund 265 Zeilen lang, und
+    /// arbeitet rekursiv: Ein einziger Stapel dieser Sorte ist rund 265 Zeilen lang, und
     /// wiederholt geschrieben verdrängt er jede echte Diagnose aus der Datei.
     /// </summary>
     private void LogFailure(ParseFailureEntry entry, IReadOnlyDictionary<Guid, ParseFailure> knownFailures)
@@ -492,8 +492,8 @@ public sealed partial class ParseOrchestrator : BackgroundService
             {
                 // Markdig wirft ArgumentException u. a. bei depth-limit-Verstößen
                 // (zu tief verschachtelte Emphasis/Listen). InvalidOperationException kommt
-                // aus dem Yaml-/Frontmatter-Pfad. Beide sind Format-Fehler im Dokument —
-                // Datei überspringen, restlicher Batch läuft weiter. Protokolliert und
+                // aus dem Yaml-/Frontmatter-Pfad. Beide sind Format-Fehler im Dokument.
+                // Die Datei überspringen, restlicher Batch läuft weiter. Protokolliert und
                 // vermerkt wird der Fehlschlag gesammelt in SyncFailureMarksAsync.
                 collector.AddFailure(new ParseFailureEntry(snapshot, ex));
                 return;

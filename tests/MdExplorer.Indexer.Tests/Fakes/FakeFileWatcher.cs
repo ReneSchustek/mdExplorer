@@ -4,7 +4,7 @@ using MdExplorer.Indexer.Models;
 namespace MdExplorer.Indexer.Tests.Fakes;
 
 /// <summary>
-/// Test-Watcher, der Ereignisse manuell aus dem Test getriggert werden — vollständig deterministisch.
+/// Test-Watcher, der Ereignisse manuell aus dem Test getriggert werden, vollständig deterministisch.
 /// </summary>
 internal sealed class FakeFileWatcher : IFileWatcher
 {

@@ -15,7 +15,7 @@ namespace MdExplorer.App.Services.Help;
 /// eingebettete Datei <c>Handbuch.md</c>, rendert sie mit Markdig zu HTML
 /// (Auto-Identifier für Anker, ohne WikiLink-Rewrite) und extrahiert die
 /// H2-Überschriften als Inhaltsverzeichnis. Das Resultat wird thread-safe
-/// gecacht — das Handbuch ändert sich zur Laufzeit nicht.
+/// gecacht, denn das Handbuch ändert sich zur Laufzeit nicht.
 /// </summary>
 internal sealed partial class HelpContentService : IHelpContentService, IDisposable
 {

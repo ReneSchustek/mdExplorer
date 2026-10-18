@@ -16,7 +16,7 @@ namespace MdExplorer.App.Views.Graph;
 /// WebView2-basiertes Graph-Fenster. Lädt die eingebetteten Assets
 /// (HTML/CSS/JS), injiziert das aktuelle Snapshot-JSON über String-Replacement
 /// und schreibt das Ergebnis in eine Temp-Datei unter <c>%LOCALAPPDATA%\MdExplorer\webview2</c>.
-/// Die View navigiert per <c>file://</c>-URI dorthin — <see cref="Microsoft.Web.WebView2.Wpf.WebView2.NavigateToString(string)"/>
+/// Die View navigiert per <c>file://</c>-URI dorthin, denn <see cref="Microsoft.Web.WebView2.Wpf.WebView2.NavigateToString(string)"/>
 /// hat ein hartes Größen-Limit (Edge meldet <c>E_INVALIDARG</c> oberhalb von ~2 MB),
 /// das bei großen Wikis (&gt;10k Knoten) regelmäßig überschritten wird.
 /// </summary>
@@ -62,7 +62,7 @@ internal sealed partial class GraphWindow : Window
 
     /// <summary>
     /// Baut das Dokument für die Zeichenfläche. Die Belegung wird als Kennzeichen am
-    /// Wurzelelement mitgegeben — die Farben stehen im Stylesheet, nicht im Zeichencode.
+    /// Wurzelelement mitgegeben; die Farben stehen im Stylesheet, nicht im Zeichencode.
     /// </summary>
     internal static string BuildHtml(string snapshotJson, bool isDarkMode)
     {
@@ -72,7 +72,7 @@ internal sealed partial class GraphWindow : Window
         string js = ReadEmbeddedResource("graph.js");
         string nonce = GenerateNonce();
         // Reihenfolge bewusst: vertraünswürdige Platzhalter zuerst, das nutzerkontrollierte
-        // Snapshot-JSON ganz zum Schluss — so ersetzt das Platzhalter-Replace im JSON nichts mehr.
+        // Snapshot-JSON ganz zum Schluss. So ersetzt das Platzhalter-Replace im JSON nichts mehr.
         return htmlTemplate
             .Replace(CssPlaceholder, css, StringComparison.Ordinal)
             .Replace(JsPlaceholder, js, StringComparison.Ordinal)

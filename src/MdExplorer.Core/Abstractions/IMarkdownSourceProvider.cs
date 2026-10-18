@@ -2,8 +2,8 @@ namespace MdExplorer.Core.Abstractions;
 
 /// <summary>
 /// Liefert die für das Parsing relevanten Snapshot-Daten der indizierten Markdown-Dateien
-/// (Id, Pfad, aktueller Inhalt-Hash). Implementierung in der Data-Schicht — der Parser bleibt
-/// EF-frei und kennt nur diese Abstraktion.
+/// (Id, Pfad, aktueller Inhalt-Hash). Implementierung in der Data-Schicht, damit der Parser
+/// EF-frei bleibt und nur diese Abstraktion kennt.
 /// </summary>
 public interface IMarkdownSourceProvider
 {

@@ -4,7 +4,7 @@ using MdExplorer.Core.Abstractions;
 namespace MdExplorer.Parser.Tests.Fakes;
 
 /// <summary>
-/// In-Memory-Datei-System für Parser-Unit-Tests — angelehnt an die Indexer-Variante,
+/// In-Memory-Datei-System für Parser-Unit-Tests, angelehnt an die Indexer-Variante,
 /// erweitert um <see cref="FailOnRead"/> für Read-Fehler-Tests.
 /// </summary>
 internal sealed class FakeFileSystem : IFileSystem

@@ -1,5 +1,5 @@
 # ============================================================
-# .gitignore – MdExplorer
+# .gitignore für MdExplorer
 # ============================================================
 
 # ============================================================
@@ -9,7 +9,7 @@
 
 # ============================================================
 # docs/ ist global ignoriert, in diesem Projekt aber gewollt
-# (ARCHITECTURE.md, SETTINGS.md — siehe README).
+# (ARCHITECTURE.md, SETTINGS.md; siehe README).
 # ============================================================
 !docs/
 !docs/**

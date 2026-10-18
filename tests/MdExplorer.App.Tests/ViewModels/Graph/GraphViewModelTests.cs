@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels.Graph;
 
-/// <summary>Tests für das Graph-Panel-ViewModel — Snapshot-Laden und Pfad-Prefix-Persistenz.</summary>
+/// <summary>Tests für das Graph-Panel-ViewModel: Snapshot-Laden und Pfad-Prefix-Persistenz.</summary>
 public sealed class GraphViewModelTests : IDisposable
 {
     private static readonly Guid NodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -137,7 +137,7 @@ public sealed class GraphViewModelTests : IDisposable
                 : Task.FromResult(Snapshot);
         }
 
-        /// <summary>Für diese Tests ohne Belang — das Bild kennt keine Einzelverbindungen.</summary>
+        /// <summary>Für diese Tests ohne Belang, denn das Bild kennt keine Einzelverbindungen.</summary>
         public Task<DocumentRelations> GetRelationsAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
             Task.FromResult(DocumentRelations.Empty);
     }

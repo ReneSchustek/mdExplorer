@@ -150,7 +150,7 @@ public sealed class TagCloudRefreshServiceTests
 
         Assert.Equal(0, received);
 
-        // Wenn die nächste Iteration einen gültigen Snapshot liefert, muss er publiziert werden —
+        // Wenn die nächste Iteration einen gültigen Snapshot liefert, muss er publiziert werden;
         // _lastSignature darf vom Fehler nicht beeinflusst worden sein.
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
         await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);

@@ -44,7 +44,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen." }
 
       # Der Installer ist nicht signiert. Die veröffentlichte Prüfsumme ist damit der
-      # einzige Beleg, dass eine heruntergeladene Datei die veröffentlichte ist — die
+      # einzige Beleg, dass eine heruntergeladene Datei die veröffentlichte ist; die
       # Update-Funktion der Anwendung installiert ohne sie bewusst nicht.
       - name: Prüfsumme des Installers veröffentlichen
         shell: pwsh

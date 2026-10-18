@@ -7,7 +7,7 @@ using Microsoft.Extensions.Time.Testing;
 namespace MdExplorer.App.Tests.ViewModels;
 
 /// <summary>
-/// Tests für die Filter der Datei-Liste — Ordner, Kennzeichnung und Änderungszeitraum.
+/// Tests für die Filter der Datei-Liste: Ordner, Kennzeichnung und Änderungszeitraum.
 /// </summary>
 /// <remarks>
 /// Der Zeitraum hängt an der Uhr, deshalb läuft er gegen eine gestellte Zeit. Ein Test, der
@@ -166,7 +166,7 @@ public sealed class AllFilesViewModelFilterTests
 
     /// <remarks>
     /// Der Zustandserhalt der Linie: Wer aus einem Dokument zurückkommt, findet seine
-    /// Einschränkung wieder vor. Ein erneutes Laden ist der härtere Fall — dabei wird die
+    /// Einschränkung wieder vor. Ein erneutes Laden ist der härtere Fall; dabei wird die
     /// Liste vollständig neu aufgebaut.
     /// </remarks>
     [Fact]
@@ -235,7 +235,7 @@ public sealed class AllFilesViewModelFilterTests
             Task.FromResult(rows);
     }
 
-    /// <summary>Ein Bestand, der sich nicht abrufen lässt — die Lage, die wie „leer" aussieht.</summary>
+    /// <summary>Ein Bestand, der sich nicht abrufen lässt, die Lage, die wie „leer" aussieht.</summary>
     private sealed class FailingAllFilesQuery : IAllFilesQuery
     {
         public Task<IReadOnlyList<AllFilesRow>> GetAllAsync(CancellationToken cancellationToken) =>
@@ -243,7 +243,7 @@ public sealed class AllFilesViewModelFilterTests
     }
     /// <remarks>
     /// Die Befehle kommen aus dem Markup und können mit <see langword="null"/> ausgelöst
-    /// werden — bei einer leeren Liste tut WPF genau das. Keiner davon darf dabei einen
+    /// werden; bei einer leeren Liste tut WPF genau das. Keiner davon darf dabei einen
     /// Filter setzen, den der Nutzer nicht angefordert hat.
     /// </remarks>
     [Fact]
@@ -262,7 +262,7 @@ public sealed class AllFilesViewModelFilterTests
 
     /// <remarks>
     /// Denselben Zeitraum noch einmal zu wählen ist kein Vorgang. Ohne die Prüfung liefe die
-    /// Liste bei jedem Klick neu durch — sichtbar als Sprung in der Bildlaufleiste.
+    /// Liste bei jedem Klick neu durch, sichtbar als Sprung in der Bildlaufleiste.
     /// </remarks>
     [Fact]
     public async Task SelectPeriod_WithTheSameValueAgain_ChangesNothing()
@@ -297,7 +297,7 @@ public sealed class AllFilesViewModelFilterTests
     }
 
     /// <remarks>
-    /// Die Auswahl meldet den Pfad weiter — daran hängt, welches Dokument die Vorschau zeigt.
+    /// Die Auswahl meldet den Pfad weiter. Daran hängt, welches Dokument die Vorschau zeigt.
     /// Wird die Auswahl wieder geleert, darf **nichts** gemeldet werden: Sonst öffnete ein
     /// Neuladen der Liste ungefragt das zuletzt markierte Dokument.
     /// </remarks>

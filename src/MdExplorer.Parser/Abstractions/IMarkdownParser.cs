@@ -10,7 +10,7 @@ public interface IMarkdownParser
 {
     /// <summary>
     /// Kennung der Fassung, mit der dieser Parser arbeitet. Ändert sie sich, kann derselbe
-    /// Inhalt ein anderes Ergebnis liefern — ein zuvor gescheiterter Versuch wird deshalb
+    /// Inhalt ein anderes Ergebnis liefern, und ein zuvor gescheiterter Versuch wird deshalb
     /// wiederholt.
     /// </summary>
     string EngineVersion { get; }

@@ -89,7 +89,7 @@ internal sealed partial class SettingsChangeBridge : IHostedService
         }
         catch (OperationCanceledException)
         {
-            // Anwendung wird heruntergefahren — kein Fehler.
+            // Anwendung wird heruntergefahren, kein Fehler.
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DbException or ArgumentException or InvalidOperationException)
         {

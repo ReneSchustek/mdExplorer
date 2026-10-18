@@ -47,7 +47,7 @@ public sealed class SimilarityQueryBuilderTests
     {
         SimilarityQueryBuilder sut = NewBuilder();
 
-        // \bAPI\d{3}\s+Main\b — Word-Runs ≥ 2: "bAPI" (Backslash zählt nicht, b-A-P-I bilden den Run) und "Main".
+        // \bAPI\d{3}\s+Main\b: Word-Runs ≥ 2: "bAPI" (Backslash zählt nicht, b-A-P-I bilden den Run) und "Main".
         Fts5QueryPlan plan = sut.BuildRegexPrefilter(@"\bAPI\d{3}\s+Main\b");
 
         Assert.Equal("\"bAPI\"* OR \"Main\"*", plan.MatchExpression);
@@ -95,7 +95,7 @@ public sealed class SimilarityQueryBuilderTests
 
         Fts5QueryPlan plan = sut.BuildSimilarity("apfel", SimilarityMode.NearStem);
 
-        // Bei nur einem Term ist NEAR nicht definiert — wir produzieren reines OR-Match.
+        // Bei nur einem Term ist NEAR nicht definiert; wir produzieren reines OR-Match.
         Assert.Equal("\"apfel\"*", plan.MatchExpression);
     }
 

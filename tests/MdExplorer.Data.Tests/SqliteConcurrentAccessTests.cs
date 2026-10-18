@@ -13,7 +13,7 @@ namespace MdExplorer.Data.Tests;
 /// Vor dem Fix führte <c>SqliteCacheMode.Shared</c> in Kombination mit fehlendem
 /// <c>busy_timeout</c> zu sofortigem <c>SQLITE_LOCKED</c> (Code 6),
 /// wenn parallel ein Schreib- und ein Lese-Scope auf denselben Tabellen
-/// arbeiteten — exakt der vom User berichtete Klick-auf-Datei-Crash
+/// arbeiteten, exakt der vom User berichtete Klick-auf-Datei-Crash
 /// während des Initial-Scans.
 /// </summary>
 public sealed class SqliteConcurrentAccessTests : IDisposable
@@ -55,7 +55,7 @@ public sealed class SqliteConcurrentAccessTests : IDisposable
             }
             catch (IOException)
             {
-                // WAL-Begleitdateien können kurz nach Schließen noch gehalten werden — Temp-Cleanup räumt auf.
+                // WAL-Begleitdateien können kurz nach Schließen noch gehalten werden; Temp-Cleanup räumt auf.
             }
         }
     }

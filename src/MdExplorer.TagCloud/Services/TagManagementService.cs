@@ -14,7 +14,7 @@ namespace MdExplorer.TagCloud.Services;
 /// schreibt jede Datei über <see cref="IFileSystem.WriteAllBytesAtomicAsync"/> atomar neu
 /// (Temp + Move) und überlasst den DB-Re-Sync dem Indexer-Watcher. Body-Vorkommen werden
 /// per Slug-Identität erkannt (Boundary-Regex + Normalizer), Frontmatter-Einträge
-/// werden zeilenbasiert manipuliert — gleicher Datei-Schreibpfad für Rename, Merge und Delete.
+/// werden zeilenbasiert manipuliert, gleicher Datei-Schreibpfad für Rename, Merge und Delete.
 /// </summary>
 public sealed partial class TagManagementService : ITagManagementService
 {

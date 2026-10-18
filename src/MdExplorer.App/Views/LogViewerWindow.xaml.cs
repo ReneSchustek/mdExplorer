@@ -34,7 +34,7 @@ internal sealed partial class LogViewerWindow : Window
     }
 
     /// <summary>
-    /// Versteht <see cref="GridViewColumnHeader"/>-Klicks als „keine Aktion" — das
+    /// Versteht <see cref="GridViewColumnHeader"/>-Klicks als „keine Aktion"; das
     /// Routing-Event bubble-up käme sonst beim DockPanel an und würde im
     /// Snoop-Tool als unbehandeltes Routed-Event auffallen.
     /// </summary>

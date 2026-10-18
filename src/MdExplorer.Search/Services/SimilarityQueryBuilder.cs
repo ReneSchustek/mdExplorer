@@ -10,7 +10,7 @@ namespace MdExplorer.Search.Services;
 /// <summary>
 /// Implementierung von <see cref="ISimilarityQueryBuilder"/>. Baut den RegEx-Vorfilter
 /// und die Similarity-Modi auf den Tokenizer-Helfern aus
-/// <see cref="SearchTokens"/> auf — der Match-Build-Pfad für reine User-Eingaben
+/// <see cref="SearchTokens"/> auf; der Match-Build-Pfad für reine User-Eingaben
 /// bleibt im <see cref="SearchQueryBuilder"/>.
 /// </summary>
 public sealed class SimilarityQueryBuilder : ISimilarityQueryBuilder

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace MdExplorer.App.Services;
 
 /// <summary>
-/// Hintergrunddienst, der kurz nach dem Start einmalig auf neue Versionen prüft — sofern der
+/// Hintergrunddienst, der kurz nach dem Start einmalig auf neue Versionen prüft, sofern der
 /// Nutzer es nicht in den Einstellungen abgewählt hat. Das eigentliche Throttling übernimmt der
 /// <see cref="IUpdateChecker"/>. Ein verfügbares Update wird per <see cref="IMessenger"/> als
 /// <see cref="UpdateAvailableMessage"/> an das UI gemeldet. Der Dienst ist bewusst nicht-fatal:

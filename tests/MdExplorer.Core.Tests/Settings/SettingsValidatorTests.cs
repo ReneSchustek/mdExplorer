@@ -180,7 +180,7 @@ public sealed class SettingsValidatorTests
     [Fact]
     public void Validate_OnNegationWithoutPattern_ReportsError()
     {
-        // "!" allein ist eine Ausnahme ohne Gegenstand — sie würde stillschweigend nichts tun.
+        // "!" allein ist eine Ausnahme ohne Gegenstand; sie würde stillschweigend nichts tun.
         StubFileSystem fs = new();
         SettingsValidator sut = new(fs);
 

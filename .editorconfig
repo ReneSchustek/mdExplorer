@@ -1,4 +1,4 @@
-# EditorConfig – https://editorconfig.org
+# EditorConfig: https://editorconfig.org
 root = true
 
 # Alle Dateien
@@ -202,11 +202,11 @@ dotnet_diagnostic.SA1313.severity = none
 # Opening square bracket spacing (`[` als Collection-Expression).
 dotnet_diagnostic.SA1010.severity = none
 
-# Closing parenthesis spacing — kollidiert mit Nullable-Annotation `)?`.
+# Closing parenthesis spacing, kollidiert mit Nullable-Annotation `)?`.
 dotnet_diagnostic.SA1009.severity = none
 
 # Operator-/Modifier-Reihenfolge mit `required public`: StyleCop kennt den `required`
-# Modifier (C# 11) noch nicht korrekt — false positives.
+# Modifier (C# 11) noch nicht korrekt (false positives).
 dotnet_diagnostic.SA1206.severity = none
 
 # Using-Reihenfolge: `dotnet format` + editorconfig regeln das bereits.
@@ -269,7 +269,7 @@ dotnet_diagnostic.S1192.severity = warning
 dotnet_diagnostic.S3776.severity = warning
 dotnet_diagnostic.S1541.severity = warning
 
-# Parametergleichheit für Vergleichsmethoden — hart als Warning.
+# Parametergleichheit für Vergleichsmethoden, hart als Warning.
 dotnet_diagnostic.S2342.severity = warning
 
 # Magic-Number-Detection: hart als Warning ("Keine Magic Values").

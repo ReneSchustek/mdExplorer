@@ -68,7 +68,7 @@ public sealed class LocalFileSystem : IFileSystem
         }
         catch (IOException)
         {
-            // Defekter Link / Zugriff verweigert — fällt auf den Original-Pfad zurück.
+            // Defekter Link / Zugriff verweigert: fällt auf den Original-Pfad zurück.
             return Path.GetFullPath(path);
         }
         catch (UnauthorizedAccessException)
@@ -155,7 +155,7 @@ public sealed class LocalFileSystem : IFileSystem
             _ = Directory.CreateDirectory(targetDirectory);
         }
 
-        // overwrite: false — ein vorhandenes Ziel wirft, statt eine fremde Datei zu verschlucken.
+        // overwrite: false, damit ein vorhandenes Ziel wirft statt eine fremde Datei zu verschlucken.
         File.Move(sourcePath, destinationPath, overwrite: false);
     }
 
@@ -164,7 +164,7 @@ public sealed class LocalFileSystem : IFileSystem
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-        // File.Delete schweigt bei einer fehlenden Datei bereits — das ist hier das gewünschte
+        // File.Delete schweigt bei einer fehlenden Datei bereits, und das ist hier das gewünschte
         // Verhalten: Wer löschen will, was schon weg ist, hat sein Ziel erreicht.
         File.Delete(path);
     }
@@ -197,7 +197,7 @@ public sealed class LocalFileSystem : IFileSystem
         }
         catch (IOException)
         {
-            // Aufräumen einer Temp-Datei ist Best-Effort — der eigentliche Fehler wurde bereits geworfen.
+            // Aufräumen einer Temp-Datei ist Best-Effort, denn der eigentliche Fehler wurde bereits geworfen.
         }
         catch (UnauthorizedAccessException)
         {

@@ -8,7 +8,7 @@ namespace MdExplorer.App.ViewModels;
 
 /// <summary>
 /// Knoten im TreeView. Repräsentiert entweder ein Verzeichnis (mit Lazy-Loading der Children
-/// per Sentinel-Pattern) oder eine Markdown-Datei (Blattknoten, klickbar — öffnet die Preview).
+/// per Sentinel-Pattern) oder eine Markdown-Datei (Blattknoten, klickbar, öffnet die Preview).
 /// Datei-Knoten werden erst beim Aufklappen des Eltern-Verzeichnisses materialisiert, weil
 /// der Verzeichnis-Lazy-Load das einzige Trigger-Event für Datei-Enumeration ist.
 /// </summary>
@@ -38,7 +38,7 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
     private bool _isSelected;
 
     /// <summary>
-    /// <see langword="true"/>, wenn dieser Knoten von der Indexierung ausgeschlossen ist — direkt
+    /// <see langword="true"/>, wenn dieser Knoten von der Indexierung ausgeschlossen ist, direkt
     /// (Pfad in <c>UiExcludedFolders</c>) oder kaskadiert von einem ausgeschlossenen Eltern-Knoten.
     /// Steuert das visuelle Ausgrauen im Folder-Tree.
     /// </summary>
@@ -74,7 +74,7 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
         IsMarkdownFile = false;
         _fileSystem = fileSystem;
         _exclusionFilter = exclusionFilter;
-        // Der Root bleibt über die ganze Hierarchie konstant — für die IExclusionFilter-API.
+        // Der Root bleibt über die ganze Hierarchie konstant, für die IExclusionFilter-API.
         _rootAbsolutePath = rootAbsolutePath ?? absolutePath;
         _exclusions = exclusions;
         _isUiExcluded = isUiExcluded;

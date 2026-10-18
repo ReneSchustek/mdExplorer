@@ -21,7 +21,7 @@ internal sealed class FakeParseFailureRepository : IParseFailureRepository
 
     public IReadOnlyDictionary<Guid, ParseFailure> Snapshot => _storeByFileId;
 
-    // Legt einen Vermerk ohne SaveChanges in den Speicher — für Tests, die einen Bestand
+    // Legt einen Vermerk ohne SaveChanges in den Speicher, für Tests, die einen Bestand
     // vor dem ersten Durchlauf brauchen.
     public void SeedFailure(ParseFailure failure)
     {

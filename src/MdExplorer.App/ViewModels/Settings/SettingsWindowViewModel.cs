@@ -27,12 +27,12 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
     /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
 
-    /// <summary>Erzeugt das ViewModel — bezieht den aktuellen Settings-Stand aus dem Service.</summary>
+    /// <summary>Erzeugt das ViewModel und bezieht den aktuellen Settings-Stand aus dem Service.</summary>
     public SettingsWindowViewModel(
         ISettingsService settingsService,
         SettingsValidator validator,

@@ -14,7 +14,7 @@ namespace MdExplorer.App.Tests.Views;
 /// <remarks>
 /// <para>
 /// Der Grund ist nicht die Abdeckungszahl, sondern das, was hier schiefgehen kann: Jeder der
-/// drei greift über <c>StaticResource</c> auf die Belegung zu — <c>PagePadding</c>,
+/// drei greift über <c>StaticResource</c> auf die Belegung zu: <c>PagePadding</c>,
 /// <c>FontSizeSubtitle</c>, <c>ControlCornerRadius</c>, <c>BoolToVisibility</c>. Wird einer
 /// dieser Namen umbenannt, **bleibt der Bau grün**: Das Markup wird erst beim Erzeugen
 /// gelesen. Der Fehler zeigt sich dann im laufenden Programm, an der Stelle, an der die
@@ -27,7 +27,7 @@ namespace MdExplorer.App.Tests.Views;
 /// </remarks>
 public sealed class DesignLineControlTests
 {
-    /// <summary>Die Wörterbücher, die <c>App.xaml</c> zusammenführt — in derselben Reihenfolge.</summary>
+    /// <summary>Die Wörterbücher, die <c>App.xaml</c> zusammenführt, in derselben Reihenfolge.</summary>
     private static readonly string[] ThemeDictionaries =
     [
         "/Themes/Tokens.xaml",
@@ -110,7 +110,7 @@ public sealed class DesignLineControlTests
 
             sut.FocusInput();
 
-            // Ohne Fenster nimmt nichts den Fokus an — geprüft ist, dass der Zugriff auf das
+            // Ohne Fenster nimmt nichts den Fokus an; geprüft ist, dass der Zugriff auf das
             // Feld gelingt und der Inhalt dabei unangetastet bleibt.
             Assert.Equal("vorher", sut.Text, StringComparer.Ordinal);
         });
@@ -151,7 +151,7 @@ public sealed class DesignLineControlTests
     /// <remarks>
     /// Es entsteht bewusst **kein** Fenster: Zum Auflösen von <c>StaticResource</c> genügt eine
     /// Anwendung mit gefüllten Ressourcen. Die Anwendung wird nur angelegt, wenn es noch keine
-    /// gibt — der Testläufer führt mehrere Prüfungen im selben Prozess aus.
+    /// gibt, denn der Testläufer führt mehrere Prüfungen im selben Prozess aus.
     /// </remarks>
     private static void WithApplicationResources(Action body)
     {
@@ -189,7 +189,7 @@ public sealed class DesignLineControlTests
     /// <remarks>
     /// Die Zusage des Bausteins: Die Escape-Taste leert das Feld. Wer sucht und danebengreift,
     /// kommt mit einem Griff zurück, ohne die Hand von der Tastatur zu nehmen. Der Weg dorthin
-    /// führt über das benannte Eingabefeld aus dem Markup — beide Enden werden hier geprüft.
+    /// führt über das benannte Eingabefeld aus dem Markup; beide Enden werden hier geprüft.
     /// </remarks>
     [Fact]
     public void SearchBox_OnEscape_ClearsTheText() => StaRunner.Run(() =>
@@ -242,7 +242,7 @@ public sealed class DesignLineControlTests
     });
 
     /// <remarks>
-    /// Derselbe Vorgang über die Schaltfläche im Feld — für alle, die mit der Maus arbeiten.
+    /// Derselbe Vorgang über die Schaltfläche im Feld, für alle, die mit der Maus arbeiten.
     /// </remarks>
     [Fact]
     public void SearchBox_OnClearButton_ClearsTheText() => StaRunner.Run(() =>

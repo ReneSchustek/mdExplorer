@@ -2,7 +2,7 @@ namespace MdExplorer.Indexer.Abstractions;
 
 /// <summary>
 /// Berechnet einen stabilen, kollisionsarmen Inhalts-Hash für eine Datei.
-/// Implementierung muss streamend arbeiten — kein <c>ReadAllBytes</c>.
+/// Implementierung muss streamend arbeiten, kein <c>ReadAllBytes</c>.
 /// </summary>
 public interface IHashCalculator
 {

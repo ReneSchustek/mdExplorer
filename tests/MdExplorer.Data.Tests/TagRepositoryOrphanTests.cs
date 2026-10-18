@@ -10,7 +10,7 @@ namespace MdExplorer.Data.Tests;
 /// Prüft das Wegräumen von Schlagworten, an denen keine Datei mehr hängt.
 /// </summary>
 /// <remarks>
-/// Ein Schlagwort ist abgeleitet — es entsteht, weil eine Datei es nennt. Nennt es keine
+/// Ein Schlagwort ist abgeleitet: Es entsteht, weil eine Datei es nennt. Nennt es keine
 /// mehr, bliebe die Zeile ohne Aufräumen für immer stehen: Die Auswertung für die Wolke
 /// verbindet über die Zuordnungen und lässt sie weg, also fiele sie niemandem auf.
 /// </remarks>

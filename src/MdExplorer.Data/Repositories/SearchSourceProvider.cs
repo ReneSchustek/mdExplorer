@@ -6,7 +6,7 @@ namespace MdExplorer.Data.Repositories;
 
 /// <summary>
 /// EF-Core-Implementierung von <see cref="ISearchSourceProvider"/>. Lädt Dokument-Stammdaten
-/// und Tag-Aggregat in zwei untracked Queries — der Snapshot ist ein Read-Only-View.
+/// und Tag-Aggregat in zwei untracked Queries, denn der Snapshot ist ein Read-Only-View.
 /// </summary>
 public sealed class SearchSourceProvider : ISearchSourceProvider
 {

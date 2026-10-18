@@ -6,7 +6,7 @@ namespace MdExplorer.Parser.Tests.Fakes;
 /// <summary>
 /// EF-realistischer Fake: <see cref="AddAsync"/> puffert in eine Pending-Liste,
 /// <see cref="SaveChangesAsync"/> committet sie. Damit reproduziert der Fake das
-/// SQLite-Verhalten (UNIQUE constraint failed: Tags.Slug) — der echte EF
+/// SQLite-Verhalten (UNIQUE constraint failed: Tags.Slug); der echte EF
 /// macht erst beim <c>SaveChanges</c> die Inserts, vorher sieht <c>GetBySlugsAsync</c>
 /// nur den committeten DB-Stand.
 /// </summary>

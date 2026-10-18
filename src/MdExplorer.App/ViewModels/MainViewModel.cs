@@ -35,7 +35,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c> — dann wartet das Schließen auf Arbeit, die
+    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
     /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
@@ -192,7 +192,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     public string Title => "MdExplorer";
 #pragma warning restore S2325
 
-    /// <summary>Pfad-Anzeige in der Statusleiste — Speicherort der Settings/Datenbank.</summary>
+    /// <summary>Pfad-Anzeige in der Statusleiste: Speicherort der Settings/Datenbank.</summary>
     public string StorageLocation { get; }
 
     /// <summary>
@@ -290,13 +290,13 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     /// Hot-Save. Jeder Wechsel der Sichtbarkeit (Command, Menü-TwoWay-Binding,
     /// Ctrl+T) wird sofort persistiert, damit der Stand beim nächsten Start auch dann erhalten
     /// bleibt, wenn das Hauptfenster ungewöhnlich beendet wird (Task-Manager / Power-Loss).
-    /// Der Initial-Wert wird im Konstruktor direkt in das Backing-Field geschrieben — die
+    /// Der Initial-Wert wird im Konstruktor direkt in das Backing-Field geschrieben; die
     /// partielle Methode feuert daher beim Initial-Load nicht, und es entsteht keine Save-Schleife.
     /// </summary>
     partial void OnIsTagCloudVisibleChanged(bool value) => PersistColumnLayout();
 
     /// <summary>Hot-Save für den Left-Tab-Index. Initial-Wert wird im Konstruktor
-    /// direkt in das Backing-Field geschrieben — der Hook feuert beim Start nicht.</summary>
+    /// direkt in das Backing-Field geschrieben. Der Hook feuert beim Start nicht.</summary>
     partial void OnLeftTabIndexChanged(int value) => PersistColumnLayout();
 
     private void OnIndexerProgress(object? sender, IndexerScanProgressEventArgs args)
@@ -415,7 +415,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
             Guid? targetId = await _documentLocator.FindByAbsolutePathAsync(absolutePath, _shutdownToken).ConfigureAwait(true);
             if (targetId is null)
             {
-                // Indexer kennt die Datei noch nicht — Direct-Load aus dem Dateisystem,
+                // Indexer kennt die Datei noch nicht: Direct-Load aus dem Dateisystem,
                 // damit der Nutzer Inhalt sieht, ohne auf den ersten Scan warten zu müssen.
                 LogPathUnresolved(_logger, absolutePath);
                 await DocumentPanel.LoadByPathAsync(absolutePath, _shutdownToken).ConfigureAwait(true);
@@ -425,7 +425,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         }
         catch (DbException exception)
         {
-            // SQLite-Spitze beim Locator-Lookup — Navigation still verwerfen.
+            // SQLite-Spitze beim Locator-Lookup; Navigation still verwerfen.
             LogNavigationFailed(_logger, absolutePath, exception);
         }
     }

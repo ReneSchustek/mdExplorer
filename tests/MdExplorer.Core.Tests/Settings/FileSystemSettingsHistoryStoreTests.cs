@@ -43,7 +43,7 @@ public sealed class FileSystemSettingsHistoryStoreTests : IDisposable
     [Fact]
     public void Constructor_WithNonPositiveRetention_Throws()
     {
-        // Retention 0 würde jeden gerade geschriebenen Schnappschuss sofort wieder löschen —
+        // Retention 0 würde jeden gerade geschriebenen Schnappschuss sofort wieder löschen;
         // die Historie wäre dauerhaft leer, ohne dass es auffiele.
         _ = Assert.Throws<ArgumentOutOfRangeException>(() => new FileSystemSettingsHistoryStore(
             _historyDir,
@@ -69,7 +69,7 @@ public sealed class FileSystemSettingsHistoryStoreTests : IDisposable
     public async Task RecordAsync_WhenAnOldSnapshotIsLocked_KeepsWritingTheNewOne()
     {
         // Ein Virenscanner oder ein offener Editor kann einen alten Schnappschuss halten.
-        // Das Aufräumen ist Nebensache — das Schreiben des neuen Standes darf nicht scheitern.
+        // Das Aufräumen ist Nebensache: das Schreiben des neuen Standes darf nicht scheitern.
         using FileSystemSettingsHistoryStore sut = new(
             _historyDir,
             _auditPath,

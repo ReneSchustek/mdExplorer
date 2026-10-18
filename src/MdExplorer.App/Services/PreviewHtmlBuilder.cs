@@ -28,7 +28,7 @@ internal sealed partial class PreviewHtmlBuilder
     /// </summary>
     /// <remarks>
     /// Geöffnet wird ausschließlich <c>img-src</c>, und nur für <c>https</c>. Skripte,
-    /// Stilvorlagen und alles Übrige bleiben gesperrt — ein Bild darf geladen werden, mehr
+    /// Stilvorlagen und alles Übrige bleiben gesperrt. Ein Bild darf geladen werden, mehr
     /// nicht.
     /// </remarks>
     public const string ContentSecurityPolicyWithRemoteImages =
@@ -42,14 +42,14 @@ internal sealed partial class PreviewHtmlBuilder
     /// <para>
     /// Die Vorschau wird per <c>NavigateToString</c> geladen; die Basis-Adresse des Dokuments
     /// ist damit <c>about:blank</c>. Ein relativer Bildpfad wie
-    /// <c>docs/screenshots/suche.png</c> hat dort nichts, worauf er sich beziehen könnte —
+    /// <c>docs/screenshots/suche.png</c> hat dort nichts, worauf er sich beziehen könnte:
     /// <b>kein einziges Bild einer Notiz war je zu sehen</b>. Ein <c>file:///</c>-Pfad hilft
     /// nicht: Chromium lädt keine Datei-Unterressourcen in ein Dokument fremder Herkunft.
     /// </para>
     /// <para>
     /// Der Weg, den WebView2 dafür vorsieht, ist ein virtueller Rechnername, der auf einen
     /// Ordner zeigt. Die Endung <c>.invalid</c> ist nach RFC 2606 dafür reserviert, niemals
-    /// im Netz aufgelöst zu werden — der Name kann also unter keinen Umständen irgendwo
+    /// im Netz aufgelöst zu werden; der Name kann also unter keinen Umständen irgendwo
     /// landen. Zugelassen wird er in der Sicherheitsregel ausdrücklich und einzeln; alles
     /// andere bleibt gesperrt, insbesondere Abzeichen und Bilder aus dem Netz.
     /// </para>
@@ -64,7 +64,7 @@ internal sealed partial class PreviewHtmlBuilder
     private readonly IEffectiveThemeProvider _themeProvider;
     private readonly ISettingsService _settings;
 
-    /// <summary>Konstruktor mit injizierbaren Abhängigkeiten — für Tests.</summary>
+    /// <summary>Konstruktor mit injizierbaren Abhängigkeiten, für Tests.</summary>
     public PreviewHtmlBuilder(IEffectiveThemeProvider themeProvider, ISettingsService settings)
     {
         ArgumentNullException.ThrowIfNull(themeProvider);
@@ -104,7 +104,7 @@ internal sealed partial class PreviewHtmlBuilder
     /// </summary>
     /// <remarks>
     /// Angefasst wird nur, was wirklich relativ ist. Ein <c>data:</c>-Bild, ein Bild aus dem
-    /// Netz und ein absoluter Pfad bleiben stehen, wie sie sind — das Bild aus dem Netz wird
+    /// Netz und ein absoluter Pfad bleiben stehen, wie sie sind. Das Bild aus dem Netz wird
     /// von der Sicherheitsregel abgewiesen, und das ist so gewollt.
     /// </remarks>
     private static string RewriteRelativeImageSources(string bodyHtml)

@@ -4,7 +4,7 @@ namespace MdExplorer.Parser.Tests.Helpers;
 
 /// <summary>
 /// Zeichnet auf, was protokolliert wurde. Nötig, um zu prüfen, ob ein Eintrag den vollen
-/// Aufrufstapel mitführt oder nicht — genau das unterscheidet den ersten Fehlschlag einer
+/// Aufrufstapel mitführt oder nicht. Genau das unterscheidet den ersten Fehlschlag einer
 /// Datei von jedem weiteren.
 /// </summary>
 internal sealed class RecordingLogger<T> : ILogger<T>

@@ -3,7 +3,7 @@ namespace MdExplorer.Core.Abstractions;
 /// <summary>
 /// Liefert die Rohdaten, aus denen der FTS5-Index-Maintainer den Such-Index aufbaut.
 /// Implementierung liegt in der Data-Schicht (EF-Core), damit das Search-Modul
-/// EF-frei bleibt — analoges Pattern zu <see cref="IGraphSourceProvider"/>.
+/// EF-frei bleibt. Analoges Pattern zu <see cref="IGraphSourceProvider"/>.
 /// </summary>
 public interface ISearchSourceProvider
 {
@@ -23,12 +23,12 @@ public sealed record SearchSourceData(
     IReadOnlyDictionary<Guid, IReadOnlyList<string>> TagsByFileId);
 
 /// <summary>Minimal-Repräsentation eines indizierungsrelevanten Dokuments.</summary>
-/// <param name="MarkdownFileId">Fremdschlüssel auf <c>MarkdownFile.Id</c> — Identität des Index-Eintrags.</param>
-/// <param name="Title">Titel — entspricht <c>MarkdownFile.FileNameWithoutExtension</c>.</param>
-/// <param name="AbsolutePath">Absoluter Dateipfad — Quelle für den Body-Text.</param>
-/// <param name="RelativePath">Relativer Pfad — wird als <c>Path</c>-Spalte im FTS5-Index gespeichert.</param>
-/// <param name="SourceContentHash">Aktueller Quell-Hash — Idempotenz-Marker.</param>
-/// <param name="FrontmatterJson">Frontmatter-JSON aus dem Parser — wird im Maintainer flachgeklopft.</param>
+/// <param name="MarkdownFileId">Fremdschlüssel auf <c>MarkdownFile.Id</c> als Identität des Index-Eintrags.</param>
+/// <param name="Title">Titel, entspricht <c>MarkdownFile.FileNameWithoutExtension</c>.</param>
+/// <param name="AbsolutePath">Absoluter Dateipfad als Quelle für den Body-Text.</param>
+/// <param name="RelativePath">Relativer Pfad, wird als <c>Path</c>-Spalte im FTS5-Index gespeichert.</param>
+/// <param name="SourceContentHash">Aktueller Quell-Hash (Idempotenz-Marker).</param>
+/// <param name="FrontmatterJson">Frontmatter-JSON aus dem Parser. Wird im Maintainer flachgeklopft.</param>
 public sealed record SearchSourceDocument(
     Guid MarkdownFileId,
     string Title,

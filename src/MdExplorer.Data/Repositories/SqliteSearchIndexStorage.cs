@@ -136,7 +136,7 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
             await using (transaction.ConfigureAwait(false))
             {
                 // In einem Zug statt Zeile für Zeile. "MarkdownFileId" ist in der
-                // FTS5-Tabelle UNINDEXED — jede Bedingung darauf liest die ganze Tabelle.
+                // FTS5-Tabelle UNINDEXED, jede Bedingung darauf liest die ganze Tabelle.
                 // Einzeln gelöscht kostet das rund 170 ms je Datei; über 25.000 verwaiste
                 // Einträge wäre das mehr als eine Stunde. Eine Anweisung
                 // je Portion liest die Tabelle einmal für 500 Dateien statt 500-mal.
@@ -255,7 +255,7 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
     }
 
     // Lädt die Body-Spalten eines Id-Chunks in einem einzigen Roundtrip. Fehlende Ids liefert
-    // FTS5 einfach nicht zurück — der Aufrufer-Kontrakt (fehlende Ids ausgelassen) bleibt gewahrt.
+    // FTS5 einfach nicht zurück; der Aufrufer-Kontrakt (fehlende Ids ausgelassen) bleibt gewahrt.
     private static async Task LoadBodyChunkAsync(
         SqliteConnection connection,
         Guid[] chunk,
@@ -265,7 +265,7 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
         using SqliteCommand command = connection.CreateCommand();
         // CA2100: Der CommandText besteht aus der konstanten SELECT-Basis plus generierten
         // Parameter-Platzhaltern ($p0..$pn). Kein Guid-Wert wird per String-Konkatenation
-        // eingesetzt — die Werte reisen ausschließlich als gebundene Parameter (AddWithValue).
+        // eingesetzt. Die Werte reisen ausschließlich als gebundene Parameter (AddWithValue).
 #pragma warning disable CA2100
         command.CommandText = BuildBodiesByIdsSql(chunk.Length);
 #pragma warning restore CA2100
@@ -293,7 +293,7 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
     }
 
     // Setzt "... IN ($p0, $p1, ..., $pn);" aus der konstanten Basis und reinen Platzhaltern
-    // zusammen. Werte tauchen hier bewusst nicht auf — nur die Anzahl steuert die Länge.
+    // zusammen. Werte tauchen hier bewusst nicht auf, nur die Anzahl steuert die Länge.
     private static string BuildBodiesByIdsSql(int parameterCount)
     {
         StringBuilder sql = new(SelectBodiesByIdsPrefix.Length + (parameterCount * 6) + 4);
@@ -336,7 +336,7 @@ public sealed class SqliteSearchIndexStorage : ISearchIndexStorage
         {
             using SqliteCommand command = connection.CreateCommand();
             command.Transaction = transaction;
-            // CA2100: gleiche Lage wie bei der Body-Sammelabfrage — konstante Basis plus
+            // CA2100: gleiche Lage wie bei der Body-Sammelabfrage: konstante Basis plus
             // generierte Platzhalter; die Werte reisen ausschließlich als Parameter.
 #pragma warning disable CA2100
             command.CommandText = BuildDeleteByIdsSql(portion.Length);

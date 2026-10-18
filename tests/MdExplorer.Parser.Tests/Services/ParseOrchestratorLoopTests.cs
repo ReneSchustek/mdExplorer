@@ -16,7 +16,7 @@ namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
 /// Prüft die Polling-Schleife des <see cref="ParseOrchestrator"/> als Hintergrunddienst.
-/// Die Schleife hat keinen Rückgabewert und keinen sichtbaren Zustand — ob sie nach einem
+/// Die Schleife hat keinen Rückgabewert und keinen sichtbaren Zustand. Ob sie nach einem
 /// Fehlschlag weiterläuft, entscheidet aber darüber, ob geänderte Dateien überhaupt jemals
 /// neu geparst werden. Die Zeit kommt aus einem <see cref="FakeTimeProvider"/>, damit kein
 /// Test auf echte Sekunden wartet.
@@ -29,7 +29,7 @@ public sealed class ParseOrchestratorLoopTests
     public async Task ExecuteAsync_OnStart_ParsesBeforeTheFirstTick()
     {
         // Ohne den Vorab-Lauf bliebe frisch geänderter Inhalt eine volle Intervall-Länge
-        // unsichtbar — der Nutzer sieht nach dem Start die alte Vorschau.
+        // unsichtbar; der Nutzer sieht nach dem Start die alte Vorschau.
         Schleifenumgebung u = new();
         await using (u.ConfigureAwait(true))
         {
@@ -264,7 +264,7 @@ public sealed class ParseOrchestratorLoopTests
         /// <summary>
         /// Wartet auf eine Bedingung und treibt dabei die Uhr weiter. Das Vorstellen geschieht in
         /// der Schleife statt einmalig, weil sonst ein Tick verloren gehen kann, solange die
-        /// Schleife den Zeitgeber noch nicht erreicht hat — der Test würde dann je nach
+        /// Schleife den Zeitgeber noch nicht erreicht hat; der Test würde dann je nach
         /// Maschinenlast unterschiedlich ausgehen.
         /// </summary>
         public async Task<bool> WarteAufBedingungAsync(Func<bool> bedingung)
@@ -296,7 +296,7 @@ public sealed class ParseOrchestratorLoopTests
     }
 
     /// <summary>
-    /// Quelle, die ihre Durchläufe zählt und — anders als <see cref="FakeMarkdownSourceProvider"/> —
+    /// Quelle, die ihre Durchläufe zählt und (anders als <see cref="FakeMarkdownSourceProvider"/>)
     /// denselben Fehler bei jedem Durchlauf wirft. Genau das braucht der Test der Schleife:
     /// ein einmaliger Fehler würde nicht zeigen, ob sie dauerhaft weiterläuft.
     /// </summary>
@@ -337,7 +337,7 @@ public sealed class ParseOrchestratorLoopTests
         }
     }
 
-    /// <summary><see cref="DbException"/> ist abstrakt — für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
+    /// <summary><see cref="DbException"/> ist abstrakt; für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
     private sealed class TestDbException : DbException
     {
         public TestDbException()

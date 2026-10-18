@@ -9,7 +9,7 @@ namespace MdExplorer.App.Services;
 /// <param name="ResultColumnWidth">Breite der Trefferlisten-Spalte in Pixel.</param>
 /// <param name="PreviewColumnWidth">Breite der Vorschau-Spalte in Pixel.</param>
 /// <param name="HelpWindow">Geometrie des Hilfefensters; <see langword="null"/>, solange
-/// das Fenster noch nie geöffnet wurde — dann gilt die Default-Geometrie.</param>
+/// das Fenster noch nie geöffnet wurde; dann gilt die Default-Geometrie.</param>
 /// <param name="IsTagCloudVisible">Ob das Tag-Cloud-Panel sichtbar ist. Default sichtbar.</param>
 /// <param name="LeftTabIndex">Zuletzt gewählter Tab in der linken Spalte (0=Ordner, 1=Alle Dateien, 2=Suche).</param>
 /// <param name="GraphPathPrefix">Zuletzt im Graph-Fenster gesetzter Pfad-Prefix-Filter. <see langword="null"/>

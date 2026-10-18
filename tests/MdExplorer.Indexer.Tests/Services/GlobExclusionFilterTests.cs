@@ -109,7 +109,7 @@ public sealed class GlobExclusionFilterTests
     [Fact]
     public void IsExcluded_OnAFileOutsideTheRoot_DoesNotExclude()
     {
-        // Ein Pfad außerhalb der Wurzel erlaubt keine Aussage — die Muster sind
+        // Ein Pfad außerhalb der Wurzel erlaubt keine Aussage; die Muster sind
         // wurzelrelativ. "Nicht ausgeschlossen" ist hier die sichere Antwort.
         using GlobExclusionFilter sut = Build(["**/*.md"]);
 

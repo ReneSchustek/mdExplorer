@@ -7,7 +7,7 @@ namespace MdExplorer.App.Services.Help;
 /// im Über-Dialog.
 /// <para>
 /// Die Ziel-URL ist bewusst eine Compile-Zeit-Konstante und wird <b>niemals</b> aus
-/// Settings, Datenbank, Umgebungsvariable oder Netz-Antwort gelesen — so gibt es zur
+/// Settings, Datenbank, Umgebungsvariable oder Netz-Antwort gelesen. So gibt es zur
 /// Laufzeit keinen austauschbaren Wert, über den jemand das Geld umleiten könnte.
 /// </para>
 /// </summary>

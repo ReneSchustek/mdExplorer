@@ -95,7 +95,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            // Erwartetes Ende — Cancellation ist die normale Abbruchsemantik.
+            // Erwartetes Ende: Cancellation ist die normale Abbruchsemantik.
         }
         catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex))
         {
@@ -211,13 +211,13 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     /// <para>
     /// Das Entfernen hängt <b>nicht</b> daran, ob jeder Stapel geschrieben werden konnte.
     /// Sonst ließe eine Datenbank-Spitze beim Schreiben den zweiten Schritt ganz ausfallen,
-    /// der Wächter beendete den Dienst, und danach liefe kein Abgleich mehr — weder für neue
+    /// der Wächter beendete den Dienst, und danach liefe kein Abgleich mehr, weder für neue
     /// Dateien noch für verschwundene. Verwaiste Einträge sammelten sich unbemerkt an.
     /// </para>
     /// <para>
     /// Was dagegen sehr wohl gilt: <b>Ein halb gelesener Baum darf nichts entfernen.</b>
-    /// Bricht die Aufzählung ab, kennt <c>filesOnDisk</c> nur einen Teil des Bestands —
-    /// alles Ungelesene sähe wie gelöscht aus. Dann wird ausgesetzt und protokolliert.
+    /// Bricht die Aufzählung ab, kennt <c>filesOnDisk</c> nur einen Teil des Bestands,
+    /// und alles Ungelesene sähe wie gelöscht aus. Dann wird ausgesetzt und protokolliert.
     /// </para>
     /// </remarks>
     private async Task<int> SyncRootAsync(string root, CancellationToken cancellationToken)
@@ -238,7 +238,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     }
 
     /// <summary>Ergebnis eines Scan-Durchgangs über eine Wurzel.</summary>
-    /// <param name="FilesOnDisk">Die gefundenen Dateien — vollständig nur bei <paramref name="EnumerationCompleted"/>.</param>
+    /// <param name="FilesOnDisk">Die gefundenen Dateien, vollständig nur bei <paramref name="EnumerationCompleted"/>.</param>
     /// <param name="TotalProcessed">Wie viele Dateien angefasst wurden.</param>
     /// <param name="EnumerationCompleted">Ob der Baum vollständig gelesen wurde.</param>
     private readonly record struct ScanOutcome(
@@ -253,7 +253,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         // Batching im Initial-Scan: nach jeweils _options.InitialScanBatchSize Dateien
         // committen wir Zwischen-Stand und feuern ein Progress-Event. Auf großen Roots
         // (mehrere Tausend .md-Dateien) wird damit der "Alle Dateien"-Tab inkrementell
-        // befüllt — er bleibt sonst minutenlang leer, bis SaveChangesAsync ganz am Ende greift.
+        // befüllt, denn er bleibt sonst minutenlang leer, bis SaveChangesAsync ganz am Ende greift.
         int batchSize = Math.Max(1, _options.InitialScanBatchSize);
         HashSet<string> filesOnDisk = new(PathComparer);
         int totalProcessed = 0;
@@ -279,7 +279,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
                         await CommitBatchAsync(repository, batchAccumulator, totalProcessed, root, cancellationToken).ConfigureAwait(false);
                         RaiseProgress(root, totalProcessed, isCompleted: false);
 
-                        // Neuer Scope: EF-Change-Tracker bleibt schlank — bei 10k+ Files
+                        // Neuer Scope: EF-Change-Tracker bleibt schlank. Bei 10k+ Files
                         // würde ein einziger Tracker überproportional viel RAM ziehen.
                         await scope.DisposeAsync().ConfigureAwait(false);
                         scope = _scopeFactory.CreateAsyncScope();
@@ -293,7 +293,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // Der Baum ist nur zum Teil gelesen. Was schon geschrieben wurde, bleibt
-                // stehen; entfernt wird nichts — das entscheidet der Aufrufer am Merker.
+                // stehen; entfernt wird nichts. Das entscheidet der Aufrufer am Merker.
                 LogEnumerationFailed(_logger, root, ex);
             }
 
@@ -310,7 +310,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         }
     }
 
-    /// <summary>Schreibt einen Stapel — ein Fehlschlag beendet den Lauf nicht.</summary>
+    /// <summary>Schreibt einen Stapel; ein Fehlschlag beendet den Lauf nicht.</summary>
     /// <remarks>
     /// Eine Datenbank-Spitze kostet den Stapel, nicht den Durchgang: Die Dateien stehen
     /// weiter auf der Platte und werden beim nächsten Abgleich erneut angeboten. Ohne diesen
@@ -361,7 +361,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
 
             // Als Menge und nicht Stück für Stück: Bei einem gewachsenen Bestand sind das
             // Zehntausende Einträge, und einzeln kostet jeder davon einen Abgleich über alle
-            // vorgemerkten — der Durchgang bleibt dann stehen, statt lange zu dauern.
+            // vorgemerkten. Der Durchgang bleibt dann stehen, statt lange zu dauern.
             int removed = await repository.RemoveRangeAsync(tombstoned, cancellationToken).ConfigureAwait(false);
             LogTombstonesRemoved(_logger, removed, root);
         }
@@ -434,7 +434,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
             catch (Exception ex) when (ex is DbException or IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
             {
                 // Eine Exception in einem Batch (SQLite-Spitze, IO-Fehler, kaputter
-                // FileSystemEvent) darf die ConsumeEventsAsync-Schleife nicht abbrechen — nächster
+                // FileSystemEvent) darf die ConsumeEventsAsync-Schleife nicht abbrechen: Der nächste
                 // Read läuft weiter, betroffener Batch verloren.
                 LogProcessBatchFailed(_logger, ex);
             }

@@ -35,7 +35,7 @@ public sealed class AppPathsTests
     [Fact]
     public void GetWebView2DataDirectory_LiesUnderTheWritableApplicationDataDirectory()
     {
-        // Neben der Programmdatei liegt nach einer Installation C:\Program Files — dort
+        // Neben der Programmdatei liegt nach einer Installation C:\Program Files; dort
         // darf die Browser-Komponente nicht schreiben.
         string actual = AppPaths.GetWebView2DataDirectory();
 

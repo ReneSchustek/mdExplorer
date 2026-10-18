@@ -5,7 +5,7 @@ namespace MdExplorer.App.Services.Help;
 /// Schreibzugriff erfolgt über <see cref="Interlocked.Exchange{T}(ref T, T)"/>
 /// und <see cref="Volatile.Read{T}(ref T)"/>, sodass das Lesen aus dem
 /// Hilfe-Fenster (UI-Thread) und das Schreiben aus dem fokussierenden View
-/// (ebenfalls UI-Thread) konsistent bleibt — und auch dann sicher, wenn ein
+/// (ebenfalls UI-Thread) konsistent bleibt, und auch dann sicher, wenn ein
 /// Hintergrund-Worker den Kontext setzt.
 /// </summary>
 internal sealed class HelpContextProvider : IHelpContextProvider

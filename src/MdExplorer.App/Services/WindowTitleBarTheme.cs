@@ -8,7 +8,7 @@ namespace MdExplorer.App.Services;
 /// Zieht die Titelleiste eines Fensters an das gewählte Erscheinungsbild.
 /// </summary>
 /// <remarks>
-/// Die Titelleiste zeichnet Windows, nicht die Anwendung — und es färbt sie nur dann dunkel,
+/// Die Titelleiste zeichnet Windows, nicht die Anwendung, und es färbt sie nur dann dunkel,
 /// wenn das <b>System</b> dunkel steht. Wer in den Einstellungen „Dunkel" wählt, während
 /// Windows hell läuft, bekam deshalb über jedem Fenster einen weißen Balken. Das lässt sich
 /// dem Fenstermanager sagen; mehr als diese eine Angabe ist dafür nicht nötig.
@@ -23,7 +23,7 @@ internal static class WindowTitleBarTheme
     /// Setzt die Titelleiste des Fensters auf hell oder dunkel.
     /// </summary>
     /// <remarks>
-    /// Scheitert der Aufruf — etwa auf einer älteren Windows-Fassung —, bleibt die Leiste,
+    /// Scheitert der Aufruf (etwa auf einer älteren Windows-Fassung), bleibt die Leiste,
     /// wie sie ist. Das ist ein Schönheitsfehler und kein Grund, ein Fenster nicht zu zeigen.
     /// </remarks>
     /// <param name="window">Das betroffene Fenster.</param>
@@ -47,7 +47,7 @@ internal static class WindowTitleBarTheme
     }
 
     // Nur aus dem Systemverzeichnis laden: Ohne diese Angabe sucht Windows die Bibliothek
-    // zuerst neben der Anwendung — dort könnte jemand eine eigene hinterlegen.
+    // zuerst neben der Anwendung; dort könnte jemand eine eigene hinterlegen.
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("dwmapi.dll", CharSet = CharSet.Unicode, SetLastError = false)]
     private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);

@@ -14,7 +14,7 @@ namespace MdExplorer.App.Services;
 /// <remarks>
 /// Die Reihenfolge ist bewusst gewählt: erst die Datei, dann der Index. Scheitert die
 /// Datei-Operation, bleibt der Index unberührt und stimmt weiter. Scheitert der Index-Schritt,
-/// steht die Datei bereits am neuen Ort — dann ist der Eintrag veraltet, und der nächste
+/// steht die Datei bereits am neuen Ort; dann ist der Eintrag veraltet, und der nächste
 /// Indexer-Lauf richtet ihn wieder. Umgekehrt wäre der Schaden größer: ein Index, der auf
 /// einen Pfad zeigt, den niemand angelegt hat.
 /// </remarks>
@@ -132,11 +132,11 @@ internal sealed partial class DocumentFileService : IDocumentFileService
 
     private static string DirectoryOf(string absolutePath) => Path.GetDirectoryName(absolutePath) ?? string.Empty;
 
-    /// <summary>Bildet den relativen Pfad neu — er hängt am bisherigen Verhältnis zur Wurzel.</summary>
+    /// <summary>Bildet den relativen Pfad neu, denn er hängt am bisherigen Verhältnis zur Wurzel.</summary>
     /// <remarks>
     /// Aus dem bisherigen Paar aus absolutem und relativem Pfad lässt sich die Wurzel
     /// zurückrechnen, ohne die Einstellungen zu befragen. Liegt das Ziel außerhalb dieser
-    /// Wurzel, bleibt nur der Dateiname — der nächste Indexer-Lauf setzt den Eintrag dann
+    /// Wurzel, bleibt nur der Dateiname; der nächste Indexer-Lauf setzt den Eintrag dann
     /// unter der Wurzel neu an, unter die das Ziel tatsächlich gehört.
     /// </remarks>
     private static string RelativePathFor(MarkdownFile file, string newAbsolutePath)

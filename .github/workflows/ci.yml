@@ -32,8 +32,8 @@ jobs:
 
       - name: Test
         # Performance-Tests sind laufzeitabhängig und auf gemeinsam genutzten Runnern
-        # nicht aussagekräftig — sie laufen lokal, nicht als CI-Gate.
+        # nicht aussagekräftig, denn sie laufen lokal, nicht als CI-Gate.
         run: dotnet test MdExplorer.slnx -c Release --no-build --filter "Category!=Performance"
 
-# Der Secret-Scan läuft im Security-Workflow über die offizielle gitleaks-Action —
+# Der Secret-Scan läuft im Security-Workflow über die offizielle gitleaks-Action,
 # dort über die vollständige Historie und zusätzlich nach Zeitplan.

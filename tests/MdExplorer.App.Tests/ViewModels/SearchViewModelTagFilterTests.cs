@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace MdExplorer.App.Tests.ViewModels;
 
 /// <summary>
-/// Prüft die Tag-Filter-Aufnahme und die Zustandswechsel des Such-ViewModels — also die
+/// Prüft die Tag-Filter-Aufnahme und die Zustandswechsel des Such-ViewModels, also die
 /// Pfade, die nicht über die Texteingabe laufen: Klicks in der Tag-Cloud, Umschalten von
 /// Modus, Ähnlichkeit und Ordner-Beschränkung sowie das Leeren der Eingabe.
 /// </summary>

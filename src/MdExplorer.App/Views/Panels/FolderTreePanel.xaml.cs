@@ -7,7 +7,7 @@ namespace MdExplorer.App.Views.Panels;
 
 /// <summary>
 /// Linkes Panel mit der baumartigen Ordner-Navigation. Code-Behind ist auf das
-/// reine Event-Wiring beschränkt — Auswahl wird ans <see cref="FolderTreeViewModel"/> gespiegelt.
+/// reine Event-Wiring beschränkt: Die Auswahl wird ans <see cref="FolderTreeViewModel"/> gespiegelt.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class FolderTreePanel : UserControl

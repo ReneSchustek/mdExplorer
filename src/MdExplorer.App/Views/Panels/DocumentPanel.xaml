@@ -13,8 +13,8 @@
     <DockPanel LastChildFill="True">
         <!--
             Mit eigener Fläche, nicht durchsichtig: Eine Leiste ohne Hintergrund zeigt, was
-            zufällig dahinter liegt — hier der eingebettete Browser, der seine eigene weiße
-            Grundfarbe mitbringt und sie über die Leiste zog.
+            zufällig dahinter liegt (hier der eingebettete Browser, der seine eigene weiße
+            Grundfarbe mitbringt und sie über die Leiste zog).
         -->
         <Border DockPanel.Dock="Top"
                 Background="{DynamicResource ToolBarBackgroundBrush}"
@@ -173,7 +173,7 @@
             </Border>
             <!--
                 Zusammenhänge unter dem Dokument: wohin es verweist, wer auf es verweist, wo
-                es liegt und was es trägt. Jeder Eintrag ist ein Weg — wer eine Zeile liest
+                es liegt und was es trägt. Jeder Eintrag ist ein Weg. Wer eine Zeile liest
                 und danach doch suchen muss, hat nichts gewonnen.
             -->
             <Expander Grid.Row="2"

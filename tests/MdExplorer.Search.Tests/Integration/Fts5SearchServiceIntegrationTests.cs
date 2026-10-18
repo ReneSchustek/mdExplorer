@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace MdExplorer.Search.Tests.Integration;
 
 /// <summary>
-/// Integrationstests gegen eine echte SQLite-Datei (kein In-Memory — FTS5 verhält sich auf
+/// Integrationstests gegen eine echte SQLite-Datei (kein In-Memory, denn FTS5 verhält sich auf
 /// In-Memory anders). Pflegt Daten über den realen <c>Fts5IndexMaintainer</c> und sucht
 /// danach über den realen <c>Fts5SearchService</c>.
 /// </summary>
@@ -195,7 +195,7 @@ public sealed class Fts5SearchServiceIntegrationTests
     [Fact]
     public async Task Maintainer_OnDocumentDeletion_RemovesTheHit()
     {
-        // Der Abgleich räumt auf, kein Auslöser je Zeile — die
+        // Der Abgleich räumt auf, kein Auslöser je Zeile; die
         // Begründung steht in TriggerDiagnosticsTests. Für die Suche zählt das Ergebnis:
         // Nach dem nächsten Abgleich ist der Treffer weg.
         SearchTestHarness harness = new();

@@ -146,7 +146,7 @@ public sealed class LogViewerViewModelTests
 
         await sut.ExportCommand.ExecuteAsync(null).ConfigureAwait(true);
 
-        // Kein Wurf, keine Datei — der Abbruch ist der Normalfall.
+        // Kein Wurf, keine Datei: der Abbruch ist der Normalfall.
         _ = Assert.Single(sut.Entries);
     }
 

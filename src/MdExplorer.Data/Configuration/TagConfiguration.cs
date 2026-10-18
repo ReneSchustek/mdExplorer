@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace MdExplorer.Data.Configuration;
 
-/// <summary>Fluent-Mapping für <see cref="Tag"/> — Slug ist Unique, Name behält Originalschreibweise.</summary>
+/// <summary>Fluent-Mapping für <see cref="Tag"/>: Slug ist Unique, Name behält Originalschreibweise.</summary>
 public sealed class TagConfiguration : IEntityTypeConfiguration<Tag>
 {
     /// <summary>SQLite-Tabellenname.</summary>

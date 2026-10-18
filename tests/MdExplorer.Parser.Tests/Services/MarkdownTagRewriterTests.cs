@@ -4,7 +4,7 @@ namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
 /// Tests für den Tag-Rewriter: prüfen Body-Regex, YAML-Frontmatter (inline + block),
-/// Rename / Merge / Delete und Edge-Cases (Code-Blöcke werden NICHT geschont — Indexer-
+/// Rename / Merge / Delete und Edge-Cases (Code-Blöcke werden NICHT geschont, Indexer-
 /// Re-Sync triggert ohnehin neuen Parse).
 /// </summary>
 public sealed class MarkdownTagRewriterTests

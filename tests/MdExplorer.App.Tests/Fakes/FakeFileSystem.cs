@@ -3,7 +3,7 @@ using MdExplorer.Core.Abstractions;
 
 namespace MdExplorer.App.Tests.Fakes;
 
-/// <summary>Minimaler Fake — deckt nur die Aufrufe ab, die der Folder-Tree benötigt.</summary>
+/// <summary>Minimaler Fake: deckt nur die Aufrufe ab, die der Folder-Tree benötigt.</summary>
 internal sealed class FakeFileSystem : IFileSystem
 {
     public HashSet<string> Directories { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -24,11 +24,11 @@ internal sealed class FakeFileSystem : IFileSystem
 
     public string GetDirectoryFinalPath(string path) => path;
 
-    /// <summary>Der Fehler, den das Lesen meldet — <see langword="null"/>, wenn es gelingen soll.</summary>
+    /// <summary>Der Fehler, den das Lesen meldet; <see langword="null"/>, wenn es gelingen soll.</summary>
     /// <remarks>
     /// Eine gesperrte oder mitten im Zugriff gelöschte Datei ist im Betrieb der Normalfall
     /// und nicht die Ausnahme. Ohne diesen Haken bliebe der Zweig, der sie auffängt,
-    /// ungeprüft — und ein Aufrufer, der ihn wegoptimiert, fiele niemandem auf.
+    /// ungeprüft, und ein Aufrufer, der ihn wegoptimiert, fiele niemandem auf.
     /// </remarks>
     public Exception? FailOnRead { get; set; }
 
@@ -50,7 +50,7 @@ internal sealed class FakeFileSystem : IFileSystem
 
     /// <summary>
     /// Fehler, den <see cref="WriteAllBytesAtomicAsync"/> statt des Schreibens liefert.
-    /// Bildet eine schreibgeschützte oder belegte Zieldatei nach — anders lässt sich der
+    /// Bildet eine schreibgeschützte oder belegte Zieldatei nach. Anders lässt sich der
     /// Fehlerpfad des Editors gegen ein In-Memory-Dateisystem nicht auslösen.
     /// </summary>
     public Exception? FailOnWrite { get; set; }
@@ -90,7 +90,7 @@ internal sealed class FakeFileSystem : IFileSystem
         _ = Files.Remove(sourcePath);
     }
 
-    /// <summary>Der Fehler, den das Löschen meldet — <see langword="null"/>, wenn es gelingen soll.</summary>
+    /// <summary>Der Fehler, den das Löschen meldet; <see langword="null"/>, wenn es gelingen soll.</summary>
     /// <remarks>
     /// Eine Datei, die gerade in einem anderen Programm offen ist, lässt sich unter Windows
     /// nicht löschen. Das ist der wahrscheinlichste Fehlschlag des ganzen Vorgangs.

@@ -3,7 +3,7 @@
     sonst greift beim Wechsel zur Laufzeit eine Bindung ins Leere.
 
     Die Primärfarbe kippt hier bewusst von Petrol auf Stahlgrau: Auf dunklem Grund braucht
-    der Akzent Helligkeit — und der Text auf ihm kippt mit, sonst stünde Weiß auf Hellgrau.
+    der Akzent Helligkeit, und der Text auf ihm kippt mit, sonst stünde Weiß auf Hellgrau.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
@@ -20,7 +20,7 @@
     <SolidColorBrush x:Key="TextTertiaryBrush"       Color="#6B8090" />
     <SolidColorBrush x:Key="TextDisabledBrush"       Color="#4A5A68" />
 
-    <!-- Dunkle Schrift auf heller Primärfläche — die Umkehrung von Light.xaml. -->
+    <!-- Dunkle Schrift auf heller Primärfläche, die Umkehrung von Light.xaml. -->
     <SolidColorBrush x:Key="TextOnAccentBrush"       Color="#0F1923" />
 
     <!-- ── Akzent (Stahlgrau statt Petrol) ──────────────────────────────── -->

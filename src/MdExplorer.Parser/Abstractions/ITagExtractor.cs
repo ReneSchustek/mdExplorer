@@ -1,7 +1,7 @@
 namespace MdExplorer.Parser.Abstractions;
 
 /// <summary>
-/// Extrahiert Hashtag-Tokens (<c>#foo</c>) aus dem Body — explizit ohne Code-Blöcke und Inline-Code.
+/// Extrahiert Hashtag-Tokens (<c>#foo</c>) aus dem Body, explizit ohne Code-Blöcke und Inline-Code.
 /// </summary>
 public interface ITagExtractor
 {

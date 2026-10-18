@@ -3,12 +3,12 @@
 
     Ohne diese Datei nützen die Farbbelegungen wenig: Ein Bedienelement, an dem niemand
     eine Farbe gesetzt hat, nimmt nicht die der Anwendung, sondern die Voreinstellung des
-    Rahmenwerks — Weiß mit schwarzer Schrift. Im hellen Erscheinungsbild fällt das nicht
+    Rahmenwerks: Weiß mit schwarzer Schrift. Im hellen Erscheinungsbild fällt das nicht
     auf, im dunklen bleibt die halbe Oberfläche hell stehen. Genau so sah es hier aus,
     bevor diese Styles kamen.
 
     Der Weg führt über das Fenster: Es setzt Fläche und Schriftfarbe, und alles darin
-    erbt die Schriftfarbe. Ein pauschaler Style für jeden Textblock wäre der falsche Weg —
+    erbt die Schriftfarbe. Ein pauschaler Style für jeden Textblock wäre der falsche Weg,
     er schlüge die Vererbung und färbte auch die Beschriftungen um, die absichtlich auf
     einer Primärfläche stehen.
 
@@ -30,7 +30,7 @@
     <!-- ── Menü ─────────────────────────────────────────────────────────── -->
     <!--
         Das Aufklappmenü zeichnet WPF in einem eigenen Fenster und holt dessen Fläche aus den
-        Systemfarben — nicht aus dem Style des Eintrags. Die Überschreibungen dafür stehen in
+        Systemfarben, nicht aus dem Style des Eintrags. Die Überschreibungen dafür stehen in
         den Belegungen (Light.xaml/Dark.xaml), weil sie mit dem Erscheinungsbild wechseln.
     -->
     <Style TargetType="Menu">
@@ -40,7 +40,7 @@
 
     <!--
         Das Aufklappmenü zeichnet WPF in einem eigenen Fenster, und dessen Fläche kommt weder
-        aus dem Style des Eintrags noch aus den Systemfarben — sie steht im mitgelieferten
+        aus dem Style des Eintrags noch aus den Systemfarben; sie steht im mitgelieferten
         Muster fest. Im dunklen Erscheinungsbild stand deshalb helle Schrift auf weißem Grund:
         Die Menüpunkte waren buchstäblich nicht zu lesen. Beide Ebenen tragen jetzt ein
         eigenes Muster, der Eintrag in der Leiste und der Eintrag im Aufklappteil.
@@ -182,7 +182,7 @@
         Beide Register-Bausteine tragen ein eigenes Muster, und zwar aus einem Grund:
         Das mitgelieferte Muster von WPF zeichnet den gewählten Reiter und die Restfläche
         der Reiterleiste mit eigenen, festen Farben. Ein Setter für die Fläche läuft dort
-        ins Leere — im dunklen Erscheinungsbild stand der gewählte Reiter weiß da, mit
+        ins Leere. Im dunklen Erscheinungsbild stand der gewählte Reiter weiß da, mit
         heller Schrift darauf, und rechts daneben ein weißer Streifen.
 
         Was man ersetzt, muss man vollständig ersetzen: Die Muster bringen deshalb
@@ -243,7 +243,7 @@
                         <!--
                             Der gewählte Reiter trägt zusätzlich eine Kante am oberen Rand.
                             Damit ist er auch dann erkennbar, wenn jemand Farben schlecht
-                            unterscheidet — die fette Schrift allein bliebe grenzwertig.
+                            unterscheidet; die fette Schrift allein bliebe grenzwertig.
                         -->
                         <Border x:Name="ActiveEdge"
                                 Height="2"
@@ -292,7 +292,7 @@
         Die Auswahl ist nicht allein über die Fläche erkennbar: Sie trägt zusätzlich eine
         farbige Kante links. Wer Farben schlecht unterscheidet, sieht trotzdem, was gewählt ist.
 
-        Mit eigenem Muster, weil das mitgelieferte die Auswahl aus den Systemfarben holt — und
+        Mit eigenem Muster, weil das mitgelieferte die Auswahl aus den Systemfarben holt, und
         zwar als statischen Verweis, der beim Umschalten des Erscheinungsbilds nicht nachzieht.
         Der gewählte Eintrag blieb deshalb in der Farbe stehen, die beim Start galt.
     -->
@@ -534,7 +534,7 @@
         mitgelieferte Muster zeichnet den ruhenden und den abgeschalteten Zustand mit festen
         hellen Farben und schlägt dabei jeden Setter. Im dunklen Erscheinungsbild leuchteten
         deshalb ausgerechnet die abgeschalteten Schaltflächen hell auf, während die
-        bedienbaren daneben dunkel blieben — die Bedeutung war damit umgekehrt.
+        bedienbaren daneben dunkel blieben; die Bedeutung war damit umgekehrt.
     -->
     <Style TargetType="Button">
         <Setter Property="Background" Value="{DynamicResource ButtonSecondaryBackgroundBrush}" />
@@ -636,7 +636,7 @@
 
     <!--
         Die vorgesehene Aktion einer Seite. Ausdrücklich anzufordern, damit auf einer Seite
-        klar bleibt, welche Aktion gemeint ist — mehrere gefüllte Schaltflächen nebeneinander
+        klar bleibt, welche Aktion gemeint ist. Mehrere gefüllte Schaltflächen nebeneinander
         beantworten die Frage nicht mehr.
     -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
@@ -671,7 +671,7 @@
     <!--
         Der Aufklapp-Bereich holt die Farbe seiner Kopfzeile ebenfalls aus dem mitgelieferten
         Muster; im dunklen Erscheinungsbild war die Beschriftung dort kaum vom Grund zu
-        unterscheiden. Der Pfeil dreht sich beim Aufklappen — der Zustand ist also nicht
+        unterscheiden. Der Pfeil dreht sich beim Aufklappen; der Zustand ist also nicht
         allein an der Farbe erkennbar.
     -->
     <Style TargetType="Expander">
@@ -723,7 +723,7 @@
 
     <!--
         Der Kurzhinweis erscheint in einem eigenen Fenster und bringt die Farben des Systems
-        mit — im dunklen Erscheinungsbild ein heller Kasten mitten in der Anwendung.
+        mit, im dunklen Erscheinungsbild ein heller Kasten mitten in der Anwendung.
     -->
     <Style TargetType="ToolTip">
         <Setter Property="Background" Value="{DynamicResource SurfaceElevatedBrush}" />

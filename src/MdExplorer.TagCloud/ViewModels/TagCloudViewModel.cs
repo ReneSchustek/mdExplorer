@@ -17,7 +17,7 @@ namespace MdExplorer.TagCloud.ViewModels;
 /// ViewModel der Tag-Cloud. Hält die aktuelle Top-N-Snapshot-Liste, exponiert Sortier-Option
 /// und Long-Tail-Toggle und veröffentlicht <see cref="TagClickedMessage"/> über den
 /// <see cref="IMessenger"/>. Empfängt Hintergrund-Aktualisierungen über
-/// <see cref="TagsRefreshedMessage"/> — dafür ist die Items-Collection mit
+/// <see cref="TagsRefreshedMessage"/>; dafür ist die Items-Collection mit
 /// <see cref="BindingOperations.EnableCollectionSynchronization(System.Collections.IEnumerable, object)"/>
 /// thread-sicher angemeldet.
 /// </summary>
@@ -89,7 +89,7 @@ public sealed partial class TagCloudViewModel : ObservableObject, IDisposable,
         }
         catch (OperationCanceledException)
         {
-            // Refresh wurde abgebrochen — kein Fehler.
+            // Refresh wurde abgebrochen (kein Fehler).
         }
         catch (InvalidOperationException exception)
         {
@@ -97,7 +97,7 @@ public sealed partial class TagCloudViewModel : ObservableObject, IDisposable,
         }
         catch (DbException exception)
         {
-            // SQLite-Spitze nach Retry-Budget — UI bleibt auf vorigem Stand.
+            // SQLite-Spitze nach Retry-Budget: UI bleibt auf vorigem Stand.
             LogRefreshFailure(_logger, exception);
         }
         finally
@@ -135,7 +135,7 @@ public sealed partial class TagCloudViewModel : ObservableObject, IDisposable,
         _messenger.UnregisterAll(this);
     }
 
-    /// <summary>Wendet einen Snapshot an — sortiert und ersetzt die UI-Items unter Lock.</summary>
+    /// <summary>Wendet einen Snapshot an, sortiert und ersetzt die UI-Items unter Lock.</summary>
     internal void ApplySnapshot(IReadOnlyList<TagStatistic> snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);

@@ -4,7 +4,7 @@ namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
 /// Sichert die Suffix-Stripping-Regeln des deutschen Stemmers. Vollständig
-/// linguistisch ist er nicht — der Test fixiert die explizit dokumentierten Regeln.
+/// linguistisch ist er nicht; der Test fixiert die explizit dokumentierten Regeln.
 /// </summary>
 public sealed class GermanStemmerTests
 {

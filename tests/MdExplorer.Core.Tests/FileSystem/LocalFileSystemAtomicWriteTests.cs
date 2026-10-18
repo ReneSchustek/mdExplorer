@@ -75,14 +75,14 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
     [Fact]
     public async Task WriteAllBytesAtomicAsync_WhenTheMoveFails_RemovesTheTemporaryFile()
     {
-        // Der Zielpfad ist ein Verzeichnis — das abschließende Verschieben scheitert. Bliebe
+        // Der Zielpfad ist ein Verzeichnis; das abschließende Verschieben scheitert. Bliebe
         // die Zwischendatei liegen, sammelten sich bei jedem Fehlversuch Reste im Ordner an.
         string path = Path.Combine(_testRoot, "blockiert.md");
         _ = Directory.CreateDirectory(path);
         byte[] payload = Encoding.UTF8.GetBytes("inhalt");
 
         // Windows meldet den blockierten Zielpfad je nach Zustand als E/A- oder als
-        // Zugriffsfehler — für den Test zählt nur, dass er nicht verschluckt wird.
+        // Zugriffsfehler: für den Test zählt nur, dass er nicht verschluckt wird.
         _ = await Assert.ThrowsAnyAsync<SystemException>(
             () => _sut.WriteAllBytesAtomicAsync(path, payload, TestContext.Current.CancellationToken)).ConfigureAwait(true);
 
@@ -108,7 +108,7 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
     [Fact]
     public async Task GetDirectoryFinalPath_OnAFilePath_FallsBackToTheOriginalPath()
     {
-        // Eine Datei ist kein Verzeichnis — die Auflösung scheitert und muss auf den
+        // Eine Datei ist kein Verzeichnis. Die Auflösung scheitert und muss auf den
         // Ausgangspfad zurückfallen statt zu werfen.
         string datei = Path.Combine(_testRoot, "keine-mappe.md");
         await File.WriteAllTextAsync(datei, "x", TestContext.Current.CancellationToken).ConfigureAwait(true);

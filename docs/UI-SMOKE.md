@@ -1,18 +1,18 @@
 # UI-Smoke-Plan (WPF)
 
 > Pflicht-Checkliste vor jedem Release. Wird in einem laufenden Build der App durchgespielt, nicht
-> gegen Unit-Tests. Tests prüfen ViewModel-Logik — dieser Plan prüft Bindings, Rendering,
+> gegen Unit-Tests. Tests prüfen ViewModel-Logik, dieser Plan prüft Bindings, Rendering,
 > Eingabe-Routing und WebView2.
 
 ## Warum manuell (Stand 2026-06-21)
 
 Erwogen waren zwei Varianten:
 
-- **Option A — FlaUI-basierte Smoke-Suite**: Neue NuGet-Abhängigkeiten (`FlaUI.Core`, `FlaUI.UIA3`)
+- **Option A (FlaUI-basierte Smoke-Suite)**: Neue NuGet-Abhängigkeiten (`FlaUI.Core`, `FlaUI.UIA3`)
   vergrößern den Abhängigkeits-Footprint und sind deshalb begründungspflichtig. WebView2-Wartepfade
   (`CoreWebView2`-Initialisierung) sind unter UIA3 erfahrungsgemäß flaky. Aufwand/Nutzen für ein
   Single-Dev-Tool mit Hardening-Priorität ist negativ.
-- **Option B — Manueller Smoke-Plan**: Sofort einsatzbereit, kein neuer Abhängigkeits-Footprint,
+- **Option B (Manueller Smoke-Plan)**: Sofort einsatzbereit, kein neuer Abhängigkeits-Footprint,
   deckt die acht Pflicht-Pfade reproduzierbar ab. Risiko des Verfalls wird durch einen
   Pflicht-Lauf-Bericht pro Release abgefangen (siehe Abschnitt _Lauf-Berichte_).
 

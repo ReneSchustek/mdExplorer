@@ -14,7 +14,7 @@ namespace MdExplorer.TagCloud.Tests.ViewModels;
 /// Prüft den Ladeweg der Tag-Cloud: <see cref="TagCloudViewModel.RefreshAsync"/> mitsamt
 /// Beschäftigt-Anzeige, Long-Tail-Umschaltung und Fehlerverhalten. Der Fehlerpfad ist der
 /// wichtigste Teil: Bei einer Datenbank-Spitze muss die bereits angezeigte Wolke stehen
-/// bleiben statt zu leeren — sonst verschwinden dem Nutzer beim Tippen die Tags.
+/// bleiben statt zu leeren, sonst verschwinden dem Nutzer beim Tippen die Tags.
 /// </summary>
 public sealed class TagCloudViewModelRefreshTests
 {
@@ -93,7 +93,7 @@ public sealed class TagCloudViewModelRefreshTests
     [Fact]
     public async Task ExpandingTheLongTail_TriggersARefreshOnItsOwn()
     {
-        // Das Umschalten ist die einzige Bedienhandlung, die selbst nachladen muss —
+        // Das Umschalten ist die einzige Bedienhandlung, die selbst nachladen muss,
         // sonst zeigt die aufgeklappte Wolke weiter nur die Top-N.
         SteuerbareStatistik dienst = new();
         using TagCloudViewModel sut = Erzeuge(dienst);
@@ -316,7 +316,7 @@ public sealed class TagCloudViewModelRefreshTests
         }
     }
 
-    /// <summary><see cref="DbException"/> ist abstrakt — für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
+    /// <summary><see cref="DbException"/> ist abstrakt; für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
     private sealed class TestDbException : DbException
     {
         public TestDbException()

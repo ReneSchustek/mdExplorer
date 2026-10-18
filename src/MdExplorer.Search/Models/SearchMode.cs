@@ -5,7 +5,7 @@ namespace MdExplorer.Search.Models;
 /// </summary>
 public enum SearchMode
 {
-    /// <summary>FTS5-Volltextsuche — Default, Stichwort-/Phrasen-/Boolean-Match.</summary>
+    /// <summary>FTS5-Volltextsuche: Default, Stichwort-/Phrasen-/Boolean-Match.</summary>
     Fts5 = 0,
 
     /// <summary>

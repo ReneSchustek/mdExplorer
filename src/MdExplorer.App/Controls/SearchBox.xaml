@@ -6,7 +6,7 @@
     <!--
         Suchfeld der Linie: Lupe links, ein Platzhalter der sagt WAS durchsucht wird,
         rechts ein Löschen-Zeichen, das nur bei gefülltem Feld erscheint. Escape leert.
-        Gefiltert wird beim Tippen — eine Suche, die erst auf einen Klick reagiert, fühlt
+        Gefiltert wird beim Tippen: Eine Suche, die erst auf einen Klick reagiert, fühlt
         sich langsam an, auch wenn sie schnell ist.
     -->
     <Border Background="{DynamicResource InputBackgroundBrush}"

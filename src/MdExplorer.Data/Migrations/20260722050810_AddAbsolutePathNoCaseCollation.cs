@@ -8,10 +8,10 @@ namespace MdExplorer.Data.Migrations
     /// <summary>
     /// Stellt die <c>AbsolutePath</c>-Spalte auf NOCASE-Collation um, damit Unique-Index und
     /// Punkt-Lookup case-insensitiv arbeiten (Windows-Pfad-Semantik). SQLite kann eine
-    /// Spalten-Collation nur per Tabellen-Rebuild ändern — EF baut <c>MarkdownFiles</c> dafür
+    /// Spalten-Collation nur per Tabellen-Rebuild ändern. EF baut <c>MarkdownFiles</c> dafür
     /// neu auf und verliert dabei den FTS5-Cleanup-Trigger. Er wird in der Folge-Migration
     /// <c>RestoreFileTriggerAfterNoCaseRebuild</c> neu angelegt (SqlOperation und Rebuild dürfen
-    /// nicht in derselben Migration liegen — EF hebt den Rebuild sonst hinter die Sql-Statements).
+    /// nicht in derselben Migration liegen, weil EF den Rebuild sonst hinter die Sql-Statements hebt).
     /// </summary>
     public partial class AddAbsolutePathNoCaseCollation : Migration
     {

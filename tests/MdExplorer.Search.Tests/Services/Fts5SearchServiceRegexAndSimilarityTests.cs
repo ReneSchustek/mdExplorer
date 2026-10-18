@@ -11,7 +11,7 @@ namespace MdExplorer.Search.Tests.Services;
 /// <summary>
 /// Hammertests gegen den <see cref="Fts5SearchService"/>-Dispatch: stellen sicher,
 /// dass der RegEx-Postfilter und die Similarity-Builder-Pfade
-/// tatsächlich aktivieren — unabhängig vom konkreten SQLite-FTS5-Backend.
+/// tatsächlich aktivieren, unabhängig vom konkreten SQLite-FTS5-Backend.
 /// </summary>
 public sealed class Fts5SearchServiceRegexAndSimilarityTests
 {
@@ -57,7 +57,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         FakeSearchIndexStorage storage = new();
         Fts5SearchService sut = NewService(storage);
 
-        // Ungültige RegEx-Syntax — der Compiler-Pfad fängt ArgumentException und liefert leere Trefferliste.
+        // Ungültige RegEx-Syntax: der Compiler-Pfad fängt ArgumentException und liefert leere Trefferliste.
         IReadOnlyList<SearchResult> results = await sut
             .SearchAsync(new SearchQuery("(unclosed", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
@@ -86,7 +86,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
     public async Task SearchAsync_RegexMode_WithTakeLimit_StopsAtTheRequestedCount()
     {
         // Ohne die Abbruchbedingung liefe der Postfilter durch alle Kandidaten, obwohl die
-        // Trefferliste längst voll ist — bei weichen Mustern sind das Tausende Dokumente.
+        // Trefferliste längst voll ist; bei weichen Mustern sind das Tausende Dokumente.
         FakeSearchIndexStorage storage = new();
         storage.AddHit(IdAlpha, "alpha.md", "Alpha", "Text mit API123Main.");
         storage.AddHit(IdBeta, "beta.md", "Beta", "Auch hier API456Main.");
@@ -118,7 +118,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
     [Fact]
     public async Task SearchAsync_RegexMode_WithoutAStoredBody_SkipsTheCandidate()
     {
-        // Ein Kandidat ohne Fließtext kann nicht gegen das Muster geprüft werden — etwa
+        // Ein Kandidat ohne Fließtext kann nicht gegen das Muster geprüft werden, etwa
         // wenn die Quelldatei beim Indizieren gesperrt war.
         FakeSearchIndexStorage storage = new();
         storage.AddHit(IdAlpha, "alpha.md", "Alpha", string.Empty);

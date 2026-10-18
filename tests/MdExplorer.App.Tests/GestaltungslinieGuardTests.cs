@@ -15,16 +15,16 @@ namespace MdExplorer.App.Tests;
 public sealed class GestaltungslinieGuardTests
 {
     // Farbwerte gehören in die Belegungen, nicht in eine Ansicht. „Transparent" ist keine
-    // Farbe der Marke, sondern eine Aussage über die Fläche — deshalb erlaubt.
+    // Farbe der Marke, sondern eine Aussage über die Fläche, deshalb erlaubt.
     private static readonly Regex ColorAttribute = new(
         "(Background|Foreground|BorderBrush|Fill|Stroke|CaretBrush|SelectionBrush|Color)\\s*=\\s*"
         + "\"(#[0-9A-Fa-f]{3,8}|White|Black|Gray|LightGray|DarkGray|Silver|Red|Green|Blue|Yellow|Orange|Navy|Teal)\"",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     // Zweiter Weg in dieselbe Falle: Ein Setter trägt die Farbe im Value, nicht im
-    // Attributnamen. Ohne diese Prüfung bliebe jede Farbe in einem Style unentdeckt —
+    // Attributnamen. Ohne diese Prüfung bliebe jede Farbe in einem Style unentdeckt;
     // im Bestand waren es vier.
-    // Verweise auf Ressourcen — beide Formen. Statisch für die Bausteine, dynamisch für
+    // Verweise auf Ressourcen, beide Formen. Statisch für die Bausteine, dynamisch für
     // die Farben, die beim Wechsel des Erscheinungsbilds getauscht werden.
     private static readonly Regex ResourceReference = new(
         "\\{(?:DynamicResource|StaticResource)\\s+(?<key>[A-Za-z0-9_.]+)\\s*\\}",
@@ -43,7 +43,7 @@ public sealed class GestaltungslinieGuardTests
     // Dritter Weg in dieselbe Falle, und der stillste: Die Farbe steht gar nicht in der
     // Ansicht, sondern im Code dahinter. Die Prüfungen oben lesen XAML und haben deshalb
     // ein halbes Jahr lang nicht gesehen, dass die Trefferhervorhebung der Suche einen
-    // festen Gelbton mitbrachte — im Dunklen heller Text auf hellem Grund.
+    // festen Gelbton mitbrachte: im Dunklen heller Text auf hellem Grund.
     private static readonly Regex ColorInCode = new(
         "Color\\.From(Rgb|Argb|Scrgb)\\s*\\(|Colors\\.[A-Z][A-Za-z]+|Brushes\\.[A-Z][A-Za-z]+"
         + "|\"#[0-9A-Fa-f]{3,8}\"",
@@ -81,7 +81,7 @@ public sealed class GestaltungslinieGuardTests
     }
 
     /// <remarks>
-    /// Fehlt ein Schlüssel in einer Belegung, bricht die Bindung genau in dieser Belegung —
+    /// Fehlt ein Schlüssel in einer Belegung, bricht die Bindung genau in dieser Belegung,
     /// und das fällt erst beim Nutzer auf, nicht beim Entwickeln.
     /// </remarks>
     [Fact]
@@ -101,8 +101,8 @@ public sealed class GestaltungslinieGuardTests
     }
 
     /// <remarks>
-    /// Eine Ansicht ist nicht nur ihr Markup. Wer die Farbe eine Ebene tiefer schreibt —
-    /// in den Code hinter der Ansicht oder in einen Wandler —, umgeht jede Prüfung, die
+    /// Eine Ansicht ist nicht nur ihr Markup. Wer die Farbe eine Ebene tiefer schreibt,
+    /// in den Code hinter der Ansicht oder in einen Wandler, umgeht jede Prüfung, die
     /// XAML liest. Eine Trefferhervorhebung mit festem Gelbton im Wandler etwa bliebe im
     /// dunklen Erscheinungsbild unlesbar, ohne dass eine XAML-Prüfung anschlägt.
     /// </remarks>
@@ -133,7 +133,7 @@ public sealed class GestaltungslinieGuardTests
     }
 
     /// <remarks>
-    /// Ohne diese Prüfung wäre die Farbsuche oben grün, sobald sie keine Datei mehr findet —
+    /// Ohne diese Prüfung wäre die Farbsuche oben grün, sobald sie keine Datei mehr findet,
     /// etwa nach einer Umbenennung des Verzeichnisses. Ein Wächter, der nichts mehr ansieht,
     /// meldet dasselbe wie einer, der nichts findet.
     /// </remarks>
@@ -147,7 +147,7 @@ public sealed class GestaltungslinieGuardTests
 
     /// <remarks>
     /// Die Bausteine der Linie stehen in Tokens.xaml und gelten in beiden Belegungen.
-    /// Wer sie versehentlich in eine Belegung schiebt, bekommt sie beim Wechsel getauscht —
+    /// Wer sie versehentlich in eine Belegung schiebt, bekommt sie beim Wechsel getauscht;
     /// dann ändert sich mit dem Erscheinungsbild plötzlich der Abstand.
     /// </remarks>
     [Fact]
@@ -171,7 +171,7 @@ public sealed class GestaltungslinieGuardTests
 
     /// <remarks>
     /// Der stillste Fehler von allen: Ein Verweis auf einen Schlüssel, den es nicht gibt,
-    /// wirft zur Laufzeit nicht — die Stelle bleibt einfach leer. Im hellen Erscheinungsbild
+    /// wirft zur Laufzeit nicht. Die Stelle bleibt einfach leer. Im hellen Erscheinungsbild
     /// fällt eine fehlende Randfarbe kaum auf, im dunklen ist die Stelle weg. Kein Build und
     /// kein Blick auf den Bildschirm findet das verlässlich; diese Prüfung schon.
     /// </remarks>
@@ -180,7 +180,7 @@ public sealed class GestaltungslinieGuardTests
     {
         // Die Linie liefert Bausteine, Farben und die Grundbelegung der Bedienelemente;
         // Konverter und Listen stehen in App.xaml oder in der Ansicht selbst. Alles davon
-        // zählt als vorhanden — gesucht wird der Verweis, den keine dieser Quellen kennt.
+        // zählt als vorhanden; gesucht wird der Verweis, den keine dieser Quellen kennt.
         HashSet<string> shared =
         [
             .. ResourceKeys("Tokens.xaml"),
@@ -225,7 +225,7 @@ public sealed class GestaltungslinieGuardTests
     /// <remarks>
     /// Der Fehler, den die vorige Prüfung nicht sieht: Der Schlüssel <b>existiert</b> in der
     /// Datei, steht aber hinter seiner Verwendung. WPF löst einen statischen Verweis beim
-    /// Lesen auf — was danach kommt, kennt es an dieser Stelle noch nicht. Das Fenster wirft
+    /// Lesen auf. Was danach kommt, kennt es an dieser Stelle noch nicht. Das Fenster wirft
     /// dann beim Öffnen, und zwar erst zur Laufzeit: Bau und Tests bleiben grün. Genau so lag
     /// die Tag-Verwaltung lahm, ohne dass es jemandem auffiel.
     /// </remarks>
@@ -244,7 +244,7 @@ public sealed class GestaltungslinieGuardTests
                 string key = match.Groups["key"].Value;
                 if (!localKeys.Contains(key))
                 {
-                    // Der Schlüssel kommt von außen — dann gilt die Reihenfolge nicht.
+                    // Der Schlüssel kommt von außen, dann gilt die Reihenfolge nicht.
                     continue;
                 }
 
@@ -268,14 +268,14 @@ public sealed class GestaltungslinieGuardTests
     /// </summary>
     /// <remarks>
     /// <para>
-    /// WPF schaltet die Virtualisierung ab, sobald eine Liste einen <c>GroupStyle</c> trägt —
+    /// WPF schaltet die Virtualisierung ab, sobald eine Liste einen <c>GroupStyle</c> trägt,
     /// es sei denn, <c>VirtualizingPanel.IsVirtualizingWhenGrouping</c> steht ausdrücklich auf
     /// <c>True</c>. Das gilt auch dann, wenn <c>IsVirtualizing="True"</c> danebensteht; genau
     /// diese Kombination sieht in einer Liste richtig aus und ist es nicht.
     /// </para>
     /// <para>
     /// Über 29.889 Einträge heißt das: 185.218 <c>TextBlock</c>, 2,4 Millionen
-    /// <c>GlyphRun</c> und über 5 GB im Speicherabbild — die Anwendung baut jede Zeile des
+    /// <c>GlyphRun</c> und über 5 GB im Speicherabbild; die Anwendung baut jede Zeile des
     /// gesamten Bestands auf, auch die 29.870, die niemand sieht. Der Bau meldet nichts, die
     /// übrigen Tests auch nicht: Es ist eine Voreinstellung, kein Fehler im Code.
     /// </para>

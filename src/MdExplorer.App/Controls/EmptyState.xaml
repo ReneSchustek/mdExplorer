@@ -6,7 +6,7 @@
     <!--
         Leerzustand der Linie. Er trennt zwei Lagen, die gleich aussehen und verschiedene
         Ursachen haben: „hier ist noch nichts" und „die Suche findet nichts". Wer beides
-        gleich beschriftet, schickt den Nutzer in die falsche Richtung — im zweiten Fall
+        gleich beschriftet, schickt den Nutzer in die falsche Richtung; im zweiten Fall
         gehört eine Schaltfläche zum Zurücksetzen daneben.
     -->
     <Border Padding="{StaticResource PagePadding}">

@@ -3,7 +3,7 @@ namespace MdExplorer.Parser.Abstractions;
 /// <summary>
 /// Schreibt Hashtag-Vorkommen in Markdown-Text um (Body + YAML-Frontmatter).
 /// Wird vom Tag-Management-Service genutzt, um Rename / Merge / Delete
-/// projektweit konsistent anzuwenden. Reine Funktion — keine I/O, keine Seiteneffekte.
+/// projektweit konsistent anzuwenden. Reine Funktion: keine I/O, keine Seiteneffekte.
 /// </summary>
 public interface IMarkdownTagRewriter
 {
@@ -16,6 +16,6 @@ public interface IMarkdownTagRewriter
     /// </summary>
     /// <param name="original">Original-Markdown-Inhalt.</param>
     /// <param name="operations">Pro Slug: neuer Name (Rename / Merge) oder <see langword="null"/> (Delete).</param>
-    /// <returns>Umgeschriebener Text — identisch zu <paramref name="original"/>, wenn keine Änderung anfällt.</returns>
+    /// <returns>Umgeschriebener Text, identisch zu <paramref name="original"/>, wenn keine Änderung anfällt.</returns>
     string Apply(string original, IReadOnlyDictionary<string, string?> operations);
 }

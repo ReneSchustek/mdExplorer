@@ -19,9 +19,9 @@ namespace MdExplorer.Search.Services;
 /// als <see cref="BackgroundService"/> mit Polling-Strategie analog zum <c>ParseOrchestrator</c>.
 /// Reine Application-Code-Pflege wurde der Trigger-Variante vorgezogen, weil der Body-Plaintext
 /// nicht als Spalte in <c>MarkdownDocuments</c> liegt und SQLite-Trigger ihn aus dem GZip-HTML
-/// nicht extrahieren können — eine UDF-/Spalten-Erweiterung wäre Cross-Modul-Eingriff in den Parser.
+/// nicht extrahieren können; eine UDF-/Spalten-Erweiterung wäre Cross-Modul-Eingriff in den Parser.
 /// DELETE-Konsistenz übernimmt weiterhin der Trigger aus der FTS5-Migration. Der Zugriff auf
-/// Quelldaten und Index-Storage läuft über Core-Abstraktionen — das Modul kennt weder EF noch SQLite.
+/// Quelldaten und Index-Storage läuft über Core-Abstraktionen. Das Modul kennt weder EF noch SQLite.
 /// </summary>
 public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchIndexer
 {
@@ -92,7 +92,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
     {
         // Die liveIds müssen über den gesamten Source-Snapshot vollständig sein, sonst markiert
         // der Orphan-Pass weiter unten alle nicht erreichten Source-Einträge fälschlich als
-        // verwaist. Targets werden separat bis zum Batch-Limit beschnitten — die Iteration läuft
+        // verwaist. Targets werden separat bis zum Batch-Limit beschnitten, die Iteration läuft
         // dennoch weiter, damit liveIds komplett bleibt.
         HashSet<Guid> liveIds = new(source.Documents.Count);
         List<SearchSourceDocument> targets = new(batchSize);
@@ -189,7 +189,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         }
         catch (DbException ex)
         {
-            // SQLite-Spitze nach Retry-Budget darf den HostedService nicht killen —
+            // SQLite-Spitze nach Retry-Budget darf den HostedService nicht killen:
             // der nächste Periodic-Tick erhält eine erneute Chance.
             LogSynchronizationFailed(_logger, ex);
         }
@@ -197,7 +197,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         {
             // Defense-in-Depth. Wenn eine korrupte Frontmatter-JSON oder ein
             // unerwarteter State im BuildUpserts-Pfad eine ArgumentException erzeugt,
-            // bleibt der Periodic-Loop am Leben — nächster Tick versucht es erneut.
+            // bleibt der Periodic-Loop am Leben; nächster Tick versucht es erneut.
             LogSynchronizationFailed(_logger, ex);
         }
     }

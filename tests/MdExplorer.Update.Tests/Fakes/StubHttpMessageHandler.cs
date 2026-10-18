@@ -33,7 +33,7 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
 
     /// <summary>
     /// Erzeugt einen Handler, der je nach Adresse unterschiedlich antwortet. Nötig, sobald ein
-    /// Ablauf mehrere Ressourcen abruft — etwa erst das Release und dann dessen Prüfsummen-Datei.
+    /// Ablauf mehrere Ressourcen abruft, etwa erst das Release und dann dessen Prüfsummen-Datei.
     /// </summary>
     /// <param name="routen">
     /// Zuordnung von Adress-Bestandteil zu Antwort. Der erste Eintrag, dessen Schlüssel in der
@@ -71,7 +71,7 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     /// <param name="content">Der auszuliefernde Inhalt.</param>
     /// <param name="setContentLength">
     /// <see langword="false"/> unterdrückt die Längenangabe. Ohne sie kann der Aufrufer keinen
-    /// Fortschritt in Prozent berechnen — ein Fall, der real vorkommt und getestet gehört.
+    /// Fortschritt in Prozent berechnen, ein Fall, der real vorkommt und getestet gehört.
     /// </param>
     public static StubHttpMessageHandler WithStream(byte[] content, bool setContentLength)
     {

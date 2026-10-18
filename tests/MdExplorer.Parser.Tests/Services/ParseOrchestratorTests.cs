@@ -140,7 +140,7 @@ public sealed class ParseOrchestratorTests
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("ok2"));
     }
 
-    // Defense-in-Depth — wenn eine ArgumentException über den ParseOneAsync-
+    // Defense-in-Depth: wenn eine ArgumentException über den ParseOneAsync-
     // Catch hinaus durchreicht (z. B. aus einer Sub-Pipeline oder einem anderen Throwing-
     // Service), darf TryRunOnceAsync sie schlucken und der Periodic-Loop weiterlaufen.
     [Fact]
@@ -149,7 +149,7 @@ public sealed class ParseOrchestratorTests
         TestHarness harness = new();
         harness.Source.ThrowOnNextEnumeration = new ArgumentException("simulated depth-limit-bubble");
 
-        // Darf NICHT werfen — TryRunOnceAsync fasert das in den Defense-in-Depth-Catches ab.
+        // Darf NICHT werfen; TryRunOnceAsync fasert das in den Defense-in-Depth-Catches ab.
         await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken);
 
         // Zweiter Tick läuft normal weiter.
@@ -193,7 +193,7 @@ public sealed class ParseOrchestratorTests
     }
 
     // ProcessBatchAsync lädt die existierenden Dokumente einmal gesammelt. Ein
-    // GetByMarkdownFileIdAsync-Point-Lookup je Datei wäre ein N+1 — der Zähler muss 0 bleiben.
+    // GetByMarkdownFileIdAsync-Point-Lookup je Datei wäre ein N+1, der Zähler muss 0 bleiben.
     [Fact]
     public async Task ProcessBatch_LoadsExistingDocumentsInSingleBatch_WithoutPerFilePointLookup()
     {

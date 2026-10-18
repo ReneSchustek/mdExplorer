@@ -6,7 +6,7 @@ namespace MdExplorer.Data.Repositories;
 
 /// <summary>
 /// EF-Core-Implementierung von <see cref="IGraphSourceProvider"/>. Lädt alle Dateien
-/// und Dokumente in zwei untracked Queries — der Snapshot ist ein Read-Only-View.
+/// und Dokumente in zwei untracked Queries, denn der Snapshot ist ein Read-Only-View.
 /// </summary>
 public sealed class GraphSourceProvider : IGraphSourceProvider
 {
@@ -54,7 +54,7 @@ public sealed class GraphSourceProvider : IGraphSourceProvider
         ArgumentException.ThrowIfNullOrWhiteSpace(targetSlug);
 
         // Die Verweis-Liste ist ein JSON-Array aus Zeichenketten; ein Ziel steht dort in
-        // Anführungszeichen. Danach wird gesucht — ein Vorfilter, den der Aufrufer beim
+        // Anführungszeichen. Danach wird gesucht. Das ist ein Vorfilter, den der Aufrufer beim
         // Auswerten der Liste ohnehin bestätigt oder verwirft.
         string needle = "%\"" + targetSlug + "\"%";
 

@@ -17,7 +17,7 @@ namespace MdExplorer.App.ViewModels;
 /// ViewModel des Markdown-Editors. Verwaltet den Rohtext einer Markdown-Datei,
 /// erkennt Live-Tags mit Debounce, trägt Dirty-Status, persistiert atomar und bewahrt
 /// das ursprüngliche Zeilenende. Tag-CRUD (Hinzufügen, Umbenennen, Entfernen)
-/// wird über <see cref="TagDocumentEditor"/> auf dem Roh-Text ausgeführt — keine
+/// wird über <see cref="TagDocumentEditor"/> auf dem Roh-Text ausgeführt, keine
 /// Geschäftslogik im Code-Behind.
 /// </summary>
 internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDisposable
@@ -83,7 +83,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
     {
     }
 
-    /// <summary>Konstruktor ohne Confirm-Dialog — Tests und Migrations-Pfade.</summary>
+    /// <summary>Konstruktor ohne Confirm-Dialog (Tests und Migrations-Pfade).</summary>
     public MarkdownEditorViewModel(
         IFileSystem fileSystem,
         ITagExtractor tagExtractor,
@@ -93,7 +93,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
     {
     }
 
-    /// <summary>Konstruktor mit anpassbarem Debounce + optionalem Confirm-Dialog — für Tests.</summary>
+    /// <summary>Konstruktor mit anpassbarem Debounce + optionalem Confirm-Dialog, für Tests.</summary>
     internal MarkdownEditorViewModel(
         IFileSystem fileSystem,
         ITagExtractor tagExtractor,
@@ -124,7 +124,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
     /// <summary>Wird gefeuert, nachdem die Datei erfolgreich gespeichert wurde.</summary>
     public event EventHandler<EditorSavedEventArgs>? Saved;
 
-    /// <summary>Wird nach jedem Debounce-Lauf der Tag-Extraktion gefeuert — für Tests.</summary>
+    /// <summary>Wird nach jedem Debounce-Lauf der Tag-Extraktion gefeuert (für Tests).</summary>
     public event EventHandler? TagsRefreshed;
 
     /// <summary>
@@ -290,7 +290,7 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
         DisposeTimer();
     }
 
-    /// <summary>Liefert <see langword="true"/>, wenn ungespeicherte Änderungen vorliegen — für Confirm-Dialog.</summary>
+    /// <summary>Liefert <see langword="true"/>, wenn ungespeicherte Änderungen vorliegen, für Confirm-Dialog.</summary>
     public bool HasUnsavedChanges => IsDirty;
 
     private static string ComputeHash(byte[] bytes)

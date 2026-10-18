@@ -16,7 +16,7 @@ public sealed class WikiLinkHtmlRenderer : HtmlObjectRenderer<WikiLinkInline>
     private readonly SlugResolver _slugResolver;
 
     /// <summary>Erzeugt einen Renderer mit dem übergebenen Slug-Bilder (typischerweise <c>TagNormalizer.TryToSlug</c>).</summary>
-    /// <param name="slugResolver">Bildet den Slug — und meldet, wenn der Zielname keinen hergibt.</param>
+    /// <param name="slugResolver">Bildet den Slug und meldet, wenn der Zielname keinen hergibt.</param>
     public WikiLinkHtmlRenderer(SlugResolver slugResolver)
     {
         ArgumentNullException.ThrowIfNull(slugResolver);
@@ -25,7 +25,7 @@ public sealed class WikiLinkHtmlRenderer : HtmlObjectRenderer<WikiLinkInline>
 
     /// <inheritdoc />
     /// <remarks>
-    /// Gibt der Zielname keinen Slug her — <c>[[…]]</c>, <c>[[+]]</c> —, bleibt der Anzeigetext
+    /// Gibt der Zielname keinen Slug her (<c>[[…]]</c>, <c>[[+]]</c>), bleibt der Anzeigetext
     /// stehen, aber ohne Verweis. Es gibt kein Ziel, also gibt es keinen Link; der Satz drumherum
     /// ist davon nicht betroffen. Würfe diese Stelle, verlöre ein Satzzeichen die ganze Datei,
     /// weil der Renderer das ganze Dokument schreibt.

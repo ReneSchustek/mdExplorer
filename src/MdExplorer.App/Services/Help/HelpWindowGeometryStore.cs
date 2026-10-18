@@ -28,7 +28,7 @@ internal sealed class HelpWindowGeometryStore
         return _backingStore.Load().HelpWindow;
     }
 
-    /// <summary>Speichert die Geometrie additiv — andere Layout-Felder bleiben erhalten.</summary>
+    /// <summary>Speichert die Geometrie additiv; andere Layout-Felder bleiben erhalten.</summary>
     public void Save(WindowGeometry geometry)
     {
         ArgumentNullException.ThrowIfNull(geometry);

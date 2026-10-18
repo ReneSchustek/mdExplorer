@@ -7,7 +7,7 @@ namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
 /// Direkt-Tests für die statischen/internen Helfer aus <see cref="Fts5IndexMaintainer"/>.
-/// Indirekt sind sie über <c>Fts5SearchServiceIntegrationTests</c> abgedeckt — diese Tests fixieren
+/// Indirekt sind sie über <c>Fts5SearchServiceIntegrationTests</c> abgedeckt; diese Tests fixieren
 /// das Verhalten in Isolation, damit Refactorings im Maintainer nicht unbeobachtet driften.
 /// </summary>
 public sealed class Fts5IndexMaintainerTests
@@ -190,7 +190,7 @@ public sealed class Fts5IndexMaintainerTests
         Assert.Equal(string.Empty, result);
     }
 
-    // TrySynchronizeAsync muss erholbare Exceptions abfangen — Periodic-Loop läuft weiter.
+    // TrySynchronizeAsync muss erholbare Exceptions abfangen; Periodic-Loop läuft weiter.
     [Fact]
     public async Task TrySynchronizeAsync_OnArgumentException_LogsAndDoesNotThrow()
     {

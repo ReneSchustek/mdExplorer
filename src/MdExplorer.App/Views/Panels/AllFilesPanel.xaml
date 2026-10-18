@@ -36,7 +36,7 @@
 
         <!--
             Zeitraum als Chips zum Umschalten statt als Aufklappliste: Was gewählt ist, sieht
-            man ohne zu klicken. Der gewählte Zeitraum ist zusätzlich fett — nie allein über
+            man ohne zu klicken. Der gewählte Zeitraum ist zusätzlich fett, also nie allein über
             die Farbe erkennbar.
         -->
         <ItemsControl DockPanel.Dock="Top"
@@ -62,7 +62,7 @@
 
         <!--
             Aktive Filter bleiben sichtbar und einzeln entfernbar. Ein Filter, der wirkt, aber
-            nicht zu sehen ist, erzeugt den Eindruck fehlender Daten — und man sucht den
+            nicht zu sehen ist, erzeugt den Eindruck fehlender Daten, und man sucht den
             Fehler in den Daten.
         -->
         <ItemsControl DockPanel.Dock="Top"
@@ -140,7 +140,7 @@
                             <DataTemplate>
                                 <!--
                                     Ohne sichtbare Gruppen führt ein Sprung ins Nichts. Nach Datum
-                                    sortiert bleibt die Beschriftung leer — dann darf auch kein
+                                    sortiert bleibt die Beschriftung leer, dann darf auch kein
                                     Kopf erscheinen, sonst steht dort eine leere Zeile je Eintrag.
                                 -->
                                 <TextBlock Text="{Binding Name}" Style="{StaticResource SectionHeadingStyle}" />

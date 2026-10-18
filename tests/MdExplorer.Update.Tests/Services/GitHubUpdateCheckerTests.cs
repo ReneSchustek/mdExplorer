@@ -8,7 +8,7 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace MdExplorer.Update.Tests.Services;
 
-/// <summary>Tests für <see cref="GitHubUpdateChecker"/> — Vergleich, Throttle und Fehlertoleranz.</summary>
+/// <summary>Tests für <see cref="GitHubUpdateChecker"/>: Vergleich, Throttle und Fehlertoleranz.</summary>
 public sealed class GitHubUpdateCheckerTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 26, 12, 0, 0, TimeSpan.Zero);

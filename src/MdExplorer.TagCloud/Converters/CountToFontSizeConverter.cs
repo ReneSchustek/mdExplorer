@@ -12,13 +12,13 @@ namespace MdExplorer.TagCloud.Converters;
 /// </summary>
 public sealed class CountToFontSizeConverter : IMultiValueConverter
 {
-    /// <summary>Index 0 — der Tag-Count.</summary>
+    /// <summary>Index 0: der Tag-Count.</summary>
     public const int CountIndex = 0;
 
-    /// <summary>Index 1 — Snapshot-Minimum.</summary>
+    /// <summary>Index 1: Snapshot-Minimum.</summary>
     public const int MinCountIndex = 1;
 
-    /// <summary>Index 2 — Snapshot-Maximum.</summary>
+    /// <summary>Index 2: Snapshot-Maximum.</summary>
     public const int MaxCountIndex = 2;
 
     private const int ExpectedValueCount = 3;
