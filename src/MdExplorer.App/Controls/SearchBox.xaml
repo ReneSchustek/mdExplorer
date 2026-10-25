@@ -2,9 +2,10 @@
              x:ClassModifier="internal"
              x:Name="Root"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:MdExplorer.App.Localization">
     <!--
-        Suchfeld der Linie: Lupe links, ein Platzhalter der sagt WAS durchsucht wird,
+        Suchfeld der Linie: Lupe links, ein Platzhalter, der sagt, was durchsucht wird,
         rechts ein Löschen-Zeichen, das nur bei gefülltem Feld erscheint. Escape leert.
         Gefiltert wird beim Tippen: Eine Suche, die erst auf einen Klick reagiert, fühlt
         sich langsam an, auch wenn sie schnell ist.
@@ -65,8 +66,8 @@
                     BorderThickness="0"
                     Padding="4,0"
                     Click="OnClearClick"
-                    ToolTip="Suche zurücksetzen (Escape)"
-                    AutomationProperties.Name="Suche zurücksetzen">
+                    ToolTip="{l:Loc SearchBox_Reset_ToolTip}"
+                    AutomationProperties.Name="{l:Loc SearchBox_Reset_Name}">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                         <Setter Property="Visibility" Value="Visible" />

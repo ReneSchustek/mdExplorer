@@ -1,7 +1,7 @@
 namespace MdExplorer.Indexer.Abstractions;
 
 /// <summary>
-/// Markierungsschnittstelle für den Markdown-Indexer.
+/// Was die Oberfläche vom Markdown-Indexer sieht: den Erst-Scan auf Anforderung und dessen Fortschritt.
 /// Der konkrete Indexer läuft als <c>BackgroundService</c> und wird über das DI-Hosting gestartet.
 /// </summary>
 public interface IIndexer
@@ -11,9 +11,9 @@ public interface IIndexer
     Task RunInitialScanAsync(CancellationToken cancellationToken);
 
     /// <summary>
-    /// Wird nach jedem Zwischen-Commit des Initial-Scans gefeuert. UI-Komponenten
-    /// können darauf reagieren und ihre Liste neu laden, ohne dass der Scan
-    /// vollständig durch sein muss.
+    /// Meldet geschriebene Stapel und das Ende eines Durchgangs je Wurzel. Der Erst-Scan meldet
+    /// immer, damit sich die Oberfläche nach und nach füllt; ein späterer Abgleich nur, wenn er
+    /// etwas geändert hat. Sonst lüde die Liste „Alle Dateien“ bei jedem Takt neu.
     /// </summary>
     event EventHandler<IndexerScanProgressEventArgs>? InitialScanProgress;
 }

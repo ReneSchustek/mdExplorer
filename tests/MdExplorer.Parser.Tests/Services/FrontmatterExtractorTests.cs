@@ -4,6 +4,11 @@ using MdExplorer.Parser.Tests.Helpers;
 
 namespace MdExplorer.Parser.Tests.Services;
 
+/// <summary>
+/// Der Frontmatter-Extractor liest skalare Werte und Listen als Text, nimmt Schlüssel ohne Rücksicht
+/// auf Groß- und Kleinschreibung und überspringt verschachtelte Abschnitte, statt am Dokument
+/// zu scheitern.
+/// </summary>
 public sealed class FrontmatterExtractorTests
 {
     private readonly FrontmatterExtractor _sut = new();
@@ -66,6 +71,18 @@ public sealed class FrontmatterExtractorTests
         IReadOnlyDictionary<string, string> result = _sut.Extract(TestPipelineFactory.Parse(Markdown));
 
         Assert.Equal("foo, bar", result["tags"]);
+    }
+
+    [Fact]
+    public void Extract_OnAFlowListWithAnEmptyEntry_TreatsTheFrontmatterAsBroken()
+    {
+        // Ein doppeltes Komma in eckigen Klammern ist kein gültiges YAML. Der Index liest dann
+        // gar kein Frontmatter, und der Umschreiber lässt die Zeile deshalb ebenfalls stehen.
+        const string Markdown = "---\ntags: [alpha, , gamma]\n---\nText.\n";
+
+        IReadOnlyDictionary<string, string> result = _sut.Extract(TestPipelineFactory.Parse(Markdown));
+
+        Assert.Empty(result);
     }
 
     [Fact]

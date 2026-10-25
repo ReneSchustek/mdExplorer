@@ -10,6 +10,11 @@ on:
     # auch ohne Push gefunden werden. Sonntag 04:00 UTC = außerhalb der Arbeitszeit.
     - cron: '0 4 * * 0'
 
+# Ab Werk nur Lesen; ein Job, der mehr braucht, sagt es selbst. Fremde Actions laufen über
+# ihren Commit statt über einen beweglichen Tag, die Fassung steht dahinter.
+permissions:
+  contents: read
+
 jobs:
   codeql:
     name: CodeQL (SAST)
@@ -21,26 +26,26 @@ jobs:
 
     steps:
       - name: Quellcode auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: .NET 10 einrichten
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.x'
 
       - name: CodeQL initialisieren
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           languages: csharp
           queries: security-extended,security-and-quality
 
-      - name: Solution bauen (App wird per Projekt-Mapping als x64 gebaut, damit CodeQL die Assemblies analysieren kann)
+      - name: Solution bauen, damit CodeQL die übersetzten Assemblies analysieren kann
         run: |
           dotnet restore MdExplorer.slnx
           dotnet build MdExplorer.slnx --no-restore
 
       - name: CodeQL-Analyse durchführen
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           category: '/language:csharp'
 
@@ -65,18 +70,18 @@ jobs:
 
     steps:
       - name: Quellcode auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Abhängigkeiten eines Pull Requests prüfen
         if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@v5
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
           comment-summary-in-pr: always
 
       - name: Abhängigkeiten des veröffentlichten Standes prüfen
         if: github.event_name == 'push'
-        uses: actions/dependency-review-action@v5
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
           base-ref: ${{ github.event.before }}
@@ -88,10 +93,10 @@ jobs:
 
     steps:
       - name: Quellcode auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: .NET 10 einrichten
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.x'
 
@@ -119,7 +124,7 @@ jobs:
 
     steps:
       - name: Quellcode auschecken
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
 
@@ -129,13 +134,18 @@ jobs:
       # überhaupt nicht, meldet aber „kein Fund". Ein Scan, der still nichts prüft, ist
       # schlechter als keiner. `detect` ohne Bereichsangabe prüft immer die vollständige
       # Historie und ist von der Beschaffenheit des Pushes unabhängig.
+      # Das Archiv wird vor dem Entpacken gegen die Prüfsumme der Veröffentlichung geprüft. Ein
+      # ausgetauschtes Archiv liefe sonst mit Lesezugriff auf die ganze Historie.
       - name: gitleaks installieren
         run: |
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            | tar -xz -C /usr/local/bin gitleaks
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSL -o "$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum --check --strict
+          tar -xzf "$archive" -C /usr/local/bin gitleaks
           gitleaks version
         env:
           GITLEAKS_VERSION: 8.24.3
+          GITLEAKS_SHA256: 9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c
 
       - name: gitleaks ausführen
         run: gitleaks detect --source . --config .gitleaks.toml --redact --no-banner --exit-code 1

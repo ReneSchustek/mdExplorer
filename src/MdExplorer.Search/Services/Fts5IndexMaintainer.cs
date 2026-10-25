@@ -1,7 +1,5 @@
 using System.Data.Common;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Hosting;
 using MdExplorer.Core.Text;
@@ -20,16 +18,40 @@ namespace MdExplorer.Search.Services;
 /// Reine Application-Code-Pflege wurde der Trigger-Variante vorgezogen, weil der Body-Plaintext
 /// nicht als Spalte in <c>MarkdownDocuments</c> liegt und SQLite-Trigger ihn aus dem GZip-HTML
 /// nicht extrahieren können; eine UDF-/Spalten-Erweiterung wäre Cross-Modul-Eingriff in den Parser.
-/// DELETE-Konsistenz übernimmt weiterhin der Trigger aus der FTS5-Migration. Der Zugriff auf
+/// Auch das Entfernen verwaister Einträge erledigt der Abgleich selbst: Lösch-Trigger auf der
+/// FTS5-Tabelle gibt es nicht, weil jede Bedingung auf der <c>UNINDEXED</c>-Spalte die ganze
+/// Tabelle liest. Der Zugriff auf
 /// Quelldaten und Index-Storage läuft über Core-Abstraktionen. Das Modul kennt weder EF noch SQLite.
 /// </summary>
-public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchIndexer
+public sealed partial class Fts5IndexMaintainer : BackgroundService
 {
+    /// <summary>
+    /// Hash, unter dem ein Eintrag ohne gelesenen Text im Index steht.
+    /// </summary>
+    /// <remarks>
+    /// Er weicht von jedem echten Inhalts-Hash ab. Der Abgleich hält den Eintrag dadurch für
+    /// veraltet und versucht die Datei erneut, auch wenn sich ihr Inhalt nicht ändert: Eine Sperre
+    /// endet meist, ohne dass jemand die Datei bearbeitet.
+    /// </remarks>
+    internal const string UnreadBodyHash = "unread";
+
+    // Wartezeit bis zum nächsten Versuch an einer Datei, die sich nicht lesen ließ. Der Wert ist
+    // gesetzt, nicht gemessen: lang genug, dass eine dauerhaft gesperrte Datei nicht jeden Takt
+    // gelesen wird, kurz genug, dass der Text nach dem Ende einer Sperre bald durchsuchbar ist.
+    private static readonly TimeSpan ReadRetryDelay = TimeSpan.FromMinutes(5);
+
+    private readonly ReadRetryTracker _readRetries;
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IFileSystem _fileSystem;
     private readonly TimeProvider _timeProvider;
     private readonly SearchOptions _options;
+    private readonly IBackgroundServiceStatus _serviceStatus;
     private readonly ILogger<Fts5IndexMaintainer> _logger;
+
+    // Der Änderungsmarker nach dem letzten Abgleich, der nichts mehr zu tun fand. Solange er gleich
+    // bleibt und keine Datei auf einen Leseversuch wartet, entfällt der volle Abgleich.
+    private SearchSourceVersion? _settledVersion;
 
     /// <summary>Erzeugt den Maintainer und löst Pflichtabhängigkeiten auf.</summary>
     public Fts5IndexMaintainer(
@@ -37,6 +59,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         IFileSystem fileSystem,
         IOptions<SearchOptions> options,
         TimeProvider timeProvider,
+        IBackgroundServiceStatus serviceStatus,
         ILogger<Fts5IndexMaintainer> logger)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
@@ -49,10 +72,19 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         _fileSystem = fileSystem;
         _options = options.Value;
         _timeProvider = timeProvider;
+        _readRetries = new ReadRetryTracker(timeProvider, ReadRetryDelay);
+        ArgumentNullException.ThrowIfNull(serviceStatus);
+        _serviceStatus = serviceStatus;
         _logger = logger;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Gleicht den Volltextindex einmal mit den geparsten Dokumenten ab. Läuft sonst im Takt des
+    /// Hintergrunddienstes; öffentlich für Tests und das Messprojekt, die einen Abgleich gezielt
+    /// auslösen.
+    /// </summary>
+    /// <param name="cancellationToken">Abbruch.</param>
+    /// <returns>Anzahl der geschriebenen oder entfernten Einträge.</returns>
     public async Task<int> SynchronizeAsync(CancellationToken cancellationToken)
     {
         long startedAt = _timeProvider.GetTimestamp();
@@ -63,14 +95,23 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
             ISearchSourceProvider sourceProvider = scope.ServiceProvider.GetRequiredService<ISearchSourceProvider>();
             ISearchIndexStorage storage = scope.ServiceProvider.GetRequiredService<ISearchIndexStorage>();
 
-            IReadOnlyDictionary<Guid, string> indexedHashes = await storage.LoadIndexedHashesAsync(cancellationToken).ConfigureAwait(false);
-            SearchSourceData source = await sourceProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
-
-            SynchronizationDiff diff = ComputeDiff(indexedHashes, source);
-            if (diff.Targets.Count == 0 && diff.Orphans.Count == 0)
+            SearchSourceVersion version = await sourceProvider.LoadVersionAsync(cancellationToken).ConfigureAwait(false);
+            if (version == _settledVersion && !_readRetries.HasPending)
             {
                 return 0;
             }
+
+            IReadOnlyDictionary<Guid, string> indexedHashes = await storage.LoadIndexedHashesAsync(cancellationToken).ConfigureAwait(false);
+            SearchSourceData source = await sourceProvider.LoadAsync(cancellationToken).ConfigureAwait(false);
+
+            SynchronizationDiff diff = ComputeDiffCore(indexedHashes, source, _options.MaintenanceBatchSize, _readRetries.IsWaiting);
+            _readRetries.ForgetOtherThan(diff.LiveIds);
+            if (diff.Targets.Count == 0 && diff.Orphans.Count == 0)
+            {
+                _settledVersion = version;
+                return 0;
+            }
+            _settledVersion = null;
 
             IReadOnlyList<SearchIndexEntry> upserts = await BuildUpsertsAsync(diff.Targets, source.TagsByFileId, cancellationToken).ConfigureAwait(false);
             await storage.ApplyChangesAsync(diff.Orphans, upserts, cancellationToken).ConfigureAwait(false);
@@ -83,17 +124,23 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
     }
 
     /// <summary>
-    /// Pure-Function-Variante von <see cref="ComputeDiff"/>. Sichtbar für Direkt-Tests.
+    /// Vergleicht den persistierten Index-Stand mit dem aktuellen Source-Snapshot und bestimmt
+    /// (a) neu/zu aktualisierende Dokumente bis zur Batch-Grenze und (b) verwaiste Index-Einträge.
+    /// Ohne Abhängigkeiten, damit Tests den Rechenkern direkt aufrufen können.
     /// </summary>
+    /// <remarks>
+    /// Ein Dokument, das <paramref name="isWaitingForRetry"/> zurückhält, zählt nicht gegen die
+    /// Stapelgrenze. Sonst hielten genug gesperrte Dateien, die jeden Takt wieder als veraltet
+    /// erscheinen, alle anderen Dokumente dauerhaft aus dem Index.
+    /// </remarks>
     internal static SynchronizationDiff ComputeDiffCore(
         IReadOnlyDictionary<Guid, string> indexedHashes,
         SearchSourceData source,
-        int batchSize)
+        int batchSize,
+        Func<SearchSourceDocument, bool> isWaitingForRetry)
     {
-        // Die liveIds müssen über den gesamten Source-Snapshot vollständig sein, sonst markiert
-        // der Orphan-Pass weiter unten alle nicht erreichten Source-Einträge fälschlich als
-        // verwaist. Targets werden separat bis zum Batch-Limit beschnitten, die Iteration läuft
-        // dennoch weiter, damit liveIds komplett bleibt.
+        // liveIds deckt den ganzen Bestand ab, auch hinter der Stapelgrenze; sonst sähen alle nicht
+        // erreichten Dokumente unten wie verwaiste Einträge aus.
         HashSet<Guid> liveIds = new(source.Documents.Count);
         List<SearchSourceDocument> targets = new(batchSize);
         foreach (SearchSourceDocument document in source.Documents)
@@ -103,77 +150,17 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
             {
                 continue;
             }
-            if (!indexedHashes.TryGetValue(document.MarkdownFileId, out string? existingHash)
-                || !string.Equals(existingHash, document.SourceContentHash, StringComparison.Ordinal))
+            bool stale = !indexedHashes.TryGetValue(document.MarkdownFileId, out string? existingHash)
+                || !string.Equals(existingHash, document.SourceContentHash, StringComparison.Ordinal);
+            if (stale && !isWaitingForRetry(document))
             {
                 targets.Add(document);
             }
         }
 
-        List<Guid> orphans = indexedHashes.Keys
-            .Where(indexedId => !liveIds.Contains(indexedId))
-            .ToList();
+        List<Guid> orphans = [.. indexedHashes.Keys.Where(indexedId => !liveIds.Contains(indexedId))];
 
-        return new SynchronizationDiff(targets, orphans);
-    }
-
-    internal static string StripFrontmatter(string source)
-    {
-        if (!source.StartsWith("---", StringComparison.Ordinal))
-        {
-            return source;
-        }
-        int firstLineBreak = source.IndexOf('\n', 3);
-        if (firstLineBreak < 0)
-        {
-            return source;
-        }
-        int closingIndex = source.IndexOf("\n---", firstLineBreak, StringComparison.Ordinal);
-        if (closingIndex < 0)
-        {
-            return source;
-        }
-        int afterClosingMarker = closingIndex + 4;
-        if (afterClosingMarker >= source.Length)
-        {
-            return string.Empty;
-        }
-        int newlineAfter = source.IndexOf('\n', afterClosingMarker);
-        return newlineAfter < 0 ? string.Empty : source[(newlineAfter + 1)..];
-    }
-
-    internal static string FlattenFrontmatter(string frontmatterJson)
-    {
-        if (string.IsNullOrWhiteSpace(frontmatterJson))
-        {
-            return string.Empty;
-        }
-
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(frontmatterJson);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-            {
-                return string.Empty;
-            }
-
-            StringBuilder builder = new();
-            foreach (JsonProperty property in document.RootElement.EnumerateObject())
-            {
-                if (builder.Length > 0)
-                {
-                    _ = builder.Append(' ');
-                }
-                _ = builder.Append(property.Name);
-                _ = builder.Append(' ');
-                _ = builder.Append(property.Value.ValueKind == JsonValueKind.String ? property.Value.GetString() : property.Value.ToString());
-            }
-            return builder.ToString();
-        }
-        catch (JsonException)
-        {
-            return string.Empty;
-        }
+        return new SynchronizationDiff(targets, orphans, liveIds);
     }
 
     /// <summary>Wrapper um <see cref="SynchronizeAsync"/>, der erwartbare Fehler frisst. Sichtbar für Tests via <c>InternalsVisibleTo</c>.</summary>
@@ -189,16 +176,15 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
         }
         catch (DbException ex)
         {
-            // SQLite-Spitze nach Retry-Budget darf den HostedService nicht killen:
-            // der nächste Periodic-Tick erhält eine erneute Chance.
+            // Eine SQLite-Spitze nach ausgeschöpften Wiederholungen beendet den Dienst nicht. Der
+            // nächste Takt versucht es erneut.
             LogSynchronizationFailed(_logger, ex);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            // Defense-in-Depth. Wenn eine korrupte Frontmatter-JSON oder ein
-            // unerwarteter State im BuildUpserts-Pfad eine ArgumentException erzeugt,
-            // bleibt der Periodic-Loop am Leben; nächster Tick versucht es erneut.
-            LogSynchronizationFailed(_logger, ex);
+            // Erzeugt ein unerwarteter Zustand beim Aufbau der Einträge eine dieser Ausnahmen,
+            // bleibt die Schleife am Leben; der nächste Takt versucht es erneut.
+            LogSynchronizationInconsistent(_logger, ex);
         }
     }
 
@@ -210,87 +196,23 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
 
         try
         {
-            await TrySynchronizeAsync(stoppingToken).ConfigureAwait(false);
-
-            using PeriodicTimer timer = new(interval, _timeProvider);
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                if (!await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
-                {
-                    return;
-                }
-                await TrySynchronizeAsync(stoppingToken).ConfigureAwait(false);
-            }
+            await RunLoopAsync(interval, stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
             // erwartete Abbruchsemantik
         }
-        catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex))
+        catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex, stoppingToken))
         {
-            // Letzte Schicht. Fängt unerwartete Exceptions ab, damit der Host
-            // den Service ordentlich beendet statt unhandled-Crash.
+            // Was bis hierher durchschlägt, beendet den Dienst geordnet, statt den Prozess
+            // mit einer unbehandelten Ausnahme abzureißen.
             LogMaintainerWatchdogTriggered(_logger, ex);
+            _serviceStatus.ReportStopped(BackgroundServiceKind.SearchIndex);
         }
         finally
         {
             LogMaintainerStopped(_logger);
         }
-    }
-
-    /// <summary>
-    /// Vergleicht den persistierten Index-Stand mit dem aktuellen Source-Snapshot und bestimmt
-    /// (a) neu/zu aktualisierende Dokumente bis zur Batch-Grenze und (b) verwaiste Index-Einträge.
-    /// </summary>
-    private SynchronizationDiff ComputeDiff(
-        IReadOnlyDictionary<Guid, string> indexedHashes,
-        SearchSourceData source)
-        => ComputeDiffCore(indexedHashes, source, _options.MaintenanceBatchSize);
-
-    private async Task<IReadOnlyList<SearchIndexEntry>> BuildUpsertsAsync(
-        IReadOnlyList<SearchSourceDocument> targets,
-        IReadOnlyDictionary<Guid, IReadOnlyList<string>> tagsByFileId,
-        CancellationToken cancellationToken)
-    {
-        List<SearchIndexEntry> upserts = new(targets.Count);
-        foreach (SearchSourceDocument target in targets)
-        {
-            string body = await ReadBodyAsync(target.AbsolutePath, cancellationToken).ConfigureAwait(false);
-            string tags = JoinTags(tagsByFileId, target.MarkdownFileId);
-            string frontmatter = FlattenFrontmatter(target.FrontmatterJson);
-            upserts.Add(new SearchIndexEntry(
-                target.MarkdownFileId,
-                target.Title,
-                body,
-                tags,
-                frontmatter,
-                target.RelativePath,
-                target.SourceContentHash));
-        }
-        return upserts;
-    }
-
-    internal readonly record struct SynchronizationDiff(
-        IReadOnlyList<SearchSourceDocument> Targets,
-        IReadOnlyList<Guid> Orphans);
-
-    private static string JoinTags(IReadOnlyDictionary<Guid, IReadOnlyList<string>> tagsByFileId, Guid markdownFileId)
-    {
-        if (!tagsByFileId.TryGetValue(markdownFileId, out IReadOnlyList<string>? tagNames) || tagNames.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        StringBuilder builder = new();
-        foreach (string name in tagNames)
-        {
-            if (builder.Length > 0)
-            {
-                _ = builder.Append(' ');
-            }
-            _ = builder.Append(name);
-        }
-        return builder.ToString();
     }
 
     [LoggerMessage(EventId = 300, Level = LogLevel.Information, Message = "FTS5-Maintainer gestartet — Polling alle {IntervalSeconds:F0} s.")]
@@ -311,18 +233,83 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService, ISearchInde
     [LoggerMessage(EventId = 305, Level = LogLevel.Error, Message = "Fts5IndexMaintainer-Watchdog: unerwartete Exception aufgefangen, Service wird ordentlich beendet.")]
     private static partial void LogMaintainerWatchdogTriggered(ILogger logger, Exception exception);
 
-    private async Task<string> ReadBodyAsync(string absolutePath, CancellationToken cancellationToken)
+    [LoggerMessage(EventId = 306, Level = LogLevel.Debug, Message = "Quelldatei weiterhin nicht lesbar: {Path} — {Reason}")]
+    private static partial void LogReadFailedAgain(ILogger logger, string path, string reason);
+
+    [LoggerMessage(EventId = 307, Level = LogLevel.Warning, Message = "FTS5-Synchronisation übersprungen — unerwarteter Zustand beim Aufbau der Einträge, nächster Takt versucht es erneut.")]
+    private static partial void LogSynchronizationInconsistent(ILogger logger, Exception exception);
+
+    private async Task<IReadOnlyList<SearchIndexEntry>> BuildUpsertsAsync(
+        IReadOnlyList<SearchSourceDocument> targets,
+        IReadOnlyDictionary<Guid, IReadOnlyList<string>> tagsByFileId,
+        CancellationToken cancellationToken)
+    {
+        List<SearchIndexEntry> upserts = new(targets.Count);
+        foreach (SearchSourceDocument target in targets)
+        {
+            // Lässt sich die Datei nicht lesen, kommt sie trotzdem in den Index: Titel, Tags und
+            // Pfad bleiben durchsuchbar, nur der Text fehlt bis zum nächsten Versuch.
+            string? body = await ReadBodyAsync(target, cancellationToken).ConfigureAwait(false);
+            string tags = SearchIndexText.JoinTags(tagsByFileId, target.MarkdownFileId);
+            string frontmatter = SearchIndexText.FlattenFrontmatter(target.FrontmatterJson);
+            upserts.Add(new SearchIndexEntry(
+                target.MarkdownFileId,
+                target.Title,
+                body ?? string.Empty,
+                tags,
+                frontmatter,
+                target.RelativePath,
+                body is null ? UnreadBodyHash : target.SourceContentHash));
+        }
+        return upserts;
+    }
+
+    // Der Zeitgeber entsteht vor dem ersten Lauf: Der Takt hängt dann nicht davon ab, wie lange der
+    // erste Abgleich über einen großen Bestand dauert.
+    private async Task RunLoopAsync(TimeSpan interval, CancellationToken stoppingToken)
+    {
+        using PeriodicTimer timer = new(interval, _timeProvider);
+        await TrySynchronizeAsync(stoppingToken).ConfigureAwait(false);
+        while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
+        {
+            await TrySynchronizeAsync(stoppingToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Liest den Text einer Quelldatei ohne Frontmatter.</summary>
+    /// <returns>Der Text, oder <see langword="null"/>, wenn sich die Datei nicht lesen ließ.</returns>
+    private async Task<string?> ReadBodyAsync(SearchSourceDocument target, CancellationToken cancellationToken)
     {
         try
         {
-            byte[] bytes = await _fileSystem.ReadAllBytesAsync(absolutePath, cancellationToken).ConfigureAwait(false);
-            string source = Utf8Decoder.DecodeNoBom(bytes);
-            return StripFrontmatter(source);
+            byte[] bytes = await _fileSystem.ReadAllBytesAsync(target.AbsolutePath, cancellationToken).ConfigureAwait(false);
+            _readRetries.Succeeded(target.MarkdownFileId);
+            return SearchIndexText.StripFrontmatter(Utf8Decoder.DecodeNoBom(bytes));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or FileNotFoundException or DirectoryNotFoundException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            LogReadFailed(_logger, absolutePath, ex);
-            return string.Empty;
+            RecordReadFailure(target, ex);
+            return null;
         }
     }
+
+    /// <summary>
+    /// Vermerkt den Lesefehler für den nächsten Versuch und protokolliert ihn, mit vollem Stapel
+    /// nur beim ersten Mal je Datei und Inhalt.
+    /// </summary>
+    /// <remarks>
+    /// Eine dauerhaft gesperrte Datei wird alle <see cref="ReadRetryDelay"/> neu versucht. Stünde
+    /// jeder Versuch mit Stapel im Protokoll, verdrängte eine einzige Datei mit der Zeit jede andere
+    /// Meldung; die Wiederholungen stehen deshalb als eine Zeile auf Debug-Ebene.
+    /// </remarks>
+    private void RecordReadFailure(SearchSourceDocument target, Exception exception)
+    {
+        if (_readRetries.Failed(target))
+        {
+            LogReadFailedAgain(_logger, target.AbsolutePath, exception.Message);
+            return;
+        }
+        LogReadFailed(_logger, target.AbsolutePath, exception);
+    }
+
 }

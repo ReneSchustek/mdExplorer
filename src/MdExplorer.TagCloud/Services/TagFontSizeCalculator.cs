@@ -2,8 +2,9 @@ namespace MdExplorer.TagCloud.Services;
 
 /// <summary>
 /// Reine, allokationsfreie Logarithmus-Skalierung von Tag-Häufigkeiten auf eine DIP-Schriftgröße.
-/// Außerhalb des Intervalls <c>[minCount, maxCount]</c> wird geklemmt, im Sonderfall
-/// <c>minCount == maxCount</c> wird die Min-Schriftgröße geliefert (keine Spreizung sichtbar).
+/// Logarithmisch, weil Häufigkeiten über Größenordnungen streuen; linear bekämen wenige Spitzenreiter
+/// die ganze Spreizung, und der Rest stünde gleich klein da. Außerhalb des Intervalls
+/// <c>[minCount, maxCount]</c> wird geklemmt; sind alle Häufigkeiten gleich, gibt es die Min-Schriftgröße.
 /// </summary>
 public static class TagFontSizeCalculator
 {

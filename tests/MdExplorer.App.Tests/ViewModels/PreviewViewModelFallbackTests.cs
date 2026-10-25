@@ -1,6 +1,4 @@
-using System.Data.Common;
 using System.IO;
-using System.IO.Compression;
 using System.Text;
 using MdExplorer.App.Services;
 using MdExplorer.App.Tests.Fakes;
@@ -20,21 +18,21 @@ namespace MdExplorer.App.Tests.ViewModels;
 /// </summary>
 public sealed class PreviewViewModelFallbackTests
 {
-    private static readonly DateTime FesteZeit = new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime FixedTime = new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc);
 
     [Fact]
     public async Task LoadAsync_WithoutAFile_ShowsTheEmptyDocumentAndClearsTheCurrentId()
     {
         // Guid.Empty steht für "nichts ausgewählt", etwa nach dem Abwählen im Baum.
         FakeMarkdownDocumentRepository repo = new();
-        using ServiceProvider provider = ErzeugeAnbieter(repo);
-        PreviewViewModel sut = Erzeuge(provider);
-        await sut.LoadAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        using ServiceProvider provider = CreateProvider(repo);
+        PreviewViewModel sut = Create(provider);
+        await sut.LoadAsync(new Guid("eeeeeeee-0000-0000-0000-000000000001"), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         await sut.LoadAsync(Guid.Empty, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Null(sut.CurrentDocumentId);
-        // Auch ohne Inhalt trägt die Anzeige die Belegung: Ein blankes HTML-Gerüst stand im
+        // Auch ohne Inhalt trägt die Anzeige die Belegung. Ein blankes HTML-Gerüst stünde im
         // dunklen Erscheinungsbild als weiße Fläche über der halben Anwendung.
         Assert.Contains("Content-Security-Policy", sut.Html, StringComparison.Ordinal);
         Assert.Contains("<body></body>", sut.Html, StringComparison.Ordinal);
@@ -44,29 +42,31 @@ public sealed class PreviewViewModelFallbackTests
     public async Task LoadAsync_WhenTheLookupIsCancelled_LeavesTheShownDocumentUntouched()
     {
         // Beim schnellen Durchklicken bricht der vorige Ladevorgang ab. Würde er dabei die
-        // Anzeige leeren, floeße die gerade fertig geladene Vorschau wieder weg.
-        Guid fileId = Guid.NewGuid();
+        // Anzeige leeren, flösse die gerade fertig geladene Vorschau wieder weg.
+        Guid fileId = new("eeeeeeee-0000-0000-0000-000000000002");
         FakeMarkdownDocumentRepository repo = new();
-        repo.Put(fileId, ErzeugeDokument(fileId, "<h1>Bestand</h1>"));
-        using ServiceProvider provider = ErzeugeAnbieter(repo);
-        PreviewViewModel sut = Erzeuge(provider);
+        repo.Put(fileId, CreateDocument(fileId, "<h1>Bestand</h1>"));
+        using ServiceProvider provider = CreateProvider(repo);
+        PreviewViewModel sut = Create(provider);
         await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        string vorher = sut.Html;
+        string before = sut.Html;
 
         repo.FailOnGet = new OperationCanceledException();
-        await sut.LoadAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await sut.LoadAsync(new Guid("eeeeeeee-0000-0000-0000-000000000003"), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        Assert.Equal(vorher, sut.Html, StringComparer.Ordinal);
+        Assert.Equal(before, sut.Html, StringComparer.Ordinal);
         Assert.Equal(fileId, sut.CurrentDocumentId);
     }
 
-    [Fact]
-    public async Task LoadAsync_OnDbException_ShowsTheEmptyDocumentForThatFile()
+    [Theory]
+    [InlineData(TestFailures.Database)]
+    [InlineData(TestFailures.InvalidState)]
+    public async Task LoadAsync_WhenTheLookupFails_ShowsTheEmptyDocumentForThatFile(string kind)
     {
-        Guid fileId = Guid.NewGuid();
-        FakeMarkdownDocumentRepository repo = new() { FailOnGet = new TestDbException("Datenbank belegt") };
-        using ServiceProvider provider = ErzeugeAnbieter(repo);
-        PreviewViewModel sut = Erzeuge(provider);
+        Guid fileId = new("eeeeeeee-0000-0000-0000-000000000004");
+        FakeMarkdownDocumentRepository repo = new() { FailOnGet = TestFailures.Of(kind) };
+        using ServiceProvider provider = CreateProvider(repo);
+        PreviewViewModel sut = Create(provider);
 
         await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -79,20 +79,20 @@ public sealed class PreviewViewModelFallbackTests
     public async Task LoadAsync_WithoutRenderedHtml_ShowsAnEmptyBody()
     {
         // Kommt vor, solange der Parser die frisch angelegte Datei noch nicht verarbeitet hat.
-        Guid fileId = Guid.NewGuid();
+        Guid fileId = new("eeeeeeee-0000-0000-0000-000000000005");
         FakeMarkdownDocumentRepository repo = new();
-        MarkdownDocument dokument = new()
+        MarkdownDocument document = new()
         {
-            Id = Guid.NewGuid(),
+            Id = new Guid("eeeeeeee-0000-0000-0000-000000000006"),
             MarkdownFileId = fileId,
             SourceContentHash = "hash",
             FrontmatterJson = "{}",
             OutlinksJson = "[]",
-            ParsedAtUtc = FesteZeit,
+            ParsedAtUtc = FixedTime,
         };
-        repo.Put(fileId, dokument);
-        using ServiceProvider provider = ErzeugeAnbieter(repo);
-        PreviewViewModel sut = Erzeuge(provider);
+        repo.Put(fileId, document);
+        using ServiceProvider provider = CreateProvider(repo);
+        PreviewViewModel sut = Create(provider);
 
         await sut.LoadAsync(fileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -101,80 +101,69 @@ public sealed class PreviewViewModelFallbackTests
     }
 
     [Fact]
-    public void SetHtml_WithoutHtml_Throws()
+    public void ShowUnindexedFile_WithoutAPath_Throws()
     {
         FakeMarkdownDocumentRepository repo = new();
-        using ServiceProvider provider = ErzeugeAnbieter(repo);
-        PreviewViewModel sut = Erzeuge(provider);
+        using ServiceProvider provider = CreateProvider(repo);
+        PreviewViewModel sut = Create(provider);
 
-        _ = Assert.Throws<ArgumentNullException>(() => sut.SetHtml(null!));
+        _ = Assert.Throws<ArgumentException>(() => sut.ShowUnindexedFile(ReadOnlyMemory<byte>.Empty, " "));
     }
 
     [Fact]
-    public void SetHtml_WithHtml_ReplacesTheShownDocument()
+    public void ShowRendered_WithEmptyContent_ShowsAnEmptyDocument()
     {
         FakeMarkdownDocumentRepository repo = new();
-        using ServiceProvider provider = ErzeugeAnbieter(repo);
-        PreviewViewModel sut = Erzeuge(provider);
+        using ServiceProvider provider = CreateProvider(repo);
+        PreviewViewModel sut = Create(provider);
 
-        sut.SetHtml("<html>direkt</html>");
+        sut.ShowRendered(ReadOnlyMemory<byte>.Empty);
 
-        Assert.Equal("<html>direkt</html>", sut.Html, StringComparer.Ordinal);
+        Assert.Contains("Content-Security-Policy", sut.Html, StringComparison.Ordinal);
     }
 
-    private static PreviewViewModel Erzeuge(ServiceProvider provider) =>
+    /// <remarks>
+    /// Kaputtes HTML mit Zehntausenden offener <c>&lt;img</c> ohne Ende lässt das Muster für die
+    /// Bildpfade quadratisch suchen, bis seine Zeitgrenze von einer Sekunde reißt. Das Dokument
+    /// erscheint dann ohne umgeschriebene Bilder; die Ausnahme darf den Klick nicht abbrechen.
+    /// </remarks>
+    [Fact]
+    public void ShowUnindexedFile_WhenRewritingTheImagesTimesOut_ShowsTheDocumentAnyway()
+    {
+        string broken = "<p>Anfang</p>" + string.Concat(Enumerable.Repeat("<img alt=x ", 60_000));
+        using ServiceProvider provider = CreateProvider(new FakeMarkdownDocumentRepository());
+        PreviewViewModel sut = Create(provider);
+
+        sut.ShowUnindexedFile(TestGzip.Compress(broken), @"C:\notes\kaputt.md");
+
+        Assert.Contains("<p>Anfang</p>", sut.Html, StringComparison.Ordinal);
+        Assert.Contains("</body></html>", sut.Html, StringComparison.Ordinal);
+    }
+
+    private static PreviewViewModel Create(ServiceProvider provider) =>
         new(provider.GetRequiredService<IServiceScopeFactory>(),
             new PreviewHtmlBuilder(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default)),
             NullLogger<PreviewViewModel>.Instance);
 
-    private static ServiceProvider ErzeugeAnbieter(FakeMarkdownDocumentRepository repository)
+    private static ServiceProvider CreateProvider(FakeMarkdownDocumentRepository repository)
     {
-        ServiceCollection dienste = new();
-        _ = dienste.AddScoped<IMarkdownDocumentRepository>(_ => repository);
-        return dienste.BuildServiceProvider(validateScopes: true);
+        ServiceCollection services = new();
+        _ = services.AddScoped<IMarkdownDocumentRepository>(_ => repository);
+        return services.BuildServiceProvider(validateScopes: true);
     }
 
-    private static MarkdownDocument ErzeugeDokument(Guid fileId, string html)
+    private static MarkdownDocument CreateDocument(Guid fileId, string html)
     {
-        MarkdownDocument dokument = new()
+        MarkdownDocument document = new()
         {
-            Id = Guid.NewGuid(),
+            Id = new Guid("eeeeeeee-0000-0000-0000-000000000007"),
             MarkdownFileId = fileId,
             SourceContentHash = "hash",
             FrontmatterJson = "{}",
             OutlinksJson = "[]",
-            ParsedAtUtc = FesteZeit,
+            ParsedAtUtc = FixedTime,
         };
-        dokument.SetRenderedHtmlGz(Packe(html));
-        return dokument;
-    }
-
-    private static byte[] Packe(string text)
-    {
-        using MemoryStream ausgabe = new();
-        using (GZipStream gz = new(ausgabe, CompressionLevel.Fastest))
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(text);
-            gz.Write(bytes, 0, bytes.Length);
-        }
-        return ausgabe.ToArray();
-    }
-
-    /// <summary><see cref="DbException"/> ist abstrakt; für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>
-    private sealed class TestDbException : DbException
-    {
-        public TestDbException()
-        {
-        }
-
-        public TestDbException(string message)
-            : base(message)
-        {
-        }
-
-        public TestDbException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
+        document.SetRenderedHtmlGz(TestGzip.Compress(html));
+        return document;
     }
 }

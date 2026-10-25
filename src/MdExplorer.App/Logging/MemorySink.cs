@@ -6,15 +6,16 @@ using Serilog.Events;
 namespace MdExplorer.App.Logging;
 
 /// <summary>
-/// Serilog-Sink mit Ring-Buffer (Default-Kapazität <see cref="DefaultCapacity"/>).
-/// Speist den integrierten Log-Viewer und implementiert gleichzeitig
-/// <see cref="IMemoryLogStore"/> als Lese-Abstraktion.
-/// Thread-safe: älteste Einträge werden bei Kapazitätsüberschreitung verworfen
-/// (harte Grenze, kein unbeschränktes Wachstum).
+/// Serilog-Sink mit Ringpuffer für den integrierten Log-Viewer, zugleich dessen Lesezugang
+/// <see cref="IMemoryLogStore"/>. Ist der Puffer voll, fällt der älteste Eintrag heraus; der
+/// Speicher wächst also nicht mit der Laufzeit.
 /// </summary>
 internal sealed class MemorySink : ILogEventSink, IMemoryLogStore
 {
-    /// <summary>Default-Kapazität (≈ 300 kB Heap).</summary>
+    /// <summary>
+    /// Obergrenze des Puffers in Einträgen. Der Speicherbedarf hängt an der Länge der Nachrichten;
+    /// ein Eintrag mit Aufrufstapel belegt mehrere Kilobyte.
+    /// </summary>
     public const int DefaultCapacity = 2000;
 
     private static readonly Lazy<MemorySink> LazyInstance =
@@ -59,6 +60,8 @@ internal sealed class MemorySink : ILogEventSink, IMemoryLogStore
                 _ = _buffer.Dequeue();
             }
         }
+        // Außerhalb der Sperre: Der Log-Viewer springt synchron auf den UI-Thread. Ruft der
+        // gerade Snapshot() und wartet auf diese Sperre, warteten beide Threads aufeinander.
         EntryAdded?.Invoke(this, entry);
     }
 
@@ -68,6 +71,20 @@ internal sealed class MemorySink : ILogEventSink, IMemoryLogStore
         lock (_lock)
         {
             return [.. _buffer];
+        }
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Die Betriebsanzeige liest bei jedem neuen Eintrag nach. Sie braucht nur das Ende des
+    /// Puffers; eine Kopie aller Einträge je Protokollzeile wäre die zehnfache Arbeit.
+    /// </remarks>
+    public IReadOnlyList<LogEntry> Recent(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+        lock (_lock)
+        {
+            return [.. _buffer.Skip(Math.Max(0, _buffer.Count - count))];
         }
     }
 

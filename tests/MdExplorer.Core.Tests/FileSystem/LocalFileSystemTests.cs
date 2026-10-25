@@ -3,6 +3,10 @@ using MdExplorer.Core.FileSystem;
 
 namespace MdExplorer.Core.Tests.FileSystem;
 
+/// <summary>
+/// Das echte Dateisystem in einem Wegwerfordner unter Temp. Die Attrappen der übrigen Tests
+/// bilden dieses Verhalten nach; weicht es hier ab, prüfen jene gegen eine falsche Vorlage.
+/// </summary>
 public sealed class LocalFileSystemTests : IDisposable
 {
     private readonly string _testRoot;
@@ -10,8 +14,7 @@ public sealed class LocalFileSystemTests : IDisposable
 
     public LocalFileSystemTests()
     {
-        _testRoot = Path.Combine(Path.GetTempPath(), "MdExplorer.Tests", Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(_testRoot);
+        _testRoot = Directory.CreateTempSubdirectory("MdExplorer.Tests-").FullName;
         _sut = new LocalFileSystem();
     }
 
@@ -54,6 +57,23 @@ public sealed class LocalFileSystemTests : IDisposable
         IEnumerable<string> result = _sut.EnumerateFiles(_testRoot, "*.md", recursive: false);
 
         Assert.Equal(2, result.Count());
+    }
+
+    [Fact]
+    public void EnumerateFileEntries_OnAFile_CarriesSizeTimeAndNoReparseMark()
+    {
+        string path = Path.Combine(_testRoot, "a.md");
+        File.WriteAllText(path, "12345");
+        DateTime written = new(2026, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(path, written);
+        File.WriteAllText(Path.Combine(_testRoot, "ignored.txt"), "x");
+
+        FileEntry entry = Assert.Single(_sut.EnumerateFileEntries(_testRoot, "*.md"));
+
+        Assert.Equal(path, entry.Path);
+        Assert.Equal(5, entry.SizeBytes);
+        Assert.Equal(written, entry.LastWriteTimeUtc);
+        Assert.False(entry.IsReparsePoint);
     }
 
     [Fact]
@@ -135,6 +155,30 @@ public sealed class LocalFileSystemTests : IDisposable
     }
 
     [Fact]
+    public void IsReparsePoint_OnAJunction_ReturnsTrue()
+    {
+        // Eine Verzeichnisverbindung braucht anders als ein symbolischer Link weder Adminrechte
+        // noch den Entwicklermodus; .NET selbst bietet zum Anlegen keine Schnittstelle.
+        string target = Path.Combine(_testRoot, "ziel");
+        string junction = Path.Combine(_testRoot, "verbindung");
+        _ = Directory.CreateDirectory(target);
+        CreateJunction(junction, target);
+        bool junctionIsReparsePoint;
+        try
+        {
+            junctionIsReparsePoint = _sut.IsReparsePoint(junction);
+        }
+        finally
+        {
+            // Nur die Verbindung selbst entfernen; das rekursive Aufräumen scheitert an ihr.
+            Directory.Delete(junction);
+        }
+
+        Assert.True(junctionIsReparsePoint);
+        Assert.False(_sut.IsReparsePoint(target));
+    }
+
+    [Fact]
     public void IsReparsePoint_OnMissingPath_ReturnsFalse()
     {
         Assert.False(_sut.IsReparsePoint(Path.Combine(_testRoot, "gibt-es-nicht")));
@@ -154,14 +198,14 @@ public sealed class LocalFileSystemTests : IDisposable
     [Fact]
     public void MoveFile_MovesTheContentAndLeavesNothingBehind()
     {
-        string quelle = Path.Combine(_testRoot, "quelle.md");
-        string ziel = Path.Combine(_testRoot, "ziel.md");
-        File.WriteAllText(quelle, "Inhalt");
+        string source = Path.Combine(_testRoot, "quelle.md");
+        string destination = Path.Combine(_testRoot, "ziel.md");
+        File.WriteAllText(source, "Inhalt");
 
-        _sut.MoveFile(quelle, ziel);
+        _sut.MoveFile(source, destination);
 
-        Assert.False(File.Exists(quelle));
-        Assert.Equal("Inhalt", File.ReadAllText(ziel));
+        Assert.False(File.Exists(source));
+        Assert.Equal("Inhalt", File.ReadAllText(destination));
     }
 
     /// <remarks>
@@ -171,60 +215,74 @@ public sealed class LocalFileSystemTests : IDisposable
     [Fact]
     public void MoveFile_IntoAMissingDirectory_CreatesTheDirectory()
     {
-        string quelle = Path.Combine(_testRoot, "quelle.md");
-        string ziel = Path.Combine(_testRoot, "neu", "tiefer", "ziel.md");
-        File.WriteAllText(quelle, "Inhalt");
+        string source = Path.Combine(_testRoot, "quelle.md");
+        string destination = Path.Combine(_testRoot, "neu", "tiefer", "ziel.md");
+        File.WriteAllText(source, "Inhalt");
 
-        _sut.MoveFile(quelle, ziel);
+        _sut.MoveFile(source, destination);
 
-        Assert.Equal("Inhalt", File.ReadAllText(ziel));
+        Assert.Equal("Inhalt", File.ReadAllText(destination));
     }
 
     /// <remarks>
-    /// Der Punkt, an dem <c>overwrite: false</c> hängt: Ein vorhandenes Ziel muss den Vorgang
-    /// abbrechen. Andernfalls verschluckt ein Umbenennen eine fremde Datei, und beides,
-    /// Quelle und Ziel, ist danach nicht mehr da, wo es hingehört.
+    /// Ein vorhandenes Ziel bricht den Vorgang ab, dafür steht <c>overwrite: false</c>.
+    /// Andernfalls verschluckte ein Umbenennen eine fremde Datei.
     /// </remarks>
     [Fact]
     public void MoveFile_OntoAnExistingTarget_ThrowsAndKeepsBothFiles()
     {
-        string quelle = Path.Combine(_testRoot, "quelle.md");
-        string ziel = Path.Combine(_testRoot, "belegt.md");
-        File.WriteAllText(quelle, "neu");
-        File.WriteAllText(ziel, "alt");
+        string source = Path.Combine(_testRoot, "quelle.md");
+        string destination = Path.Combine(_testRoot, "belegt.md");
+        File.WriteAllText(source, "neu");
+        File.WriteAllText(destination, "alt");
 
-        _ = Assert.Throws<IOException>(() => _sut.MoveFile(quelle, ziel));
+        _ = Assert.Throws<IOException>(() => _sut.MoveFile(source, destination));
 
-        Assert.Equal("neu", File.ReadAllText(quelle));
-        Assert.Equal("alt", File.ReadAllText(ziel));
+        Assert.Equal("neu", File.ReadAllText(source));
+        Assert.Equal("alt", File.ReadAllText(destination));
+    }
+
+    /// <remarks>
+    /// Unter Windows sind „notiz.md“ und „Notiz.md“ dieselbe Datei. Das Umbenennen darf trotzdem
+    /// nicht als belegtes Ziel scheitern, sonst ließe sich die Schreibweise nie ändern.
+    /// </remarks>
+    [Fact]
+    public void MoveFile_ChangingOnlyTheCase_RenamesTheFile()
+    {
+        string source = Path.Combine(_testRoot, "notiz.md");
+        File.WriteAllText(source, "inhalt");
+
+        _sut.MoveFile(source, Path.Combine(_testRoot, "Notiz.md"));
+
+        Assert.Equal(["Notiz.md"], Directory.GetFiles(_testRoot).Select(Path.GetFileName));
+        Assert.Equal("inhalt", File.ReadAllText(Path.Combine(_testRoot, "Notiz.md")));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void MoveFile_OnBlankPath_Throws(string leer)
+    public void MoveFile_OnBlankPath_Throws(string empty)
     {
-        string ziel = Path.Combine(_testRoot, "ziel.md");
+        string destination = Path.Combine(_testRoot, "ziel.md");
 
-        _ = Assert.Throws<ArgumentException>(() => _sut.MoveFile(leer, ziel));
-        _ = Assert.Throws<ArgumentException>(() => _sut.MoveFile(ziel, leer));
+        _ = Assert.Throws<ArgumentException>(() => _sut.MoveFile(empty, destination));
+        _ = Assert.Throws<ArgumentException>(() => _sut.MoveFile(destination, empty));
     }
 
     [Fact]
     public void DeleteFile_OnExistingFile_RemovesIt()
     {
-        string pfad = Path.Combine(_testRoot, "weg.md");
-        File.WriteAllText(pfad, "Inhalt");
+        string filePath = Path.Combine(_testRoot, "weg.md");
+        File.WriteAllText(filePath, "Inhalt");
 
-        _sut.DeleteFile(pfad);
+        _sut.DeleteFile(filePath);
 
-        Assert.False(File.Exists(pfad));
+        Assert.False(File.Exists(filePath));
     }
 
     /// <remarks>
-    /// Wer löschen will, was schon weg ist, hat sein Ziel erreicht. Diese Zusage steht als
-    /// Kommentar im Code; hier steht sie als Prüfung, sonst hinge der Aufrufer an einer
-    /// Ausnahme für einen Zustand, den er sich gewünscht hat.
+    /// Wer löschen will, was schon weg ist, hat sein Ziel erreicht. Sonst hinge der Aufrufer
+    /// an einer Ausnahme für einen Zustand, den er sich gewünscht hat.
     /// </remarks>
     [Fact]
     public void DeleteFile_OnAlreadyMissingFile_StaysQuiet()
@@ -235,8 +293,28 @@ public sealed class LocalFileSystemTests : IDisposable
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void DeleteFile_OnBlankPath_Throws(string leer)
+    public void DeleteFile_OnBlankPath_Throws(string empty)
     {
-        _ = Assert.Throws<ArgumentException>(() => _sut.DeleteFile(leer));
+        _ = Assert.Throws<ArgumentException>(() => _sut.DeleteFile(empty));
+    }
+
+    private static void CreateJunction(string junction, string target)
+    {
+        System.Diagnostics.ProcessStartInfo start = new("cmd.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+        };
+        start.ArgumentList.Add("/c");
+        start.ArgumentList.Add("mklink");
+        start.ArgumentList.Add("/J");
+        start.ArgumentList.Add(junction);
+        start.ArgumentList.Add(target);
+        using System.Diagnostics.Process process = System.Diagnostics.Process.Start(start)
+            ?? throw new InvalidOperationException("cmd.exe ließ sich nicht starten.");
+        _ = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        Assert.Equal(0, process.ExitCode);
     }
 }

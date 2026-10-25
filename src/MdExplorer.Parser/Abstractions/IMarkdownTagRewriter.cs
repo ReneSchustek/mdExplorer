@@ -8,14 +8,16 @@ namespace MdExplorer.Parser.Abstractions;
 public interface IMarkdownTagRewriter
 {
     /// <summary>
-    /// Wendet die angegebenen Slug-Operationen auf den Rohtext an. Body-Vorkommen werden
-    /// per Boundary-Regex erkannt (gleiche Regel wie <c>TagExtractor</c>), Frontmatter-Einträge
-    /// im <c>tags</c>-Feld werden zeilenbasiert manipuliert. Verarbeitet Inline-Sequenzen
-    /// (<c>tags: [a, b]</c>), kommagetrennte Werte (<c>tags: a, b</c>) und Block-Listen
-    /// (<c>- a</c> in Folgezeilen).
+    /// Wendet die angegebenen Slug-Operationen auf den Rohtext an. Im Rumpf werden die Hashtags
+    /// ersetzt, die der Index zählt (gleiche Regel und gleiche Pipeline wie der
+    /// <c>TagExtractor</c>). Im Frontmatter werden die Einträge unter dem Schlüssel <c>tags</c> auf
+    /// oberster Ebene ersetzt, in Klammer-Listen (<c>tags: [a, b]</c>), Block-Listen
+    /// (<c>- a</c> in Folgezeilen) und Komma-Texten (<c>tags: a, b</c>); Lage und Kommentare
+    /// liefert der YAML-Leser.
     /// </summary>
     /// <param name="original">Original-Markdown-Inhalt.</param>
     /// <param name="operations">Pro Slug: neuer Name (Rename / Merge) oder <see langword="null"/> (Delete).</param>
     /// <returns>Umgeschriebener Text, identisch zu <paramref name="original"/>, wenn keine Änderung anfällt.</returns>
+    /// <exception cref="ArgumentException">Ein neuer Name ist kein gültiger Schlagwort-Name (siehe <c>HashtagPattern.IsValidName</c>).</exception>
     string Apply(string original, IReadOnlyDictionary<string, string?> operations);
 }

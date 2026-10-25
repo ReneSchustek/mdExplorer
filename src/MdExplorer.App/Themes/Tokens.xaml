@@ -62,5 +62,20 @@
     <system:Double x:Key="SplitterWidth">6</system:Double>
     <system:Double x:Key="IconSizeS">14</system:Double>
     <system:Double x:Key="IconSizeM">18</system:Double>
+    <!-- Kopfleiste: Symbolknöpfe in Zeilenhöhe der Leiste, das Symbol etwas größer als der Text. -->
+    <system:Double x:Key="IconButtonSize">32</system:Double>
+    <system:Double x:Key="IconSizeIconButton">16</system:Double>
+    <!-- ── Symbole ──────────────────────────────────────────────────────── -->
+    <!-- Segoe Fluent Icons ab Windows 11, Segoe MDL2 Assets trägt Windows 10 mit denselben Codes. -->
+    <FontFamily x:Key="IconFontFamily">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+    <!-- Die Zeichen der Symbolschrift, mit Namen statt Code im Markup. -->
+    <system:String x:Key="GlyphSidePanel">&#xE90D;</system:String> <!-- Seitenleiste (DockRight): Tag-Cloud ein und aus -->
+    <system:String x:Key="GlyphTag">&#xE8EC;</system:String> <!-- Tag: Tag-Verwaltung -->
+    <system:String x:Key="GlyphGraph">&#xF003;</system:String> <!-- Beziehung: WikiLink-Graph -->
+    <system:String x:Key="GlyphList">&#xE8FD;</system:String> <!-- Aufzählung: Protokoll -->
+    <system:String x:Key="GlyphSettings">&#xE713;</system:String> <!-- Zahnrad: Einstellungen -->
+    <system:String x:Key="GlyphHelp">&#xE897;</system:String> <!-- Fragezeichen: Handbuch -->
+    <system:String x:Key="GlyphInfo">&#xE946;</system:String> <!-- Info: Über MdExplorer -->
+    <system:String x:Key="GlyphClose">&#xE711;</system:String> <!-- Kreuz: Schließen -->
 
 </ResourceDictionary>

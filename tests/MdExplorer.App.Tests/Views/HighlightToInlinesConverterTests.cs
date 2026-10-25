@@ -1,10 +1,9 @@
 using System.Globalization;
-using System.Runtime.ExceptionServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using MdExplorer.App.Converters;
-using Xunit.Sdk;
+using MdExplorer.Core.Abstractions;
 
 namespace MdExplorer.App.Tests.Views;
 
@@ -19,7 +18,7 @@ namespace MdExplorer.App.Tests.Views;
 public sealed class HighlightToInlinesConverterTests
 {
     [Fact]
-    public void SnippetWithoutMarkerYieldsSinglePlainRun() => RunSta(() =>
+    public void SnippetWithoutMarkerYieldsSinglePlainRun() => StaRunner.Run(() =>
     {
         TextBlock block = Convert("Text ohne Treffer");
 
@@ -29,9 +28,9 @@ public sealed class HighlightToInlinesConverterTests
     });
 
     [Fact]
-    public void SnippetWithMarkerSplitsIntoThreeRuns() => RunSta(() =>
+    public void SnippetWithMarkerSplitsIntoThreeRuns() => StaRunner.Run(() =>
     {
-        TextBlock block = Convert("vor <mark>Treffer</mark> nach");
+        TextBlock block = Convert("vor " + SnippetMarkers.Open + "Treffer" + SnippetMarkers.Close + " nach");
 
         Assert.Equal(3, block.Inlines.Count);
         Assert.Equal(
@@ -40,11 +39,11 @@ public sealed class HighlightToInlinesConverterTests
     });
 
     /// <remarks>
-    /// Der Kern des Befunds: <b>beide</b> Farben. Ein gesetzter Hintergrund ohne gesetzten
-    /// Vordergrund ist genau der Fehler, den dieser Test verhindert.
+    /// Beide Farben zählen. Ein gesetzter Hintergrund ohne gesetzten Vordergrund ist der
+    /// Fehler, den dieser Test verhindert.
     /// </remarks>
     [Fact]
-    public void HighlightedRunBindsBothColorsToThePalette() => RunSta(() =>
+    public void HighlightedRunBindsBothColorsToThePalette() => StaRunner.Run(() =>
     {
         Run run = HighlightToInlinesConverter.BuildHighlightRun("Treffer");
 
@@ -68,23 +67,23 @@ public sealed class HighlightToInlinesConverterTests
     /// Ausgabe von FTS5. Er darf den Aufbau der Liste nicht abbrechen.
     /// </remarks>
     [Fact]
-    public void UnclosedMarkerDoesNotBreakTheBuild() => RunSta(() =>
+    public void UnclosedMarkerDoesNotBreakTheBuild() => StaRunner.Run(() =>
     {
-        TextBlock block = Convert("vor <mark>Rest ohne Ende");
+        TextBlock block = Convert("vor " + SnippetMarkers.Open + "Rest ohne Ende");
 
         Assert.Equal(2, block.Inlines.Count);
         Assert.Equal(["vor ", "Rest ohne Ende"], block.Inlines.OfType<Run>().Select(run => run.Text));
     });
 
     [Fact]
-    public void EmptyAndForeignInputYieldAnEmptyBlock() => RunSta(() =>
+    public void EmptyAndForeignInputYieldAnEmptyBlock() => StaRunner.Run(() =>
     {
         Assert.Empty(Convert(string.Empty).Inlines);
         Assert.Empty(Convert(42).Inlines);
     });
 
     [Fact]
-    public void ConvertBackIsNotSupported() => RunSta(() =>
+    public void ConvertBackIsNotSupported() => StaRunner.Run(() =>
     {
         HighlightToInlinesConverter converter = new();
 
@@ -98,40 +97,5 @@ public sealed class HighlightToInlinesConverterTests
 
         return Assert.IsType<TextBlock>(
             converter.Convert(value, typeof(object), null, CultureInfo.InvariantCulture));
-    }
-
-    /// <summary>
-    /// Führt die Prüfung auf einem STA-Thread aus.
-    /// </summary>
-    /// <remarks>
-    /// <see cref="TextBlock"/> ist ein <see cref="FrameworkElement"/> und verlangt beim
-    /// Erzeugen einen STA-Thread; der Testläufer stellt einen MTA-Thread. Und weil ein
-    /// WPF-Objekt seinem erzeugenden Thread gehört, muss auch die Zusicherung dort laufen,
-    /// deshalb die ganze Prüfung und nicht nur der Aufbau. Ein eigener Thread ist billiger
-    /// als eine Sonderregel für die gesamte Suite.
-    /// </remarks>
-    private static void RunSta(Action assertion)
-    {
-        ExceptionDispatchInfo? failure = null;
-
-        Thread thread = new(() =>
-        {
-            try
-            {
-                assertion();
-            }
-            catch (Exception exception) when (exception is XunitException or InvalidOperationException)
-            {
-                // Eine fehlgeschlagene Zusicherung und ein Thread-Verstoß sind das, was hier
-                // auftreten kann. Beides gehört unverfälscht in den Testbericht, deshalb wird
-                // es mit Ursprungs-Stapel weitergereicht statt neu geworfen.
-                failure = ExceptionDispatchInfo.Capture(exception);
-            }
-        });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-
-        failure?.Throw();
     }
 }

@@ -1,4 +1,7 @@
+using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using MdExplorer.App.Localization;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
 using MdExplorer.Graph.Abstractions;
@@ -14,9 +17,9 @@ namespace MdExplorer.App.Services;
 /// <remarks>
 /// Die Reihenfolge ist bewusst gewählt: erst die Datei, dann der Index. Scheitert die
 /// Datei-Operation, bleibt der Index unberührt und stimmt weiter. Scheitert der Index-Schritt,
-/// steht die Datei bereits am neuen Ort; dann ist der Eintrag veraltet, und der nächste
-/// Indexer-Lauf richtet ihn wieder. Umgekehrt wäre der Schaden größer: ein Index, der auf
-/// einen Pfad zeigt, den niemand angelegt hat.
+/// steht die Datei bereits am neuen Ort; der Vorgang gilt dann als gelungen, die Meldung sagt
+/// dazu, dass der nächste Abgleich des Indexers den Eintrag nachzieht. Umgekehrt wäre der
+/// Schaden größer: ein Index, der auf einen Pfad zeigt, den niemand angelegt hat.
 /// </remarks>
 internal sealed partial class DocumentFileService : IDocumentFileService
 {
@@ -41,6 +44,14 @@ internal sealed partial class DocumentFileService : IDocumentFileService
         _logger = logger;
     }
 
+    /// <summary>Die drei Vorgänge; jeder hat eigene Meldungen, weil das Verb im Satz nicht einsetzbar ist.</summary>
+    private enum FileOperation
+    {
+        Rename,
+        Move,
+        Delete,
+    }
+
     /// <inheritdoc />
     public async Task<DocumentImpact> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken)
     {
@@ -62,14 +73,23 @@ internal sealed partial class DocumentFileService : IDocumentFileService
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Der Name kommt aus einem Eingabefeld. Das ViewModel prüft ihn schon; hier steht die
+    /// Prüfung trotzdem, weil sie die Grenze des Dateisystems schützt und nicht die Bedienung.
+    /// </remarks>
     public Task<DocumentFileResult> RenameAsync(Guid markdownFileId, string newFileName, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(newFileName);
 
+        if (!FileNameRule.IsPlainName(newFileName))
+        {
+            return Task.FromResult(DocumentFileResult.Failed(UiText.Get("DocumentFile_InvalidName")));
+        }
+
         return MoveToAsync(
             markdownFileId,
             file => Path.Combine(DirectoryOf(file.AbsolutePath), WithMarkdownExtension(newFileName)),
-            "umbenannt",
+            FileOperation.Rename,
             cancellationToken);
     }
 
@@ -78,10 +98,18 @@ internal sealed partial class DocumentFileService : IDocumentFileService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(targetDirectory);
 
+        if (!Path.IsPathFullyQualified(targetDirectory))
+        {
+            return Task.FromResult(DocumentFileResult.Failed(UiText.Get("DocumentFile_InvalidTarget")));
+        }
+
+        // GetFullPath löst „..“-Teile auf, damit der Vergleich mit der Quelle und der relative
+        // Pfad im Index mit dem Ort rechnen, an dem die Datei tatsächlich landet.
+        string directory = Path.GetFullPath(targetDirectory);
         return MoveToAsync(
             markdownFileId,
-            file => Path.Combine(targetDirectory, Path.GetFileName(file.AbsolutePath)),
-            "verschoben",
+            file => Path.Combine(directory, Path.GetFileName(file.AbsolutePath)),
+            FileOperation.Move,
             cancellationToken);
     }
 
@@ -92,31 +120,22 @@ internal sealed partial class DocumentFileService : IDocumentFileService
         await using (scope.ConfigureAwait(false))
         {
             IMarkdownFileRepository files = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
-            MarkdownFile? file = await files.GetByIdAsync(markdownFileId, cancellationToken).ConfigureAwait(false);
-            if (file is null)
+            Lookup lookup = await FindAsync(files, markdownFileId, cancellationToken).ConfigureAwait(false);
+            if (!lookup.Found)
             {
-                return DocumentFileResult.Failed("Die Datei steht nicht mehr im Index.");
+                return lookup.Failure;
             }
 
-            try
+            MarkdownFile file = lookup.File;
+
+            DocumentFileResult? failure = TryOnDisk(() => _fileSystem.DeleteFile(file.AbsolutePath), FileOperation.Delete, file.AbsolutePath);
+            if (failure is not null)
             {
-                _fileSystem.DeleteFile(file.AbsolutePath);
-            }
-            catch (IOException exception)
-            {
-                LogOperationFailed(_logger, "gelöscht", file.AbsolutePath, exception);
-                return DocumentFileResult.Failed($"Die Datei ließ sich nicht löschen: {exception.Message}");
-            }
-            catch (UnauthorizedAccessException exception)
-            {
-                LogOperationFailed(_logger, "gelöscht", file.AbsolutePath, exception);
-                return DocumentFileResult.Failed($"Die Datei ließ sich nicht löschen: {exception.Message}");
+                return failure;
             }
 
             files.Remove(file);
-            _ = await files.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            return new DocumentFileResult(true, $"„{file.FileNameWithoutExtension}“ wurde gelöscht.", null);
+            return await CommitAsync(files, FileOperation.Delete, file.FileNameWithoutExtension, newAbsolutePath: null, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -134,76 +153,155 @@ internal sealed partial class DocumentFileService : IDocumentFileService
 
     /// <summary>Bildet den relativen Pfad neu, denn er hängt am bisherigen Verhältnis zur Wurzel.</summary>
     /// <remarks>
-    /// Aus dem bisherigen Paar aus absolutem und relativem Pfad lässt sich die Wurzel
-    /// zurückrechnen, ohne die Einstellungen zu befragen. Liegt das Ziel außerhalb dieser
-    /// Wurzel, bleibt nur der Dateiname; der nächste Indexer-Lauf setzt den Eintrag dann
-    /// unter der Wurzel neu an, unter die das Ziel tatsächlich gehört.
+    /// Liegt das Ziel außerhalb der Wurzel des Eintrags, bleibt nur der Dateiname; der nächste
+    /// Indexer-Lauf setzt den Eintrag dann unter der Wurzel neu an, unter die das Ziel
+    /// tatsächlich gehört.
     /// </remarks>
     private static string RelativePathFor(MarkdownFile file, string newAbsolutePath)
     {
-        string normalizedOld = file.AbsolutePath.Replace('\\', '/');
-        string normalizedRelative = file.RelativePath.Replace('\\', '/');
-
-        if (!normalizedOld.EndsWith(normalizedRelative, StringComparison.OrdinalIgnoreCase))
-        {
-            return Path.GetFileName(newAbsolutePath);
-        }
-
-        string root = normalizedOld[..^normalizedRelative.Length];
+        string? root = IndexRootPath.Of(file.AbsolutePath, file.RelativePath);
         string normalizedNew = newAbsolutePath.Replace('\\', '/');
 
-        return normalizedNew.StartsWith(root, StringComparison.OrdinalIgnoreCase)
+        return root is not null && normalizedNew.StartsWith(root, StringComparison.OrdinalIgnoreCase)
             ? normalizedNew[root.Length..]
             : Path.GetFileName(newAbsolutePath);
     }
 
-    [LoggerMessage(EventId = 1500, Level = LogLevel.Warning, Message = "Datei {Path} konnte nicht {Operation} werden.")]
-    private static partial void LogOperationFailed(ILogger logger, string operation, string path, Exception exception);
+    private static string DoneMessage(FileOperation operation, string title) => operation switch
+    {
+        FileOperation.Rename => UiText.Format("DocumentFile_Renamed", title),
+        FileOperation.Move => UiText.Format("DocumentFile_Moved", title),
+        _ => UiText.Format("DocumentFile_Deleted", title),
+    };
+
+    private static string FailedMessage(FileOperation operation, string cause) => operation switch
+    {
+        FileOperation.Rename => UiText.Format("DocumentFile_RenameFailed", cause),
+        FileOperation.Move => UiText.Format("DocumentFile_MoveFailed", cause),
+        _ => UiText.Format("DocumentFile_DeleteFailed", cause),
+    };
+
+    [LoggerMessage(EventId = 1500, Level = LogLevel.Warning, Message = "Dateivorgang {Operation} an {Path} gescheitert.")]
+    private static partial void LogOperationFailed(ILogger logger, FileOperation operation, string path, Exception exception);
+
+    [LoggerMessage(EventId = 1501, Level = LogLevel.Warning, Message = "Dateivorgang {Operation} ausgeführt, Index nicht gespeichert; der nächste Abgleich zieht {Title} nach.")]
+    private static partial void LogIndexLagging(ILogger logger, FileOperation operation, string title, Exception exception);
+
+    [LoggerMessage(EventId = 1502, Level = LogLevel.Warning, Message = "Index für den Dateivorgang an {MarkdownFileId} nicht lesbar.")]
+    private static partial void LogLookupFailed(ILogger logger, Guid markdownFileId, Exception exception);
 
     private async Task<DocumentFileResult> MoveToAsync(
         Guid markdownFileId,
         Func<MarkdownFile, string> targetPath,
-        string operation,
+        FileOperation operation,
         CancellationToken cancellationToken)
     {
         AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
             IMarkdownFileRepository files = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
-            MarkdownFile? file = await files.GetByIdAsync(markdownFileId, cancellationToken).ConfigureAwait(false);
-            if (file is null)
+            Lookup lookup = await FindAsync(files, markdownFileId, cancellationToken).ConfigureAwait(false);
+            if (!lookup.Found)
             {
-                return DocumentFileResult.Failed("Die Datei steht nicht mehr im Index.");
+                return lookup.Failure;
             }
 
+            MarkdownFile file = lookup.File;
+
+            // Ordinal: Eine reine Änderung der Groß-/Kleinschreibung ist eine Umbenennung, die
+            // Windows ausführt, und keine „dieselbe Datei“.
             string destination = targetPath(file);
-            if (string.Equals(destination, file.AbsolutePath, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(destination, file.AbsolutePath, StringComparison.Ordinal))
             {
-                return DocumentFileResult.Failed("Ziel und Quelle sind dieselbe Datei.");
+                return DocumentFileResult.Failed(UiText.Get("DocumentFile_SameFile"));
             }
 
-            try
-            {
-                _fileSystem.MoveFile(file.AbsolutePath, destination);
-            }
-            catch (IOException exception)
-            {
-                LogOperationFailed(_logger, operation, file.AbsolutePath, exception);
-                return DocumentFileResult.Failed($"Die Datei ließ sich nicht {operation}: {exception.Message}");
-            }
-            catch (UnauthorizedAccessException exception)
-            {
-                LogOperationFailed(_logger, operation, file.AbsolutePath, exception);
-                return DocumentFileResult.Failed($"Die Datei ließ sich nicht {operation}: {exception.Message}");
-            }
-
-            file.RelativePath = RelativePathFor(file, destination);
-            file.AbsolutePath = destination;
-            file.FileNameWithoutExtension = Path.GetFileNameWithoutExtension(destination);
-            files.Update(file);
-            _ = await files.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            return new DocumentFileResult(true, $"„{file.FileNameWithoutExtension}“ wurde {operation}.", destination);
+            return await RelocateAsync(files, file, destination, operation, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>Verschiebt die Datei und schreibt den neuen Ort in den Eintrag.</summary>
+    private async Task<DocumentFileResult> RelocateAsync(
+        IMarkdownFileRepository files,
+        MarkdownFile file,
+        string destination,
+        FileOperation operation,
+        CancellationToken cancellationToken)
+    {
+        DocumentFileResult? failure = TryOnDisk(() => _fileSystem.MoveFile(file.AbsolutePath, destination), operation, file.AbsolutePath);
+        if (failure is not null)
+        {
+            return failure;
+        }
+
+        file.RelativePath = RelativePathFor(file, destination);
+        file.AbsolutePath = destination;
+        file.FileNameWithoutExtension = Path.GetFileNameWithoutExtension(destination);
+        files.Update(file);
+        return await CommitAsync(files, operation, file.FileNameWithoutExtension, destination, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Liest den Eintrag; fehlt er oder ist der Index nicht lesbar, liegt statt seiner das Ergebnis vor.</summary>
+    private async Task<Lookup> FindAsync(
+        IMarkdownFileRepository files,
+        Guid markdownFileId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            MarkdownFile? file = await files.GetByIdAsync(markdownFileId, cancellationToken).ConfigureAwait(false);
+            return file is null
+                ? new Lookup(null, DocumentFileResult.Failed(UiText.Get("DocumentFile_NotInIndex")))
+                : new Lookup(file, null);
+        }
+        catch (DbException exception)
+        {
+            LogLookupFailed(_logger, markdownFileId, exception);
+            return new Lookup(null, DocumentFileResult.Failed(UiText.Get("DocumentFile_IndexUnavailable")));
+        }
+    }
+
+    /// <summary>Führt den Schritt auf der Platte aus; scheitert er, liegt das Ergebnis vor, sonst <see langword="null"/>.</summary>
+    private DocumentFileResult? TryOnDisk(Action step, FileOperation operation, string path)
+    {
+        try
+        {
+            step();
+            return null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LogOperationFailed(_logger, operation, path, exception);
+            return DocumentFileResult.Failed(FailedMessage(operation, exception.Message));
+        }
+    }
+
+    /// <summary>Speichert den Index-Schritt; scheitert er, gilt der Vorgang trotzdem, mit Hinweis.</summary>
+    private async Task<DocumentFileResult> CommitAsync(
+        IMarkdownFileRepository files,
+        FileOperation operation,
+        string title,
+        string? newAbsolutePath,
+        CancellationToken cancellationToken)
+    {
+        string done = DoneMessage(operation, title);
+        try
+        {
+            _ = await files.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return new DocumentFileResult(true, done, newAbsolutePath);
+        }
+        catch (DbException exception)
+        {
+            LogIndexLagging(_logger, operation, title, exception);
+            return new DocumentFileResult(true, UiText.Format("DocumentFile_IndexLagging", done), newAbsolutePath);
+        }
+    }
+
+    /// <summary>Der gefundene Eintrag oder das Ergebnis, mit dem der Vorgang endet.</summary>
+    private sealed record Lookup(MarkdownFile? File, DocumentFileResult? Failure)
+    {
+        [MemberNotNullWhen(true, nameof(File))]
+        [MemberNotNullWhen(false, nameof(Failure))]
+        public bool Found => File is not null;
     }
 }

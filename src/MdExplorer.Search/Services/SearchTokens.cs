@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace MdExplorer.Search.Services;
 
@@ -8,9 +7,19 @@ namespace MdExplorer.Search.Services;
 /// Gemeinsame, seiteneffektfreie Tokenizer-Helfer für <see cref="SearchQueryBuilder"/>
 /// und <see cref="SimilarityQueryBuilder"/>.
 /// </summary>
-internal static partial class SearchTokens
+internal static class SearchTokens
 {
+    // Kappt überlange Eingaben, bevor sie in die MATCH-Expression gehen. Der Wert ist gesetzt, nicht gemessen.
     private const int MaxTermLength = 128;
+
+    // Eine Wortgruppe darf länger sein als ein Wort, aber keine eingefügte Seite.
+    private const int MaxPhraseLength = 256;
+
+    /// <summary>Kürzt eine Wortgruppe oder einen Pfad auf eine feste Höchstlänge.</summary>
+    /// <param name="raw">Die Wortgruppe.</param>
+    /// <returns>Höchstens 256 Zeichen.</returns>
+    public static string LimitPhrase(string raw) =>
+        raw.Length > MaxPhraseLength ? raw[..MaxPhraseLength] : raw;
 
     /// <summary>Quotiert als FTS5-Phrase, eskapiert <c>"</c> per Verdopplung, hängt optional <c>*</c> an.</summary>
     public static string FormatPhrase(string content, bool withWildcard)
@@ -33,7 +42,17 @@ internal static partial class SearchTokens
         return builder.ToString();
     }
 
-    /// <summary>Filtert Nicht-Wort-Zeichen, verwirft Anführungszeichen, begrenzt auf <c>MaxTermLength</c>.</summary>
+    /// <summary>
+    /// Macht aus Nicht-Wort-Zeichen Trenner, verwirft Anführungszeichen, begrenzt auf
+    /// <c>MaxTermLength</c>.
+    /// </summary>
+    /// <remarks>
+    /// Der Tokenizer des Index (<c>unicode61</c>) zerlegt „E-Mail“ an jedem Satzzeichen in
+    /// <c>e</c> und <c>mail</c>. Fiele das Satzzeichen ersatzlos weg, suchte die Anfrage
+    /// <c>email</c> und fände nichts, ebenso jeder Klick auf ein Schlagwort mit Bindestrich. Als
+    /// Leerzeichen bleibt es eine Phrase aus denselben Teilen, und FTS5 verlangt sie in genau
+    /// dieser Folge.
+    /// </remarks>
     public static string SanitizeTerm(string raw)
     {
         if (raw.Length == 0)
@@ -49,27 +68,13 @@ internal static partial class SearchTokens
             {
                 _ = builder.Append(character);
             }
-        }
-        return builder.ToString();
-    }
-
-    /// <summary>Extrahiert <c>\w{2,}</c>-Treffer aus <paramref name="source"/>, sanitisiert sie und liefert die Reihenfolge.</summary>
-    public static List<string> ExtractWordTokens(string source)
-    {
-        List<string> tokens = [];
-        foreach (Match match in WordTokenRegex().Matches(source))
-        {
-            string sanitized = SanitizeTerm(match.Value);
-            if (sanitized.Length > 0)
+            else if (builder.Length > 0 && builder[^1] != ' ')
             {
-                tokens.Add(sanitized);
+                _ = builder.Append(' ');
             }
         }
-        return tokens;
+        return builder.ToString().TrimEnd();
     }
-
-    [GeneratedRegex(@"\w{2,}", RegexOptions.CultureInvariant)]
-    private static partial Regex WordTokenRegex();
 
     private static bool IsTermCharacter(char character) =>
         character != '"' && CharUnicodeInfo.GetUnicodeCategory(character)

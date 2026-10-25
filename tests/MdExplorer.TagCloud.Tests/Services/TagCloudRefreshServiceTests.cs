@@ -9,12 +9,21 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using MicrosoftOptions = Microsoft.Extensions.Options.Options;
 using TagCloudOptions = MdExplorer.TagCloud.Options.TagCloudOptions;
+using MdExplorer.TagCloud.Tests.Fakes;
 
 namespace MdExplorer.TagCloud.Tests.Services;
 
-/// <summary>Unit-Tests des <see cref="TagCloudRefreshService"/>.</summary>
-public sealed class TagCloudRefreshServiceTests
+/// <summary>
+/// Der <see cref="TagCloudRefreshService"/> meldet einen neuen Stand der Schlagwortwolke nur, wenn
+/// sich Anzahl oder letzte Verwendung geändert hat, und übersteht einen Fehler der Statistik, ohne
+/// den nächsten gültigen Stand zu verschlucken.
+/// </summary>
+public sealed class TagCloudRefreshServiceTests : IDisposable
 {
+    // Jeder Dienst bekommt einen eigenen Anbieter; freigegeben wird nach dem Test.
+    private readonly List<ServiceProvider> _providers = [];
+
+    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(5);
     private static readonly DateTime FixedUtc = new(2026, 6, 12, 8, 0, 0, DateTimeKind.Utc);
 
     [Fact]
@@ -127,7 +136,7 @@ public sealed class TagCloudRefreshServiceTests
 
         Assert.Equal(0, received);
 
-        // Nächster Snapshot wird normal published.
+        // Der nächste gültige Stand wird normal gemeldet.
         statsService.SetSnapshot(new TagStatistic("Docs", "docs", 3, FixedUtc));
         await sut.PublishIfChangedAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.Equal(1, received);
@@ -178,17 +187,18 @@ public sealed class TagCloudRefreshServiceTests
             messenger,
             timeProvider,
             MicrosoftOptions.Create(options),
+            new MdExplorer.Core.Diagnostics.BackgroundServiceStatus(),
             NullLogger<TagCloudRefreshService>.Instance);
 
         await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         try
         {
-            await WaitForAsync(() => statsService.CallCount >= 1, TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            Assert.True(await statsService.Calls.WaitForAsync(1, Patience).ConfigureAwait(true), "Kein erster Abruf.");
 
             statsService.SetSnapshot(new TagStatistic("Docs", "docs", 2, FixedUtc));
             timeProvider.Advance(TimeSpan.FromSeconds(1));
 
-            await WaitForAsync(() => statsService.CallCount >= 2, TimeSpan.FromSeconds(5)).ConfigureAwait(true);
+            Assert.True(await statsService.Calls.WaitForAsync(2, Patience).ConfigureAwait(true), "Kein Abruf nach dem Takt.");
         }
         finally
         {
@@ -198,7 +208,15 @@ public sealed class TagCloudRefreshServiceTests
         Assert.Equal(2, statsService.CallCount);
     }
 
-    private static TagCloudRefreshService CreateService(
+    public void Dispose()
+    {
+        foreach (ServiceProvider provider in _providers)
+        {
+            provider.Dispose();
+        }
+    }
+
+    private TagCloudRefreshService CreateService(
         IMessenger messenger,
         FakeTagStatisticsService statsService,
         int refreshIntervalSeconds = 5)
@@ -206,43 +224,30 @@ public sealed class TagCloudRefreshServiceTests
         ServiceCollection services = new();
         _ = services.AddSingleton<ITagStatisticsService>(statsService);
         ServiceProvider provider = services.BuildServiceProvider();
+        _providers.Add(provider);
         TagCloudOptions options = new() { RefreshIntervalSeconds = refreshIntervalSeconds };
         return new TagCloudRefreshService(
             provider.GetRequiredService<IServiceScopeFactory>(),
             messenger,
             TimeProvider.System,
             MicrosoftOptions.Create(options),
+            new MdExplorer.Core.Diagnostics.BackgroundServiceStatus(),
             NullLogger<TagCloudRefreshService>.Instance);
     }
 
-    private static async Task WaitForAsync(Func<bool> condition, TimeSpan timeout)
-    {
-        DateTime deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline)
-        {
-            if (condition())
-            {
-                return;
-            }
-            await Task.Delay(10).ConfigureAwait(true);
-        }
-        if (!condition())
-        {
-            throw new TimeoutException($"Bedingung nicht innerhalb von {timeout.TotalSeconds:F1}s erfüllt.");
-        }
-    }
-
+    /// <summary>
+    /// Statistik mit vorgegebenem Stand, die mitzählt. Eine mit <c>SetThrow</c> gesetzte Ausnahme
+    /// wirft sie bei jedem Aufruf, bis <c>SetSnapshot</c> wieder einen Stand vorgibt.
+    /// </summary>
     private sealed class FakeTagStatisticsService : ITagStatisticsService
     {
         private readonly object _gate = new();
         private IReadOnlyList<TagStatistic> _snapshot = [];
         private Exception? _throwOnNext;
-        private int _callCount;
 
-        public int CallCount
-        {
-            get { lock (_gate) { return _callCount; } }
-        }
+        public CallSignal Calls { get; } = new();
+
+        public int CallCount => Calls.Count;
 
         public void SetSnapshot(params TagStatistic[] tags)
         {
@@ -263,9 +268,9 @@ public sealed class TagCloudRefreshServiceTests
 
         public Task<IReadOnlyList<TagStatistic>> GetTopTagsAsync(int topN, CancellationToken cancellationToken)
         {
+            Calls.Record();
             lock (_gate)
             {
-                _callCount++;
                 if (_throwOnNext is not null)
                 {
                     Exception toThrow = _throwOnNext;

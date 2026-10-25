@@ -1,7 +1,6 @@
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
+using MdExplorer.App.Services;
 using MdExplorer.App.Services.Help;
 using MdExplorer.App.ViewModels.Help;
 
@@ -15,34 +14,24 @@ namespace MdExplorer.App.Views.Help;
 [ExcludeFromCodeCoverage]
 internal sealed partial class AboutWindow : Window
 {
+    private readonly IExternalLinkLauncher _linkLauncher;
+
     /// <summary>Erzeugt das Fenster und setzt den DataContext.</summary>
-    public AboutWindow(AboutViewModel viewModel)
+    public AboutWindow(AboutViewModel viewModel, IExternalLinkLauncher linkLauncher)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
+        ArgumentNullException.ThrowIfNull(linkLauncher);
         InitializeComponent();
+        _linkLauncher = linkLauncher;
         DataContext = viewModel;
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs args) => Close();
 
     /// <summary>
-    /// Öffnet das Spendenziel im Standardbrowser. Die Adresse stammt aus
-    /// <see cref="SupportDonation.PayPalUrl"/> und ist eine Compile-Zeit-Konstante auf
-    /// HTTPS; es gibt keinen Laufzeit-Pfad, über den hier eine fremde URL ankommen
-    /// könnte, weshalb eine zusätzliche Schema-Prüfung ins Leere liefe.
+    /// Öffnet das Spendenziel aus <see cref="SupportDonation.PayPalUrl"/> im Standardbrowser.
+    /// Scheitert das, bleibt der Dialog offen, und der Grund steht im Protokoll.
     /// </summary>
-    private void OnDonationClick(object sender, RoutedEventArgs args)
-    {
-        try
-        {
-            using Process? process = Process.Start(
-                new ProcessStartInfo(SupportDonation.PayPalUrl) { UseShellExecute = true });
-        }
-        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or System.IO.FileNotFoundException)
-        {
-            // Kein Standardbrowser oder Start verweigert: Der Dialog bleibt offen, der
-            // Nutzer kann die Adresse manuell aufrufen. Bewusst nicht-fatal: eine
-            // freiwillige Spende ist kein Grund, die Anwendung zu beenden.
-        }
-    }
+    private void OnDonationClick(object sender, RoutedEventArgs args) =>
+        _linkLauncher.Open(new Uri(SupportDonation.PayPalUrl, UriKind.Absolute));
 }

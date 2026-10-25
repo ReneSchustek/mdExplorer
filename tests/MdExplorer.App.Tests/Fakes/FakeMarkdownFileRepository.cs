@@ -3,7 +3,10 @@ using MdExplorer.Core.Models;
 
 namespace MdExplorer.App.Tests.Fakes;
 
-/// <summary>In-Memory-Repo für WikiLink-Auflösungstests.</summary>
+/// <summary>
+/// Dateibestand im Speicher. Die Namenssuche ignoriert wie das Repository die Groß- und
+/// Kleinschreibung und nimmt bei gleichem Namen den kleinsten relativen Pfad.
+/// </summary>
 internal sealed class FakeMarkdownFileRepository : IMarkdownFileRepository
 {
     private readonly Dictionary<Guid, MarkdownFile> _store = [];
@@ -17,20 +20,20 @@ internal sealed class FakeMarkdownFileRepository : IMarkdownFileRepository
     public Task<MarkdownFile?> GetByAbsolutePathAsync(string absolutePath, CancellationToken cancellationToken) =>
         Task.FromResult(_store.Values.FirstOrDefault(f => string.Equals(f.AbsolutePath, absolutePath, StringComparison.OrdinalIgnoreCase)));
 
+    /// <summary>Der Fehler, den das Lesen per Kennung meldet; <see langword="null"/>, wenn es gelingen soll.</summary>
+    public Exception? FailOnGet { get; set; }
+
+    /// <summary>Der Fehler, den das Speichern meldet; <see langword="null"/>, wenn es gelingen soll.</summary>
+    /// <remarks>Eine belegte Datenbank meldet sich erst beim Speichern, nicht beim Ändern des Eintrags.</remarks>
+    public Exception? FailOnSave { get; set; }
+
     public Task<MarkdownFile?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        Task.FromResult(_store.TryGetValue(id, out MarkdownFile? file) ? file : null);
+        FailOnGet is not null
+            ? Task.FromException<MarkdownFile?>(FailOnGet)
+            : Task.FromResult(_store.TryGetValue(id, out MarkdownFile? file) ? file : null);
 
     public Task<IReadOnlyList<MarkdownFile>> GetAllUnderRootAsync(string rootAbsolutePath, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MarkdownFile>>([.. _store.Values]);
-
-    public Task<Guid?> FindIdByFileNameAsync(string fileNameWithoutExtension, CancellationToken cancellationToken)
-    {
-        MarkdownFile? match = _store.Values
-            .Where(f => string.Equals(f.FileNameWithoutExtension, fileNameWithoutExtension, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
-        return Task.FromResult<Guid?>(match?.Id);
-    }
 
     public Task<int> CountAsync(CancellationToken cancellationToken) => Task.FromResult(_store.Count);
 
@@ -40,9 +43,10 @@ internal sealed class FakeMarkdownFileRepository : IMarkdownFileRepository
     public Task<int> RemoveRangeAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ids);
-        int entfernt = ids.Count(id => _store.Remove(id));
-        return Task.FromResult(entfernt);
+        int removed = ids.Count(id => _store.Remove(id));
+        return Task.FromResult(removed);
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken) => Task.FromResult(0);
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
+        FailOnSave is not null ? Task.FromException<int>(FailOnSave) : Task.FromResult(0);
 }

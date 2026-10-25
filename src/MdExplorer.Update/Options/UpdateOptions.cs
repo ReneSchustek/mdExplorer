@@ -27,13 +27,17 @@ public sealed class UpdateOptions
     public string RepositoryName { get; set; } = "mdExplorer";
 
     /// <summary>
-    /// Mindestabstand zwischen zwei tatsächlichen Netzprüfungen in Stunden. Verhindert, dass
-    /// häufige Programmstarts die GitHub-API unnötig belasten. Default: 24 Stunden.
+    /// Mindestabstand zwischen zwei tatsächlichen Netzprüfungen in Stunden. Ohne Anmeldung
+    /// erlaubt die GitHub-API 60 Anfragen je Stunde und Adresse; mit häufigen Programmstarts
+    /// käme man dem nahe. Default: 24 Stunden, für eine Update-Meldung genügt einmal am Tag.
     /// </summary>
     [Range(1, MaxCheckIntervalHours)]
     public int CheckIntervalHours { get; set; } = 24;
 
-    /// <summary>Timeout der HTTP-Anfrage an die GitHub-API in Sekunden. Default: 10 Sekunden.</summary>
+    /// <summary>
+    /// Timeout der HTTP-Anfrage an die GitHub-API in Sekunden. Default: 10 Sekunden; die Antwort
+    /// ist ein kleines JSON-Dokument, und eine hängende Leitung soll die Prüfung nicht länger aufhalten.
+    /// </summary>
     [Range(1, MaxRequestTimeoutSeconds)]
     public int RequestTimeoutSeconds { get; set; } = 10;
 }

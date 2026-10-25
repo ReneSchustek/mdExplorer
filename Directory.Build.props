@@ -1,6 +1,6 @@
 <Project>
   <!--
-    Zentrale Build-Konfiguration für alle Projekte. Vorbild: EchoPlay.
+    Zentrale Build-Konfiguration für alle Projekte.
     Einzelne .csproj-Dateien können diese Werte überschreiben.
   -->
   <PropertyGroup>
@@ -16,11 +16,16 @@
     <NeutralLanguage>de-DE</NeutralLanguage>
     <Company>Ruhrcoder</Company>
     <Product>MdExplorer</Product>
-    <Copyright>Copyright © Ruhrcoder $([System.DateTime]::UtcNow.Year)</Copyright>
+    <!-- Festes Jahr der ersten Veröffentlichung: Ein Jahr aus der Uhr des Build-Rechners
+         machte zwei Builds derselben Quelle über den Jahreswechsel hinweg verschieden. -->
+    <Copyright>Copyright © Ruhrcoder 2026</Copyright>
     <Authors>Ruhrcoder</Authors>
   </PropertyGroup>
 
-  <!-- Test-Projekte: nur die eine ausdrücklich erlaubte Ausnahme. -->
+  <!--
+    Test-Projekte: nur die eine ausdrücklich erlaubte Ausnahme. CA1707 verbietet Unterstriche
+    in Bezeichnern, und die Testnamen trennen damit Gegenstand, Lage und Erwartung.
+  -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <NoWarn>$(NoWarn);CA1707</NoWarn>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
@@ -39,7 +44,7 @@
     <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
-  <!-- Reproduzierbare Builds (EchoPlay-Pattern). -->
+  <!-- Reproduzierbare Builds: gleiche Quelle, gleiche Binärdatei. -->
   <PropertyGroup>
     <Deterministic>true</Deterministic>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true' or '$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
@@ -47,16 +52,19 @@
 
   <!--
     Statische Analyzer: StyleCop + Sonar als zentrale PackageReference, nur in
-    Produktivprojekten. Test-Projekte bleiben aussen vor, weil Stil-Regeln dort Boilerplate
-    forcieren würden (Doku, file headers, public visibility), das Tests nicht brauchen.
+    Produktivprojekten. Test-Projekte bleiben außen vor, weil Stil-Regeln dort Beiwerk
+    erzwängen (Doku, Dateiköpfe, öffentliche Sichtbarkeit), das Tests nicht brauchen.
   -->
   <ItemGroup Condition="!$(MSBuildProjectName.EndsWith('.Tests'))">
-    <PackageReference Include="StyleCop.Analyzers" Version="1.1.118" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.32.0.713" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="StyleCop.Analyzers" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="SonarAnalyzer.CSharp" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json" />
   </ItemGroup>
 
-  <!-- SemVer aus der VERSION-Datei im Repo-Root. -->
+  <!--
+    SemVer aus der VERSION-Datei im Repo-Root. AssemblyVersion und FileVersion verlangen vier
+    Stellen, deshalb das angehängte ".0"; die InformationalVersion trägt die Fassung unverändert.
+  -->
   <PropertyGroup>
     <_VersionFromFile>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</_VersionFromFile>
     <Version>$(_VersionFromFile)</Version>

@@ -66,7 +66,7 @@ ausschließlich über Abstraktionen in `MdExplorer.Core.Abstractions`.
 | `MdExplorer.Indexer` | Core |
 | `MdExplorer.Parser` | Core |
 | `MdExplorer.Search` | Core |
-| `MdExplorer.Graph` | Core, Parser |
+| `MdExplorer.Graph` | Core |
 | `MdExplorer.TagCloud` | Core, Parser |
 | `MdExplorer.Update` | Core |
 
@@ -140,19 +140,26 @@ und WPF-Thread-Synchronisierung (`EnableCollectionSynchronization`).
 ### MdExplorer.Update
 
 Prüft über die GitHub-Releases-API auf neue Fassungen, lädt das
-Installationspaket und gleicht es gegen den veröffentlichten SHA-256 ab.
-Ohne Prüfwert wird nicht geladen, bei Abweichung die Datei verworfen statt
-ausgeführt. Der Installer ist unsigniert, die Prüfsumme ist der einzige Beleg.
+Installationspaket und gleicht es gegen den veröffentlichten SHA-256 und die
+Signatur ab. Die Prüfsumme erkennt einen verfälschten Download, die Signatur
+(ECDSA P-256 gegen den eingebauten öffentlichen Schlüssel) die Herkunft.
+Adressen aus der API-Antwort gelten nur über https und im eigenen Repository,
+Antworten und Paket haben feste Größengrenzen, ein stehender Download bricht
+nach einer Minute ohne Daten ab. Gestartet wird nur das gerade geprüfte Paket,
+und nur, solange es unverändert ist. Ohne Prüfwert oder Signatur wird nicht
+geladen, bei Abweichung die Datei verworfen statt ausgeführt.
 
 ## Querschnittsregeln
 
 - **Keine Cross-Modul-Kopplung** außer über `MdExplorer.Core.Abstractions`.
 - **Atomare Schreibvorgänge** für `settings.json`, `ui-layout.json` und
-  Markdown-Dateien (`.tmp` + `File.Move`).
+  Markdown-Dateien (`.tmp` + `File.Move`), jeweils über `IFileSystem`.
 - **Asynchrone I/O** durchgehend (`async`/`await`,
   `ConfigureAwait(false)` in Bibliotheksprojekten).
 - **DI-Registrierung** je Modul über `Add<Modul>()`-Erweiterung in
-  `DependencyInjection/`.
+  `DependencyInjection/`; bei `MdExplorer.Data` liegt sie im Projektordner, bei der
+  App unter `Hosting/`. Ein Test löst jede Registrierung der fertigen Anwendung
+  einzeln auf, auch die über eine Fabrik.
 - **Logging** über `Microsoft.Extensions.Logging` mit `LoggerMessage`-
   Source-Generators (Event-IDs pro Bereich).
 - **Tests** für jedes Modul in `tests/<Modul>.Tests/` auf xUnit-Basis.
@@ -173,6 +180,6 @@ ausgeführt. Der Installer ist unsigniert, die Prüfsumme ist der einzige Beleg.
        |
        v
 [ Search ] <---- Suchfeld (App)
-[ Graph  ] <---- Ansicht → Graph…
+[ Graph  ] <---- Graph-Knopf der Kopfleiste
 [ Tags   ] <---- TagCloud + Tag-Verwaltung
 ```

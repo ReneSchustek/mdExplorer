@@ -1,0 +1,945 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="About_Build_Label" xml:space="preserve">
+    <value>Build</value>
+  </data>
+  <data name="About_Donation_Button" xml:space="preserve">
+    <value>☕ Kaffee spendieren</value>
+  </data>
+  <data name="About_Donation_Name" xml:space="preserve">
+    <value>Kaffee spendieren</value>
+  </data>
+  <data name="About_Donation_Text" xml:space="preserve">
+    <value>Gefällt Ihnen MdExplorer? Über einen Kaffee freue ich mich – ganz freiwillig.</value>
+  </data>
+  <data name="About_Licenses_Heading" xml:space="preserve">
+    <value>Eingesetzte Open-Source-Bibliotheken</value>
+  </data>
+  <data name="About_Licenses_License" xml:space="preserve">
+    <value>Lizenz</value>
+  </data>
+  <data name="About_Licenses_Package" xml:space="preserve">
+    <value>Paket</value>
+  </data>
+  <data name="About_Title" xml:space="preserve">
+    <value>Über MdExplorer</value>
+  </data>
+  <data name="About_Version_Label" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="Action_Add" xml:space="preserve">
+    <value>Hinzufügen</value>
+  </data>
+  <data name="Action_Apply" xml:space="preserve">
+    <value>Anwenden</value>
+  </data>
+  <data name="Action_Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Action_Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="Action_Reload" xml:space="preserve">
+    <value>Neu laden</value>
+  </data>
+  <data name="Action_Remove" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="AllFiles_ActiveFilters_Name" xml:space="preserve">
+    <value>Aktive Filter</value>
+  </data>
+  <data name="AllFiles_Count_Label" xml:space="preserve">
+    <value>Einträge:</value>
+  </data>
+  <data name="AllFiles_Empty_Failed_Headline" xml:space="preserve">
+    <value>Die Liste konnte nicht geladen werden</value>
+  </data>
+  <data name="AllFiles_Empty_Failed_Hint" xml:space="preserve">
+    <value>Der Bestand ließ sich nicht abrufen. Einzelheiten stehen im Protokoll unter Ansicht → Logs…; ein erneuter Versuch lohnt sich.</value>
+  </data>
+  <data name="AllFiles_Empty_NoMatch_Headline" xml:space="preserve">
+    <value>Nichts gefunden</value>
+  </data>
+  <data name="AllFiles_Empty_NoMatch_Hint" xml:space="preserve">
+    <value>Zu dieser Eingabe und den gesetzten Filtern gibt es keinen Eintrag.</value>
+  </data>
+  <data name="AllFiles_Empty_None_Headline" xml:space="preserve">
+    <value>Noch nichts indiziert</value>
+  </data>
+  <data name="AllFiles_Empty_None_Hint" xml:space="preserve">
+    <value>Sobald ein Ordner als Wurzel eingetragen und durchlaufen ist, stehen die Dateien hier.</value>
+  </data>
+  <data name="AllFiles_Filter_Folder" xml:space="preserve">
+    <value>Ordner: {0}</value>
+  </data>
+  <data name="AllFiles_Filter_Period" xml:space="preserve">
+    <value>Geändert: {0}</value>
+  </data>
+  <data name="AllFiles_Filter_Remove" xml:space="preserve">
+    <value>Filter „{0}“ entfernen</value>
+  </data>
+  <data name="AllFiles_Filter_RootFolder" xml:space="preserve">
+    <value>(Wurzel)</value>
+  </data>
+  <data name="AllFiles_Filter_Tag" xml:space="preserve">
+    <value>Tag: {0}</value>
+  </data>
+  <data name="AllFiles_Folder_Restrict" xml:space="preserve">
+    <value>Auf den Ordner {0} einschränken</value>
+  </data>
+  <data name="AllFiles_Period_Any" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="AllFiles_Period_Name" xml:space="preserve">
+    <value>Änderungszeitraum</value>
+  </data>
+  <data name="AllFiles_Period_SevenDays" xml:space="preserve">
+    <value>7 Tage</value>
+  </data>
+  <data name="AllFiles_Period_ThirtyDays" xml:space="preserve">
+    <value>30 Tage</value>
+  </data>
+  <data name="AllFiles_Period_Today" xml:space="preserve">
+    <value>Heute</value>
+  </data>
+  <data name="AllFiles_Reload" xml:space="preserve">
+    <value>Erneut laden</value>
+  </data>
+  <data name="AllFiles_ResetFilters" xml:space="preserve">
+    <value>Suche und Filter zurücksetzen</value>
+  </data>
+  <data name="AllFiles_Search_Placeholder" xml:space="preserve">
+    <value>Titel, Pfad und Tags durchsuchen</value>
+  </data>
+  <data name="AllFiles_Sort_LastModified" xml:space="preserve">
+    <value>Zuletzt geändert</value>
+  </data>
+  <data name="AllFiles_Sort_Name" xml:space="preserve">
+    <value>Sortierung</value>
+  </data>
+  <data name="AllFiles_Sort_Path" xml:space="preserve">
+    <value>Pfad A→Z</value>
+  </data>
+  <data name="AllFiles_Sort_Title" xml:space="preserve">
+    <value>Titel A→Z</value>
+  </data>
+  <data name="AllFiles_Tag_Restrict" xml:space="preserve">
+    <value>Auf den Tag {0} einschränken</value>
+  </data>
+  <data name="AlphabetJumpBar_JumpTo" xml:space="preserve">
+    <value>Zur Gruppe {0} springen</value>
+  </data>
+  <data name="AlphabetJumpBar_Name" xml:space="preserve">
+    <value>Sprungleiste</value>
+  </data>
+  <data name="Browser_Unavailable" xml:space="preserve">
+    <value>Für diese Anzeige fehlt die WebView2-Laufzeit von Microsoft. Nach ihrer Installation erscheint der Inhalt beim nächsten Öffnen.</value>
+  </data>
+  <data name="DocumentFile_DeleteFailed" xml:space="preserve">
+    <value>Die Datei ließ sich nicht löschen: {0}</value>
+  </data>
+  <data name="DocumentFile_Deleted" xml:space="preserve">
+    <value>„{0}“ wurde gelöscht.</value>
+  </data>
+  <data name="DocumentFile_IndexLagging" xml:space="preserve">
+    <value>{0} Der Index zieht beim nächsten Abgleich nach.</value>
+  </data>
+  <data name="DocumentFile_IndexUnavailable" xml:space="preserve">
+    <value>Der Index ist gerade nicht erreichbar. Bitte gleich noch einmal versuchen.</value>
+  </data>
+  <data name="DocumentFile_InvalidName" xml:space="preserve">
+    <value>Der neue Name darf weder einen Ordner noch ein in Dateinamen unzulässiges Zeichen enthalten.</value>
+  </data>
+  <data name="DocumentFile_InvalidTarget" xml:space="preserve">
+    <value>Das Ziel muss ein vollständiger Ordnerpfad sein.</value>
+  </data>
+  <data name="DocumentFile_MoveFailed" xml:space="preserve">
+    <value>Die Datei ließ sich nicht verschieben: {0}</value>
+  </data>
+  <data name="DocumentFile_Moved" xml:space="preserve">
+    <value>„{0}“ wurde verschoben.</value>
+  </data>
+  <data name="DocumentFile_NotInIndex" xml:space="preserve">
+    <value>Die Datei steht nicht mehr im Index.</value>
+  </data>
+  <data name="DocumentFile_RenameFailed" xml:space="preserve">
+    <value>Die Datei ließ sich nicht umbenennen: {0}</value>
+  </data>
+  <data name="DocumentFile_Renamed" xml:space="preserve">
+    <value>„{0}“ wurde umbenannt.</value>
+  </data>
+  <data name="DocumentFile_SameFile" xml:space="preserve">
+    <value>Ziel und Quelle sind dieselbe Datei.</value>
+  </data>
+  <data name="Document_AddTag_ToolTip" xml:space="preserve">
+    <value>Tag hinzufügen</value>
+  </data>
+  <data name="Document_EditToggle" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="Document_EditToggle_ToolTip" xml:space="preserve">
+    <value>Lese-/Bearbeiten-Modus umschalten (Strg+E)</value>
+  </data>
+  <data name="Document_Editor_Name" xml:space="preserve">
+    <value>Markdown-Text der Datei</value>
+  </data>
+  <data name="Document_EnterEdit" xml:space="preserve">
+    <value>✏️ Bearbeiten</value>
+  </data>
+  <data name="Document_EnterEdit_ToolTip" xml:space="preserve">
+    <value>Bearbeiten-Modus aktivieren — danach können Änderungen gespeichert werden</value>
+  </data>
+  <data name="Document_ExitEdit" xml:space="preserve">
+    <value>👁 Anzeigen</value>
+  </data>
+  <data name="Document_ExitEdit_ToolTip" xml:space="preserve">
+    <value>Zurück in den Anzeigen-Modus</value>
+  </data>
+  <data name="Document_FindClose_ToolTip" xml:space="preserve">
+    <value>Suche schließen (Esc)</value>
+  </data>
+  <data name="Document_FindNext_ToolTip" xml:space="preserve">
+    <value>Nächster Treffer (Enter / F3)</value>
+  </data>
+  <data name="Document_FindPrevious_ToolTip" xml:space="preserve">
+    <value>Vorheriger Treffer (Shift+Enter / Shift+F3)</value>
+  </data>
+  <data name="Document_Find_HitAtLine" xml:space="preserve">
+    <value>Treffer in Zeile {0}</value>
+  </data>
+  <data name="Document_Find_Label" xml:space="preserve">
+    <value>Suchen:</value>
+  </data>
+  <data name="Document_Find_NoHit" xml:space="preserve">
+    <value>Kein Treffer</value>
+  </data>
+  <data name="Document_NewTag_ToolTip" xml:space="preserve">
+    <value>Neuen Tag eingeben und 'Hinzufügen' drücken</value>
+  </data>
+  <data name="Document_Open_Format" xml:space="preserve">
+    <value>{0} öffnen</value>
+  </data>
+  <data name="Document_RemoveTag_Name" xml:space="preserve">
+    <value>Tag {0} entfernen</value>
+  </data>
+  <data name="Document_RemoveTag_ToolTip" xml:space="preserve">
+    <value>Tag entfernen</value>
+  </data>
+  <data name="Document_Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="Document_Save_ToolTip" xml:space="preserve">
+    <value>Änderungen speichern (Strg+S)</value>
+  </data>
+  <data name="Document_Tag_Name" xml:space="preserve">
+    <value>Tag {0} anzeigen</value>
+  </data>
+  <data name="Document_Tag_ToolTip" xml:space="preserve">
+    <value>Zeigt alle Dateien mit dem Tag {0}</value>
+  </data>
+  <data name="Document_Tags_Label" xml:space="preserve">
+    <value>Tags:</value>
+  </data>
+  <data name="Editor_SaveDialog_Question" xml:space="preserve">
+    <value>Möchten Sie die Änderungen wirklich speichern?</value>
+  </data>
+  <data name="Editor_SaveDialog_Title" xml:space="preserve">
+    <value>Änderungen speichern</value>
+  </data>
+  <data name="Editor_Status_Editing" xml:space="preserve">
+    <value>Bearbeitung aktiv — Strg+S öffnet Speichern-Dialog.</value>
+  </data>
+  <data name="Editor_Status_ExternalConflict" xml:space="preserve">
+    <value>Die Datei wurde extern geändert. Änderungen wurden NICHT gespeichert.</value>
+  </data>
+  <data name="Editor_Status_Locked" xml:space="preserve">
+    <value>Datei ist im Anzeigen-Modus — bitte erst Bearbeiten.</value>
+  </data>
+  <data name="Editor_Status_NotUtf8" xml:space="preserve">
+    <value>Die Datei ist nicht in UTF-8 gespeichert. Sie lässt sich anzeigen, aber nicht bearbeiten: Das Speichern würde Zeichen der bisherigen Kodierung zerstören.</value>
+  </data>
+  <data name="Editor_Status_SaveCancelled" xml:space="preserve">
+    <value>Speichern abgebrochen.</value>
+  </data>
+  <data name="Editor_Status_SaveFailed" xml:space="preserve">
+    <value>Speichern fehlgeschlagen: {0}</value>
+  </data>
+  <data name="Editor_Status_Saved" xml:space="preserve">
+    <value>Gespeichert: {0:HH:mm:ss}</value>
+  </data>
+  <data name="Editor_Status_Viewing" xml:space="preserve">
+    <value>Anzeigen-Modus.</value>
+  </data>
+  <data name="Editor_UnsavedDialog_Question" xml:space="preserve">
+    <value>„{0}“ enthält ungespeicherte Änderungen. Speichern (Ja), verwerfen (Nein) oder beim Dokument bleiben (Abbrechen)?</value>
+  </data>
+  <data name="Editor_UnsavedDialog_Title" xml:space="preserve">
+    <value>Ungespeicherte Änderungen</value>
+  </data>
+  <data name="EmptyState_Reset" xml:space="preserve">
+    <value>Suche zurücksetzen</value>
+  </data>
+  <data name="Enum_AppTheme_Dark" xml:space="preserve">
+    <value>Dunkel</value>
+  </data>
+  <data name="Enum_AppTheme_Light" xml:space="preserve">
+    <value>Hell</value>
+  </data>
+  <data name="Enum_AppTheme_System" xml:space="preserve">
+    <value>Wie Windows</value>
+  </data>
+  <data name="Enum_LogLevel_Trace" xml:space="preserve">
+    <value>Ablauf</value>
+  </data>
+  <data name="Enum_OperationHealth_Error" xml:space="preserve">
+    <value>Fehler</value>
+  </data>
+  <data name="Enum_OperationHealth_Healthy" xml:space="preserve">
+    <value>Läuft</value>
+  </data>
+  <data name="Enum_OperationHealth_Warning" xml:space="preserve">
+    <value>Warnung</value>
+  </data>
+  <data name="Enum_SearchMode_Fts5" xml:space="preserve">
+    <value>Volltext</value>
+  </data>
+  <data name="Enum_SearchMode_Regex" xml:space="preserve">
+    <value>Regulärer Ausdruck</value>
+  </data>
+  <data name="Enum_SimilarityMode_NearStem" xml:space="preserve">
+    <value>Ähnlicher Wortstamm</value>
+  </data>
+  <data name="Enum_SimilarityMode_NearStemSynonyms" xml:space="preserve">
+    <value>Ähnlicher Wortstamm und Synonyme</value>
+  </data>
+  <data name="Enum_SimilarityMode_None" xml:space="preserve">
+    <value>Genau</value>
+  </data>
+  <data name="Enum_SimilarityMode_Stemmed" xml:space="preserve">
+    <value>Wortstamm</value>
+  </data>
+  <data name="Error_Details" xml:space="preserve">
+    <value>{0}
+
+Fehler: {1}
+Meldung: {2}
+
+Einzelheiten stehen im Protokoll.</value>
+  </data>
+  <data name="Error_Fatal_Hint" xml:space="preserve">
+    <value>Ein schwerer Fehler zwingt MdExplorer zum Beenden.</value>
+  </data>
+  <data name="Error_Fatal_Title" xml:space="preserve">
+    <value>MdExplorer wird beendet</value>
+  </data>
+  <data name="Error_Unhandled_Hint" xml:space="preserve">
+    <value>MdExplorer hat einen Fehler abgefangen und läuft weiter.</value>
+  </data>
+  <data name="Error_Unhandled_Title" xml:space="preserve">
+    <value>Unerwarteter Fehler</value>
+  </data>
+  <data name="FolderTree_Header" xml:space="preserve">
+    <value>Ordner</value>
+  </data>
+  <data name="FolderTree_PauseIndexing" xml:space="preserve">
+    <value>Indexierung pausieren</value>
+  </data>
+  <data name="FolderTree_ResumeIndexing" xml:space="preserve">
+    <value>Indexierung wieder aufnehmen</value>
+  </data>
+  <data name="FolderTree_SaveFailed_Message" xml:space="preserve">
+    <value>Die Einstellung ließ sich nicht speichern, der Ordner wird weiter indiziert: {0}</value>
+  </data>
+  <data name="FolderTree_SaveFailed_Title" xml:space="preserve">
+    <value>Indexierung pausieren</value>
+  </data>
+  <data name="Graph_Canvas_Name" xml:space="preserve">
+    <value>Graph der WikiLinks mit {0} Knoten und {1} Kanten. Plus und Minus zoomen, die Pfeiltasten verschieben, Null setzt die Ansicht zurück.</value>
+  </data>
+  <data name="Graph_Edges_Label" xml:space="preserve">
+    <value>Kanten:</value>
+  </data>
+  <data name="Graph_Empty_Hint" xml:space="preserve">
+    <value>Mögliche Ursachen: Der Indexer liest Ihre Ordner gerade noch ein, oder die Markdown-Dateien enthalten noch keine [[WikiLinks]]. Lassen Sie das Fenster offen — „Neu laden“ aktualisiert die Anzeige.</value>
+  </data>
+  <data name="Graph_Empty_Title" xml:space="preserve">
+    <value>Noch keine Graph-Daten verfügbar</value>
+  </data>
+  <data name="Graph_Legend_Format" xml:space="preserve">
+    <value>{0} Knoten / {1} Kanten</value>
+  </data>
+  <data name="Graph_Nodes_Label" xml:space="preserve">
+    <value>Knoten:</value>
+  </data>
+  <data name="Graph_Of" xml:space="preserve">
+    <value>von</value>
+  </data>
+  <data name="Graph_PathPrefix_Label" xml:space="preserve">
+    <value>Pfad-Prefix:</value>
+  </data>
+  <data name="Graph_PathPrefix_ToolTip" xml:space="preserve">
+    <value>Optionaler Pfad-Filter (relativ zum Root, Trennzeichen / oder \). Leer = alle Pfade.</value>
+  </data>
+  <data name="Graph_Title" xml:space="preserve">
+    <value>WikiLink-Graph</value>
+  </data>
+  <data name="Health_Errors" xml:space="preserve">
+    <value>{0} Fehler im letzten Beobachtungsfenster.</value>
+  </data>
+  <data name="Health_Healthy" xml:space="preserve">
+    <value>Alle Subsysteme laufen normal.</value>
+  </data>
+  <data name="Health_LastError" xml:space="preserve">
+    <value>Letzter: {0}</value>
+  </data>
+  <data name="Health_LastWarning" xml:space="preserve">
+    <value>Letzte: {0}</value>
+  </data>
+  <data name="Health_ServiceStopped" xml:space="preserve">
+    <value>Angehalten: {0}. Ergebnisse veralten bis zum Neustart der Anwendung.</value>
+  </data>
+  <data name="Health_Service_Indexer" xml:space="preserve">
+    <value>Indexer</value>
+  </data>
+  <data name="Health_Service_Parser" xml:space="preserve">
+    <value>Parser</value>
+  </data>
+  <data name="Health_Service_SearchIndex" xml:space="preserve">
+    <value>Pflege des Suchindex</value>
+  </data>
+  <data name="Health_Service_TagCloud" xml:space="preserve">
+    <value>Aktualisierung der Tag-Cloud</value>
+  </data>
+  <data name="Health_UnparsableFiles_Many" xml:space="preserve">
+    <value>{0} Dateien nicht verarbeitbar.</value>
+  </data>
+  <data name="Health_UnparsableFiles_One" xml:space="preserve">
+    <value>1 Datei nicht verarbeitbar.</value>
+  </data>
+  <data name="Health_Warnings" xml:space="preserve">
+    <value>{0} Warnung(en) im letzten Beobachtungsfenster.</value>
+  </data>
+  <data name="Help_NextHit_ToolTip" xml:space="preserve">
+    <value>Nächster Treffer</value>
+  </data>
+  <data name="Help_PreviousHit_ToolTip" xml:space="preserve">
+    <value>Voriger Treffer</value>
+  </data>
+  <data name="Help_Search_Name" xml:space="preserve">
+    <value>Im Handbuch suchen</value>
+  </data>
+  <data name="Help_Title" xml:space="preserve">
+    <value>MdExplorer-Handbuch</value>
+  </data>
+  <data name="Help_Toc_Name" xml:space="preserve">
+    <value>Inhaltsverzeichnis</value>
+  </data>
+  <data name="LogViewer_Buffer_Label" xml:space="preserve">
+    <value>/ Puffer:</value>
+  </data>
+  <data name="LogViewer_Column_Level" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="LogViewer_Column_Message" xml:space="preserve">
+    <value>Nachricht</value>
+  </data>
+  <data name="LogViewer_Column_Source" xml:space="preserve">
+    <value>Quelle</value>
+  </data>
+  <data name="LogViewer_Column_Time" xml:space="preserve">
+    <value>Zeit</value>
+  </data>
+  <data name="LogViewer_Export" xml:space="preserve">
+    <value>Exportieren…</value>
+  </data>
+  <data name="LogViewer_Export_Done" xml:space="preserve">
+    <value>Gespeichert unter {0}.</value>
+  </data>
+  <data name="LogViewer_Export_Failed" xml:space="preserve">
+    <value>Export fehlgeschlagen: {0}</value>
+  </data>
+  <data name="LogViewer_Export_Filter" xml:space="preserve">
+    <value>Log-Datei (*.log)|*.log|Text (*.txt)|*.txt</value>
+  </data>
+  <data name="LogViewer_Level_All" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="LogViewer_Level_Critical" xml:space="preserve">
+    <value>Kritisch</value>
+  </data>
+  <data name="LogViewer_Level_Debug" xml:space="preserve">
+    <value>Debug+</value>
+  </data>
+  <data name="LogViewer_Level_Error" xml:space="preserve">
+    <value>Fehler+</value>
+  </data>
+  <data name="LogViewer_Level_Information" xml:space="preserve">
+    <value>Information+</value>
+  </data>
+  <data name="LogViewer_Level_Label" xml:space="preserve">
+    <value>Level:</value>
+  </data>
+  <data name="LogViewer_Level_Warning" xml:space="preserve">
+    <value>Warnung+</value>
+  </data>
+  <data name="LogViewer_Period_All" xml:space="preserve">
+    <value>Alles</value>
+  </data>
+  <data name="LogViewer_Period_Day" xml:space="preserve">
+    <value>Letzte 24 Stunden</value>
+  </data>
+  <data name="LogViewer_Period_FifteenMinutes" xml:space="preserve">
+    <value>Letzte 15 Minuten</value>
+  </data>
+  <data name="LogViewer_Period_Hour" xml:space="preserve">
+    <value>Letzte Stunde</value>
+  </data>
+  <data name="LogViewer_Period_Label" xml:space="preserve">
+    <value>Zeitraum:</value>
+  </data>
+  <data name="LogViewer_Search_Label" xml:space="preserve">
+    <value>Suche:</value>
+  </data>
+  <data name="LogViewer_Title" xml:space="preserve">
+    <value>Live-Log</value>
+  </data>
+  <data name="LogViewer_Visible_Label" xml:space="preserve">
+    <value>Sichtbare Einträge:</value>
+  </data>
+  <data name="Main_IndexedFiles_Label" xml:space="preserve">
+    <value>Indizierte Dateien:</value>
+  </data>
+  <data name="Main_Status_LastProgress_Format" xml:space="preserve">
+    <value>Letzte Indexer-Meldung: {0:dd.MM.yyyy HH:mm}</value>
+  </data>
+  <data name="Main_Status_LastProgress_None" xml:space="preserve">
+    <value>Noch keine Indexer-Meldung</value>
+  </data>
+  <data name="Main_Tab_AllFiles" xml:space="preserve">
+    <value>Alle Dateien</value>
+  </data>
+  <data name="Main_Tab_Folders" xml:space="preserve">
+    <value>Ordner</value>
+  </data>
+  <data name="Main_Tab_Search" xml:space="preserve">
+    <value>Suche</value>
+  </data>
+  <data name="Main_Toolbar_About" xml:space="preserve">
+    <value>Über MdExplorer</value>
+  </data>
+  <data name="Main_Toolbar_Graph" xml:space="preserve">
+    <value>WikiLink-Graph öffnen</value>
+  </data>
+  <data name="Main_Toolbar_Logs" xml:space="preserve">
+    <value>Protokoll anzeigen</value>
+  </data>
+  <data name="Main_Toolbar_Manual" xml:space="preserve">
+    <value>Handbuch (F1)</value>
+  </data>
+  <data name="Main_Toolbar_Settings" xml:space="preserve">
+    <value>Einstellungen (Strg+,)</value>
+  </data>
+  <data name="Main_Toolbar_TagCloud" xml:space="preserve">
+    <value>Tag-Cloud ein- oder ausblenden (Strg+T)</value>
+  </data>
+  <data name="Main_Toolbar_TagManagement" xml:space="preserve">
+    <value>Tags verwalten</value>
+  </data>
+  <data name="Main_Update_Available" xml:space="preserve">
+    <value>verfügbar.</value>
+  </data>
+  <data name="Main_Update_Dismiss_ToolTip" xml:space="preserve">
+    <value>Hinweis schließen</value>
+  </data>
+  <data name="Main_Update_NewVersion" xml:space="preserve">
+    <value>Neue Version</value>
+  </data>
+  <data name="Main_Update_OpenRelease" xml:space="preserve">
+    <value>Release öffnen</value>
+  </data>
+  <data name="OpenFile_HandOverFailed_File" xml:space="preserve">
+    <value>MdExplorer läuft bereits, hat aber nicht rechtzeitig geantwortet. Die Datei „{0}“ wurde nicht geöffnet.
+
+Versuchen Sie es erneut, sobald das Programm wieder reagiert.</value>
+  </data>
+  <data name="OpenFile_HandOverFailed_NoFile" xml:space="preserve">
+    <value>MdExplorer läuft bereits, hat aber nicht rechtzeitig geantwortet.
+
+Versuchen Sie es erneut, sobald das Programm wieder reagiert.</value>
+  </data>
+  <data name="OpenFile_HandOverFailed_Title" xml:space="preserve">
+    <value>MdExplorer antwortet nicht</value>
+  </data>
+  <data name="OpenFile_Rejected_InvalidPath" xml:space="preserve">
+    <value>„{0}“ ist kein gültiger Dateipfad.</value>
+  </data>
+  <data name="OpenFile_Rejected_NotFound" xml:space="preserve">
+    <value>Die Datei „{0}“ wurde nicht gefunden.</value>
+  </data>
+  <data name="OpenFile_Rejected_Title" xml:space="preserve">
+    <value>Datei kann nicht geöffnet werden</value>
+  </data>
+  <data name="OpenFile_Rejected_UnsupportedExtension" xml:space="preserve">
+    <value>„{0}“ ist keine Markdown-Datei. MdExplorer öffnet Dateien mit der Endung .md oder .markdown.</value>
+  </data>
+  <data name="Relations_Delete" xml:space="preserve">
+    <value>Löschen …</value>
+  </data>
+  <data name="Relations_DeleteDialog_Title" xml:space="preserve">
+    <value>Datei löschen</value>
+  </data>
+  <data name="Relations_DeleteQuestion_Many" xml:space="preserve">
+    <value>{0} wird gelöscht. {1} Dokumente verweisen darauf — ihre Verweise zeigen danach ins Leere.</value>
+  </data>
+  <data name="Relations_DeleteQuestion_None" xml:space="preserve">
+    <value>{0} wird gelöscht. Kein anderes Dokument verweist darauf.</value>
+  </data>
+  <data name="Relations_DeleteQuestion_One" xml:space="preserve">
+    <value>{0} wird gelöscht. Ein Dokument verweist darauf — sein Verweis zeigt danach ins Leere.</value>
+  </data>
+  <data name="Relations_Delete_ToolTip" xml:space="preserve">
+    <value>Löscht die Datei — die Rückfrage nennt vorher die Folgen</value>
+  </data>
+  <data name="Relations_Empty" xml:space="preserve">
+    <value>Dieses Dokument steht für sich — keine Verweise, keine Tags.</value>
+  </data>
+  <data name="Relations_Failed" xml:space="preserve">
+    <value>Die Verbindungen ließen sich nicht ermitteln. Einzelheiten stehen im Protokoll.</value>
+  </data>
+  <data name="Relations_Folder" xml:space="preserve">
+    <value>ORDNER</value>
+  </data>
+  <data name="Relations_Header" xml:space="preserve">
+    <value>Zusammenhänge</value>
+  </data>
+  <data name="Relations_Incoming" xml:space="preserve">
+    <value>VERWIESEN VON</value>
+  </data>
+  <data name="Relations_Loading" xml:space="preserve">
+    <value>Wird ermittelt …</value>
+  </data>
+  <data name="Relations_Move" xml:space="preserve">
+    <value>Verschieben …</value>
+  </data>
+  <data name="Relations_MoveDialog_Title" xml:space="preserve">
+    <value>Zielordner wählen</value>
+  </data>
+  <data name="Relations_Move_ToolTip" xml:space="preserve">
+    <value>Verschiebt die Datei in ein anderes Verzeichnis</value>
+  </data>
+  <data name="Relations_NewName_Invalid" xml:space="preserve">
+    <value>Nur ein Dateiname, ohne Ordner und ohne die Zeichen \ / : * ? " &lt; &gt; |.</value>
+  </data>
+  <data name="Relations_NewName_Name" xml:space="preserve">
+    <value>Neuer Dateiname</value>
+  </data>
+  <data name="Relations_NewName_ToolTip" xml:space="preserve">
+    <value>Neuer Dateiname — die Erweiterung .md wird ergänzt</value>
+  </data>
+  <data name="Relations_Outgoing" xml:space="preserve">
+    <value>VERWEIST AUF</value>
+  </data>
+  <data name="Relations_Rename" xml:space="preserve">
+    <value>Umbenennen</value>
+  </data>
+  <data name="Relations_RenameDialog_Title" xml:space="preserve">
+    <value>Datei umbenennen</value>
+  </data>
+  <data name="Relations_RenameQuestion_Many" xml:space="preserve">
+    <value>{0} wird in „{1}“ umbenannt. {2} Dokumente verweisen auf den bisherigen Namen — ihre Verweise zeigen danach ins Leere.</value>
+  </data>
+  <data name="Relations_RenameQuestion_One" xml:space="preserve">
+    <value>{0} wird in „{1}“ umbenannt. Ein Dokument verweist auf den bisherigen Namen — sein Verweis zeigt danach ins Leere.</value>
+  </data>
+  <data name="Relations_Rename_ToolTip" xml:space="preserve">
+    <value>Benennt die Datei um; der Ordner bleibt derselbe</value>
+  </data>
+  <data name="Relations_ShowFolder_Name" xml:space="preserve">
+    <value>Ordner anzeigen</value>
+  </data>
+  <data name="Relations_ShowFolder_ToolTip" xml:space="preserve">
+    <value>Zeigt, was sonst noch in diesem Ordner liegt</value>
+  </data>
+  <data name="Relations_Subject_ThisFile" xml:space="preserve">
+    <value>Diese Datei</value>
+  </data>
+  <data name="Relations_Subject_Titled" xml:space="preserve">
+    <value>„{0}“</value>
+  </data>
+  <data name="Relations_Tags" xml:space="preserve">
+    <value>KENNZEICHNUNGEN</value>
+  </data>
+  <data name="Relations_ThisFile" xml:space="preserve">
+    <value>DIESE DATEI</value>
+  </data>
+  <data name="SearchBox_Placeholder" xml:space="preserve">
+    <value>Suchen …</value>
+  </data>
+  <data name="SearchBox_Reset_Name" xml:space="preserve">
+    <value>Suche zurücksetzen</value>
+  </data>
+  <data name="SearchBox_Reset_ToolTip" xml:space="preserve">
+    <value>Suche zurücksetzen (Escape)</value>
+  </data>
+  <data name="Search_CurrentFolderOnly" xml:space="preserve">
+    <value>Nur aktueller Ordner</value>
+  </data>
+  <data name="Search_CurrentFolderOnly_ToolTip" xml:space="preserve">
+    <value>Beschränkt die Treffer auf den im Ordnerbaum gewählten Pfad. Ohne Haken wird über alle Wurzeln gesucht.</value>
+  </data>
+  <data name="Search_Empty_Failed_Headline" xml:space="preserve">
+    <value>Die Suche ist gescheitert</value>
+  </data>
+  <data name="Search_Empty_Failed_Hint" xml:space="preserve">
+    <value>Die Anfrage konnte nicht ausgeführt werden. Einzelheiten stehen im Protokoll unter Ansicht → Logs….</value>
+  </data>
+  <data name="Search_Empty_Idle_Headline" xml:space="preserve">
+    <value>Noch nichts gesucht</value>
+  </data>
+  <data name="Search_Empty_Idle_Hint" xml:space="preserve">
+    <value>Tippen Sie einen Begriff ein. Mehrere Wörter werden mit UND verknüpft; tag: und path: schränken auf Tag und Pfad ein.</value>
+  </data>
+  <data name="Search_Empty_NoMatch_Headline" xml:space="preserve">
+    <value>Nichts gefunden</value>
+  </data>
+  <data name="Search_Empty_NoMatch_Hint" xml:space="preserve">
+    <value>Zu dieser Anfrage gibt es keinen Treffer. Ein kürzerer Begriff oder eine andere Ähnlichkeit hilft oft weiter.</value>
+  </data>
+  <data name="Search_Mode_Label" xml:space="preserve">
+    <value>Modus:</value>
+  </data>
+  <data name="Search_Placeholder" xml:space="preserve">
+    <value>Volltext, tag: und path: durchsuchen</value>
+  </data>
+  <data name="Search_Reset" xml:space="preserve">
+    <value>Anfrage zurücksetzen</value>
+  </data>
+  <data name="Search_Similarity_Label" xml:space="preserve">
+    <value>Ähnlichkeit:</value>
+  </data>
+  <data name="Settings_Appearance_FontSize_Label" xml:space="preserve">
+    <value>Preview-Schriftgröße (px):</value>
+  </data>
+  <data name="Settings_Appearance_PageSize_Label" xml:space="preserve">
+    <value>Treffer pro Seite:</value>
+  </data>
+  <data name="Settings_Appearance_Theme_Label" xml:space="preserve">
+    <value>Theme:</value>
+  </data>
+  <data name="Settings_Behavior_CheckNow" xml:space="preserve">
+    <value>Nach Updates suchen</value>
+  </data>
+  <data name="Settings_Behavior_CheckOnStartup" xml:space="preserve">
+    <value>Beim Start nach Updates suchen</value>
+  </data>
+  <data name="Settings_Behavior_Debounce_Label" xml:space="preserve">
+    <value>Such-Debounce (ms):</value>
+  </data>
+  <data name="Settings_Behavior_InstallNow" xml:space="preserve">
+    <value>Jetzt aktualisieren</value>
+  </data>
+  <data name="Settings_Behavior_RemoteImages" xml:space="preserve">
+    <value>Bilder aus dem Netz in der Vorschau laden</value>
+  </data>
+  <data name="Settings_Behavior_RemoteImages_Hint" xml:space="preserve">
+    <value>Aus. Damit bleibt die Vorschau ohne Internetverbindung vollständig. Eingeschaltet werden auch Abzeichen und Bilder von fremden Servern geladen — die erfahren dann, wann Sie welche Notiz ansehen.</value>
+  </data>
+  <data name="Settings_Behavior_Resync_Label" xml:space="preserve">
+    <value>Indexer-Resync-Intervall (s, 0 = aus):</value>
+  </data>
+  <data name="Settings_Indexing_AddRoot" xml:space="preserve">
+    <value>Hinzufügen…</value>
+  </data>
+  <data name="Settings_Indexing_Exclusions_Heading" xml:space="preserve">
+    <value>Ausschluss-Muster (Glob, '!' negiert)</value>
+  </data>
+  <data name="Settings_Indexing_InlineTags" xml:space="preserve">
+    <value>Tags automatisch aus Hashtags extrahieren</value>
+  </data>
+  <data name="Settings_Indexing_InlineTags_ToolTip" xml:space="preserve">
+    <value>Wenn aktiviert, werden #-Tags im Markdown-Body als Tags indiziert. Frontmatter-Einträge bleiben unabhängig davon erhalten.</value>
+  </data>
+  <data name="Settings_Indexing_RootDialog_Title" xml:space="preserve">
+    <value>Index-Root wählen</value>
+  </data>
+  <data name="Settings_Indexing_Roots_Heading" xml:space="preserve">
+    <value>Index-Roots</value>
+  </data>
+  <data name="Settings_Indexing_Tagging_Heading" xml:space="preserve">
+    <value>Tagging</value>
+  </data>
+  <data name="Settings_InvalidDialog_Title" xml:space="preserve">
+    <value>Einstellungen ungültig</value>
+  </data>
+  <data name="Settings_SaveFailedDialog_Title" xml:space="preserve">
+    <value>Speichern fehlgeschlagen</value>
+  </data>
+  <data name="Settings_Tab_Appearance" xml:space="preserve">
+    <value>Darstellung</value>
+  </data>
+  <data name="Settings_Tab_Behavior" xml:space="preserve">
+    <value>Verhalten</value>
+  </data>
+  <data name="Settings_Tab_Indexing" xml:space="preserve">
+    <value>Indexierung</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="Settings_ValidationField_ExclusionPatterns" xml:space="preserve">
+    <value>Ausschluss-Muster {0}</value>
+  </data>
+  <data name="Settings_ValidationField_IndexerResyncIntervalSeconds" xml:space="preserve">
+    <value>Abgleich-Intervall (s)</value>
+  </data>
+  <data name="Settings_ValidationField_PreviewFontSize" xml:space="preserve">
+    <value>Schriftgröße der Vorschau</value>
+  </data>
+  <data name="Settings_ValidationField_ResultsPerPage" xml:space="preserve">
+    <value>Treffer pro Seite</value>
+  </data>
+  <data name="Settings_ValidationField_Roots" xml:space="preserve">
+    <value>Index-Root {0}</value>
+  </data>
+  <data name="Settings_ValidationField_SearchDebounceMs" xml:space="preserve">
+    <value>Wartezeit der Suche (ms)</value>
+  </data>
+  <data name="Settings_ValidationField_Theme" xml:space="preserve">
+    <value>Erscheinungsbild</value>
+  </data>
+  <data name="Settings_ValidationField_UiExcludedFolders" xml:space="preserve">
+    <value>Pausierter Ordner {0}</value>
+  </data>
+  <data name="Settings_ValidationRule_DirectoryMissing" xml:space="preserve">
+    <value>Verzeichnis existiert nicht: „{0}“.</value>
+  </data>
+  <data name="Settings_ValidationRule_NegationWithoutPattern" xml:space="preserve">
+    <value>Ausrufezeichen ohne folgendes Muster.</value>
+  </data>
+  <data name="Settings_ValidationRule_OutOfRange" xml:space="preserve">
+    <value>Wert muss zwischen {0} und {1} liegen.</value>
+  </data>
+  <data name="Settings_ValidationRule_PathNotAbsolute" xml:space="preserve">
+    <value>Pfad muss absolut sein: „{0}“.</value>
+  </data>
+  <data name="Settings_ValidationRule_PatternInvalid" xml:space="preserve">
+    <value>Ungültiges Glob-Muster: „{0}“.</value>
+  </data>
+  <data name="Settings_ValidationRule_PatternRooted" xml:space="preserve">
+    <value>„{0}“ ist ein absoluter Pfad; Muster gelten relativ zur Wurzel und träfen so nie.</value>
+  </data>
+  <data name="Settings_ValidationRule_PatternUnsupportedSyntax" xml:space="preserve">
+    <value>„{0}“ enthält Klammern, die die Mustersprache nicht kennt.</value>
+  </data>
+  <data name="Settings_ValidationRule_UnknownValue" xml:space="preserve">
+    <value>Unbekannter Wert „{0}“.</value>
+  </data>
+  <data name="Settings_ValidationRule_ValueEmpty" xml:space="preserve">
+    <value>Eintrag ist leer.</value>
+  </data>
+  <data name="Settings_Validation_Header" xml:space="preserve">
+    <value>{0} Fehler:</value>
+  </data>
+  <data name="Settings_Validation_Line" xml:space="preserve">
+    <value>• {0}: {1}</value>
+  </data>
+  <data name="Splash_Status_Initializing" xml:space="preserve">
+    <value>Initialisierung läuft …</value>
+  </data>
+  <data name="Startup_Failure_Message" xml:space="preserve">
+    <value>MdExplorer konnte nicht gestartet werden.
+
+{0}
+Einzelheiten stehen im Protokoll.</value>
+  </data>
+  <data name="Startup_Failure_Title" xml:space="preserve">
+    <value>Startfehler</value>
+  </data>
+  <data name="Startup_Hint_AccessDenied" xml:space="preserve">
+    <value>Der Zugriff auf den Anwendungsordner wurde verweigert.</value>
+  </data>
+  <data name="Startup_Hint_Configuration" xml:space="preserve">
+    <value>Die Anwendung ist fehlerhaft zusammengestellt.</value>
+  </data>
+  <data name="Startup_Hint_Database" xml:space="preserve">
+    <value>Die Datenbank ließ sich nicht öffnen.</value>
+  </data>
+  <data name="Startup_Hint_FileAccess" xml:space="preserve">
+    <value>Auf eine Datei oder einen Ordner der Anwendung ließ sich nicht zugreifen.</value>
+  </data>
+  <data name="Startup_Hint_InvalidOptions" xml:space="preserve">
+    <value>Die Konfiguration ist ungültig.</value>
+  </data>
+  <data name="Startup_Hint_InvalidSettings" xml:space="preserve">
+    <value>Die Einstellungen sind ungültig.</value>
+  </data>
+  <data name="Startup_Hint_Unexpected" xml:space="preserve">
+    <value>Beim Start ist ein unerwarteter Fehler aufgetreten.</value>
+  </data>
+  <data name="Startup_Status_PreparingDatabase" xml:space="preserve">
+    <value>Datenbank wird vorbereitet …</value>
+  </data>
+  <data name="Update_Download_ChecksumMismatch" xml:space="preserve">
+    <value>Die Prüfsumme der geladenen Datei stimmt nicht mit der veröffentlichten überein. Die Datei wurde verworfen und nicht ausgeführt.</value>
+  </data>
+  <data name="Update_Download_Failed" xml:space="preserve">
+    <value>Der Download ist fehlgeschlagen. Bitte später erneut versuchen.</value>
+  </data>
+  <data name="Update_Download_InstallFailed" xml:space="preserve">
+    <value>Die Installation ist fehlgeschlagen.</value>
+  </data>
+  <data name="Update_Download_NoChecksum" xml:space="preserve">
+    <value>Zu diesem Release ist keine Prüfsumme veröffentlicht — es wird nicht automatisch installiert.</value>
+  </data>
+  <data name="Update_Download_NoSignature" xml:space="preserve">
+    <value>Zu diesem Release liegt keine Signatur vor, die sich prüfen lässt — es wird nicht automatisch installiert. Die Release-Seite bietet das Paket zum Herunterladen an.</value>
+  </data>
+  <data name="Update_Download_SignatureInvalid" xml:space="preserve">
+    <value>Die Signatur passt nicht zum geladenen Paket. Es stammt nicht vom Herausgeber; die Datei wurde verworfen und nicht ausgeführt.</value>
+  </data>
+  <data name="Update_Download_StorageFailed" xml:space="preserve">
+    <value>Das Paket ließ sich lokal nicht ablegen.</value>
+  </data>
+  <data name="Update_Status_Available" xml:space="preserve">
+    <value>Version {0} ist verfügbar (installiert: {1}).</value>
+  </data>
+  <data name="Update_Status_AvailableNotInstallable" xml:space="preserve">
+    <value>Version {0} ist verfügbar, lässt sich hier aber nicht installieren — zu diesem Release fehlt die Prüfsumme. Bitte über die Release-Seite herunterladen.</value>
+  </data>
+  <data name="Update_Status_Cancelled" xml:space="preserve">
+    <value>Abgebrochen.</value>
+  </data>
+  <data name="Update_Status_CheckFailed" xml:space="preserve">
+    <value>Es ließ sich nicht feststellen, ob es eine neuere Version gibt — die Quelle war nicht erreichbar. Das heißt nicht, dass Sie aktuell sind.</value>
+  </data>
+  <data name="Update_Status_Checking" xml:space="preserve">
+    <value>Suche nach Updates …</value>
+  </data>
+  <data name="Update_Status_Downloading" xml:space="preserve">
+    <value>Lädt herunter …</value>
+  </data>
+  <data name="Update_Status_InstallerNotStarted" xml:space="preserve">
+    <value>Das Installationsprogramm ließ sich nicht starten. Die geprüfte Datei liegt unter {0}.</value>
+  </data>
+  <data name="Update_Status_NotChecked" xml:space="preserve">
+    <value>Noch nicht geprüft.</value>
+  </data>
+  <data name="Update_Status_UpToDate" xml:space="preserve">
+    <value>Die installierte Version {0} ist aktuell.</value>
+  </data>
+  <data name="Update_Status_Verified" xml:space="preserve">
+    <value>Prüfsumme bestätigt — Installation wird gestartet.</value>
+  </data>
+</root>

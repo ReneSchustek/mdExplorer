@@ -11,17 +11,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Markdig" Version="1.3.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.11" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.11" />
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
-    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="MdExplorer.Parser.Tests" />
+    <!-- Das Messprojekt stößt einen vollständigen Parse-Durchlauf direkt an, statt auf den Takt des Hintergrunddienstes zu warten. -->
+    <InternalsVisibleTo Include="MdExplorer.Benchmarks" />
   </ItemGroup>
 
 </Project>

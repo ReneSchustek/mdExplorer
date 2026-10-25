@@ -9,14 +9,15 @@ namespace MdExplorer.App.Services;
 /// </summary>
 /// <remarks>
 /// Die Titelleiste zeichnet Windows, nicht die Anwendung, und es färbt sie nur dann dunkel,
-/// wenn das <b>System</b> dunkel steht. Wer in den Einstellungen „Dunkel" wählt, während
-/// Windows hell läuft, bekam deshalb über jedem Fenster einen weißen Balken. Das lässt sich
-/// dem Fenstermanager sagen; mehr als diese eine Angabe ist dafür nicht nötig.
+/// wenn das System dunkel steht. Wer in den Einstellungen „Dunkel" wählt, während Windows
+/// hell läuft, bekäme sonst über jedem Fenster einen weißen Balken. Eine einzige Angabe an den
+/// Fenstermanager genügt, um das zu ändern.
 /// </remarks>
 internal static class WindowTitleBarTheme
 {
-    /// <summary>Bekannt seit Windows 10 Version 2004; ältere Fassungen kannten 19.</summary>
+    /// <summary><c>DWMWA_USE_IMMERSIVE_DARK_MODE</c> aus <c>dwmapi.h</c>, gültig ab Windows 10 Version 2004.</summary>
     private const int UseImmersiveDarkMode = 20;
+    // Dieselbe Angabe unter der undokumentierten Nummer, die Windows 10 vor Version 2004 erwartet.
     private const int UseImmersiveDarkModeBefore20H1 = 19;
 
     /// <summary>
@@ -39,10 +40,10 @@ internal static class WindowTitleBarTheme
             return;
         }
 
-        int wert = isDarkMode ? 1 : 0;
-        if (DwmSetWindowAttribute(handle, UseImmersiveDarkMode, ref wert, sizeof(int)) != 0)
+        int enabled = isDarkMode ? 1 : 0;
+        if (DwmSetWindowAttribute(handle, UseImmersiveDarkMode, ref enabled, sizeof(int)) != 0)
         {
-            _ = DwmSetWindowAttribute(handle, UseImmersiveDarkModeBefore20H1, ref wert, sizeof(int));
+            _ = DwmSetWindowAttribute(handle, UseImmersiveDarkModeBefore20H1, ref enabled, sizeof(int));
         }
     }
 

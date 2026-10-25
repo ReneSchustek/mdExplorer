@@ -12,6 +12,7 @@ namespace MdExplorer.Data.Tests;
 /// </summary>
 public sealed class ParseFailureRepositoryTests : IAsyncDisposable
 {
+    private readonly TestIdSequence _ids = new();
     private static readonly Guid FileId = new("11111111-1111-1111-1111-111111111111");
 
     private readonly SqliteConnection _connection;
@@ -22,6 +23,7 @@ public sealed class ParseFailureRepositoryTests : IAsyncDisposable
     {
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
+        SqliteParameterLimit.Restrict(_connection);
 
         DbContextOptions<MdExplorerDbContext> options = new DbContextOptionsBuilder<MdExplorerDbContext>()
             .UseSqlite(_connection)
@@ -104,12 +106,9 @@ public sealed class ParseFailureRepositoryTests : IAsyncDisposable
     [Fact]
     public async Task GetByMarkdownFileIdsAsync_OnManyIds_DoesNotExceedSqliteParameterLimit()
     {
+        // Über der Grenze von 999 gebundenen Parametern, auf die die Verbindung gesetzt ist.
         const int BatchSize = 2_000;
-        List<Guid> ids = new(BatchSize);
-        for (int i = 0; i < BatchSize; i++)
-        {
-            ids.Add(Guid.NewGuid());
-        }
+        List<Guid> ids = SqliteParameterLimit.DistinctIds(BatchSize);
 
         IReadOnlyDictionary<Guid, ParseFailure> result = await _repository
             .GetByMarkdownFileIdsAsync(ids, TestContext.Current.CancellationToken)
@@ -125,16 +124,18 @@ public sealed class ParseFailureRepositoryTests : IAsyncDisposable
         await _repository.RecordAsync(CreateFailure(FileId, "hash-1"), TestContext.Current.CancellationToken).ConfigureAwait(true);
         _ = await _repository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = _dbContext.Set<MarkdownFile>().Remove(file);
-        _ = await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        // Ohne verfolgte Vermerke und über die Mengen-Löschung: So muss der Fremdschlüssel der
+        // Datenbank den Vermerk mitnehmen, nicht das Rahmenwerk auf Client-Seite.
+        _dbContext.ChangeTracker.Clear();
+        _ = await new MarkdownFileRepository(_dbContext).RemoveRangeAsync([file.Id], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(0, await _repository.CountAsync(TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
-    private static ParseFailure CreateFailure(Guid markdownFileId, string contentHash) =>
+    private ParseFailure CreateFailure(Guid markdownFileId, string contentHash) =>
         new()
         {
-            Id = Guid.NewGuid(),
+            Id = _ids.Next(),
             MarkdownFileId = markdownFileId,
             ContentHash = contentHash,
             EngineVersion = "test-engine/1",

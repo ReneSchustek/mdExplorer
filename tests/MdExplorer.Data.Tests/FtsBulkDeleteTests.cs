@@ -60,7 +60,7 @@ public sealed class FtsBulkDeleteTests : IAsyncDisposable
     [Fact]
     public async Task ApplyChangesAsync_RemovesEveryRequestedEntry()
     {
-        Guid[] ids = [.. Enumerable.Range(0, 30).Select(_ => Guid.NewGuid())];
+        Guid[] ids = [.. SqliteParameterLimit.DistinctIds(30)];
         await _sut.ApplyChangesAsync(
             [],
             [.. ids.Select(id => EntryFor(id))],
@@ -84,7 +84,7 @@ public sealed class FtsBulkDeleteTests : IAsyncDisposable
     {
         // Das Ersetzen läuft über dieselbe Sammel-Löschung. Bliebe die alte Zeile stehen,
         // stünde derselbe Treffer zweimal in der Ergebnisliste.
-        Guid id = Guid.NewGuid();
+        Guid id = Guid.Parse("44444444-4444-4444-4444-444444444444");
         await _sut.ApplyChangesAsync([], [EntryFor(id)], TestContext.Current.CancellationToken).ConfigureAwait(true);
         await _sut.ApplyChangesAsync([], [EntryFor(id, "zweiter")], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -96,11 +96,11 @@ public sealed class FtsBulkDeleteTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task ApplyChangesAsync_OverMoreThanOnePortion_RemovesAll()
+    public async Task ApplyChangesAsync_WithMoreIdsThanTheOldParameterLimit_RemovesAll()
     {
-        // Mehr als die Portionsgröße von 500; die Schleife über die Portionen darf keine
-        // Datei unterschlagen.
-        Guid[] ids = [.. Enumerable.Range(0, 620).Select(_ => Guid.NewGuid())];
+        // Mehr Kennungen, als ältere SQLite-Fassungen als Parameter zuließen (999); sie gehen als
+        // ein JSON-Parameter in eine Anweisung, und keine Datei darf dabei unterschlagen werden.
+        Guid[] ids = [.. SqliteParameterLimit.DistinctIds(1200)];
         await _sut.ApplyChangesAsync(
             [],
             [.. ids.Select(id => EntryFor(id))],

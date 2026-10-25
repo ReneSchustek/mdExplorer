@@ -2,11 +2,13 @@
         x:ClassModifier="internal"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Style="{StaticResource {x:Type Window}}"
+        xmlns:l="clr-namespace:MdExplorer.App.Localization"
         xmlns:vm="clr-namespace:MdExplorer.App.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Live-Log"
+        Title="{l:Loc LogViewer_Title}"
         Width="960"
         Height="520"
         MinWidth="640"
@@ -23,25 +25,45 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Level:" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock x:Name="LevelLabel" Text="{l:Loc LogViewer_Level_Label}" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <ComboBox x:Name="LevelComboBox"
+                              AutomationProperties.LabeledBy="{Binding ElementName=LevelLabel}"
                               ItemsSource="{Binding LevelFilters}"
                               SelectedItem="{Binding SelectedLevelFilter, Mode=TwoWay}"
                               DisplayMemberPath="Display"
-                              MinWidth="140" />
+                              MinWidth="140">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                <Setter Property="AutomationProperties.Name" Value="{Binding Display}" />
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
+                    <TextBlock x:Name="PeriodLabel" Text="{l:Loc LogViewer_Period_Label}" VerticalAlignment="Center" Margin="16,0,6,0" />
+                    <ComboBox AutomationProperties.LabeledBy="{Binding ElementName=PeriodLabel}"
+                              ItemsSource="{Binding PeriodFilters}"
+                              SelectedItem="{Binding SelectedPeriodFilter, Mode=TwoWay}"
+                              DisplayMemberPath="Display"
+                              MinWidth="140">
+                        <ComboBox.ItemContainerStyle>
+                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                                <Setter Property="AutomationProperties.Name" Value="{Binding Display}" />
+                            </Style>
+                        </ComboBox.ItemContainerStyle>
+                    </ComboBox>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="Suche:" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock x:Name="SearchLabel" Text="{l:Loc LogViewer_Search_Label}" VerticalAlignment="Center" Margin="0,0,6,0" />
                     <TextBox x:Name="SearchTextBox"
+                             AutomationProperties.LabeledBy="{Binding ElementName=SearchLabel}"
                              Text="{Binding SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              MinWidth="240" />
                 </StackPanel>
                 <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Exportieren…"
+                    <Button Content="{l:Loc LogViewer_Export}"
                             Command="{Binding ExportCommand}"
                             Padding="12,4"
                             Margin="0,0,8,0" />
-                    <Button Content="Schließen"
+                    <Button Content="{l:Loc Action_Close}"
                             Width="100"
                             IsCancel="True"
                             Click="OnCloseClick" />
@@ -49,42 +71,55 @@
             </Grid>
         </Border>
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="8,4">
-            <TextBlock>
-                <Run Text="Sichtbare Einträge: " />
-                <Run Text="{Binding VisibleCount, Mode=OneWay}" FontWeight="SemiBold" />
-                <Run Text=" / Puffer: " />
-                <Run Text="{Binding Entries.Count, Mode=OneWay}" />
-            </TextBlock>
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right"
+                           Text="{Binding ExportMessage}"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding ExportMessage}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           AutomationProperties.LiveSetting="Polite" />
+                <TextBlock>
+                    <Run Text="{l:Loc LogViewer_Visible_Label}" />
+                    <Run Text="{Binding VisibleCount, Mode=OneWay}" FontWeight="SemiBold" />
+                    <Run Text="{l:Loc LogViewer_Buffer_Label}" />
+                    <Run Text="{Binding Entries.Count, Mode=OneWay}" />
+                </TextBlock>
+            </DockPanel>
         </Border>
         <ListView ItemsSource="{Binding FilteredView}"
                   VirtualizingPanel.IsVirtualizing="True"
                   VirtualizingPanel.VirtualizationMode="Recycling"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto"
                   GridViewColumnHeader.Click="OnHeaderClick">
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="AutomationProperties.Name" Value="{Binding Message}" />
+                </Style>
+            </ListView.ItemContainerStyle>
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Zeit" Width="180">
+                    <GridViewColumn Header="{l:Loc LogViewer_Column_Time}" Width="180">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" FontFamily="Consolas" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Level" Width="80">
+                    <GridViewColumn Header="{l:Loc LogViewer_Column_Level}" Width="80">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Level}" FontFamily="Consolas" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Level, Converter={StaticResource EnumDisplay}}" FontFamily="Consolas" FontWeight="SemiBold" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Quelle" Width="220">
+                    <GridViewColumn Header="{l:Loc LogViewer_Column_Source}" Width="220">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding SourceContext}" FontFamily="Consolas" TextTrimming="CharacterEllipsis" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Nachricht" Width="420">
+                    <GridViewColumn Header="{l:Loc LogViewer_Column_Message}" Width="420">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />

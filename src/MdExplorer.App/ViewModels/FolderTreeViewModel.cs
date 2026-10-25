@@ -4,21 +4,20 @@ using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.App.Localization;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
 using MdExplorer.Indexer.Abstractions;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// ViewModel der linken Spalte (Datei-Navigation). Bezieht die Roots aus den
-/// persistierten <see cref="MdExplorer.Core.Models.AppSettings"/>; UI-Tree-Ausschlüsse
-/// für offensichtliche System-Verzeichnisse bleiben weiterhin hartverdrahtet, weil
-/// sie reine Darstellungs-Hygiene sind (kein Indexer-Belang). Markdown-Dateien werden
-/// pro Verzeichnis als Blattknoten gelistet und feuern beim Selektieren
-/// das <see cref="FileSelected"/>-Event. Die Kontextmenü-Aktionen für
-/// <c>Indexierung pausieren / wieder aufnehmen</c> liegen ebenfalls hier.
+/// ViewModel der linken Spalte (Datei-Navigation). Die Wurzeln kommen aus den
+/// <see cref="MdExplorer.Core.Models.AppSettings"/>. Werkzeugordner wie <c>.git</c> oder
+/// <c>node_modules</c> blendet der Baum über eine feste Liste aus; das betrifft nur die
+/// Darstellung, nicht den Indexer. Eine angeklickte Datei löst <see cref="FileSelected"/> aus.
+/// Die Kontextmenü-Aktionen „Indexierung pausieren" und „wieder aufnehmen" liegen ebenfalls hier.
 /// </summary>
 internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposable
 {
@@ -35,14 +34,16 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     private readonly IFileSystem _fileSystem;
     private readonly ISettingsService _settings;
     private readonly IExclusionFilter? _exclusionFilter;
+    private readonly IDialogService _dialogService;
+    private readonly ILogger<FolderTreeViewModel> _logger;
 
     /// <summary>
     /// Der Merker, der beim Beenden der Anwendung anschlägt.
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
-    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// wartete das Schließen auf Arbeit, die niemand mehr braucht. Ohne Wirt, also im Test,
+    /// bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
     private bool _disposed;
@@ -60,15 +61,21 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     public FolderTreeViewModel(
         ISettingsService settings,
         IFileSystem fileSystem,
+        IDialogService dialogService,
+        ILogger<FolderTreeViewModel> logger,
         IExclusionFilter? exclusionFilter = null,
         CancellationToken shutdownToken = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(fileSystem);
+        ArgumentNullException.ThrowIfNull(dialogService);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _settings = settings;
         _fileSystem = fileSystem;
         _exclusionFilter = exclusionFilter;
+        _dialogService = dialogService;
+        _logger = logger;
         _shutdownToken = shutdownToken;
         Roots = BuildRoots(settings.Current.Indexing.Roots);
         _settings.SettingsChanged += OnSettingsChanged;
@@ -92,56 +99,12 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     private static bool CanPauseIndexing(TreeNodeViewModel? node) =>
         node is not null && !node.IsMarkdownFile && !node.IsExcluded;
 
-    private static IReadOnlyList<string> AddUnique(IReadOnlyList<string> existing, string folder)
-    {
-        if (existing.Any(item => string.Equals(NormalizeFolder(item), folder, StringComparison.OrdinalIgnoreCase)))
-        {
-            return existing;
-        }
-        List<string> result = new(existing.Count + 1);
-        result.AddRange(existing);
-        result.Add(folder);
-        return result;
-    }
+    // Die Reihenfolge zählt mit: Eine umsortierte Liste baut den Baum in der neuen Folge auf.
+    private static bool RootsAreSame(IReadOnlyList<string> a, IReadOnlyList<string> b) =>
+        a.SequenceEqual(b, StringComparer.OrdinalIgnoreCase);
 
-    private static List<string> RemoveFolder(IReadOnlyList<string> existing, string folder)
-    {
-        List<string> result = new(existing.Count);
-        foreach (string item in existing)
-        {
-            if (string.Equals(NormalizeFolder(item), folder, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-            result.Add(item);
-        }
-        return result;
-    }
-
-    private static string NormalizeFolder(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            return string.Empty;
-        }
-        return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-    }
-
-    private static bool RootsAreSame(IReadOnlyList<string> a, IReadOnlyList<string> b)
-    {
-        if (a.Count != b.Count)
-        {
-            return false;
-        }
-        for (int index = 0; index < a.Count; index++)
-        {
-            if (!string.Equals(a[index], b[index], StringComparison.OrdinalIgnoreCase))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
+    [LoggerMessage(EventId = 1600, Level = LogLevel.Warning, Message = "Pausierte Ordner konnten nicht gespeichert werden.")]
+    private static partial void LogExclusionSaveFailed(ILogger logger, Exception exception);
 
     /// <summary>
     /// Fügt den Pfad des Knotens zu <c>AppSettings.Indexing.UiExcludedFolders</c> hinzu.
@@ -155,8 +118,8 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
         {
             return;
         }
-        string normalized = NormalizeFolder(node.AbsolutePath);
-        IReadOnlyList<string> updated = AddUnique(_settings.Current.Indexing.UiExcludedFolders, normalized);
+        string normalized = FolderExclusionList.Normalize(node.AbsolutePath);
+        IReadOnlyList<string> updated = FolderExclusionList.With(_settings.Current.Indexing.UiExcludedFolders, normalized);
         await SaveUiExcludedAsync(updated).ConfigureAwait(true);
     }
 
@@ -172,8 +135,8 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
         {
             return;
         }
-        string normalized = NormalizeFolder(node.AbsolutePath);
-        IReadOnlyList<string> updated = RemoveFolder(_settings.Current.Indexing.UiExcludedFolders, normalized);
+        string normalized = FolderExclusionList.Normalize(node.AbsolutePath);
+        IReadOnlyList<string> updated = FolderExclusionList.Without(_settings.Current.Indexing.UiExcludedFolders, normalized);
         await SaveUiExcludedAsync(updated).ConfigureAwait(true);
     }
 
@@ -199,7 +162,7 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     /// <c>SearchViewModel</c> die Treffer filtert. Der Index speichert Pfade relativ zur Wurzel
     /// (<c>Path.GetRelativePath(root, …)</c>), darum darf der Filter nicht der absolute Pfad sein,
     /// sonst greift <c>StartsWith</c> nie und die Trefferliste bleibt leer. Wird die Wurzel selbst
-    /// (oder ein Pfad ausserhalb aller Roots) selektiert, liefert die Methode <c>null</c>: dann gilt
+    /// (oder ein Pfad außerhalb aller Roots) selektiert, liefert die Methode <c>null</c>: dann gilt
     /// kein Filter und die Suche bleibt global. Der angehängte Separator verhindert, dass ein
     /// Prefix wie <c>dotnet</c> fälschlich auch <c>dotnetfoo\…</c> trifft.
     /// </summary>
@@ -289,27 +252,8 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
         return result;
     }
 
-    private bool IsFolderUiExcluded(string absolutePath)
-    {
-        IReadOnlyList<string> excluded = _settings.Current.Indexing.UiExcludedFolders;
-        if (excluded.Count == 0 || string.IsNullOrWhiteSpace(absolutePath))
-        {
-            return false;
-        }
-        string normalized = NormalizeFolder(absolutePath);
-        foreach (string folder in excluded)
-        {
-            if (string.IsNullOrWhiteSpace(folder))
-            {
-                continue;
-            }
-            if (string.Equals(NormalizeFolder(folder), normalized, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
+    private bool IsFolderUiExcluded(string absolutePath) =>
+        FolderExclusionList.Contains(_settings.Current.Indexing.UiExcludedFolders, absolutePath);
 
     private async Task SaveUiExcludedAsync(IReadOnlyList<string> updated)
     {
@@ -322,8 +266,10 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or DbException)
         {
-            // UI-Tree bleibt auf Vorstand, Settings-Datei wurde nicht geschrieben.
-            Log.ForContext<FolderTreeViewModel>().Warning(ex, "UI-Exclusion-Save fehlgeschlagen.");
+            // Der Baum behält den alten Stand, denn die Einstellungsdatei ist unverändert. Der
+            // Nutzer erfährt es, sonst wundert er sich, warum der Ordner weiter indiziert wird.
+            LogExclusionSaveFailed(_logger, ex);
+            _dialogService.ShowError(UiText.Get("FolderTree_SaveFailed_Title"), UiText.Format("FolderTree_SaveFailed_Message", ex.Message));
         }
     }
 

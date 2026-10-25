@@ -1,63 +1,46 @@
-using System.Data.Common;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using MdExplorer.App.Messaging;
 using MdExplorer.App.Services;
 using MdExplorer.Core.Abstractions;
-using MdExplorer.Indexer.Abstractions;
 using MdExplorer.TagCloud.ViewModels;
 using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// Orchestriert die drei Spalten-ViewModels. Verdrahtet Auswahl-Events
-/// (Tree → Suchfilter, Suchtreffer → Preview) und liefert die persistierten Spaltenbreiten.
+/// Orchestriert die Bereiche des Hauptfensters: Ordnerbaum, Alle Dateien, Suche, Dokument und
+/// Tag-Cloud. Leitet Klicks auf verwandte Dokumente, Ordner und Kennzeichnungen weiter und
+/// liefert die gespeicherten Spaltenbreiten. Statuszeile und Update-Hinweis sind eigene Teile.
 /// </summary>
-internal sealed partial class MainViewModel : ObservableObject, INavigationService, IDisposable,
-    IRecipient<UpdateAvailableMessage>
+internal sealed partial class MainViewModel : ObservableObject, INavigationService, IDisposable
 {
     /// <summary>Stelle des Registers „Suche" in der linken Spalte.</summary>
     private const int SearchTabIndex = 2;
 
-    private readonly IDocumentLocator _documentLocator;
-    private readonly UiSettingsStore _settingsStore;
-    private readonly IOperationHealthProvider _healthProvider;
-    private readonly IUiDispatcher _uiDispatcher;
-    private readonly IIndexer _indexer;
-    private readonly IMessenger _messenger;
-    private readonly TimeProvider _timeProvider;
+    /// <summary>Der Produktname, wie er in der Titelzeile steht; er wird nicht übersetzt.</summary>
+    private const string ProductName = "MdExplorer";
+
+    private readonly MainServices _services;
     private readonly ILogger<MainViewModel> _logger;
+    private readonly PanelSelectionCoordinator _selection;
+    private readonly TagCloudVisibility _tagCloudVisibility = new();
 
     /// <summary>
     /// Der Merker, der beim Beenden der Anwendung anschlägt.
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
-    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// wartete das Schließen auf Arbeit, die niemand mehr braucht. Ohne Wirt, also im Test,
+    /// bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
-    private readonly Dictionary<string, int> _perRootProcessed = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Lock _perRootLock = new();
     private bool _disposed;
 
     [ObservableProperty]
     private double _folderColumnWidth;
 
     [ObservableProperty]
-    private double _resultColumnWidth;
-
-    [ObservableProperty]
     private double _previewColumnWidth;
-
-    [ObservableProperty]
-    private int _indexedFileCount;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(LastIndexerRun))]
-    private DateTime? _lastIndexerRunUtc;
 
     [ObservableProperty]
     private bool _isTagCloudVisible;
@@ -65,165 +48,174 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     [ObservableProperty]
     private int _leftTabIndex;
 
-    [ObservableProperty]
-    private OperationHealth _health = OperationHealth.Healthy;
-
-    [ObservableProperty]
-    private string _healthDetail = "Alle Subsysteme laufen normal.";
-
-    [ObservableProperty]
-    private bool _isUpdateAvailable;
-
-    [ObservableProperty]
-    private string _updateVersion = string.Empty;
-
-    [ObservableProperty]
-    private Uri? _updateReleaseUrl;
-
-    /// <summary>Erzeugt das ViewModel und verbindet die Child-ViewModels.</summary>
-    public MainViewModel(
-        FolderTreeViewModel folderTree,
-        AllFilesViewModel allFiles,
-        SearchViewModel search,
-        DocumentPanelViewModel documentPanel,
-        TagCloudViewModel tagCloud,
-        IDocumentLocator documentLocator,
-        UiSettingsStore settingsStore,
-        IOperationHealthProvider healthProvider,
-        IUiDispatcher uiDispatcher,
-        IIndexer indexer,
-        IMessenger messenger,
-        TimeProvider timeProvider,
-        ILogger<MainViewModel> logger,
-        CancellationToken shutdownToken = default)
+    /// <summary>Erzeugt das ViewModel und verbindet die Bereiche.</summary>
+    /// <param name="panels">Die Bereiche des Hauptfensters.</param>
+    /// <param name="services">Die Dienste, auf die zugegriffen wird.</param>
+    /// <param name="logger">Protokoll.</param>
+    /// <param name="shutdownToken">Schlägt beim Beenden der Anwendung an.</param>
+    public MainViewModel(MainPanels panels, MainServices services, ILogger<MainViewModel> logger, CancellationToken shutdownToken = default)
     {
-        ArgumentNullException.ThrowIfNull(folderTree);
-        ArgumentNullException.ThrowIfNull(allFiles);
-        ArgumentNullException.ThrowIfNull(search);
-        ArgumentNullException.ThrowIfNull(documentPanel);
-        ArgumentNullException.ThrowIfNull(tagCloud);
-        ArgumentNullException.ThrowIfNull(documentLocator);
-        ArgumentNullException.ThrowIfNull(settingsStore);
-        ArgumentNullException.ThrowIfNull(healthProvider);
-        ArgumentNullException.ThrowIfNull(uiDispatcher);
-        ArgumentNullException.ThrowIfNull(indexer);
-        ArgumentNullException.ThrowIfNull(messenger);
-        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(panels);
+        ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(logger);
 
-        FolderTree = folderTree;
-        AllFiles = allFiles;
-        Search = search;
-        DocumentPanel = documentPanel;
-        TagCloud = tagCloud;
-        _documentLocator = documentLocator;
-        _settingsStore = settingsStore;
-        _healthProvider = healthProvider;
-        _uiDispatcher = uiDispatcher;
-        _indexer = indexer;
-        _messenger = messenger;
-        _timeProvider = timeProvider;
+        FolderTree = panels.FolderTree;
+        AllFiles = panels.AllFiles;
+        Search = panels.Search;
+        DocumentPanel = panels.DocumentPanel;
+        TagCloud = panels.TagCloud;
+        _services = services;
         _logger = logger;
         _shutdownToken = shutdownToken;
-        StorageLocation = settingsStore.StorageLocation;
-        Health = healthProvider.Current;
-        HealthDetail = healthProvider.Detail;
-        healthProvider.Changed += OnHealthChanged;
-        indexer.InitialScanProgress += OnIndexerProgress;
+        StorageLocation = services.SettingsStore.StorageLocation;
+        StatusBar = new StatusBarViewModel(services);
+        UpdateBanner = new UpdateBannerViewModel(services.UiDispatcher, services.Messenger);
 
-        UiLayout layout = settingsStore.Load();
+        // Direkt in die Felder: Über die Eigenschaften sprängen die Speicher-Haken an, und das
+        // Laden schriebe dieselbe Datei gleich wieder.
+        UiLayout layout = services.SettingsStore.Load();
         _folderColumnWidth = layout.FolderColumnWidth;
-        _resultColumnWidth = layout.ResultColumnWidth;
         _previewColumnWidth = layout.PreviewColumnWidth;
         _isTagCloudVisible = layout.IsTagCloudVisible;
         _leftTabIndex = layout.LeftTabIndex;
 
-        FolderTree.PropertyChanged += OnFolderTreeChanged;
-        FolderTree.FileSelected += OnFolderTreeFileSelected;
-        AllFiles.FileSelected += OnAllFilesFileSelected;
-        DocumentPanel.Relations.OpenRequested += OnRelatedDocumentRequested;
-        DocumentPanel.Relations.FolderRequested += OnFolderRequested;
-        DocumentPanel.Relations.TagRequested += OnTagRequested;
-        DocumentPanel.Relations.DocumentChanged += OnDocumentChanged;
-        Search.PropertyChanged += OnSearchChanged;
-
-        _messenger.RegisterAll(this);
-
+        _selection = new PanelSelectionCoordinator(
+            panels,
+            services.UiDispatcher,
+            id => DocumentPanel.LoadAsync(id, _shutdownToken),
+            NavigateToPathAsync,
+            logger);
+        Subscribe();
         LogCreated(logger);
     }
 
-    /// <summary>
-    /// Empfängt die Update-Benachrichtigung des Hintergrunddienstes (auf einem ThreadPool-Thread)
-    /// und blendet die Hinweisleiste ein. Das Setzen der Bindings wird über den
-    /// <see cref="IUiDispatcher"/> auf den UI-Thread marshalled.
-    /// </summary>
-    public void Receive(UpdateAvailableMessage message)
-    {
-        ArgumentNullException.ThrowIfNull(message);
-        _uiDispatcher.Invoke(() =>
-        {
-            UpdateVersion = message.Version;
-            UpdateReleaseUrl = message.ReleaseUrl;
-            IsUpdateAvailable = true;
-        });
-    }
-
-    /// <summary>Schließt die Update-Hinweisleiste, ohne die Release-Seite zu öffnen.</summary>
-    [RelayCommand]
-    private void DismissUpdate() => IsUpdateAvailable = false;
-
-    /// <summary>Linke Spalte, Tab 1: Ordnerbaum.</summary>
+    /// <summary>Linke Spalte, Register Ordnerbaum.</summary>
     public FolderTreeViewModel FolderTree { get; }
 
-    /// <summary>Linke Spalte, Tab 2: flache Liste aller indizierten Dateien.</summary>
+    /// <summary>Linke Spalte, Register mit der flachen Liste aller indizierten Dateien.</summary>
     public AllFilesViewModel AllFiles { get; }
 
-    /// <summary>Mittlere Spalte.</summary>
+    /// <summary>Linke Spalte, Register Suche.</summary>
     public SearchViewModel Search { get; }
 
-    /// <summary>Rechte Spalte (Read/Edit-Container).</summary>
+    /// <summary>Mittlere Spalte (Lesen und Bearbeiten).</summary>
     public DocumentPanelViewModel DocumentPanel { get; }
 
     /// <summary>Tag-Cloud-Panel (zuschaltbar).</summary>
     public TagCloudViewModel TagCloud { get; }
 
+    /// <summary>Statuszeile: Indexstand und Betriebsanzeige.</summary>
+    public StatusBarViewModel StatusBar { get; }
+
+    /// <summary>Hinweis auf eine neuere Fassung.</summary>
+    public UpdateBannerViewModel UpdateBanner { get; }
+
     /// <summary>Titelzeile des Hauptfensters.</summary>
-#pragma warning disable S2325 // WPF-Binding erwartet Instanz-Property auf dem DataContext.
-    public string Title => "MdExplorer";
-#pragma warning restore S2325
+    public string Title { get; } = ProductName;
 
     /// <summary>Pfad-Anzeige in der Statusleiste: Speicherort der Settings/Datenbank.</summary>
     public string StorageLocation { get; }
 
-    /// <summary>
-    /// Der letzte Indexer-Lauf in der Zeitzone des Rechners. Intern wird in UTC gerechnet,
-    /// abgelesen wird aber an der Uhr, die neben dem Bildschirm hängt.
-    /// </summary>
-    public DateTime? LastIndexerRun => LastIndexerRunUtc is DateTime utc
-        ? TimeZoneInfo.ConvertTimeFromUtc(utc, _timeProvider.LocalTimeZone)
-        : null;
+    /// <summary>Wahr, solange der Editor Änderungen hält, die nicht auf der Platte stehen.</summary>
+    public bool HasUnsavedChanges => DocumentPanel.HasUnsavedChanges;
+
+    /// <summary>Merkt sich die Spaltenbreiten beim Schließen für den nächsten Start.</summary>
+    /// <param name="folderWidth">Breite der linken Spalte.</param>
+    /// <param name="previewWidth">Breite der Vorschau.</param>
+    public void RememberColumnWidths(double folderWidth, double previewWidth)
+    {
+        FolderColumnWidth = folderWidth;
+        PreviewColumnWidth = previewWidth;
+        PersistColumnLayout();
+    }
 
     /// <summary>Persistiert die aktuellen Spaltenbreiten, Tag-Cloud-Sichtbarkeit und Left-Tab-Index.</summary>
     public void PersistColumnLayout()
     {
-        _settingsStore.Save(new UiLayout(
-            FolderColumnWidth,
-            ResultColumnWidth,
-            PreviewColumnWidth,
-            HelpWindow: null,
-            IsTagCloudVisible: IsTagCloudVisible,
-            LeftTabIndex: LeftTabIndex));
+        // Hilfe- und Graph-Fenster schreiben ihre Felder in dieselbe Datei. Deshalb wird der
+        // gespeicherte Stand fortgeschrieben, statt ein neues Layout ohne ihre Felder anzulegen.
+        UiSettingsStore store = _services.SettingsStore;
+        store.Save(store.Load() with
+        {
+            FolderColumnWidth = FolderColumnWidth,
+            PreviewColumnWidth = PreviewColumnWidth,
+            IsTagCloudVisible = IsTagCloudVisible,
+            LeftTabIndex = LeftTabIndex,
+        });
     }
 
-    /// <summary>Schaltet das Tag-Cloud-Panel ein/aus. Hot-Save erfolgt im <see cref="OnIsTagCloudVisibleChanged"/>-Hook.</summary>
-    [CommunityToolkit.Mvvm.Input.RelayCommand]
-    public void ToggleTagCloud() => IsTagCloudVisible = !IsTagCloudVisible;
+    /// <summary>
+    /// Öffnet eine Datei, die von außen kommt (Doppelklick, „Öffnen mit“), auch wenn sie in keinem
+    /// indizierten Ordner liegt.
+    /// </summary>
+    /// <param name="absolutePath">Der geprüfte, vollständige Pfad.</param>
+    /// <returns><see langword="false"/>, wenn der Nutzer bei ungespeicherten Änderungen abgebrochen hat.</returns>
+    public Task<bool> OpenFileAsync(string absolutePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
+        return NavigateToPathAsync(absolutePath);
+    }
+
+    /// <summary>Wechselt in der linken Spalte auf das Register „Suche".</summary>
+    public void ShowSearchTab() => LeftTabIndex = SearchTabIndex;
+
+    /// <summary>Fragt vor dem Schließen des Hauptfensters nach ungespeicherten Änderungen.</summary>
+    /// <returns><see langword="true"/>, wenn das Fenster schließen darf.</returns>
+    public Task<bool> ConfirmCloseAsync() => DocumentPanel.ConfirmLeaveAsync(CancellationToken.None);
+
+    /// <summary>
+    /// Ob die Tag-Cloud gerade zu sehen ist: die gespeicherte Wahl, in einem schmalen Fenster
+    /// eingeschränkt durch <see cref="TagCloudVisibility"/>.
+    /// </summary>
+    /// <remarks>
+    /// Setzbar, damit ein Schalter in beide Richtungen binden kann. Ein Schalter, der nur einen
+    /// Befehl auslöst, wechselt über die Bedienungshilfen nur seinen Haken, nicht den Zustand.
+    /// </remarks>
+    public bool IsTagCloudShown
+    {
+        get => _tagCloudVisibility.IsShown(IsTagCloudVisible);
+        set
+        {
+            if (value != IsTagCloudShown)
+            {
+                ToggleTagCloud();
+            }
+        }
+    }
+
+    /// <summary>Schaltet die Tag-Cloud um, wie der Nutzer sie sieht (Knopf, Strg+T). Gespeichert wird im <see cref="OnIsTagCloudVisibleChanged(bool)"/>-Hook.</summary>
+    [RelayCommand]
+    public void ToggleTagCloud()
+    {
+        bool preferred = _tagCloudVisibility.Toggle(IsTagCloudVisible);
+        if (preferred == IsTagCloudVisible)
+        {
+            // Nur im schmalen Fenster: Die Wahl bleibt, aber die Tag-Cloud erscheint.
+            OnPropertyChanged(nameof(IsTagCloudShown));
+            return;
+        }
+        IsTagCloudVisible = preferred;
+    }
+
+    /// <summary>Blendet die Tag-Cloud aus (✕ in ihrem Kopf).</summary>
+    [RelayCommand]
+    public void HideTagCloud() => IsTagCloudShown = false;
+
+    /// <summary>Nimmt die Breite des Hauptfensters auf; ein schmales Fenster blendet die Tag-Cloud aus.</summary>
+    /// <param name="width">Die Breite in geräteunabhängigen Einheiten.</param>
+    public void UpdateWindowWidth(double width)
+    {
+        if (_tagCloudVisibility.UpdateWidth(width))
+        {
+            OnPropertyChanged(nameof(IsTagCloudShown));
+        }
+    }
 
     /// <inheritdoc />
     public async Task<bool> NavigateToWikiLinkAsync(string wikiLinkTarget, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(wikiLinkTarget);
-        Guid? targetId = await _documentLocator.FindByWikiLinkAsync(wikiLinkTarget, cancellationToken).ConfigureAwait(true);
+        Guid? targetId = await _services.DocumentLocator.FindByWikiLinkAsync(wikiLinkTarget, cancellationToken).ConfigureAwait(true);
         if (targetId is null)
         {
             LogWikiLinkUnresolved(_logger, wikiLinkTarget);
@@ -239,17 +231,16 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         {
             return false;
         }
-        await DocumentPanel.LoadAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
-
-        SearchResultItemViewModel? matchingItem = Search.Results.FirstOrDefault(item => item.MarkdownFileId == markdownFileId);
-        if (matchingItem is not null)
+        if (!await DocumentPanel.LoadAsync(markdownFileId, cancellationToken).ConfigureAwait(true))
         {
-            Search.SelectedResult = matchingItem;
+            return false;
         }
+
+        _selection.MarkOpenSearchResult(markdownFileId);
         return true;
     }
 
-    /// <summary>Trennt Event-Handler und gibt Ressourcen frei.</summary>
+    /// <summary>Trennt die Abonnements. Die Bereiche gibt die Abhängigkeitsverwaltung frei, die sie erzeugt hat.</summary>
     public void Dispose()
     {
         if (_disposed)
@@ -257,21 +248,13 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
             return;
         }
         _disposed = true;
-        _messenger.UnregisterAll(this);
-        FolderTree.PropertyChanged -= OnFolderTreeChanged;
-        FolderTree.FileSelected -= OnFolderTreeFileSelected;
-        AllFiles.FileSelected -= OnAllFilesFileSelected;
-        DocumentPanel.Relations.OpenRequested -= OnRelatedDocumentRequested;
-        DocumentPanel.Relations.FolderRequested -= OnFolderRequested;
-        DocumentPanel.Relations.TagRequested -= OnTagRequested;
-        DocumentPanel.Relations.DocumentChanged -= OnDocumentChanged;
-        Search.PropertyChanged -= OnSearchChanged;
-        _healthProvider.Changed -= OnHealthChanged;
-        _indexer.InitialScanProgress -= OnIndexerProgress;
-        FolderTree.Dispose();
-        Search.Dispose();
-        TagCloud.Dispose();
-        DocumentPanel.Dispose();
+        _selection.Dispose();
+        StatusBar.Dispose();
+        UpdateBanner.Dispose();
+        DocumentPanel.RelatedDocumentRequested -= OnRelatedDocumentRequested;
+        DocumentPanel.FolderRequested -= OnFolderRequested;
+        DocumentPanel.TagRequested -= OnTagRequested;
+        DocumentPanel.DocumentChanged -= OnDocumentChanged;
     }
 
     [LoggerMessage(EventId = 200, Level = LogLevel.Information, Message = "MainViewModel erstellt.")]
@@ -280,87 +263,34 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     [LoggerMessage(EventId = 320, Level = LogLevel.Information, Message = "WikiLink-Ziel {WikiLinkTarget} konnte nicht aufgelöst werden.")]
     private static partial void LogWikiLinkUnresolved(ILogger logger, string wikiLinkTarget);
 
-    [LoggerMessage(EventId = 321, Level = LogLevel.Information, Message = "Datei {AbsolutePath} ist noch nicht indiziert — Klick im Tree ignoriert.")]
-    private static partial void LogPathUnresolved(ILogger logger, string absolutePath);
-
-    [LoggerMessage(EventId = 322, Level = LogLevel.Warning, Message = "Navigation zu {AbsolutePath} fehlgeschlagen — Datenbank-Spitze.")]
-    private static partial void LogNavigationFailed(ILogger logger, string absolutePath, Exception exception);
-
     /// <summary>
-    /// Hot-Save. Jeder Wechsel der Sichtbarkeit (Command, Menü-TwoWay-Binding,
-    /// Ctrl+T) wird sofort persistiert, damit der Stand beim nächsten Start auch dann erhalten
+    /// Speichert sofort. Jeder Wechsel der Sichtbarkeit (Befehl, Menü-Haken, Strg+T) wird
+    /// gleich persistiert, damit der Stand beim nächsten Start auch dann erhalten
     /// bleibt, wenn das Hauptfenster ungewöhnlich beendet wird (Task-Manager / Power-Loss).
     /// Der Initial-Wert wird im Konstruktor direkt in das Backing-Field geschrieben; die
     /// partielle Methode feuert daher beim Initial-Load nicht, und es entsteht keine Save-Schleife.
     /// </summary>
-    partial void OnIsTagCloudVisibleChanged(bool value) => PersistColumnLayout();
+    partial void OnIsTagCloudVisibleChanged(bool value)
+    {
+        PersistColumnLayout();
+        OnPropertyChanged(nameof(IsTagCloudShown));
+    }
 
     /// <summary>Hot-Save für den Left-Tab-Index. Initial-Wert wird im Konstruktor
     /// direkt in das Backing-Field geschrieben. Der Hook feuert beim Start nicht.</summary>
     partial void OnLeftTabIndexChanged(int value) => PersistColumnLayout();
 
-    private void OnIndexerProgress(object? sender, IndexerScanProgressEventArgs args)
+    private void Subscribe()
     {
-        ArgumentNullException.ThrowIfNull(args);
-        int totalProcessed;
-        lock (_perRootLock)
-        {
-            _perRootProcessed[args.Root] = args.ProcessedCount;
-            totalProcessed = _perRootProcessed.Values.Sum();
-        }
-        DateTime nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-        _uiDispatcher.Invoke(() =>
-        {
-            IndexedFileCount = totalProcessed;
-            LastIndexerRunUtc = nowUtc;
-        });
-    }
-
-    private void OnHealthChanged(object? sender, EventArgs args)
-    {
-        _uiDispatcher.Invoke(() =>
-        {
-            Health = _healthProvider.Current;
-            HealthDetail = _healthProvider.Detail;
-        });
-    }
-
-    private void OnFolderTreeChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
-    {
-        if (string.Equals(args.PropertyName, nameof(FolderTreeViewModel.SelectedPathPrefix), StringComparison.Ordinal))
-        {
-            Search.PathPrefixFilter = FolderTree.SelectedPathPrefix;
-        }
-    }
-
-    private void OnSearchChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs args)
-    {
-        if (string.Equals(args.PropertyName, nameof(SearchViewModel.SelectedResult), StringComparison.Ordinal))
-        {
-            SearchResultItemViewModel? selected = Search.SelectedResult;
-            if (selected is null)
-            {
-                return;
-            }
-            _ = DocumentPanel.LoadAsync(selected.MarkdownFileId, _shutdownToken);
-        }
-    }
-
-    private void OnFolderTreeFileSelected(string absolutePath)
-    {
-        _ = NavigateToPathAsync(absolutePath);
-    }
-
-    private void OnAllFilesFileSelected(string absolutePath)
-    {
-        _ = NavigateToPathAsync(absolutePath);
+        DocumentPanel.RelatedDocumentRequested += OnRelatedDocumentRequested;
+        DocumentPanel.FolderRequested += OnFolderRequested;
+        DocumentPanel.TagRequested += OnTagRequested;
+        DocumentPanel.DocumentChanged += OnDocumentChanged;
     }
 
     /// <summary>Öffnet ein Dokument, das am geöffneten hängt.</summary>
-    private void OnRelatedDocumentRequested(Guid markdownFileId)
-    {
-        _ = NavigateToDocumentAsync(markdownFileId, _shutdownToken);
-    }
+    private void OnRelatedDocumentRequested(Guid markdownFileId) =>
+        ObservedTask.Forget(NavigateToDocumentAsync(markdownFileId, _shutdownToken), _logger);
 
     /// <summary>
     /// Zeigt, was sonst noch im selben Ordner liegt.
@@ -370,64 +300,52 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     /// Nutzer sieht damit dieselbe Trefferliste wie bei einer getippten Anfrage, und es gibt
     /// nur eine Stelle, an der eine Einschränkung wirkt.
     /// </remarks>
-    private void OnFolderRequested(string folderPath)
-    {
-        ShowInSearch($"path:{folderPath}");
-    }
+    private void OnFolderRequested(string folderPath) => ShowInSearch(SearchQueryText.PathFilter(folderPath));
 
     /// <summary>Zeigt, was dieselbe Kennzeichnung trägt.</summary>
-    private void OnTagRequested(string tagSlug)
-    {
-        ShowInSearch($"tag:{tagSlug}");
-    }
+    private void OnTagRequested(string tagSlug) => ShowInSearch($"tag:{tagSlug}");
 
     /// <summary>
     /// Zieht die Ansicht nach, wenn ein Vorgang die Datei verändert hat.
     /// </summary>
     /// <remarks>
     /// Nach dem Umbenennen oder Verschieben zeigt die Ansicht dieselbe Datei unter ihrem
-    /// neuen Pfad; nach dem Löschen gibt es nichts mehr zu zeigen. Die Liste wird neu
-    /// geladen, weil ihr Eintrag sonst auf einen Pfad zeigt, den es nicht mehr gibt.
+    /// neuen Pfad. Nach dem Löschen wird der ganze Bereich geleert: Bliebe der Editor auf der
+    /// gelöschten Datei, legte ein Speichern sie neu an. Die Liste wird neu geladen, weil ihr
+    /// Eintrag sonst auf einen Pfad zeigt, den es nicht mehr gibt.
     /// </remarks>
     private void OnDocumentChanged(string? newAbsolutePath)
     {
-        _ = AllFiles.RefreshAsync();
+        ObservedTask.Forget(AllFiles.RefreshAsync(), _logger);
 
         if (newAbsolutePath is null)
         {
-            DocumentPanel.Relations.Clear();
+            DocumentPanel.Clear();
             return;
         }
 
-        _ = NavigateToPathAsync(newAbsolutePath);
+        ObservedTask.Forget(NavigateToPathAsync(newAbsolutePath), _logger);
     }
 
     private void ShowInSearch(string query)
     {
         Search.QueryText = query;
-        LeftTabIndex = SearchTabIndex;
+        ShowSearchTab();
     }
 
-    private async Task NavigateToPathAsync(string absolutePath)
+    /// <summary>
+    /// Öffnet eine Datei über ihren Pfad. Ob sie schon im Index steht, klärt der Dokumentbereich
+    /// mit einer einzigen Abfrage.
+    /// </summary>
+    /// <returns><see langword="false"/>, wenn der Nutzer bei ungespeicherten Änderungen abgebrochen hat.</returns>
+    private async Task<bool> NavigateToPathAsync(string absolutePath)
     {
-        try
+        if (!await DocumentPanel.LoadByPathAsync(absolutePath, _shutdownToken).ConfigureAwait(true))
         {
-            Guid? targetId = await _documentLocator.FindByAbsolutePathAsync(absolutePath, _shutdownToken).ConfigureAwait(true);
-            if (targetId is null)
-            {
-                // Indexer kennt die Datei noch nicht: Direct-Load aus dem Dateisystem,
-                // damit der Nutzer Inhalt sieht, ohne auf den ersten Scan warten zu müssen.
-                LogPathUnresolved(_logger, absolutePath);
-                await DocumentPanel.LoadByPathAsync(absolutePath, _shutdownToken).ConfigureAwait(true);
-                return;
-            }
-            _ = await NavigateToDocumentAsync(targetId.Value, _shutdownToken).ConfigureAwait(true);
+            return false;
         }
-        catch (DbException exception)
-        {
-            // SQLite-Spitze beim Locator-Lookup; Navigation still verwerfen.
-            LogNavigationFailed(_logger, absolutePath, exception);
-        }
-    }
 
+        _selection.MarkOpenSearchResult(DocumentPanel.OpenDocumentId);
+        return true;
+    }
 }

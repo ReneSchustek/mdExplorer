@@ -4,6 +4,9 @@ namespace MdExplorer.Core.Models;
 /// Tag-Entität, eindeutig über <see cref="Slug"/>. Der <see cref="Name"/> behält die Original-Schreibweise
 /// (inkl. Umlauten), der Slug ist die normalisierte URL-/Vergleichs-Variante.
 /// </summary>
+/// <remarks>
+/// Öffentliche Setter aus demselben Grund wie bei <see cref="MarkdownFile"/>.
+/// </remarks>
 public sealed class Tag
 {
     /// <summary>Primärschlüssel.</summary>

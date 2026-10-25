@@ -26,13 +26,18 @@ public static class CoreServiceCollectionExtensions
         _ = services.AddSingleton(TimeProvider.System);
         _ = services.AddSingleton<IFileSystem, LocalFileSystem>();
         _ = services.AddSingleton<IParseFailureStatus, ParseFailureStatus>();
+        _ = services.AddSingleton<IBackgroundServiceStatus, BackgroundServiceStatus>();
+        _ = services.AddSingleton(AppPaths.Default);
         _ = services.AddSingleton<ISettingsHistoryStore>(sp => new FileSystemSettingsHistoryStore(
-            AppPaths.GetSettingsHistoryDirectory(),
-            AppPaths.GetSettingsAuditLogPath(),
+            AppPaths.Default.SettingsHistoryDirectory,
+            AppPaths.Default.SettingsAuditLogPath,
             FileSystemSettingsHistoryStore.DefaultRetention,
+            FileSystemSettingsHistoryStore.DefaultAuditRotationBytes,
+            sp.GetRequiredService<IFileSystem>(),
             sp.GetRequiredService<ILogger<FileSystemSettingsHistoryStore>>()));
         _ = services.AddSingleton<ISettingsService>(sp => new JsonSettingsService(
-            AppPaths.GetSettingsPath(),
+            AppPaths.Default.SettingsPath,
+            sp.GetRequiredService<IFileSystem>(),
             sp.GetRequiredService<ILogger<JsonSettingsService>>(),
             sp.GetRequiredService<ISettingsHistoryStore>(),
             sp.GetRequiredService<TimeProvider>()));

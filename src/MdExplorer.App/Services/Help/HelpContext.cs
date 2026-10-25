@@ -12,16 +12,16 @@ internal static class HelpContext
     /// <summary>Inhaltsverzeichnis (Default, wenn nichts Spezielles aktiv ist).</summary>
     public const string TableOfContents = "inhalt";
 
-    /// <summary>Einführungs-Kapitel, Initial-State bei leeren Roots.</summary>
+    /// <summary>Einführung. Keine Ansicht setzt diesen Kontext; erreichbar über das Inhaltsverzeichnis.</summary>
     public const string Intro = "einfuehrung";
 
-    /// <summary>Installations-Kapitel.</summary>
+    /// <summary>Installation. Ebenfalls nur über das Inhaltsverzeichnis erreichbar.</summary>
     public const string Install = "installation";
 
-    /// <summary>Drei-Spalten-Layout: Folder-Tree, Splitter, Preview.</summary>
+    /// <summary>Die Oberfläche; gilt, solange der Fokus in der Liste aller Dateien steht.</summary>
     public const string Layout = "layout";
 
-    /// <summary>Indexierung und `.mdignore` (Settings-Dialog, Folder-Tree-Pause).</summary>
+    /// <summary>Indexierung und <c>.mdignore</c>; gilt im Ordnerbaum und im Einstellungsfenster.</summary>
     public const string Indexing = "indexierung";
 
     /// <summary>Suche und Vorschau: aktives Suchfeld, Dokument-Panel.</summary>
@@ -33,6 +33,6 @@ internal static class HelpContext
     /// <summary>Graph-Ansicht.</summary>
     public const string Graph = "graph";
 
-    /// <summary>FAQ-Kapitel, wird derzeit nicht automatisch gesetzt.</summary>
+    /// <summary>Häufige Fragen. Keine Ansicht setzt diesen Kontext.</summary>
     public const string Faq = "faq";
 }

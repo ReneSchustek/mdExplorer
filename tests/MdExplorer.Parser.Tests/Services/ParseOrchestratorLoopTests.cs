@@ -1,16 +1,10 @@
 using System.Data.Common;
-using System.Runtime.CompilerServices;
-using MdExplorer.Core.Abstractions;
-using MdExplorer.Core.Diagnostics;
-using MdExplorer.Parser.Abstractions;
-using MdExplorer.Parser.Options;
+using MdExplorer.Data;
 using MdExplorer.Parser.Services;
 using MdExplorer.Parser.Tests.Fakes;
 using MdExplorer.Parser.Tests.Helpers;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Time.Testing;
-using MEOptions = Microsoft.Extensions.Options.Options;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.Parser.Tests.Services;
 
@@ -18,146 +12,148 @@ namespace MdExplorer.Parser.Tests.Services;
 /// Prüft die Polling-Schleife des <see cref="ParseOrchestrator"/> als Hintergrunddienst.
 /// Die Schleife hat keinen Rückgabewert und keinen sichtbaren Zustand. Ob sie nach einem
 /// Fehlschlag weiterläuft, entscheidet aber darüber, ob geänderte Dateien überhaupt jemals
-/// neu geparst werden. Die Zeit kommt aus einem <see cref="FakeTimeProvider"/>, damit kein
-/// Test auf echte Sekunden wartet.
+/// neu geparst werden. Getaktet wird über eine feste Uhr: Jeder Schritt wartet auf das Ende
+/// des Durchlaufs im Protokoll und stellt die Uhr erst dann um ein Intervall weiter.
 /// </summary>
 public sealed class ParseOrchestratorLoopTests
 {
-    private static readonly TimeSpan Geduld = TimeSpan.FromSeconds(5);
+    // Die Ereignis-Ids von LogPollFailed und LogPollFailedAgain im ParseOrchestrator.
+    private const int PollFailedEventId = 207;
+
+    private const int PollFailedAgainEventId = 213;
 
     [Fact]
     public async Task ExecuteAsync_OnStart_ParsesBeforeTheFirstTick()
     {
         // Ohne den Vorab-Lauf bliebe frisch geänderter Inhalt eine volle Intervall-Länge
         // unsichtbar; der Nutzer sieht nach dem Start die alte Vorschau.
-        Schleifenumgebung u = new();
-        await using (u.ConfigureAwait(true))
+        OrchestratorHarness harness = new();
+        await using (harness.ConfigureAwait(true))
         {
-            await u.StartAsync().ConfigureAwait(true);
+            await harness.StartAsync().ConfigureAwait(true);
 
-            Assert.True(
-                await u.WarteAufLaeufeAsync(1).ConfigureAwait(true),
-                $"Erwartet: 1 Lauf, tatsächlich {u.Quelle.CallCount}.");
+            Assert.Equal(1, harness.Source.CallCount);
         }
     }
 
-    [Fact]
-    public async Task ExecuteAsync_OnTimerTick_ParsesAgain()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    public async Task ExecuteAsync_OnEachTick_ParsesAgain(int ticks)
     {
-        Schleifenumgebung u = new();
-        await using (u.ConfigureAwait(true))
+        OrchestratorHarness harness = new();
+        await using (harness.ConfigureAwait(true))
         {
-            await u.StartAsync().ConfigureAwait(true);
-            _ = await u.WarteAufLaeufeAsync(1).ConfigureAwait(true);
+            await harness.StartAsync().ConfigureAwait(true);
 
-            Assert.True(
-                await u.WarteAufLaeufeAsync(2).ConfigureAwait(true),
-                $"Erwartet: 2 Läufe, tatsächlich {u.Quelle.CallCount}.");
-        }
-    }
+            for (int tick = 0; tick < ticks; tick++)
+            {
+                await harness.RunNextTickAsync().ConfigureAwait(true);
+            }
 
-    [Fact]
-    public async Task ExecuteAsync_OnRepeatedTicks_KeepsParsing()
-    {
-        Schleifenumgebung u = new();
-        await using (u.ConfigureAwait(true))
-        {
-            await u.StartAsync().ConfigureAwait(true);
-
-            Assert.True(
-                await u.WarteAufLaeufeAsync(4).ConfigureAwait(true),
-                $"Erwartet: 4 Läufe, tatsächlich {u.Quelle.CallCount}.");
+            Assert.Equal(ticks + 1, harness.Source.CallCount);
         }
     }
 
     [Fact]
     public async Task ExecuteAsync_OnStop_EndsWithoutFault()
     {
-        Schleifenumgebung u = new();
-        await using (u.ConfigureAwait(true))
+        OrchestratorHarness harness = new();
+        await using (harness.ConfigureAwait(true))
         {
-            await u.StartAsync().ConfigureAwait(true);
-            _ = await u.WarteAufLaeufeAsync(1).ConfigureAwait(true);
+            await harness.StartAsync().ConfigureAwait(true);
 
-            await u.Sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.Sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             // Der Abbruch beim Herunterfahren ist der Normalfall und darf keinen Fehler hinterlassen.
-            Assert.NotNull(u.Sut.ExecuteTask);
-            Assert.True(u.Sut.ExecuteTask!.IsCompleted);
-            Assert.False(u.Sut.ExecuteTask.IsFaulted);
+            Task execution = Assert.IsType<Task>(harness.Sut.ExecuteTask, exactMatch: false);
+            Assert.True(execution.IsCompleted);
+            Assert.False(execution.IsFaulted);
+        }
+    }
+
+    [Theory]
+    [InlineData("database")]
+    [InlineData("invalid-operation")]
+    [InlineData("argument")]
+    public async Task ExecuteAsync_WhenEveryPollFails_KeepsPolling(string kind)
+    {
+        // Eine Datenbank-Spitze oder ein kaputter Zustand darf den Parser nicht dauerhaft
+        // stilllegen.
+        OrchestratorHarness harness = new();
+        await using (harness.ConfigureAwait(true))
+        {
+            harness.Source.ThrowOnEveryEnumeration = kind switch
+            {
+                "database" => new TestDbException("Datenbank belegt"),
+                "invalid-operation" => new InvalidOperationException("kaputter Zustand"),
+                _ => new ArgumentException("ungültige Eingabe"),
+            };
+            await harness.StartAsync().ConfigureAwait(true);
+
+            await harness.RunNextTickAsync().ConfigureAwait(true);
+            await harness.RunNextTickAsync().ConfigureAwait(true);
+
+            Assert.Equal(3, harness.Source.CallCount);
+            Assert.False(harness.Sut.ExecuteTask?.IsFaulted ?? true);
         }
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenAPollFailsWithDbException_KeepsPolling()
+    public async Task ExecuteAsync_WhenEveryPollFails_LogsTheStackTraceOnlyOnce()
     {
-        // Eine Datenbank-Spitze darf den Parser nicht dauerhaft stilllegen.
-        Schleifenumgebung u = new(new TestDbException("Datenbank belegt"));
-        await using (u.ConfigureAwait(true))
+        // Eine dauerhaft gesperrte Datenbank schrieb sonst alle fünf Sekunden einen vollen
+        // Stapel ins Protokoll und verdrängte jede andere Meldung.
+        OrchestratorHarness harness = new();
+        await using (harness.ConfigureAwait(true))
         {
-            await u.StartAsync().ConfigureAwait(true);
+            harness.Source.ThrowOnEveryEnumeration = new TestDbException("Datenbank belegt");
+            await harness.StartAsync().ConfigureAwait(true);
 
-            Assert.True(
-                await u.WarteAufLaeufeAsync(3).ConfigureAwait(true),
-                $"Erwartet: 3 Läufe trotz Fehler, tatsächlich {u.Quelle.CallCount}.");
-            Assert.False(u.Sut.ExecuteTask!.IsFaulted);
+            await harness.RunNextTickAsync().ConfigureAwait(true);
+            await harness.RunNextTickAsync().ConfigureAwait(true);
+
+            Assert.Equal(1, harness.Logger.Entries.Count(entry => entry.EventId == PollFailedEventId && entry.Exception is not null));
+            Assert.Equal(2, harness.Logger.Entries.Count(entry => entry.EventId == PollFailedAgainEventId && entry.Level == LogLevel.Debug));
         }
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenAPollFailsWithInvalidOperationException_KeepsPolling()
+    public async Task ExecuteAsync_AfterAPollRecovers_LogsTheNextFailureInFull()
     {
-        Schleifenumgebung u = new(new InvalidOperationException("kaputter Zustand"));
-        await using (u.ConfigureAwait(true))
+        // Ein Fehler nach einem erfolgreichen Durchlauf ist ein neues Ereignis.
+        OrchestratorHarness harness = new();
+        await using (harness.ConfigureAwait(true))
         {
-            await u.StartAsync().ConfigureAwait(true);
+            harness.Source.ThrowOnNextEnumeration = new TestDbException("Datenbank belegt");
+            await harness.StartAsync().ConfigureAwait(true);
+            await harness.RunNextTickAsync().ConfigureAwait(true);
 
-            Assert.True(
-                await u.WarteAufLaeufeAsync(3).ConfigureAwait(true),
-                $"Erwartet: 3 Läufe trotz Fehler, tatsächlich {u.Quelle.CallCount}.");
-            Assert.False(u.Sut.ExecuteTask!.IsFaulted);
+            harness.Source.ThrowOnNextEnumeration = new TestDbException("Datenbank belegt");
+            await harness.RunNextTickAsync().ConfigureAwait(true);
+
+            Assert.Equal(2, harness.Logger.Entries.Count(entry => entry.EventId == PollFailedEventId && entry.Exception is not null));
         }
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenAPollFailsWithArgumentException_KeepsPolling()
+    public async Task ExecuteAsync_WhenSavingFailsEveryTime_KeepsPolling()
     {
-        Schleifenumgebung u = new(new ArgumentException("ungültige Eingabe"));
-        await using (u.ConfigureAwait(true))
+        // So meldet das echte Repository einen verletzten Schlüssel oder eine belegte Datenbank
+        // beim Speichern. Endete der Dienst daran, bliebe der Index bis zum Neustart stehen.
+        OrchestratorHarness harness = new();
+        await using (harness.ConfigureAwait(true))
         {
-            await u.StartAsync().ConfigureAwait(true);
+            _ = harness.AddSource("/r/a.md", "h1", "Text mit #schlagwort");
+            harness.DocRepo.OnSaveChangesAsync = _ => throw new DatabaseOperationException(
+                "Speichern fehlgeschlagen.", new DbUpdateException("UNIQUE constraint failed: Tags.Slug"));
+            await harness.StartAsync().ConfigureAwait(true);
 
-            Assert.True(
-                await u.WarteAufLaeufeAsync(3).ConfigureAwait(true),
-                $"Erwartet: 3 Läufe trotz Fehler, tatsächlich {u.Quelle.CallCount}.");
-            Assert.False(u.Sut.ExecuteTask!.IsFaulted);
-        }
-    }
+            await harness.RunNextTickAsync().ConfigureAwait(true);
+            await harness.RunNextTickAsync().ConfigureAwait(true);
 
-    [Fact]
-    public async Task TryRunOnceAsync_OnDbException_DoesNotThrow()
-    {
-        Schleifenumgebung u = new(new TestDbException("Datenbank belegt"));
-        await using (u.ConfigureAwait(true))
-        {
-            await u.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-
-            Assert.Equal(1, u.Quelle.CallCount);
-        }
-    }
-
-    [Fact]
-    public async Task TryRunOnceAsync_WhenCancelled_Rethrows()
-    {
-        // Der Abbruch muss durchschlagen, damit die Schleife anhält statt weiterzupollen.
-        Schleifenumgebung u = new(new OperationCanceledException());
-        await using (u.ConfigureAwait(true))
-        {
-            using CancellationTokenSource abbruch = new();
-            await abbruch.CancelAsync().ConfigureAwait(true);
-
-            _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
-                () => u.Sut.TryRunOnceAsync(abbruch.Token)).ConfigureAwait(true);
+            Assert.Equal(3, harness.Source.CallCount);
+            Assert.False(harness.Sut.ExecuteTask?.IsFaulted ?? true);
         }
     }
 
@@ -166,175 +162,40 @@ public sealed class ParseOrchestratorLoopTests
     {
         // Der eigentliche Zweck der Schleife: was erst nach dem Start dazukommt, muss
         // ohne Neustart im Bestand landen.
-        Schleifenumgebung u = new();
-        await using (u.ConfigureAwait(true))
+        OrchestratorHarness harness = new();
+        await using (harness.ConfigureAwait(true))
         {
-            await u.StartAsync().ConfigureAwait(true);
-            _ = await u.WarteAufLaeufeAsync(1).ConfigureAwait(true);
+            await harness.StartAsync().ConfigureAwait(true);
 
-            Guid id = u.FuegeQuelleHinzu("/r/spaet.md", "hash-spaet", "Text mit #spaet.");
+            Guid id = harness.AddSource("/r/nachtrag.md", "hash-nachtrag", "Text mit #nachtrag.");
+            await harness.RunNextTickAsync().ConfigureAwait(true);
 
-            Assert.True(
-                await u.WarteAufBedingungAsync(() => u.DocRepo.Snapshot.ContainsKey(id)).ConfigureAwait(true),
-                "Die nach dem Start angelegte Datei wurde nicht geparst.");
+            Assert.True(harness.DocRepo.Snapshot.ContainsKey(id), "Die nach dem Start angelegte Datei wurde nicht geparst.");
         }
     }
 
-    /// <summary>Hält Fakes und den Orchestrator für einen Testlauf zusammen.</summary>
-    private sealed class Schleifenumgebung : IAsyncDisposable
+    [Fact]
+    public async Task TryRunOnceAsync_OnDbException_DoesNotThrow()
     {
-        private const int IntervallSekunden = 5;
+        using OrchestratorHarness harness = new();
+        harness.Source.ThrowOnEveryEnumeration = new TestDbException("Datenbank belegt");
 
-        private readonly ServiceProvider _provider;
-        private readonly FakeTimeProvider _zeit = new();
-        private bool _gestartet;
+        await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        public Schleifenumgebung()
-            : this(null)
-        {
-        }
-
-        public Schleifenumgebung(Exception? fehler)
-        {
-            Quelle = new CountingSource(fehler);
-            DocRepo.OnSaveChangesAsync = ct => TagRepo.SaveChangesAsync(ct);
-
-            ServiceCollection dienste = new();
-            _ = dienste.AddSingleton<IMarkdownSourceProvider>(Quelle);
-            _ = dienste.AddSingleton<IMarkdownDocumentRepository>(DocRepo);
-            _ = dienste.AddSingleton<ITagRepository>(TagRepo);
-            _ = dienste.AddSingleton<IParseFailureRepository>(FailureRepo);
-            _provider = dienste.BuildServiceProvider();
-
-            MarkdigParser parser = new(
-                new FrontmatterExtractor(),
-                new TagExtractor(new FakeSettingsService()),
-                new WikiLinkExtractor(),
-                new TagNormalizer());
-
-            Sut = new ParseOrchestrator(
-                _provider.GetRequiredService<IServiceScopeFactory>(),
-                FileSystem,
-                parser,
-                FailureStatus,
-                MEOptions.Create(new ParserOptions
-                {
-                    MaxParallelism = 2,
-                    BatchSize = 100,
-                    PollIntervalSeconds = IntervallSekunden,
-                }),
-                _zeit,
-                NullLogger<ParseOrchestrator>.Instance);
-        }
-
-        public FakeFileSystem FileSystem { get; } = new();
-
-        public FakeParseFailureRepository FailureRepo { get; } = new();
-
-        public ParseFailureStatus FailureStatus { get; } = new();
-
-        public CountingSource Quelle { get; }
-
-        public FakeMarkdownDocumentRepository DocRepo { get; } = new();
-
-        public FakeTagRepository TagRepo { get; } = new();
-
-        public ParseOrchestrator Sut { get; }
-
-        public async Task StartAsync()
-        {
-            _gestartet = true;
-            await Sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
-        }
-
-        public Guid FuegeQuelleHinzu(string pfad, string inhaltsHash, string inhalt)
-        {
-            Guid id = Guid.NewGuid();
-            string normalisiert = pfad.Replace('/', Path.DirectorySeparatorChar);
-            FileSystem.AddFile(normalisiert, inhalt);
-            lock (Quelle.Sperre)
-            {
-                Quelle.Sources.Add(new MarkdownSourceSnapshot(id, normalisiert, inhaltsHash));
-            }
-            return id;
-        }
-
-        public Task<bool> WarteAufLaeufeAsync(int anzahl) => WarteAufBedingungAsync(() => Quelle.CallCount >= anzahl);
-
-        /// <summary>
-        /// Wartet auf eine Bedingung und treibt dabei die Uhr weiter. Das Vorstellen geschieht in
-        /// der Schleife statt einmalig, weil sonst ein Tick verloren gehen kann, solange die
-        /// Schleife den Zeitgeber noch nicht erreicht hat; der Test würde dann je nach
-        /// Maschinenlast unterschiedlich ausgehen.
-        /// </summary>
-        public async Task<bool> WarteAufBedingungAsync(Func<bool> bedingung)
-        {
-            ArgumentNullException.ThrowIfNull(bedingung);
-
-            DateTimeOffset ende = DateTimeOffset.UtcNow + Geduld;
-            while (DateTimeOffset.UtcNow < ende)
-            {
-                if (bedingung())
-                {
-                    return true;
-                }
-                _zeit.Advance(TimeSpan.FromSeconds(IntervallSekunden));
-                await Task.Delay(5).ConfigureAwait(false);
-            }
-            return bedingung();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_gestartet)
-            {
-                await Sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
-            }
-            Sut.Dispose();
-            await _provider.DisposeAsync().ConfigureAwait(false);
-        }
+        Assert.Equal(1, harness.Source.CallCount);
     }
 
-    /// <summary>
-    /// Quelle, die ihre Durchläufe zählt und (anders als <see cref="FakeMarkdownSourceProvider"/>)
-    /// denselben Fehler bei jedem Durchlauf wirft. Genau das braucht der Test der Schleife:
-    /// ein einmaliger Fehler würde nicht zeigen, ob sie dauerhaft weiterläuft.
-    /// </summary>
-    private sealed class CountingSource : IMarkdownSourceProvider
+    [Fact]
+    public async Task TryRunOnceAsync_WhenCancelled_Rethrows()
     {
-        private readonly Exception? _fehler;
-        private int _aufrufe;
+        // Der Abbruch muss durchschlagen, damit die Schleife anhält statt weiterzupollen.
+        using OrchestratorHarness harness = new();
+        harness.Source.ThrowOnEveryEnumeration = new OperationCanceledException();
+        using CancellationTokenSource cancellation = new();
+        await cancellation.CancelAsync().ConfigureAwait(true);
 
-        public CountingSource(Exception? fehler) => _fehler = fehler;
-
-        public List<MarkdownSourceSnapshot> Sources { get; } = [];
-
-        public Lock Sperre { get; } = new();
-
-        public int CallCount => Volatile.Read(ref _aufrufe);
-
-        public async IAsyncEnumerable<MarkdownSourceSnapshot> EnumerateAsync(
-            [EnumeratorCancellation] CancellationToken cancellationToken)
-        {
-            _ = Interlocked.Increment(ref _aufrufe);
-            if (_fehler is not null)
-            {
-                await Task.Yield();
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(_fehler).Throw();
-            }
-
-            MarkdownSourceSnapshot[] momentaufnahme;
-            lock (Sperre)
-            {
-                momentaufnahme = [.. Sources];
-            }
-            foreach (MarkdownSourceSnapshot eintrag in momentaufnahme)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                yield return eintrag;
-                await Task.Yield();
-            }
-        }
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => harness.Sut.TryRunOnceAsync(cancellation.Token)).ConfigureAwait(true);
     }
 
     /// <summary><see cref="DbException"/> ist abstrakt; für den Fehlerpfad braucht es eine eigene Ausprägung.</summary>

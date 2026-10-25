@@ -6,7 +6,7 @@ namespace MdExplorer.App.Services.Help;
 /// Fest verdrahtetes Spendenziel für den freiwilligen „Kaffee spendieren"-Eintrag
 /// im Über-Dialog.
 /// <para>
-/// Die Ziel-URL ist bewusst eine Compile-Zeit-Konstante und wird <b>niemals</b> aus
+/// Die Ziel-URL ist eine Compile-Zeit-Konstante und wird nie aus
 /// Settings, Datenbank, Umgebungsvariable oder Netz-Antwort gelesen. So gibt es zur
 /// Laufzeit keinen austauschbaren Wert, über den jemand das Geld umleiten könnte.
 /// </para>

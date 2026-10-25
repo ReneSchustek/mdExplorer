@@ -1,6 +1,6 @@
-using System.Windows;
-
 using System.Diagnostics.CodeAnalysis;
+using System.Windows;
+using MdExplorer.App.Localization;
 
 namespace MdExplorer.App.Services;
 
@@ -15,8 +15,8 @@ internal sealed class EditorConfirmationDialogService : IEditorConfirmationDialo
     public bool ConfirmSave()
     {
         MessageBoxResult result = MessageBox.Show(
-            "Möchten Sie die Änderungen wirklich speichern?",
-            "Änderungen speichern",
+            UiText.Get("Editor_SaveDialog_Question"),
+            UiText.Get("Editor_SaveDialog_Title"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Question,
             MessageBoxResult.Yes);

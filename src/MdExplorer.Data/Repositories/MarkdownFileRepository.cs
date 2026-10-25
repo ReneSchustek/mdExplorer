@@ -11,16 +11,6 @@ namespace MdExplorer.Data.Repositories;
 /// </summary>
 public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMarkdownFileRepository
 {
-    /// <summary>
-    /// Wie viele Schlüssel höchstens in eine Löschanweisung gehen.
-    /// </summary>
-    /// <remarks>
-    /// SQLite lässt je Anweisung eine begrenzte Zahl gebundener Werte zu (voreingestellt
-    /// 32.766). 500 hält deutlichen Abstand dazu und macht jede Portion für sich schnell genug,
-    /// dass ein Abbruch nur wenig Arbeit kostet.
-    /// </remarks>
-    private const int DeleteChunkSize = 500;
-
     private readonly MdExplorerDbContext _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 
     /// <inheritdoc />
@@ -28,7 +18,7 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
         // Der Vergleich ist case-insensitiv, weil die Spalte NOCASE-Collation trägt; die
-        // Abfrage nutzt weiterhin den Unique-Index (kein Full-Scan, kein EF.Functions.Collate).
+        // einfache Gleichheit genügt deshalb und trifft den Unique-Index.
         return await _dbContext.Set<MarkdownFile>()
             .FirstOrDefaultAsync(file => file.AbsolutePath == absolutePath, cancellationToken)
             .ConfigureAwait(false);
@@ -51,32 +41,19 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     public async Task<IReadOnlyList<MarkdownFile>> GetAllUnderRootAsync(string rootAbsolutePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootAbsolutePath);
-        // Trailing-Separator-Terminator verhindert, dass z.B. der Root "C:\Notes" auch Dateien
-        // unter "C:\Notes-evil\..." matcht, denn beide hätten sonst gleiche StartsWith-Prefix-Präfixe.
+        // Mit abschließendem Trenner: Ohne ihn träfe der Root "C:\Notes" auch Dateien unter
+        // "C:\Notes-alt\...", denn beide Pfade beginnen mit derselben Zeichenfolge.
         string trimmedRoot = rootAbsolutePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string prefix = trimmedRoot + Path.DirectorySeparatorChar;
-        // AsNoTracking: das Repo liefert Read-Only-Sichten. Falls Remove(entity) nötig wird,
-        // hängt der Caller die Entität per Update/Remove an. Spart Change-Tracker-Overhead
-        // bei Bulk-Scans (Initial-Indexer-Lauf, Background-Re-Sync).
+        // AsNoTracking: Der Erst-Scan und der Abgleich lesen hier den ganzen Bestand einer
+        // Wurzel, und die Änderungsverfolgung für jede Zeile kostete nur Zeit. Wer eine dieser
+        // Entitäten ändern oder entfernen will, hängt sie über Update oder Remove wieder an.
         List<MarkdownFile> result = await _dbContext.Set<MarkdownFile>()
             .AsNoTracking()
             .Where(file => file.AbsolutePath.StartsWith(prefix))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         return result;
-    }
-
-    /// <inheritdoc />
-    public async Task<Guid?> FindIdByFileNameAsync(string fileNameWithoutExtension, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileNameWithoutExtension);
-        Guid match = await _dbContext.Set<MarkdownFile>()
-            .Where(file => EF.Functions.Collate(file.FileNameWithoutExtension, "NOCASE") == fileNameWithoutExtension)
-            .OrderBy(file => file.RelativePath)
-            .Select(file => file.Id)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-        return match == Guid.Empty ? null : match;
     }
 
     /// <inheritdoc />
@@ -137,7 +114,7 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
         }
 
         int removed = 0;
-        foreach (Guid[] portion in ids.Chunk(DeleteChunkSize))
+        foreach (Guid[] portion in ids.Chunk(SqliteInList.BatchSize))
         {
             // Bewusst ohne umschließende Transaktion: Die Wiederholungsstrategie darf jede
             // Portion für sich noch einmal versuchen, und ein abgebrochener Durchgang
@@ -148,12 +125,33 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
                 .ConfigureAwait(false);
         }
 
-        // Was der Aufrufer noch verfolgt, zeigt jetzt auf Zeilen, die es nicht mehr gibt.
-        _dbContext.ChangeTracker.Clear();
+        DetachRemoved([.. ids]);
         return removed;
     }
 
     /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _dbContext.SaveChangesAsync(cancellationToken);
+
+    // Was der Kontext zu den entfernten Dateien noch verfolgt, zeigt jetzt auf Zeilen, die es nicht
+    // mehr gibt; ein späteres SaveChanges schriebe sie zurück oder scheiterte daran. Gelöst wird nur
+    // das: Andere vorgemerkte Änderungen im selben Kontext gehören anderen Aufrufern.
+    private void DetachRemoved(HashSet<Guid> removedFileIds)
+    {
+        foreach (EntityEntry entry in _dbContext.ChangeTracker.Entries().ToList())
+        {
+            Guid? owningFileId = entry.Entity switch
+            {
+                MarkdownFile file => file.Id,
+                MarkdownDocument document => document.MarkdownFileId,
+                MarkdownFileTag link => link.MarkdownFileId,
+                ParseFailure failure => failure.MarkdownFileId,
+                _ => null,
+            };
+            if (owningFileId is { } fileId && removedFileIds.Contains(fileId))
+            {
+                entry.State = EntityState.Detached;
+            }
+        }
+    }
 }

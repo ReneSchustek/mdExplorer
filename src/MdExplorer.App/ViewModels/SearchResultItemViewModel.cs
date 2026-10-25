@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+using MdExplorer.Core.Abstractions;
 using MdExplorer.Search.Models;
 
 namespace MdExplorer.App.ViewModels;
@@ -7,7 +7,7 @@ namespace MdExplorer.App.ViewModels;
 /// Einzelner Eintrag in der Trefferliste. Kapselt das <see cref="SearchResult"/> des
 /// Search-Moduls und exponiert die im Binding benötigten Eigenschaften.
 /// </summary>
-internal sealed partial class SearchResultItemViewModel : ObservableObject
+internal sealed class SearchResultItemViewModel
 {
     /// <summary>Erzeugt einen Eintrag aus einem <see cref="SearchResult"/>.</summary>
     public SearchResultItemViewModel(SearchResult source)
@@ -28,6 +28,6 @@ internal sealed partial class SearchResultItemViewModel : ObservableObject
     /// <summary>Relativer Pfad zur Anzeige unter dem Titel.</summary>
     public string Path { get; }
 
-    /// <summary>HTML-Snippet mit <c>&lt;mark&gt;</c>-Markern um die Trefferstellen.</summary>
+    /// <summary>Textausschnitt; die Trefferstellen stehen zwischen den <see cref="SnippetMarkers"/>.</summary>
     public string Snippet { get; }
 }

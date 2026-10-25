@@ -9,10 +9,12 @@ namespace MdExplorer.Search.Services;
 
 /// <summary>
 /// Synonym-Quelle, die aus einer JSON-Datei lädt (<see cref="SearchOptions.SynonymFilePath"/>).
-/// Schema: <c>Dictionary&lt;string, string[]&gt;</c> mit Lemma → Synonym-Liste.
+/// Schema: <c>Dictionary&lt;string, string[]&gt;</c> mit Grundform → Synonym-Liste. Nachgeschlagen
+/// wird mit dem Stamm der Anfrage; die Schlüssel der Datei werden deshalb beim Laden gestemmt, und
+/// Einträge mit demselben Stamm teilen sich ihre Synonyme.
 /// Fehlende Datei und Parse-Fehler werden als leere Map behandelt (Warnung im Log,
 /// kein Crash). Die Map wird beim ersten Zugriff lazy geladen und bleibt für die
-/// Lebenszeit der Singleton-Instanz im Speicher.
+/// Lebenszeit der Singleton-Instanz im Speicher; eine geänderte Datei wirkt erst nach einem Neustart.
 /// </summary>
 public sealed partial class FileSynonymProvider : ISynonymProvider
 {
@@ -37,11 +39,11 @@ public sealed partial class FileSynonymProvider : ISynonymProvider
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<string> GetSynonyms(string lemma)
+    public IReadOnlyList<string> GetSynonyms(string stem)
     {
-        ArgumentNullException.ThrowIfNull(lemma);
+        ArgumentNullException.ThrowIfNull(stem);
         Dictionary<string, IReadOnlyList<string>> map = EnsureLoaded();
-        return map.TryGetValue(lemma, out IReadOnlyList<string>? hits)
+        return map.TryGetValue(stem, out IReadOnlyList<string>? hits)
             ? hits
             : [];
     }
@@ -51,6 +53,30 @@ public sealed partial class FileSynonymProvider : ISynonymProvider
 
     private static Dictionary<string, IReadOnlyList<string>> EmptyMap() =>
         new(StringComparer.OrdinalIgnoreCase);
+
+    private static Dictionary<string, IReadOnlyList<string>> ByStem(Dictionary<string, string[]> raw)
+    {
+        Dictionary<string, List<string>> merged = new(raw.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, string[]> entry in raw)
+        {
+            string stem = GermanStemmer.Stem(entry.Key);
+            if (!merged.TryGetValue(stem, out List<string>? synonyms))
+            {
+                synonyms = [];
+                merged[stem] = synonyms;
+            }
+
+            // Ein Null-Wert (JSON "wagen": null) zählt als leere Liste.
+            synonyms.AddRange(entry.Value ?? []);
+        }
+
+        Dictionary<string, IReadOnlyList<string>> result = new(merged.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (KeyValuePair<string, List<string>> entry in merged)
+        {
+            result[entry.Key] = [.. entry.Value.Distinct(StringComparer.OrdinalIgnoreCase)];
+        }
+        return result;
+    }
 
     private Dictionary<string, IReadOnlyList<string>> EnsureLoaded()
     {
@@ -87,17 +113,11 @@ public sealed partial class FileSynonymProvider : ISynonymProvider
             {
                 return EmptyMap();
             }
-            Dictionary<string, IReadOnlyList<string>> normalized = new(raw.Count, StringComparer.OrdinalIgnoreCase);
-            foreach (KeyValuePair<string, string[]> entry in raw)
-            {
-                // Null-Array-Werte (JSON "lemma": null) an der Grenze normalisieren, sonst NRE beim Iterieren.
-                normalized[entry.Key] = entry.Value ?? [];
-            }
-            return normalized;
+            return ByStem(raw);
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException or NotSupportedException or System.Security.SecurityException)
         {
-            // Vertrag der Klasse: fehlende/defekte/gesperrte Synonym-Datei degradiert zu leerer Map (kein Crash).
+            // Eine defekte oder gesperrte Synonym-Datei schaltet nur die Erweiterung ab, nicht die Suche.
             LogSynonymParseFailure(_logger, path, ex);
             return EmptyMap();
         }

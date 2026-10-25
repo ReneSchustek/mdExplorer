@@ -9,16 +9,19 @@ using Microsoft.Extensions.DependencyInjection;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Verifiziert die DB-Kompatibilität der NOCASE-Collation-Migration: eine bestehende Datenbank
-/// (migriert bis zur Vorgänger-Migration, mit Daten befüllt) muss sauber auf den neuen Stand
-/// wandern: Zeilen bleiben erhalten, der Lookup wird case-insensitiv und der beim Tabellen-Rebuild
-/// gedroppte FTS5-Cleanup-Trigger auf <c>MarkdownFiles</c> ist danach wieder vorhanden.
+/// Eine bestehende Datenbank (migriert bis zur Migration vor der NOCASE-Spalte, mit Daten befüllt)
+/// muss sauber auf den neuesten Stand wandern: Zeilen bleiben erhalten, der Pfad-Vergleich wird
+/// unabhängig von der Schreibweise, und der beim Tabellen-Neuaufbau gelöschte FTS5-Auslöser ist
+/// auf dem Zwischenstand wieder da und auf dem neuesten Stand gewollt weg. Steht derselbe Pfad in
+/// zwei Schreibweisen in der Tabelle, darf der eindeutige NOCASE-Index die Migration nicht
+/// abbrechen; sonst startete die Anwendung nicht mehr.
 /// </summary>
 public sealed class AbsolutePathNoCaseMigrationTests : IAsyncDisposable
 {
     // Migration unmittelbar vor AddAbsolutePathNoCaseCollation.
     private const string PreviousMigration = "20260609172327_RestoreFtsCleanupTriggersAfterRebuild";
     private const string FileTriggerName = "trg_MarkdownFiles_AD_FtsCleanup";
+    private const string CleanupMigration = "20260722050000_RemoveCasingDuplicatePaths";
 
     // Der Stand, auf dem der Auslöser zuletzt existierte. Danach fällt er weg; die
     // Begründung steht in der Migration DropFtsCleanupTriggers.
@@ -71,6 +74,54 @@ public sealed class AbsolutePathNoCaseMigrationTests : IAsyncDisposable
         await migrator.MigrateAsync(null, TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.False(await TriggerExistsAsync(FileTriggerName).ConfigureAwait(true));
         Assert.Equal(fileId, await FindIdByPathAsync(@"c:\notes\mixedcase.md").ConfigureAwait(true));
+    }
+
+    [Fact]
+    public async Task Migrate_WithTheSamePathInTwoSpellings_KeepsTheFirstRowAndSucceeds()
+    {
+        IMigrator migrator = _dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
+        await migrator.MigrateAsync(PreviousMigration, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Guid first = Guid.Parse("bbbbbbbb-1111-2222-3333-444444444444");
+        Guid second = Guid.Parse("cccccccc-1111-2222-3333-444444444444");
+        await InsertMarkdownFileAsync(first, @"C:\Notes\Doppelt.md").ConfigureAwait(true);
+        await InsertMarkdownFileAsync(second, @"c:\notes\doppelt.md").ConfigureAwait(true);
+
+        await migrator.MigrateAsync(null, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Equal(first, await FindIdByPathAsync(@"C:\NOTES\DOPPELT.MD").ConfigureAwait(true));
+        Assert.Equal(1L, await CountFilesAsync().ConfigureAwait(true));
+    }
+
+    [Fact]
+    public async Task Migrate_OnADatabaseThatAlreadyHasNoCase_AppliesTheLateCleanupWithoutChanges()
+    {
+        // Bestehende Installationen haben die NOCASE-Migration schon; die Bereinigung liegt
+        // zeitlich davor und kommt dort nachträglich. Sie darf nichts löschen.
+        IMigrator migrator = _dbContext.GetInfrastructure().GetRequiredService<IMigrator>();
+        await migrator.MigrateAsync(null, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Guid fileId = Guid.Parse("dddddddd-1111-2222-3333-444444444444");
+        await InsertMarkdownFileAsync(fileId, @"C:\Notes\Bestand.md").ConfigureAwait(true);
+        await RemoveHistoryEntryAsync(CleanupMigration).ConfigureAwait(true);
+
+        await migrator.MigrateAsync(null, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Equal(fileId, await FindIdByPathAsync(@"c:\notes\bestand.md").ConfigureAwait(true));
+        Assert.Equal(1L, await CountFilesAsync().ConfigureAwait(true));
+    }
+
+    private async Task RemoveHistoryEntryAsync(string migrationId)
+    {
+        using SqliteCommand command = _connection.CreateCommand();
+        command.CommandText = """DELETE FROM "__EFMigrationsHistory" WHERE "MigrationId" = $id;""";
+        _ = command.Parameters.AddWithValue("$id", migrationId);
+        Assert.Equal(1, await command.ExecuteNonQueryAsync().ConfigureAwait(false));
+    }
+
+    private async Task<long> CountFilesAsync()
+    {
+        using SqliteCommand command = _connection.CreateCommand();
+        command.CommandText = """SELECT COUNT(*) FROM "MarkdownFiles";""";
+        return (long)(await command.ExecuteScalarAsync().ConfigureAwait(false) ?? 0L);
     }
 
     private async Task InsertMarkdownFileAsync(Guid id, string absolutePath)

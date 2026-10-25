@@ -2,21 +2,23 @@ using System.Text;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Search.Options;
 using MdExplorer.Search.Services;
+using MdExplorer.Search.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
-/// Tests für den dateibasierten Synonym-Provider. Fehlende Datei,
-/// fehlerhafte JSON und valide Map werden verifiziert.
+/// Der Synonym-Anbieter liest die Synonymdatei einmal, sucht ohne Rücksicht auf Groß- und
+/// Kleinschreibung und liefert bei fehlender oder kaputter Datei eine leere Liste. Eine kaputte
+/// Datei darf die Suche nicht abbrechen.
 /// </summary>
 public sealed class FileSynonymProviderTests
 {
     [Fact]
     public void GetSynonyms_WhenFilePathIsNull_ReturnsEmpty()
     {
-        StubFileSystem fs = new();
+        FakeFileSystem fs = new();
         FileSynonymProvider sut = NewProvider(fs, synonymFilePath: null);
 
         Assert.Empty(sut.GetSynonyms("auto"));
@@ -25,7 +27,7 @@ public sealed class FileSynonymProviderTests
     [Fact]
     public void GetSynonyms_WhenFileDoesNotExist_ReturnsEmpty()
     {
-        StubFileSystem fs = new();
+        FakeFileSystem fs = new();
         FileSynonymProvider sut = NewProvider(fs, synonymFilePath: @"C:\nicht\da\synonyms.json");
 
         Assert.Empty(sut.GetSynonyms("auto"));
@@ -34,8 +36,8 @@ public sealed class FileSynonymProviderTests
     [Fact]
     public void GetSynonyms_LoadsAndCachesValidJson()
     {
-        StubFileSystem fs = new();
-        fs.WriteText(@"C:\syn.json", """{"auto":["wagen","fahrzeug"]}""");
+        FakeFileSystem fs = new();
+        fs.AddFile(@"C:\syn.json", """{"auto":["wagen","fahrzeug"]}""");
         FileSynonymProvider sut = NewProvider(fs, @"C:\syn.json");
 
         IReadOnlyList<string> first = sut.GetSynonyms("auto");
@@ -47,10 +49,32 @@ public sealed class FileSynonymProviderTests
     }
 
     [Fact]
-    public void GetSynonyms_OnInvalidJson_ReturnsEmptyAndLogs()
+    public void GetSynonyms_ForAnInflectedEntry_AnswersTheStemOfTheQuery()
     {
-        StubFileSystem fs = new();
-        fs.WriteText(@"C:\syn.json", "{ kaputt :: ");
+        // Die Anfrage schlägt mit dem Stamm nach („Wagen“ → „Wag“). Ein Eintrag in Grundform
+        // träfe sonst nie, sobald der Stemmer eine Endung abtrennt.
+        FakeFileSystem fs = new();
+        fs.AddFile(@"C:\syn.json", """{"wagen":["auto"]}""");
+        FileSynonymProvider sut = NewProvider(fs, @"C:\syn.json");
+
+        Assert.Equal(["auto"], sut.GetSynonyms(GermanStemmer.Stem("Wagen")));
+    }
+
+    [Fact]
+    public void GetSynonyms_ForTwoEntriesWithTheSameStem_MergesTheirSynonyms()
+    {
+        FakeFileSystem fs = new();
+        fs.AddFile(@"C:\syn.json", """{"wagen":["auto"],"wages":["fahrzeug","auto"]}""");
+        FileSynonymProvider sut = NewProvider(fs, @"C:\syn.json");
+
+        Assert.Equal(["auto", "fahrzeug"], sut.GetSynonyms("wag"));
+    }
+
+    [Fact]
+    public void GetSynonyms_OnInvalidJson_ReturnsEmpty()
+    {
+        FakeFileSystem fs = new();
+        fs.AddFile(@"C:\syn.json", "{ kaputt :: ");
         FileSynonymProvider sut = NewProvider(fs, @"C:\syn.json");
 
         Assert.Empty(sut.GetSynonyms("auto"));
@@ -59,8 +83,8 @@ public sealed class FileSynonymProviderTests
     [Fact]
     public void GetSynonyms_LookupIsCaseInsensitive()
     {
-        StubFileSystem fs = new();
-        fs.WriteText(@"C:\syn.json", """{"Auto":["wagen"]}""");
+        FakeFileSystem fs = new();
+        fs.AddFile(@"C:\syn.json", """{"Auto":["wagen"]}""");
         FileSynonymProvider sut = NewProvider(fs, @"C:\syn.json");
 
         Assert.Equal(["wagen"], sut.GetSynonyms("AUTO"));
@@ -74,49 +98,5 @@ public sealed class FileSynonymProviderTests
             fileSystem,
             Microsoft.Extensions.Options.Options.Create(options),
             NullLogger<FileSynonymProvider>.Instance);
-    }
-
-    private sealed class StubFileSystem : IFileSystem
-    {
-        private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);
-
-        public List<string> ReadCalls { get; } = [];
-
-        public void WriteText(string path, string content) =>
-            _files[path] = Encoding.UTF8.GetBytes(content);
-
-        public bool DirectoryExists(string path) => true;
-        public bool FileExists(string path) => _files.ContainsKey(path);
-        public void EnsureDirectoryExists(string path) { }
-        public IEnumerable<string> EnumerateFiles(string directory, string searchPattern, bool recursive) => [];
-        public IEnumerable<string> EnumerateDirectories(string directory) => [];
-        public bool IsReparsePoint(string path) => false;
-        public string GetDirectoryFinalPath(string path) => path;
-
-        public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken) =>
-            Task.FromResult(_files[path]);
-
-        public byte[] ReadAllBytes(string path)
-        {
-            ReadCalls.Add(path);
-            return _files[path];
-        }
-
-        public Stream OpenRead(string path) => new MemoryStream(_files[path], writable: false);
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.UnixEpoch;
-        public long GetFileSize(string path) => _files[path].LongLength;
-        public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
-        {
-            _files[path] = content.ToArray();
-            return Task.CompletedTask;
-        }
-
-        /// <inheritdoc />
-        public void MoveFile(string sourcePath, string destinationPath) =>
-            throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
-
-        /// <inheritdoc />
-        public void DeleteFile(string path) =>
-            throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
     }
 }

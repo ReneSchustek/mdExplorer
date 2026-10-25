@@ -4,8 +4,10 @@ using MdExplorer.Search.Services;
 namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
-/// Unit-Tests für <see cref="SearchQueryBuilder"/>. Schwerpunkt: FTS5-Injektions-Resistenz,
-/// korrekte Operator-Übersetzung, Tag-/Pfad-Filter-Trennung.
+/// <see cref="SearchQueryBuilder"/> übersetzt die Eingabe ins Suchfeld in einen FTS5-Ausdruck: Begriffe
+/// in Anführungszeichen, Operatoren übersetzt, <c>tag:</c> als Spaltensuche und <c>path:</c> als
+/// eigener Filter. Ein ungeschützt durchgereichtes Sonderzeichen machte die Abfrage ungültig oder
+/// änderte ihre Bedeutung.
 /// </summary>
 public sealed class SearchQueryBuilderTests
 {
@@ -61,11 +63,11 @@ public sealed class SearchQueryBuilderTests
     }
 
     [Fact]
-    public void Build_OnNegation_EmitsNotOperator()
+    public void Build_OnNegationBehindATerm_EmitsNotOperator()
     {
-        Fts5QueryPlan plan = _sut.Build("-draft");
+        Fts5QueryPlan plan = _sut.Build("notiz -draft");
 
-        Assert.Equal("NOT \"draft\"", plan.MatchExpression);
+        Assert.Equal("\"notiz\" NOT \"draft\"", plan.MatchExpression);
     }
 
     [Fact]
@@ -167,10 +169,10 @@ public sealed class SearchQueryBuilderTests
     }
 
     [Fact]
-    public void Build_OnPhraseWithSpecialChars_StripsSpecialChars()
+    public void Build_OnPhraseWithSpecialChars_KeepsThePhraseUnchanged()
     {
-        // Phrasen werden bewusst NICHT sanitisiert (FTS5-Tokenizer normalisiert beim Indexieren);
-        // Anführungszeichen bleiben über das Doppelquoten-Schema neutralisiert.
+        // Phrasen bleiben unverändert, der FTS5-Tokenizer zerlegt sie ohnehin an Satzzeichen.
+        // Ein Anführungszeichen darin wird verdoppelt und kann die Phrase nicht beenden.
         Fts5QueryPlan plan = _sut.Build("\"foo;bar\"");
 
         Assert.Equal("\"foo;bar\"", plan.MatchExpression);

@@ -2,7 +2,10 @@ using MdExplorer.App.Services.Help;
 
 namespace MdExplorer.App.Tests.Services.Help;
 
-/// <summary>Verifiziert das Default-/Setz-Verhalten von <see cref="HelpContextProvider"/>.</summary>
+/// <summary>
+/// Die Hilfe öffnet an der Seite, die der Kontext meldet. Ein leerer Wert führt zum
+/// Inhaltsverzeichnis; sonst suchte die Hilfe nach einer Seite ohne Namen.
+/// </summary>
 public sealed class HelpContextProviderTests
 {
     [Fact]
@@ -38,7 +41,7 @@ public sealed class HelpContextProviderTests
     }
 
     [Fact]
-    public void SetSlug_TrimsLeadingAndTrailingWhitespace()
+    public void SetSlug_WithSurroundingWhitespace_TrimsIt()
     {
         HelpContextProvider provider = new();
 

@@ -19,27 +19,17 @@ namespace MdExplorer.App.ViewModels;
 /// <remarks>
 /// Der Prüfsatz der Gestaltungslinie lautet: von jedem Ding zu jedem verwandten Ding, ohne
 /// Umweg über eine Suche. Deshalb ist hier jeder Eintrag ein Weg und keine Angabe. Wer eine
-/// Zeile liest und danach doch suchen muss, hat nichts gewonnen.
+/// Zeile liest und danach doch suchen muss, hat nichts gewonnen. Umbenennen, Verschieben und
+/// Löschen liegen in <see cref="FileActions"/>.
 /// </remarks>
 internal sealed partial class DocumentRelationsViewModel : ObservableObject
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IDocumentFileService _fileService;
-    private readonly IDialogService _dialogService;
     private readonly ILogger<DocumentRelationsViewModel> _logger;
 
-    /// <summary>
-    /// Der Merker, der beim Beenden der Anwendung anschlägt.
-    /// </summary>
-    /// <remarks>
-    /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
-    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
-    /// </remarks>
-    private readonly CancellationToken _shutdownToken;
-
-    private Guid _openDocumentId;
-    private string _openAbsolutePath = string.Empty;
+    // Zählt die Ladevorgänge. Ein abgebrochener Vorgang räumt nur auf, solange kein neuerer
+    // begonnen hat; sonst löschte er dessen Stand.
+    private long _loadNumber;
 
     [ObservableProperty]
     private DocumentRelationsState _state = DocumentRelationsState.NoDocument;
@@ -47,41 +37,37 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     [ObservableProperty]
     private string _folderPath = string.Empty;
 
-    /// <summary>Der neue Name, solange er noch getippt wird.</summary>
-    [ObservableProperty]
-    private string _newName = string.Empty;
-
-    /// <summary>Was der letzte Vorgang bewirkt hat, in einem Satz.</summary>
-    [ObservableProperty]
-    private string _operationMessage = string.Empty;
-
     /// <summary>Erzeugt das ViewModel.</summary>
+    /// <param name="scopeFactory">Liefert je Ladevorgang Graph und Dateiverzeichnis.</param>
+    /// <param name="fileService">Führt die Dateivorgänge aus.</param>
+    /// <param name="dialogService">Stellt die Rückfragen der Dateivorgänge.</param>
+    /// <param name="unsavedChanges">Fragt vor jedem Dateivorgang nach ungespeicherten Änderungen.</param>
+    /// <param name="logger">Protokoll.</param>
+    /// <param name="shutdownToken">
+    /// Schlägt beim Beenden der Anwendung an (<c>IHostApplicationLifetime.ApplicationStopping</c>);
+    /// ohne Wirt, also im Test, der leere Merker.
+    /// </param>
     public DocumentRelationsViewModel(
         IServiceScopeFactory scopeFactory,
         IDocumentFileService fileService,
         IDialogService dialogService,
+        IUnsavedChangesGuard unsavedChanges,
         ILogger<DocumentRelationsViewModel> logger,
         CancellationToken shutdownToken = default)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
-        ArgumentNullException.ThrowIfNull(fileService);
-        ArgumentNullException.ThrowIfNull(dialogService);
         ArgumentNullException.ThrowIfNull(logger);
 
         _scopeFactory = scopeFactory;
-        _fileService = fileService;
-        _dialogService = dialogService;
         _logger = logger;
-        _shutdownToken = shutdownToken;
+        FileActions = new DocumentFileActionsViewModel(fileService, dialogService, unsavedChanges, shutdownToken);
+        FileActions.DocumentChanged += path => DocumentChanged?.Invoke(path);
         Outgoing = [];
         Incoming = [];
         Tags = [];
         OpenRelatedCommand = new RelayCommand<RelatedDocumentViewModel>(RaiseOpenRequested);
         ShowFolderCommand = new RelayCommand(RaiseFolderRequested, () => FolderPath.Length > 0);
         ShowTagCommand = new RelayCommand<string>(RaiseTagRequested);
-        RenameCommand = new AsyncRelayCommand(RenameAsync, () => HasDocument && NewName.Trim().Length > 0);
-        MoveCommand = new AsyncRelayCommand(MoveAsync, () => HasDocument);
-        DeleteCommand = new AsyncRelayCommand(DeleteAsync, () => HasDocument);
     }
 
     /// <summary>Wird ausgelöst, wenn ein verwandtes Dokument geöffnet werden soll.</summary>
@@ -92,6 +78,12 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
 
     /// <summary>Wird ausgelöst, wenn eine Kennzeichnung gezeigt werden soll.</summary>
     public event Action<string>? TagRequested;
+
+    /// <summary>Wird ausgelöst, wenn ein Dateivorgang die Datei verändert hat, siehe <see cref="DocumentFileActionsViewModel.DocumentChanged"/>.</summary>
+    public event Action<string?>? DocumentChanged;
+
+    /// <summary>Umbenennen, Verschieben und Löschen der geöffneten Datei.</summary>
+    public DocumentFileActionsViewModel FileActions { get; }
 
     /// <summary>Dokumente, auf die dieses verweist.</summary>
     public ObservableCollection<RelatedDocumentViewModel> Outgoing { get; }
@@ -111,22 +103,6 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     /// <summary>Zeigt, was dieselbe Kennzeichnung trägt.</summary>
     public RelayCommand<string> ShowTagCommand { get; }
 
-    /// <summary>Benennt die Datei um, aus dem Zusammenhang heraus, ohne Verwaltungsseite.</summary>
-    public AsyncRelayCommand RenameCommand { get; }
-
-    /// <summary>Verschiebt die Datei in ein anderes Verzeichnis.</summary>
-    public AsyncRelayCommand MoveCommand { get; }
-
-    /// <summary>Löscht die Datei, nachdem die Folgen benannt wurden.</summary>
-    public AsyncRelayCommand DeleteCommand { get; }
-
-    /// <summary>Wird ausgelöst, wenn ein Vorgang die Datei verändert hat.</summary>
-    /// <remarks>
-    /// Der Weg zurück in die Ansicht: Nach dem Umbenennen oder Verschieben zeigt derselbe
-    /// Eintrag auf einen neuen Pfad, nach dem Löschen auf gar keinen mehr.
-    /// </remarks>
-    public event Action<string?>? DocumentChanged;
-
     /// <summary>Es ist kein Dokument geöffnet.</summary>
     public bool ShowsNoDocument => State == DocumentRelationsState.NoDocument;
 
@@ -142,11 +118,18 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     /// <summary>Die Verbindungen werden gerade ermittelt.</summary>
     public bool IsLoading => State == DocumentRelationsState.Loading;
 
-    /// <summary>Das Dokument hat weder Verweise noch Kennzeichnungen.</summary>
+    /// <summary>Das Dokument hat weder Verweise noch Kennzeichnungen und liegt direkt in der Wurzel.</summary>
     public bool ShowsNothingRelated => State == DocumentRelationsState.NothingRelated;
 
     /// <summary>Es gibt etwas zu zeigen.</summary>
     public bool ShowsRelations => State == DocumentRelationsState.Relations;
+
+    /// <summary>Die Verbindungen ließen sich nicht ermitteln.</summary>
+    /// <remarks>
+    /// Ohne eigene Anzeige stünde nur die Überschrift da, und der Bereich sähe aus wie ein
+    /// Dokument, an dem nichts hängt.
+    /// </remarks>
+    public bool ShowsFailure => State == DocumentRelationsState.Failed;
 
     /// <summary>Vergisst das zuletzt geladene Dokument.</summary>
     public void Clear()
@@ -155,10 +138,7 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         Incoming.Clear();
         Tags.Clear();
         FolderPath = string.Empty;
-        NewName = string.Empty;
-        OperationMessage = string.Empty;
-        _openDocumentId = Guid.Empty;
-        _openAbsolutePath = string.Empty;
+        FileActions.Release();
         ShowFolderCommand.NotifyCanExecuteChanged();
         State = DocumentRelationsState.NoDocument;
     }
@@ -172,177 +152,85 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
     public async Task LoadAsync(Guid markdownFileId, IReadOnlyList<string> tags, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(tags);
-
         if (markdownFileId == Guid.Empty)
         {
             Clear();
             return;
         }
-
-        State = DocumentRelationsState.Loading;
+        long loadNumber = BeginLoad();
         try
         {
-            AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
-            await using (scope.ConfigureAwait(true))
-            {
-                IGraphService graph = scope.ServiceProvider.GetRequiredService<IGraphService>();
-                IMarkdownFileRepository files = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
-
-                DocumentRelations relations = await graph.GetRelationsAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
-                MarkdownFile? file = await files.GetByIdAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
-
-                _openDocumentId = markdownFileId;
-                _openAbsolutePath = file?.AbsolutePath ?? string.Empty;
-                NewName = file?.FileNameWithoutExtension ?? string.Empty;
-                OperationMessage = string.Empty;
-                Apply(relations, tags, file?.RelativePath ?? string.Empty);
-            }
+            await QueryAndShowAsync(markdownFileId, tags, cancellationToken).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
-            // Der Nutzer hat weitergeklickt; die Antwort gilt einem Dokument, das nicht mehr offen ist.
+            // Hat ein neuerer Klick übernommen, zeigt der seinen eigenen Stand. Ohne ihn, etwa beim
+            // Beenden, stünde sonst dauerhaft „lädt“ da.
+            if (loadNumber == _loadNumber)
+            {
+                Clear();
+            }
         }
-        catch (InvalidOperationException exception)
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             LogRelationsFailed(_logger, markdownFileId, exception);
             State = DocumentRelationsState.Failed;
         }
     }
 
-    /// <summary>Trennt den Ordneranteil eines relativen Pfads ab.</summary>
-    private static string FolderOf(string relativePath)
-    {
-        int cut = relativePath.LastIndexOfAny(['/', '\\']);
-
-        return cut < 0 ? string.Empty : relativePath[..cut].Replace('\\', '/');
-    }
-
-    /// <summary>Formuliert die Rückfrage vor dem Umbenennen samt Folgen.</summary>
-    private static string RenameQuestion(DocumentImpact impact, string newName)
-    {
-        string subject = impact.Title.Length == 0 ? "Diese Datei" : $"„{impact.Title}“";
-        string target = newName.Trim();
-
-        return impact.IncomingLinkCount == 1
-            ? $"{subject} wird in „{target}“ umbenannt. Ein Dokument verweist auf den bisherigen Namen — sein Verweis zeigt danach ins Leere."
-            : $"{subject} wird in „{target}“ umbenannt. {impact.IncomingLinkCount} Dokumente verweisen auf den bisherigen Namen — ihre Verweise zeigen danach ins Leere.";
-    }
-
-    /// <summary>Formuliert die Rückfrage vor dem Löschen samt Folgen.</summary>
-    private static string DeletionQuestion(DocumentImpact impact)
-    {
-        string subject = impact.Title.Length == 0 ? "Diese Datei" : $"„{impact.Title}“";
-
-        return impact.IncomingLinkCount switch
-        {
-            0 => $"{subject} wird gelöscht. Kein anderes Dokument verweist darauf.",
-            1 => $"{subject} wird gelöscht. Ein Dokument verweist darauf — sein Verweis zeigt danach ins Leere.",
-            _ => $"{subject} wird gelöscht. {impact.IncomingLinkCount} Dokumente verweisen darauf — ihre Verweise zeigen danach ins Leere.",
-        };
-    }
-
-    private static string? FolderOfPath(string absolutePath)
-    {
-        int cut = absolutePath.LastIndexOfAny(['/', '\\']);
-
-        return cut < 0 ? null : absolutePath[..cut];
-    }
-
     [LoggerMessage(EventId = 1400, Level = LogLevel.Warning, Message = "Zusammenhänge für Datei {MarkdownFileId} konnten nicht ermittelt werden.")]
     private static partial void LogRelationsFailed(ILogger logger, Guid markdownFileId, Exception exception);
 
-    /// <summary>
-    /// Benennt die Datei um.
-    /// </summary>
-    /// <remarks>
-    /// Nachgefragt wird nur, wenn etwas daran hängt: Ein WikiLink zeigt auf den Dateinamen,
-    /// und der ändert sich hier; die Verweise anderer Dokumente brechen also. Hängt nichts
-    /// daran, wäre eine Rückfrage bloß Gewöhnung daran, Rückfragen wegzuklicken.
-    /// </remarks>
-    private async Task RenameAsync()
+    private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> items)
     {
-        DocumentImpact impact = await _fileService
-            .GetImpactAsync(_openDocumentId, _shutdownToken)
-            .ConfigureAwait(true);
-
-        if (impact.IncomingLinkCount > 0
-            && !_dialogService.Confirm("Datei umbenennen", RenameQuestion(impact, NewName)))
+        target.Clear();
+        foreach (T item in items)
         {
-            return;
+            target.Add(item);
         }
-
-        DocumentFileResult result = await _fileService
-            .RenameAsync(_openDocumentId, NewName, _shutdownToken)
-            .ConfigureAwait(true);
-
-        ReportAndFollow(result);
     }
 
-    /// <summary>Verschiebt die Datei in ein anderes Verzeichnis.</summary>
-    private async Task MoveAsync()
+    private async Task QueryAndShowAsync(Guid markdownFileId, IReadOnlyList<string> tags, CancellationToken cancellationToken)
     {
-        string? target = _dialogService.PickDirectory("Zielordner wählen", FolderOfPath(_openAbsolutePath));
-        if (target is null)
-        {
-            return;
-        }
-
-        DocumentFileResult result = await _fileService
-            .MoveAsync(_openDocumentId, target, _shutdownToken)
-            .ConfigureAwait(true);
-
-        ReportAndFollow(result);
+        (DocumentRelations relations, MarkdownFile? file) = await QueryAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
+        cancellationToken.ThrowIfCancellationRequested();
+        FileActions.Target(markdownFileId, file?.AbsolutePath ?? string.Empty, file?.FileNameWithoutExtension ?? string.Empty);
+        Apply(relations, tags, file?.RelativePath ?? string.Empty);
     }
 
-    /// <summary>
-    /// Löscht die Datei, nachdem die Folgen benannt wurden.
-    /// </summary>
-    /// <remarks>
-    /// Die Rückfrage nennt, wie viele Dokumente danach ins Leere zeigen. Wer das erst
-    /// hinterher erfährt, kann es nicht mehr abwählen, und ein Verweis, der stillschweigend
-    /// bricht, fällt erst Monate später auf.
-    /// </remarks>
-    private async Task DeleteAsync()
+    /// <summary>Beginnt einen Ladevorgang und gibt seine Nummer zurück.</summary>
+    /// <remarks>Die Dateibefehle gelten ab hier nicht mehr dem vorigen Dokument, auch wenn dieser Vorgang scheitert.</remarks>
+    private long BeginLoad()
     {
-        DocumentImpact impact = await _fileService
-            .GetImpactAsync(_openDocumentId, _shutdownToken)
-            .ConfigureAwait(true);
+        FileActions.Release();
+        State = DocumentRelationsState.Loading;
+        return ++_loadNumber;
+    }
 
-        if (!_dialogService.Confirm("Datei löschen", DeletionQuestion(impact)))
+    private async Task<(DocumentRelations Relations, MarkdownFile? File)> QueryAsync(Guid markdownFileId, CancellationToken cancellationToken)
+    {
+        AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        await using (scope.ConfigureAwait(true))
         {
-            return;
+            IGraphService graph = scope.ServiceProvider.GetRequiredService<IGraphService>();
+            IMarkdownFileRepository files = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
+
+            DocumentRelations relations = await graph.GetRelationsAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
+            MarkdownFile? file = await files.GetByIdAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
+            return (relations, file);
         }
-
-        DocumentFileResult result = await _fileService
-            .DeleteAsync(_openDocumentId, _shutdownToken)
-            .ConfigureAwait(true);
-
-        ReportAndFollow(result);
     }
 
     private void Apply(DocumentRelations relations, IReadOnlyList<string> tags, string relativePath)
     {
-        Outgoing.Clear();
-        foreach (RelatedDocument document in relations.Outgoing)
-        {
-            Outgoing.Add(new RelatedDocumentViewModel(document));
-        }
+        Replace(Outgoing, relations.Outgoing.Select(document => new RelatedDocumentViewModel(document)));
+        Replace(Incoming, relations.Incoming.Select(document => new RelatedDocumentViewModel(document)));
+        Replace(Tags, tags.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase));
 
-        Incoming.Clear();
-        foreach (RelatedDocument document in relations.Incoming)
-        {
-            Incoming.Add(new RelatedDocumentViewModel(document));
-        }
-
-        Tags.Clear();
-        foreach (string tag in tags.Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase))
-        {
-            Tags.Add(tag);
-        }
-
-        FolderPath = FolderOf(relativePath);
+        FolderPath = RelativeFolder.Of(relativePath);
         ShowFolderCommand.NotifyCanExecuteChanged();
 
+        // Auch ein Ordner ist ein Weg zu Verwandtem; leer ist der Bereich erst ohne ihn.
         State = Outgoing.Count + Incoming.Count + Tags.Count == 0 && FolderPath.Length == 0
             ? DocumentRelationsState.NothingRelated
             : DocumentRelationsState.Relations;
@@ -378,29 +266,14 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         TagRequested?.Invoke(tag);
     }
 
-    private void ReportAndFollow(DocumentFileResult result)
-    {
-        OperationMessage = result.Message;
-        if (!result.Succeeded)
-        {
-            return;
-        }
-
-        DocumentChanged?.Invoke(result.NewAbsolutePath);
-    }
-
-    partial void OnNewNameChanged(string value) => RenameCommand.NotifyCanExecuteChanged();
-
     partial void OnStateChanged(DocumentRelationsState value)
     {
-        RenameCommand.NotifyCanExecuteChanged();
-        MoveCommand.NotifyCanExecuteChanged();
-        DeleteCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(ShowsNoDocument));
         OnPropertyChanged(nameof(HasDocument));
         OnPropertyChanged(nameof(IsLoading));
         OnPropertyChanged(nameof(ShowsNothingRelated));
         OnPropertyChanged(nameof(ShowsRelations));
+        OnPropertyChanged(nameof(ShowsFailure));
         OnPropertyChanged(nameof(HasOutgoing));
         OnPropertyChanged(nameof(HasIncoming));
     }
@@ -438,7 +311,7 @@ internal enum DocumentRelationsState
     /// <summary>Die Verbindungen werden ermittelt.</summary>
     Loading = 1,
 
-    /// <summary>Das Dokument steht für sich: keine Verweise, keine Kennzeichnungen.</summary>
+    /// <summary>Das Dokument steht für sich: keine Verweise, keine Kennzeichnungen, kein Unterordner.</summary>
     NothingRelated = 2,
 
     /// <summary>Es gibt Verbindungen zu zeigen.</summary>

@@ -4,20 +4,27 @@
     Ohne diese Datei nützen die Farbbelegungen wenig: Ein Bedienelement, an dem niemand
     eine Farbe gesetzt hat, nimmt nicht die der Anwendung, sondern die Voreinstellung des
     Rahmenwerks: Weiß mit schwarzer Schrift. Im hellen Erscheinungsbild fällt das nicht
-    auf, im dunklen bleibt die halbe Oberfläche hell stehen. Genau so sah es hier aus,
-    bevor diese Styles kamen.
+    auf, im dunklen bliebe die halbe Oberfläche hell stehen.
 
     Der Weg führt über das Fenster: Es setzt Fläche und Schriftfarbe, und alles darin
     erbt die Schriftfarbe. Ein pauschaler Style für jeden Textblock wäre der falsche Weg,
     er schlüge die Vererbung und färbte auch die Beschriftungen um, die absichtlich auf
     einer Primärfläche stehen.
 
+    Ein Style ohne Schlüssel greift nur beim genau passenden Typ, und jedes Fenster der
+    Anwendung ist ein abgeleiteter. Jedes verweist deshalb ausdrücklich auf den
+    Fenster-Style (Style="{StaticResource {x:Type Window}}"); ein lokaler Style baut mit
+    BasedOn auf dem der Anwendung auf, statt ihn zu ersetzen. Beides prüft StyleGuardTests.
+
     Alle Farben als DynamicResource, damit der Wechsel des Erscheinungsbilds zur Laufzeit
     ankommt. StaticResource würde den Wert einmal auflösen und dann stehen lassen.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:menus="clr-namespace:MdExplorer.App.Views.Menus">
+                    xmlns:menus="clr-namespace:MdExplorer.App.Views.Menus"
+                    xmlns:converters="clr-namespace:MdExplorer.App.Converters">
+
+    <converters:EnumDisplayConverter x:Key="EnumDisplay" />
 
     <!-- ── Fenster ──────────────────────────────────────────────────────── -->
     <Style TargetType="Window">
@@ -29,9 +36,9 @@
 
     <!-- ── Menü ─────────────────────────────────────────────────────────── -->
     <!--
-        Das Aufklappmenü zeichnet WPF in einem eigenen Fenster und holt dessen Fläche aus den
-        Systemfarben, nicht aus dem Style des Eintrags. Die Überschreibungen dafür stehen in
-        den Belegungen (Light.xaml/Dark.xaml), weil sie mit dem Erscheinungsbild wechseln.
+        Dieser Style färbt nur die Leiste. Das Aufklappteil tragen die beiden Muster weiter
+        unten; was ohne eigenes Muster aus den Systemfarben liest, stellen die Belegungen
+        (Light.xaml/Dark.xaml) um, weil es mit dem Erscheinungsbild wechselt.
     -->
     <Style TargetType="Menu">
         <Setter Property="Background" Value="{DynamicResource ToolBarBackgroundBrush}" />
@@ -41,9 +48,9 @@
     <!--
         Das Aufklappmenü zeichnet WPF in einem eigenen Fenster, und dessen Fläche kommt weder
         aus dem Style des Eintrags noch aus den Systemfarben; sie steht im mitgelieferten
-        Muster fest. Im dunklen Erscheinungsbild stand deshalb helle Schrift auf weißem Grund:
-        Die Menüpunkte waren buchstäblich nicht zu lesen. Beide Ebenen tragen jetzt ein
-        eigenes Muster, der Eintrag in der Leiste und der Eintrag im Aufklappteil.
+        Muster fest. Im dunklen Erscheinungsbild stünde dort helle Schrift auf weißem Grund,
+        und die Menüpunkte wären nicht zu lesen. Deshalb tragen beide Ebenen ein eigenes
+        Muster, der Eintrag in der Leiste und der Eintrag im Aufklappteil.
     -->
     <ControlTemplate x:Key="MenuEntryTemplate" TargetType="MenuItem">
         <Border x:Name="Shape" Background="{DynamicResource SurfaceBrush}" Padding="10,5">
@@ -113,6 +120,12 @@
         </ControlTemplate.Triggers>
     </ControlTemplate>
 
+    <!--
+        Ein Eintrag mit eigenem Untermenü (Rolle SubmenuHeader) bekommt bewusst kein eigenes
+        Muster: Das Eintragsmuster hat kein Aufklappteil, das Untermenü ginge nie auf. Die
+        Anwendung hat derzeit keine verschachtelten Menüs; wer eines anlegt, braucht ein
+        Muster mit Aufklappteil nach rechts, nach dem Vorbild von MenuTitleTemplate.
+    -->
     <Style TargetType="MenuItem">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="Background" Value="Transparent" />
@@ -121,9 +134,6 @@
                 <Setter Property="Template" Value="{StaticResource MenuTitleTemplate}" />
             </Trigger>
             <Trigger Property="Role" Value="SubmenuItem">
-                <Setter Property="Template" Value="{StaticResource MenuEntryTemplate}" />
-            </Trigger>
-            <Trigger Property="Role" Value="SubmenuHeader">
                 <Setter Property="Template" Value="{StaticResource MenuEntryTemplate}" />
             </Trigger>
             <Trigger Property="IsHighlighted" Value="True">
@@ -182,7 +192,7 @@
         Beide Register-Bausteine tragen ein eigenes Muster, und zwar aus einem Grund:
         Das mitgelieferte Muster von WPF zeichnet den gewählten Reiter und die Restfläche
         der Reiterleiste mit eigenen, festen Farben. Ein Setter für die Fläche läuft dort
-        ins Leere. Im dunklen Erscheinungsbild stand der gewählte Reiter weiß da, mit
+        ins Leere. Im dunklen Erscheinungsbild stünde der gewählte Reiter weiß da, mit
         heller Schrift darauf, und rechts daneben ein weißer Streifen.
 
         Was man ersetzt, muss man vollständig ersetzen: Die Muster bringen deshalb
@@ -211,7 +221,12 @@
                                 BorderThickness="0,1,0,0"
                                 KeyboardNavigation.TabNavigation="Local"
                                 KeyboardNavigation.TabIndex="2">
-                            <ContentPresenter ContentSource="SelectedContent" />
+                            <!--
+                                Der Name ist vorgegeben: Unter ihm sucht der Automatisierungspartner
+                                des Registers den Inhalt. Fehlt er, ist für Screenreader unter
+                                keinem Register etwas vorhanden.
+                            -->
+                            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent" />
                         </Border>
                     </Grid>
                 </ControlTemplate>
@@ -294,7 +309,7 @@
 
         Mit eigenem Muster, weil das mitgelieferte die Auswahl aus den Systemfarben holt, und
         zwar als statischen Verweis, der beim Umschalten des Erscheinungsbilds nicht nachzieht.
-        Der gewählte Eintrag blieb deshalb in der Farbe stehen, die beim Start galt.
+        Der gewählte Eintrag bliebe sonst in der Farbe stehen, die beim Start galt.
     -->
     <Style TargetType="ListBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
@@ -409,13 +424,13 @@
     <!--
         Das Auswahlfeld ist der hartnäckigste Fall: Sein mitgeliefertes Muster zeichnet Fläche,
         Rahmen, Pfeil und den ausgewählten Eintrag mit eigenen festen Farben. Im dunklen
-        Erscheinungsbild stand das Feld deshalb leer da — der Text war schwarz auf dunklem
-        Grund und schlicht nicht zu sehen. Das eigene Muster nimmt Fläche und Schrift der
+        Erscheinungsbild stünde das Feld leer da, weil der Text schwarz auf dunklem Grund
+        nicht zu sehen wäre. Das eigene Muster nimmt Fläche und Schrift der
         Anwendung und bringt Aufklappteil und Zustände selbst mit.
     -->
     <ControlTemplate x:Key="ComboBoxToggleTemplate" TargetType="ToggleButton">
         <Border Background="Transparent" BorderThickness="0">
-            <Path x:Name="Pfeil"
+            <Path x:Name="Arrow"
                   HorizontalAlignment="Right"
                   VerticalAlignment="Center"
                   Margin="0,0,8,0"
@@ -432,24 +447,37 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
+                    <!--
+                        Der Pfeil hat eine eigene Spalte. Lag er mit dem Text in derselben Zelle,
+                        lief ein langer Eintrag in einer schmalen Spalte unter ihn, und der Pfeil
+                        stand als grauer Fleck auf den letzten Buchstaben.
+                    -->
                     <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="20" />
+                        </Grid.ColumnDefinitions>
                         <Border x:Name="Shape"
+                                Grid.ColumnSpan="2"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="{StaticResource ControlCornerRadius}" />
-                        <ToggleButton Template="{StaticResource ComboBoxToggleTemplate}"
+                        <ToggleButton Grid.ColumnSpan="2"
+                                      Template="{StaticResource ComboBoxToggleTemplate}"
                                       Focusable="False"
                                       IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                       ClickMode="Press" />
-                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                        <ContentPresenter Grid.Column="0"
+                                          Margin="{TemplateBinding Padding}"
                                           HorizontalAlignment="Left"
                                           VerticalAlignment="Center"
                                           IsHitTestVisible="False"
                                           Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                           ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
-                        <Popup IsOpen="{TemplateBinding IsDropDownOpen}"
+                        <Popup Grid.ColumnSpan="2"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
                                PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
                                Placement="Bottom"
                                HorizontalOffset="0"
@@ -533,8 +561,8 @@
         Auch hier ein eigenes Muster, und aus demselben Grund wie bei den Registern: Das
         mitgelieferte Muster zeichnet den ruhenden und den abgeschalteten Zustand mit festen
         hellen Farben und schlägt dabei jeden Setter. Im dunklen Erscheinungsbild leuchteten
-        deshalb ausgerechnet die abgeschalteten Schaltflächen hell auf, während die
-        bedienbaren daneben dunkel blieben; die Bedeutung war damit umgekehrt.
+        sonst ausgerechnet die abgeschalteten Schaltflächen hell auf, während die bedienbaren
+        daneben dunkel blieben; die Bedeutung wäre damit umgekehrt.
     -->
     <Style TargetType="Button">
         <Setter Property="Background" Value="{DynamicResource ButtonSecondaryBackgroundBrush}" />
@@ -584,7 +612,7 @@
     <!--
         Der Umschalter braucht sein eigenes Muster aus demselben Grund wie die Schaltfläche:
         Das mitgelieferte zeichnet den eingeschalteten Zustand mit einer festen hellen Fläche
-        und schlägt den Setter. Die Zeitraum-Chips standen deshalb hell da, mit heller Schrift
+        und schlägt den Setter. Die Zeitraum-Chips stünden sonst hell da, mit heller Schrift
         darauf. Der eingeschaltete Zustand ist zusätzlich an der fetten Schrift erkennbar,
         nicht allein an der Farbe.
     -->
@@ -634,30 +662,170 @@
         </Setter>
     </Style>
 
+    <!-- ── Kopfleiste und Segmente ──────────────────────────────────────── -->
     <!--
-        Die vorgesehene Aktion einer Seite. Ausdrücklich anzufordern, damit auf einer Seite
-        klar bleibt, welche Aktion gemeint ist. Mehrere gefüllte Schaltflächen nebeneinander
-        beantworten die Frage nicht mehr.
+        Symbolknöpfe der Kopfleiste: ohne Fläche und Rahmen, bis die Maus darauf steht oder die
+        Tastatur sie erreicht. Das Muster kommt von den Knöpfen oben, damit Fokus und
+        abgeschalteter Zustand dieselben bleiben. Den Namen für Screenreader und den Tooltip
+        trägt jeder Knopf selbst; ein Symbol allein sagt nichts.
     -->
-    <Style x:Key="PrimaryButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-        <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource ButtonBackgroundBrush}" />
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource ButtonBackgroundHoverBrush}" />
-            </Trigger>
-            <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="{DynamicResource ButtonBackgroundPressedBrush}" />
-            </Trigger>
-            <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Background" Value="{DynamicResource ButtonBackgroundDisabledBrush}" />
-                <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundDisabledBrush}" />
-            </Trigger>
-        </Style.Triggers>
+    <Style x:Key="IconButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource IconFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource IconSizeIconButton}" />
+        <Setter Property="Width" Value="{StaticResource IconButtonSize}" />
+        <Setter Property="Height" Value="{StaticResource IconButtonSize}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="2,0,0,0" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!-- Derselbe Knopf als Schalter; eingeschaltet trägt er die Auswahlfläche samt Rand. -->
+    <Style x:Key="IconToggleButtonStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource IconFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource IconSizeIconButton}" />
+        <Setter Property="Width" Value="{StaticResource IconButtonSize}" />
+        <Setter Property="Height" Value="{StaticResource IconButtonSize}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="2,0,0,0" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!--
+        Register als Segmentleiste statt als Reiter: eine Fläche, darin gleich breite Segmente,
+        das gewählte hebt sich als helle Karte mit Rand und fetter Schrift ab. Nicht allein über
+        die Farbe, damit es auch erkennbar bleibt, wer Farben schlecht unterscheidet. Nur das
+        Hauptfenster nimmt diese Form; die Register der Einstellungen bleiben Reiter.
+    -->
+    <Style x:Key="SegmentTabItemStyle" TargetType="TabItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+        <Setter Property="Padding" Value="{StaticResource CompactPadding}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="Shape"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="{StaticResource HairlineBorderThickness}"
+                            CornerRadius="{StaticResource BadgeCornerRadius}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter ContentSource="Header"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True">
+                            <ContentPresenter.Resources>
+                                <!-- Wird die Spalte sehr schmal, endet der Name mit Auslassung statt zu überlappen. -->
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                </Style>
+                            </ContentPresenter.Resources>
+                        </ContentPresenter>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SurfaceBrush}" />
+                            <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="False" />
+                                <Condition Property="IsMouseOver" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                        </MultiTrigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource InputBorderFocusBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SegmentedTabControlStyle" TargetType="TabControl">
+        <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource SegmentTabItemStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid KeyboardNavigation.TabNavigation="Local" Background="{TemplateBinding Background}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0"
+                                Margin="8,8,8,4"
+                                Padding="2"
+                                Background="{DynamicResource SurfaceElevatedBrush}"
+                                BorderBrush="{DynamicResource DividerBrush}"
+                                BorderThickness="{StaticResource HairlineBorderThickness}"
+                                CornerRadius="{StaticResource ControlCornerRadius}">
+                            <UniformGrid Rows="1"
+                                         IsItemsHost="True"
+                                         KeyboardNavigation.TabIndex="1" />
+                        </Border>
+                        <!-- Der Name ist vorgegeben, siehe das Muster der Register oben. -->
+                        <ContentPresenter x:Name="PART_SelectedContentHost"
+                                          Grid.Row="1"
+                                          ContentSource="SelectedContent"
+                                          KeyboardNavigation.TabNavigation="Local"
+                                          KeyboardNavigation.TabIndex="2" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ── Übriges ──────────────────────────────────────────────────────── -->
+    <!--
+        Auswahlfeld über die Werte einer Aufzählung. Ohne eigene Vorlage stünde der Bezeichner aus
+        dem Code in der Liste („NearStemSynonyms"), und der Screenreader läse ihn ebenso vor.
+    -->
+    <Style x:Key="EnumComboBoxStyle" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Converter={StaticResource EnumDisplay}}" />
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemContainerStyle">
+            <Setter.Value>
+                <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                    <Setter Property="AutomationProperties.Name" Value="{Binding Converter={StaticResource EnumDisplay}}" />
+                </Style>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        Steht an Stelle einer Browserfläche, die nicht starten konnte, meist weil die
+        WebView2-Laufzeit fehlt. Ohne ihn bliebe die Fläche leer, und der Grund stünde nur im
+        Protokoll.
+    -->
+    <Style x:Key="BrowserUnavailableHintStyle" TargetType="TextBlock">
+        <Setter Property="Margin" Value="24" />
+        <Setter Property="MaxWidth" Value="480" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+    </Style>
+
     <Style TargetType="GridSplitter">
         <Setter Property="Background" Value="{DynamicResource SplitterBrush}" />
     </Style>
@@ -670,7 +838,7 @@
 
     <!--
         Der Aufklapp-Bereich holt die Farbe seiner Kopfzeile ebenfalls aus dem mitgelieferten
-        Muster; im dunklen Erscheinungsbild war die Beschriftung dort kaum vom Grund zu
+        Muster; im dunklen Erscheinungsbild wäre die Beschriftung dort kaum vom Grund zu
         unterscheiden. Der Pfeil dreht sich beim Aufklappen; der Zustand ist also nicht
         allein an der Farbe erkennbar.
     -->
@@ -687,9 +855,9 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition x:Name="InhaltZeile" Height="0" />
+                                <RowDefinition x:Name="ContentRow" Height="0" />
                             </Grid.RowDefinitions>
-                            <ToggleButton x:Name="Kopf"
+                            <ToggleButton x:Name="HeaderButton"
                                           Grid.Row="0"
                                           IsChecked="{Binding IsExpanded, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                           Background="Transparent"
@@ -697,7 +865,7 @@
                                           HorizontalContentAlignment="Left"
                                           Padding="8,4">
                                 <StackPanel Orientation="Horizontal">
-                                    <Path x:Name="Pfeil"
+                                    <Path x:Name="Arrow"
                                           VerticalAlignment="Center"
                                           Margin="0,0,8,0"
                                           Data="M 0 0 L 4 4 L 0 8 Z"
@@ -712,8 +880,8 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsExpanded" Value="True">
-                            <Setter TargetName="InhaltZeile" Property="Height" Value="Auto" />
-                            <Setter TargetName="Pfeil" Property="Data" Value="M 0 0 L 8 0 L 4 4 Z" />
+                            <Setter TargetName="ContentRow" Property="Height" Value="Auto" />
+                            <Setter TargetName="Arrow" Property="Data" Value="M 0 0 L 8 0 L 4 4 Z" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -750,8 +918,8 @@
     </Style>
 
     <!--
-        Verweise bringen als einziges Element eine eigene Farbe von WPF mit — ein festes
-        Blau, das im dunklen Erscheinungsbild kaum vom Grund abhebt. Unterstrichen bleiben
+        Verweise bringen als einziges Element eine eigene Farbe von WPF mit: ein festes
+        Blau, das sich im dunklen Erscheinungsbild kaum vom Grund abhebt. Unterstrichen bleiben
         sie: Ein Verweis, der nur an der Farbe erkennbar ist, ist für manche keiner.
     -->
     <Style TargetType="Hyperlink">

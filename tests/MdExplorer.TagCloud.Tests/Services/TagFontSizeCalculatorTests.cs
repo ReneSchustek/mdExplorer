@@ -3,7 +3,8 @@ using MdExplorer.TagCloud.Services;
 namespace MdExplorer.TagCloud.Tests.Services;
 
 /// <summary>
-/// Reine Unit-Tests des logarithmischen Skalen-Rechners. Keine Allokationen, kein WPF.
+/// Die Schriftgröße wächst mit dem Logarithmus der Anzahl und bleibt zwischen kleinster und
+/// größter Größe. Linear gerechnet stünde ein häufiges Schlagwort riesig neben lauter winzigen.
 /// </summary>
 public sealed class TagFontSizeCalculatorTests
 {

@@ -66,6 +66,10 @@ internal sealed class FakeFileSystem : IFileSystem
 
     public long GetFileSize(string path) => _files[Normalize(path)].LongLength;
 
+    /// <summary>Wie <see cref="WriteAllBytesAtomicAsync"/>, synchron.</summary>
+    public void WriteAllBytesAtomic(string path, ReadOnlySpan<byte> content) =>
+        WriteAllBytesAtomicAsync(path, content.ToArray(), CancellationToken.None).GetAwaiter().GetResult();
+
     public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
     {
         _files[Normalize(path)] = content.ToArray();

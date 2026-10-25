@@ -1,11 +1,9 @@
-using System.Data.Common;
 using System.IO;
-using System.IO.Compression;
-using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MdExplorer.App.Services;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Hosting;
 using MdExplorer.Parser.Abstractions;
 using MdExplorer.Parser.Models;
 using Microsoft.Extensions.Logging;
@@ -13,19 +11,19 @@ using Microsoft.Extensions.Logging;
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// Container-ViewModel der rechten Spalte. Verwaltet den Mode-Switch zwischen
-/// <see cref="DocumentPanelMode.Read"/> (WebView2-Vorschau) und <see cref="DocumentPanelMode.Edit"/>
-/// (Markdown-Editor) und übernimmt nach dem Speichern die direkte Vorschau-Aktualisierung
-/// gegen den aktuellen Editor-Text, damit Akzeptanzkriterium 4 (Preview &lt;= 2 s nach Save)
-/// unabhängig vom Hintergrund-Indexer eingehalten wird.
+/// Container-ViewModel der rechten Spalte. Schaltet zwischen <see cref="DocumentPanelMode.Read"/>
+/// (WebView2-Vorschau) und <see cref="DocumentPanelMode.Edit"/> (Markdown-Editor) um. Nach dem
+/// Speichern rendert es den gespeicherten Text selbst in die Vorschau, statt auf den Indexer zu
+/// warten, der die Datei erst nach der Meldung des Datei-Watchers neu liest.
 /// </summary>
 internal sealed partial class DocumentPanelViewModel : ObservableObject, IDisposable
 {
     private readonly IMarkdownParser _markdownParser;
-    private readonly PreviewHtmlBuilder _htmlBuilder;
     private readonly IDocumentLocator _documentLocator;
-    private readonly IFileSystem _fileSystem;
+    private readonly UnindexedFileReader _unindexedFiles;
+    private readonly IUnsavedChangesGuard _unsavedChanges;
     private readonly ILogger<DocumentPanelViewModel> _logger;
+    private readonly LatestOperation _loads = new();
     private bool _disposed;
 
     [ObservableProperty]
@@ -39,31 +37,50 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         MarkdownEditorViewModel editor,
         DocumentRelationsViewModel relations,
         IMarkdownParser markdownParser,
-        PreviewHtmlBuilder htmlBuilder,
         IDocumentLocator documentLocator,
         IFileSystem fileSystem,
+        IUnsavedChangesGuard unsavedChanges,
         ILogger<DocumentPanelViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(preview);
         ArgumentNullException.ThrowIfNull(editor);
         ArgumentNullException.ThrowIfNull(relations);
         ArgumentNullException.ThrowIfNull(markdownParser);
-        ArgumentNullException.ThrowIfNull(htmlBuilder);
         ArgumentNullException.ThrowIfNull(documentLocator);
         ArgumentNullException.ThrowIfNull(fileSystem);
+        ArgumentNullException.ThrowIfNull(unsavedChanges);
         ArgumentNullException.ThrowIfNull(logger);
 
         Preview = preview;
         Editor = editor;
         Relations = relations;
         _markdownParser = markdownParser;
-        _htmlBuilder = htmlBuilder;
         _documentLocator = documentLocator;
-        _fileSystem = fileSystem;
+        _unindexedFiles = new UnindexedFileReader(fileSystem, markdownParser, logger);
+        _unsavedChanges = unsavedChanges;
         _logger = logger;
 
         Editor.Saved += OnEditorSaved;
+        Relations.OpenRequested += OnRelatedDocumentRequested;
+        Relations.FolderRequested += OnFolderRequested;
+        Relations.TagRequested += OnTagRequested;
+        Relations.DocumentChanged += OnDocumentChanged;
     }
+
+    /// <summary>Ein Klick auf ein verwandtes Dokument; es soll geöffnet werden.</summary>
+    public event Action<Guid>? RelatedDocumentRequested;
+
+    /// <summary>Der Ordner des Dokuments soll gezeigt werden (relativ zur Wurzel).</summary>
+    public event Action<string>? FolderRequested;
+
+    /// <summary>Eine Kennzeichnung des Dokuments soll gezeigt werden.</summary>
+    public event Action<string>? TagRequested;
+
+    /// <summary>
+    /// Ein Vorgang hat die Datei verändert: neuer Pfad nach Umbenennen oder Verschieben,
+    /// <see langword="null"/> nach dem Löschen.
+    /// </summary>
+    public event Action<string?>? DocumentChanged;
 
     /// <summary>Liefert die Preview im Read-Modus.</summary>
     public PreviewViewModel Preview { get; }
@@ -78,68 +95,94 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     public bool IsReadMode => Mode == DocumentPanelMode.Read;
 
     /// <summary>Wahr, solange das Panel im Bearbeiten-Modus ist (Binding-Helfer für Visibility).</summary>
-    public bool IsEditMode => Mode == DocumentPanelMode.Edit;
+    /// <remarks>
+    /// Setzbar, damit der Schalter „Bearbeiten“ in beide Richtungen bindet. Löste er nur den
+    /// Befehl aus, wechselte er über die Bedienungshilfen allein seinen Haken, nicht den Modus.
+    /// </remarks>
+    public bool IsEditMode
+    {
+        get => Mode == DocumentPanelMode.Edit;
+        set => Mode = value ? DocumentPanelMode.Edit : DocumentPanelMode.Read;
+    }
+
+    /// <summary>Wahr, solange der Editor Änderungen hält, die nicht auf der Platte stehen.</summary>
+    public bool HasUnsavedChanges => _unsavedChanges.HasUnsavedChanges;
+
+    /// <summary>Kennung des angezeigten Dokuments; <see langword="null"/>, wenn keines indiziert offen ist.</summary>
+    public Guid? OpenDocumentId => Preview.CurrentDocumentId;
+
+    /// <summary>Leert Vorschau, Editor und Bezüge; danach ist kein Dokument offen.</summary>
+    public void Clear()
+    {
+        Preview.Clear();
+        Editor.Clear();
+        Relations.Clear();
+    }
+
+    /// <summary>Fragt bei ungespeicherten Änderungen nach, bevor das Dokument verlassen wird.</summary>
+    /// <param name="cancellationToken">Abbruch des Speicherns.</param>
+    /// <returns><see langword="true"/>, wenn das Dokument verlassen werden darf.</returns>
+    public Task<bool> ConfirmLeaveAsync(CancellationToken cancellationToken) =>
+        _unsavedChanges.ConfirmLeaveAsync(cancellationToken);
 
     /// <summary>
-    /// Lädt das Dokument in beiden Modi. Auswahl-Pfad wird über den
-    /// <see cref="IDocumentLocator"/> aufgelöst, damit der Aufruf nur die Id kennen muss.
+    /// Lädt das Dokument in Vorschau, Editor und Bezüge. Den Dateipfad für den Editor löst der
+    /// <see cref="IDocumentLocator"/> auf, damit der Aufrufer nur die Id kennen muss.
     /// </summary>
-    public async Task LoadAsync(Guid markdownFileId, CancellationToken cancellationToken)
+    /// <returns>
+    /// <see langword="false"/>, wenn der Nutzer bei ungespeicherten Änderungen abgebrochen hat;
+    /// dann bleibt das bisherige Dokument im Bereich.
+    /// </returns>
+    public async Task<bool> LoadAsync(Guid markdownFileId, CancellationToken cancellationToken)
     {
-        try
+        if (!await _unsavedChanges.ConfirmLeaveAsync(cancellationToken).ConfigureAwait(true))
         {
-            await Preview.LoadAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
+            return false;
+        }
 
-            string? absolutePath = await _documentLocator.GetAbsolutePathAsync(markdownFileId, cancellationToken).ConfigureAwait(true);
-            if (absolutePath is null)
-            {
-                LogPathMissing(_logger, markdownFileId);
-                return;
-            }
-            await Editor.LoadAsync(markdownFileId, absolutePath, cancellationToken).ConfigureAwait(true);
-            // Erst nach dem Editor: Die Kennzeichnungen stehen im Text, nicht im Graphen.
-            await Relations.LoadAsync(markdownFileId, [.. Editor.Tags], cancellationToken).ConfigureAwait(true);
-        }
-        catch (OperationCanceledException)
-        {
-            // Load wurde abgebrochen, kein Fehler.
-        }
-        catch (DbException exception)
-        {
-            // SQLite-Spitze beim Document-Lookup: Panel bleibt leer.
-            LogLoadFailed(_logger, markdownFileId, exception);
-        }
+        using LatestOperation.Ticket load = _loads.Begin(cancellationToken);
+        await LoadIndexedAsync(markdownFileId, load).ConfigureAwait(true);
+        return true;
     }
 
     /// <summary>
-    /// Lädt eine Datei direkt vom Dateisystem: Fallback für Klicks auf Markdown-Dateien,
-    /// die der Indexer noch nicht erfasst hat. Wenn die Datei bereits in der DB liegt,
-    /// wird der überlieferte ID-Pfad bevorzugt (Tag-Persistenz, Outlink-Resolution).
+    /// Lädt eine Datei über ihren Pfad. Steht sie schon im Index, geht es über die Id weiter,
+    /// damit auch die Bezüge geladen werden. Sonst wird sie direkt vom Datenträger gelesen und
+    /// gerendert; das betrifft Dateien, die der Indexer noch nicht erfasst hat.
     /// </summary>
-    public async Task LoadByPathAsync(string absolutePath, CancellationToken cancellationToken)
+    /// <returns><see langword="false"/>, wenn der Nutzer bei ungespeicherten Änderungen abgebrochen hat.</returns>
+    public async Task<bool> LoadByPathAsync(string absolutePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
 
-        Guid? indexedId = await _documentLocator
-            .FindByAbsolutePathAsync(absolutePath, cancellationToken)
-            .ConfigureAwait(true);
-        if (indexedId is { } id)
+        // Vor dem Nachschlagen fragen: Sonst entschiede die Antwort erst, wenn das Ziel schon
+        // halb geladen ist.
+        if (!await _unsavedChanges.ConfirmLeaveAsync(cancellationToken).ConfigureAwait(true))
         {
-            await LoadAsync(id, cancellationToken).ConfigureAwait(true);
-            return;
+            return false;
         }
 
-        await LoadDirectFromFileAsync(absolutePath, cancellationToken).ConfigureAwait(true);
+        using LatestOperation.Ticket load = _loads.Begin(cancellationToken);
+        PathLookup lookup = await LookUpAsync(absolutePath, load).ConfigureAwait(true);
+        if (lookup.IndexedId is { } id)
+        {
+            await LoadIndexedAsync(id, load).ConfigureAwait(true);
+        }
+        else if (lookup.Succeeded && load.IsCurrent)
+        {
+            await LoadDirectFromFileAsync(absolutePath, load).ConfigureAwait(true);
+        }
+        return true;
     }
 
-    /// <summary>Wechselt zwischen Lese- und Bearbeiten-Modus (Toolbar-Button / Ctrl+E).</summary>
+    /// <summary>Wechselt zwischen Lese- und Bearbeiten-Modus (Schaltfläche oder Strg+E).</summary>
     [RelayCommand]
     public void ToggleMode()
     {
         Mode = Mode == DocumentPanelMode.Read ? DocumentPanelMode.Edit : DocumentPanelMode.Read;
     }
 
-    /// <summary>Speichert den Editor. Wird vom MainWindow über Ctrl+S aufgerufen.</summary>
+    /// <summary>Speichert den Editor. Das <c>DocumentPanel</c> ruft es über Strg+S.</summary>
     [RelayCommand]
     public Task SaveAsync(CancellationToken cancellationToken) => Editor.SaveAsync(cancellationToken);
 
@@ -151,21 +194,12 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
             return;
         }
         _disposed = true;
+        _loads.Dispose();
         Editor.Saved -= OnEditorSaved;
-        Editor.Dispose();
-    }
-
-    private static string DecompressHtml(ReadOnlyMemory<byte> compressed)
-    {
-        if (compressed.IsEmpty)
-        {
-            return string.Empty;
-        }
-        byte[] buffer = compressed.ToArray();
-        using MemoryStream input = new(buffer, writable: false);
-        using GZipStream gzip = new(input, CompressionMode.Decompress);
-        using StreamReader reader = new(gzip, System.Text.Encoding.UTF8);
-        return reader.ReadToEnd();
+        Relations.OpenRequested -= OnRelatedDocumentRequested;
+        Relations.FolderRequested -= OnFolderRequested;
+        Relations.TagRequested -= OnTagRequested;
+        Relations.DocumentChanged -= OnDocumentChanged;
     }
 
     [LoggerMessage(EventId = 510, Level = LogLevel.Warning, Message = "Editor-Load für {MarkdownFileId} ohne Datei-Pfad — Indexer-Eintrag fehlt.")]
@@ -177,58 +211,136 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     [LoggerMessage(EventId = 512, Level = LogLevel.Information, Message = "Datei {Path} direkt aus dem Dateisystem geladen (Indexer noch nicht durch).")]
     private static partial void LogDirectLoadCompleted(ILogger logger, string path);
 
-    [LoggerMessage(EventId = 513, Level = LogLevel.Warning, Message = "Direkt-Load für {Path} fehlgeschlagen.")]
-    private static partial void LogDirectLoadFailed(ILogger logger, string path, Exception exception);
-
-    [LoggerMessage(EventId = 514, Level = LogLevel.Warning, Message = "Direkt-Load übersprungen — Datei {Path} existiert nicht.")]
-    private static partial void LogDirectLoadMissingFile(ILogger logger, string path);
-
-    [LoggerMessage(EventId = 515, Level = LogLevel.Warning, Message = "Document-Load für {MarkdownFileId} fehlgeschlagen — Datenbank-Spitze.")]
+    [LoggerMessage(EventId = 515, Level = LogLevel.Warning, Message = "Laden von Dokument {MarkdownFileId} fehlgeschlagen; der Bereich bleibt leer.")]
     private static partial void LogLoadFailed(ILogger logger, Guid markdownFileId, Exception exception);
 
-    private async Task LoadDirectFromFileAsync(string absolutePath, CancellationToken cancellationToken)
-    {
-        if (!_fileSystem.FileExists(absolutePath))
-        {
-            LogDirectLoadMissingFile(_logger, absolutePath);
-            return;
-        }
+    [LoggerMessage(EventId = 516, Level = LogLevel.Warning, Message = "Nachschlagen von {Path} im Index fehlgeschlagen; der Bereich bleibt leer.")]
+    private static partial void LogPathLookupFailed(ILogger logger, string path, Exception exception);
 
-        byte[] bytes;
+    /// <summary>
+    /// Lädt ein indiziertes Dokument in Vorschau, Editor und Bezüge.
+    /// </summary>
+    /// <remarks>
+    /// Zuerst der Pfad, dann die Teile: Scheitert das Nachschlagen, ist noch nichts ausgetauscht.
+    /// Scheitert ein Teil danach, wird der ganze Bereich geleert. Vorschau und Editor zeigen so
+    /// immer dieselbe Datei oder beide keine; sonst bearbeitete der Nutzer die vorige Datei,
+    /// während die Vorschau schon die neue zeigt. Nach jedem Warten zählt nur der jüngste Klick.
+    /// </remarks>
+    private async Task LoadIndexedAsync(Guid markdownFileId, LatestOperation.Ticket load)
+    {
         try
         {
-            bytes = await _fileSystem
-                .ReadAllBytesAsync(absolutePath, cancellationToken)
-                .ConfigureAwait(true);
+            string? absolutePath = await _documentLocator.GetAbsolutePathAsync(markdownFileId, load.Token).ConfigureAwait(true);
+            if (absolutePath is not null && load.IsCurrent)
+            {
+                await LoadPartsAsync(markdownFileId, absolutePath, load).ConfigureAwait(true);
+            }
+            else if (load.IsCurrent)
+            {
+                LogPathMissing(_logger, markdownFileId);
+                Clear();
+            }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (OperationCanceledException)
         {
-            LogDirectLoadFailed(_logger, absolutePath, ex);
+            // Ein neuerer Klick hat übernommen; er zeigt sein eigenes Dokument.
+        }
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception) || exception is IOException or UnauthorizedAccessException)
+        {
+            LogLoadFailed(_logger, markdownFileId, exception);
+            if (load.IsCurrent)
+            {
+                Clear();
+            }
+        }
+    }
+
+    private async Task LoadPartsAsync(Guid markdownFileId, string absolutePath, LatestOperation.Ticket load)
+    {
+        await Preview.LoadAsync(markdownFileId, load.Token).ConfigureAwait(true);
+        await Editor.LoadAsync(markdownFileId, absolutePath, load.Token).ConfigureAwait(true);
+        // Erst nach dem Editor: Die Kennzeichnungen stehen im Text, nicht im Graphen.
+        await Relations.LoadAsync(markdownFileId, [.. Editor.Tags], load.Token).ConfigureAwait(true);
+    }
+
+    /// <summary>Schlägt nach, ob die Datei im Index steht; scheitert das, ist der Bereich danach leer.</summary>
+    private async Task<PathLookup> LookUpAsync(string absolutePath, LatestOperation.Ticket load)
+    {
+        try
+        {
+            Guid? id = await _documentLocator.FindByAbsolutePathAsync(absolutePath, load.Token).ConfigureAwait(true);
+            return new PathLookup(Succeeded: true, id);
+        }
+        catch (OperationCanceledException)
+        {
+            return PathLookup.Failed;
+        }
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
+        {
+            LogPathLookupFailed(_logger, absolutePath, exception);
+            Clear();
+            return PathLookup.Failed;
+        }
+    }
+
+    /// <summary>
+    /// Liest eine Datei, die der Indexer noch nicht kennt, direkt von der Platte.
+    /// </summary>
+    /// <remarks>
+    /// Wie beim indizierten Weg gilt: alles oder nichts. Gelingt das Lesen oder Übersetzen nicht,
+    /// wird der Bereich geleert, statt still das vorige Dokument weiterzuzeigen. Die Bezüge gehören
+    /// immer dem vorigen Dokument; eine nicht indizierte Datei hat keine.
+    /// </remarks>
+    private async Task LoadDirectFromFileAsync(string absolutePath, LatestOperation.Ticket load)
+    {
+        UnindexedFile? file = await _unindexedFiles.ReadAsync(absolutePath, load).ConfigureAwait(true);
+        if (!load.IsCurrent)
+        {
+            return;
+        }
+        if (file is null)
+        {
+            Clear();
             return;
         }
 
-        string text = Encoding.UTF8.GetString(bytes);
-        ParseResult result = _markdownParser.Parse(text);
-        string body = DecompressHtml(result.RenderedHtmlGz);
-        Preview.SetHtml(_htmlBuilder.Build(body));
-        // Editor übernimmt den Rohtext via LoadDirectAsync. Eine künstliche Guid wäre
-        // im Conflict-Check unsicher, deshalb läuft der Editor in einem Read-Only-Modus
-        // ohne MarkdownFileId; Save bleibt gesperrt, bis der Indexer die Datei kennt.
-        await Editor.LoadDirectAsync(absolutePath, text, cancellationToken).ConfigureAwait(true);
+        Preview.ShowUnindexedFile(file.Parsed.RenderedHtmlGz, absolutePath);
+        // Der Editor bekommt keine MarkdownFileId: Eine erfundene hätte im Index kein Gegenstück.
+        // Bearbeiten und Speichern laufen über den Pfad; den Index zieht der Datei-Watcher nach.
+        Editor.LoadDirect(absolutePath, file.Bytes);
+        Relations.Clear();
         LogDirectLoadCompleted(_logger, absolutePath);
     }
+
+    private void OnRelatedDocumentRequested(Guid markdownFileId) => RelatedDocumentRequested?.Invoke(markdownFileId);
+
+    private void OnFolderRequested(string folderPath) => FolderRequested?.Invoke(folderPath);
+
+    private void OnTagRequested(string tagSlug) => TagRequested?.Invoke(tagSlug);
+
+    private void OnDocumentChanged(string? newAbsolutePath) => DocumentChanged?.Invoke(newAbsolutePath);
 
     private void OnEditorSaved(object? sender, EditorSavedEventArgs args)
     {
         try
         {
             ParseResult result = _markdownParser.Parse(args.SavedText);
-            string body = DecompressHtml(result.RenderedHtmlGz);
-            Preview.SetHtml(_htmlBuilder.Build(body));
+            Preview.ShowRendered(result.RenderedHtmlGz);
         }
-        catch (InvalidOperationException exception)
+        catch (Exception exception) when (BackgroundServiceWatchdog.IsRecoverable(exception, CancellationToken.None))
         {
+            // Die Datei liegt zu diesem Zeitpunkt schon gespeichert auf der Platte. Weist der
+            // Parser den Text ab, bleibt nur die Vorschau auf dem alten Stand; das Speichern
+            // selbst darf daran nicht nachträglich scheitern.
             LogPreviewRefreshFailed(_logger, exception);
         }
+    }
+
+    /// <summary>Was das Nachschlagen im Index ergeben hat.</summary>
+    /// <param name="Succeeded">Ob die Antwort gilt; sonst ist der Vorgang abgebrochen oder gescheitert.</param>
+    /// <param name="IndexedId">Die Kennung, wenn die Datei im Index steht.</param>
+    private sealed record PathLookup(bool Succeeded, Guid? IndexedId)
+    {
+        public static PathLookup Failed { get; } = new(Succeeded: false, IndexedId: null);
     }
 }

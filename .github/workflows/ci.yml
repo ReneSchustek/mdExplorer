@@ -11,29 +11,30 @@ permissions:
 
 jobs:
   build-test:
-    name: Build, Test & Secret-Scan
+    name: Build, Format & Test
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.0.x'
 
       - name: Restore
         run: dotnet restore MdExplorer.slnx
 
+      - name: Format (no changes allowed)
+        run: dotnet format MdExplorer.slnx --verify-no-changes --no-restore
+
       - name: Build (warnings as errors)
         run: dotnet build MdExplorer.slnx -c Release --no-restore -warnaserror
 
       - name: Test
-        # Performance-Tests sind laufzeitabhängig und auf gemeinsam genutzten Runnern
-        # nicht aussagekräftig, denn sie laufen lokal, nicht als CI-Gate.
+        # Performance-Tests hängen von der Rechenlast ab und sagen auf gemeinsam genutzten
+        # Runnern nichts aus; sie laufen deshalb nur lokal, nicht als CI-Gate.
         run: dotnet test MdExplorer.slnx -c Release --no-build --filter "Category!=Performance"
 
-# Der Secret-Scan läuft im Security-Workflow über die offizielle gitleaks-Action,
-# dort über die vollständige Historie und zusätzlich nach Zeitplan.
+# Der Secret-Scan läuft im Security-Workflow mit dem gitleaks-Programm selbst, dort über
+# die vollständige Historie und zusätzlich nach Zeitplan.

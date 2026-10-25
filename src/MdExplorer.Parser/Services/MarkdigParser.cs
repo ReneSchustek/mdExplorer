@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using Markdig;
+using MdExplorer.Core.Abstractions;
 using MdExplorer.Parser.Abstractions;
 using MdExplorer.Parser.MarkdigExtensions;
 using MdExplorer.Parser.Models;
@@ -11,8 +12,13 @@ namespace MdExplorer.Parser.Services;
 
 /// <summary>
 /// Treibt die vollständige Markdown-Verarbeitung: Markdig-AST aufbauen, Frontmatter/Tags/WikiLinks extrahieren,
-/// HTML rendern (HTML-Roh-Inputs deaktiviert, XSS-sicher), GZip-komprimieren und alles in <see cref="ParseResult"/> verpacken.
+/// HTML rendern, GZip-komprimieren und alles in <see cref="ParseResult"/> verpacken.
 /// </summary>
+/// <remarks>
+/// HTML im Quelltext wird maskiert und erscheint als Text. Verweisziele und Attribute bereinigt
+/// <see cref="MarkdigExtensions.SafeOutputExtension"/>; die Sicherheitsregel der Vorschau ist eine
+/// zweite Schicht dahinter, nicht die einzige.
+/// </remarks>
 public sealed class MarkdigParser : IMarkdownParser
 {
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
@@ -42,13 +48,7 @@ public sealed class MarkdigParser : IMarkdownParser
         _wikiLinkExtractor = wikiLinkExtractor;
         _tagNormalizer = tagNormalizer;
 
-        _pipeline = new MarkdownPipelineBuilder()
-            .UseAdvancedExtensions()
-            .UseEmphasisExtras()
-            .UseYamlFrontMatter()
-            .DisableHtml()
-            .UseMdExplorerWikiLinks(tagNormalizer.TryToSlug)
-            .Build();
+        _pipeline = IndexPipeline.CreateBuilder(tagNormalizer.TryToSlug).Build();
     }
 
     /// <inheritdoc />
@@ -60,6 +60,7 @@ public sealed class MarkdigParser : IMarkdownParser
         ArgumentNullException.ThrowIfNull(markdownText);
 
         MarkdigAst ast = Markdown.Parse(markdownText, _pipeline);
+        // Ein AST für alle Auszüge und das HTML: Markdig parst jede Datei nur einmal.
         IReadOnlyDictionary<string, string> frontmatter = _frontmatterExtractor.Extract(ast);
         IReadOnlyList<string> bodyTagNames = _tagExtractor.ExtractFromAst(ast);
         IReadOnlyList<string> linkTargets = _wikiLinkExtractor.Extract(ast);
@@ -80,7 +81,7 @@ public sealed class MarkdigParser : IMarkdownParser
     }
 
     // Beide Fassungen stehen in der Kennung, weil beide das Ergebnis bestimmen: Markdig
-    // entscheidet über die Verschachtelungsgrenze, unsere eigene Kette über Frontmatter,
+    // entscheidet über die Verschachtelungsgrenze, die eigene Kette über Frontmatter,
     // Schlagworte und WikiLinks. Ein Vermerk über einen Fehlschlag bindet dadurch nur so
     // lange, wie die Fassung unverändert bleibt. Nach einem Update läuft der Versuch von
     // selbst wieder an, ohne dass jemand die Datei anfassen muss.
@@ -100,6 +101,7 @@ public sealed class MarkdigParser : IMarkdownParser
             return bodyTagNames;
         }
 
+        // Die 4 ist nur eine Startkapazität für die Frontmatter-Einträge, keine Grenze.
         List<string> combined = new(bodyTagNames.Count + 4);
         combined.AddRange(bodyTagNames);
         foreach (string entry in rawTags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))

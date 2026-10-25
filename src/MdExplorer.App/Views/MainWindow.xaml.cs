@@ -1,95 +1,80 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Navigation;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.App.Services;
 using MdExplorer.App.Services.Help;
 using MdExplorer.App.ViewModels;
-using MdExplorer.App.Views.Graph;
-using MdExplorer.App.Views.Help;
 using MdExplorer.App.Views.Panels;
-using MdExplorer.App.Views.Settings;
 using MdExplorer.TagCloud.Views;
 
 namespace MdExplorer.App.Views;
 
 /// <summary>
-/// Hauptfenster der Anwendung. Bindet das <see cref="MainViewModel"/>, hängt den
-/// Preview-Host, das Suchpanel und das Tag-Cloud-Panel auf, übernimmt Initial-Layout
-/// und persistiert es beim Schließen.
+/// Hauptfenster der Anwendung. Bindet das <see cref="MainViewModel"/>, setzt Dokument-Panel,
+/// Dateiliste und Tag-Cloud in ihre Plätze, stellt das gespeicherte Layout her und speichert es
+/// beim Schließen. Die Nebenfenster öffnet <see cref="SecondaryWindows"/>; hier wird nur der
+/// Hilfe-Kontext nachgehalten.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class MainWindow : Window
 {
+    // Dieselben Werte wie die Spaltenangaben in MainWindow.xaml. Die Breite gilt, solange die
+    // Tag-Cloud noch nie ausgeblendet war und es keine gemerkte Breite gibt.
     private const double DefaultTagCloudColumnWidth = 260.0;
     private const double DefaultTagCloudSplitterWidth = 6.0;
 
     /// <summary>Schmalste sinnvolle Breite der Tag-Cloud, solange sie sichtbar ist.</summary>
     private const double DefaultTagCloudMinWidth = 180.0;
-    private const int SearchTabIndex = 2;
 
     private readonly MainViewModel _viewModel;
-    private readonly Func<SettingsWindow> _settingsWindowFactory;
-    private readonly Func<GraphWindow> _graphWindowFactory;
-    private readonly Func<MdExplorer.TagCloud.Views.TagManagementWindow> _tagManagementWindowFactory;
-    private readonly Func<HelpWindow> _helpWindowFactory;
-    private readonly Func<AboutWindow> _aboutWindowFactory;
-    private readonly Func<LogViewerWindow> _logViewerWindowFactory;
+    private readonly SecondaryWindows _windows;
     private readonly IHelpContextProvider _helpContextProvider;
-    private HelpWindow? _activeHelpWindow;
-    private LogViewerWindow? _activeLogViewerWindow;
+    private readonly IExternalLinkLauncher _linkLauncher;
     private double _restoredTagCloudColumnWidth = DefaultTagCloudColumnWidth;
+
+    // Die Breite, die der Nutzer der linken Spalte gegeben hat. Ein schmales Fenster zeigt sie
+    // schmaler an (ColumnFit), gespeichert wird aber diese.
+    private double _wantedFolderColumnWidth;
     private bool _allFilesInitialized;
+    private bool _closeConfirmed;
 
     /// <summary>Erstellt das Hauptfenster.</summary>
     public MainWindow(
         MainViewModel viewModel,
-        DocumentPanel documentPanel,
-        AllFilesPanel allFilesPanel,
-        TagCloudPanel tagCloudPanel,
-        Func<SettingsWindow> settingsWindowFactory,
-        Func<GraphWindow> graphWindowFactory,
-        Func<MdExplorer.TagCloud.Views.TagManagementWindow> tagManagementWindowFactory,
-        Func<HelpWindow> helpWindowFactory,
-        Func<AboutWindow> aboutWindowFactory,
-        Func<LogViewerWindow> logViewerWindowFactory,
-        IHelpContextProvider helpContextProvider)
+        MainWindowPanels panels,
+        SecondaryWindowFactories windowFactories,
+        IHelpContextProvider helpContextProvider,
+        IExternalLinkLauncher linkLauncher)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
-        ArgumentNullException.ThrowIfNull(documentPanel);
-        ArgumentNullException.ThrowIfNull(allFilesPanel);
-        ArgumentNullException.ThrowIfNull(tagCloudPanel);
-        ArgumentNullException.ThrowIfNull(settingsWindowFactory);
-        ArgumentNullException.ThrowIfNull(graphWindowFactory);
-        ArgumentNullException.ThrowIfNull(tagManagementWindowFactory);
-        ArgumentNullException.ThrowIfNull(helpWindowFactory);
-        ArgumentNullException.ThrowIfNull(aboutWindowFactory);
-        ArgumentNullException.ThrowIfNull(logViewerWindowFactory);
+        ArgumentNullException.ThrowIfNull(panels);
+        ArgumentNullException.ThrowIfNull(windowFactories);
         ArgumentNullException.ThrowIfNull(helpContextProvider);
+        ArgumentNullException.ThrowIfNull(linkLauncher);
         InitializeComponent();
         _viewModel = viewModel;
-        _settingsWindowFactory = settingsWindowFactory;
-        _graphWindowFactory = graphWindowFactory;
-        _tagManagementWindowFactory = tagManagementWindowFactory;
-        _helpWindowFactory = helpWindowFactory;
-        _aboutWindowFactory = aboutWindowFactory;
-        _logViewerWindowFactory = logViewerWindowFactory;
+        _windows = new SecondaryWindows(this, windowFactories);
         _helpContextProvider = helpContextProvider;
+        _linkLauncher = linkLauncher;
         DataContext = viewModel;
 
-        DocumentHost.Content = documentPanel;
-        AllFilesHost.Content = allFilesPanel;
-        TagCloudHost.Content = tagCloudPanel;
+        DocumentHost.Content = panels.Document;
+        AllFilesHost.Content = panels.AllFiles;
+        TagCloudHost.Content = panels.TagCloud;
+        panels.TagCloud.CloseCommand = _viewModel.HideTagCloudCommand;
         ApplyInitialLayout();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(FocusSearch), Key.F, ModifierKeys.Control));
-        _ = InputBindings.Add(new KeyBinding(new RelayCommand(ShowSettingsWindow), Key.OemComma, ModifierKeys.Control));
+        _ = InputBindings.Add(new KeyBinding(new RelayCommand(_windows.ShowSettings), Key.OemComma, ModifierKeys.Control));
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(OnHelpHotkey), Key.F1, ModifierKeys.None));
         _ = InputBindings.Add(new KeyBinding(_viewModel.ToggleTagCloudCommand, Key.T, ModifierKeys.Control));
         PreviewGotKeyboardFocus += OnPreviewGotKeyboardFocus;
+        SizeChanged += OnSizeChanged;
     }
 
     private static string ResolveContextSlug(DependencyObject focused)
@@ -99,8 +84,8 @@ internal sealed partial class MainWindow : Window
         {
             switch (cursor)
             {
+                // Das Kapitel heißt „Suche und Vorschau“; es gilt für beide Bereiche.
                 case SearchPanel:
-                    return HelpContext.Search;
                 case DocumentPanel:
                     return HelpContext.Search;
                 case TagCloudPanel:
@@ -129,10 +114,15 @@ internal sealed partial class MainWindow : Window
     private async void OnLeftTabsSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
+        // SelectionChanged steigt auch aus den Listen in den Registern auf; hier zählt nur der
+        // Wechsel des Registers selbst.
         if (!ReferenceEquals(args.OriginalSource, LeftTabs))
         {
             return;
         }
+        // Die Liste aller Dateien lädt erst, wenn ihr Register zum ersten Mal aufgeht. Die Marke
+        // steht vor dem Laden, damit schnelles Hin- und Herschalten nicht doppelt lädt. Scheitert
+        // das Laden, zeigt die Liste das selbst samt „Neu laden“; RefreshAsync wirft dafür nicht.
         if (!_allFilesInitialized && ReferenceEquals(LeftTabs.SelectedItem, AllFilesTabItem))
         {
             _allFilesInitialized = true;
@@ -140,154 +130,86 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    private void OnSettingsMenuItemClick(object sender, RoutedEventArgs args) => ShowSettingsWindow();
+    private void OnSettingsClick(object sender, RoutedEventArgs args) => _windows.ShowSettings();
 
-    private void OnGraphMenuItemClick(object sender, RoutedEventArgs args) => ShowGraphWindow();
+    private void OnGraphClick(object sender, RoutedEventArgs args) => _windows.ShowGraph();
 
-    private void OnTagManagementMenuItemClick(object sender, RoutedEventArgs args) => ShowTagManagementWindow();
+    private void OnTagManagementClick(object sender, RoutedEventArgs args) => _windows.ShowTagManagement();
 
-    private async void OnHelpMenuItemClick(object sender, RoutedEventArgs args)
-        => await ShowHelpWindowAsync(HelpContext.TableOfContents).ConfigureAwait(true);
+    // Die Skriptaufrufe im Hilfefenster fangen ihre Fehler selbst ab; hier kommt keiner an.
+    private async void OnHelpClick(object sender, RoutedEventArgs args)
+        => await _windows.ShowHelpAsync(HelpContext.TableOfContents).ConfigureAwait(true);
 
-    private void OnAboutMenuItemClick(object sender, RoutedEventArgs args) => ShowAboutWindow();
+    private void OnAboutClick(object sender, RoutedEventArgs args) => _windows.ShowAbout();
 
-    private void OnLogViewerMenuItemClick(object sender, RoutedEventArgs args) => ShowLogViewerWindow();
+    private void OnLogViewerClick(object sender, RoutedEventArgs args) => _windows.ShowLogViewer();
 
-    private void OnHealthIndicatorClick(object sender, RoutedEventArgs args)
-    {
-        ArgumentNullException.ThrowIfNull(args);
-        ShowLogViewerWindow();
-        args.Handled = true;
-    }
+    private void OnHealthIndicatorClick(object sender, RoutedEventArgs args) => _windows.ShowLogViewer();
 
+    // Die Adresse stammt aus der Antwort des Update-Servers. Der Öffner lässt nur http, https und
+    // mailto zur Shell durch und protokolliert, was er abweist oder nicht starten kann.
     private void OnUpdateLinkRequestNavigate(object sender, RequestNavigateEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
         args.Handled = true;
-        try
-        {
-            using Process? process = Process.Start(new ProcessStartInfo(args.Uri.AbsoluteUri) { UseShellExecute = true });
-        }
-        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or System.IO.FileNotFoundException)
-        {
-            // Kein Standardbrowser oder Start verweigert: Der Hinweis bleibt sichtbar,
-            // der Nutzer kann die URL manuell öffnen. Bewusst nicht-fatal.
-        }
+        _linkLauncher.Open(args.Uri);
     }
 
-    private void ShowSettingsWindow()
-    {
-        SettingsWindow window = _settingsWindowFactory();
-        window.Owner = this;
-        _ = window.ShowDialog();
-    }
-
-    private void ShowGraphWindow()
-    {
-        GraphWindow window = _graphWindowFactory();
-        window.Owner = this;
-        window.Show();
-    }
-
-    private void ShowTagManagementWindow()
-    {
-        MdExplorer.TagCloud.Views.TagManagementWindow window = _tagManagementWindowFactory();
-        window.Owner = this;
-        _ = window.ShowDialog();
-    }
-
-    private async Task ShowHelpWindowAsync(string slug)
-    {
-        // Wenn das Fenster bereits offen ist, holen wir es nur in den Vordergrund
-        // und navigieren zum gewünschten Slug, denn ein zweites Fenster wäre verwirrend.
-        if (_activeHelpWindow is not null)
-        {
-            if (_activeHelpWindow.WindowState == WindowState.Minimized)
-            {
-                _activeHelpWindow.WindowState = WindowState.Normal;
-            }
-            _ = _activeHelpWindow.Activate();
-            await _activeHelpWindow.NavigateToAsync(slug).ConfigureAwait(true);
-            return;
-        }
-        HelpWindow window = _helpWindowFactory();
-        window.Owner = this;
-        window.Closed += OnHelpWindowClosed;
-        _activeHelpWindow = window;
-        window.Show();
-        await window.NavigateToAsync(slug).ConfigureAwait(true);
-    }
-
-    private void OnHelpWindowClosed(object? sender, EventArgs args)
-    {
-        if (sender is HelpWindow window)
-        {
-            window.Closed -= OnHelpWindowClosed;
-        }
-        _activeHelpWindow = null;
-    }
-
-    private void ShowAboutWindow()
-    {
-        AboutWindow window = _aboutWindowFactory();
-        window.Owner = this;
-        _ = window.ShowDialog();
-    }
-
-    private void ShowLogViewerWindow()
-    {
-        if (_activeLogViewerWindow is not null)
-        {
-            if (_activeLogViewerWindow.WindowState == WindowState.Minimized)
-            {
-                _activeLogViewerWindow.WindowState = WindowState.Normal;
-            }
-            _ = _activeLogViewerWindow.Activate();
-            return;
-        }
-        LogViewerWindow window = _logViewerWindowFactory();
-        window.Owner = this;
-        window.Closed += OnLogViewerWindowClosed;
-        _activeLogViewerWindow = window;
-        window.Show();
-    }
-
-    private void OnLogViewerWindowClosed(object? sender, EventArgs args)
-    {
-        if (sender is LogViewerWindow window)
-        {
-            window.Closed -= OnLogViewerWindowClosed;
-        }
-        _activeLogViewerWindow = null;
-    }
-
-    private async void OnHelpHotkey()
-    {
-        string slug = _helpContextProvider.CurrentSlug;
-        await ShowHelpWindowAsync(slug).ConfigureAwait(true);
-    }
+    private async void OnHelpHotkey() =>
+        await _windows.ShowHelpAsync(_helpContextProvider.CurrentSlug).ConfigureAwait(true);
 
     private void ApplyInitialLayout()
     {
-        FolderColumn.Width = new GridLength(_viewModel.FolderColumnWidth, GridUnitType.Pixel);
+        _wantedFolderColumnWidth = _viewModel.FolderColumnWidth;
+        FolderColumn.Width = new GridLength(_wantedFolderColumnWidth, GridUnitType.Pixel);
+        // Die Vorschau ist die einzige Sternspalte. Der gespeicherte Wert wirkt nur als Gewicht,
+        // die Spalte füllt in jedem Fall den Rest.
         PreviewColumn.Width = new GridLength(_viewModel.PreviewColumnWidth, GridUnitType.Star);
         ApplyTagCloudVisibility();
+    }
+
+    /// <summary>
+    /// Hält das Schließen an, solange der Editor ungespeicherte Änderungen hat, und fragt nach.
+    /// </summary>
+    /// <remarks>
+    /// Gefragt wird erst nach dem Closing-Ereignis: Ein <c>Close</c> aus dem laufenden Ereignis
+    /// heraus lehnt WPF ab. Dürfen die Änderungen gehen, schließt das Fenster ein zweites Mal,
+    /// dann ohne Frage.
+    /// </remarks>
+    private void OnClosing(object? sender, CancelEventArgs args)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        if (_closeConfirmed || !_viewModel.HasUnsavedChanges)
+        {
+            return;
+        }
+        args.Cancel = true;
+        _ = Dispatcher.InvokeAsync(ConfirmAndCloseAsync);
+    }
+
+    private async Task ConfirmAndCloseAsync()
+    {
+        if (!await _viewModel.ConfirmCloseAsync().ConfigureAwait(true))
+        {
+            return;
+        }
+        _closeConfirmed = true;
+        Close();
     }
 
     private void OnClosed(object? sender, EventArgs args)
     {
         PreviewGotKeyboardFocus -= OnPreviewGotKeyboardFocus;
+        SizeChanged -= OnSizeChanged;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        _viewModel.FolderColumnWidth = FolderColumn.ActualWidth;
-        _viewModel.PreviewColumnWidth = PreviewColumn.ActualWidth;
-        _viewModel.PersistColumnLayout();
+        _viewModel.RememberColumnWidths(_wantedFolderColumnWidth, PreviewColumn.ActualWidth);
         _viewModel.Dispose();
     }
 
     /// <summary>Strg+F-Pfad: schaltet auf den Such-Tab und fokussiert das Suchfeld.</summary>
     private void FocusSearch()
     {
-        _viewModel.LeftTabIndex = SearchTabIndex;
+        _viewModel.ShowSearchTab();
         // TabControl wechselt den ContentPresenter; Focus muss nach dem Binding-Roundtrip kommen.
         _ = Dispatcher.BeginInvoke(SearchPanelControl.FocusQueryBox, System.Windows.Threading.DispatcherPriority.Input);
     }
@@ -295,31 +217,66 @@ internal sealed partial class MainWindow : Window
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
-        if (string.Equals(args.PropertyName, nameof(MainViewModel.IsTagCloudVisible), StringComparison.Ordinal))
+        if (string.Equals(args.PropertyName, nameof(MainViewModel.IsTagCloudShown), StringComparison.Ordinal))
         {
             ApplyTagCloudVisibility();
         }
     }
 
-    private void ApplyTagCloudVisibility()
+    // Die Breite entscheidet das ViewModel; hier wird sie nur gemeldet.
+    private void OnSizeChanged(object sender, SizeChangedEventArgs args)
     {
-        bool visible = _viewModel.IsTagCloudVisible;
-        if (!visible && TagCloudColumn.ActualWidth > 0.0)
+        ArgumentNullException.ThrowIfNull(args);
+        if (args.WidthChanged)
+        {
+            _viewModel.UpdateWindowWidth(args.NewSize.Width);
+        }
+    }
+
+    // Nur das Ziehen am Trenner ändert die Wunschbreite; das Anpassen an das Fenster nicht.
+    private void OnFolderSplitterDragCompleted(object sender, DragCompletedEventArgs args)
+    {
+        _wantedFolderColumnWidth = FolderColumn.ActualWidth;
+        if (TagCloudColumn.ActualWidth > 0.0)
         {
             _restoredTagCloudColumnWidth = TagCloudColumn.ActualWidth;
         }
+    }
+
+    private void OnColumnsSizeChanged(object sender, SizeChangedEventArgs args) => FitColumnsToWindow();
+
+    private void FitColumnsToWindow()
+    {
+        bool tagCloudShown = _viewModel.IsTagCloudShown;
+        double reserved = FolderSplitterColumn.ActualWidth + PreviewColumn.MinWidth
+            + (tagCloudShown ? DefaultTagCloudSplitterWidth : 0.0);
+        ColumnWidths widths = ColumnFit.Fit(
+            ColumnsGrid.ActualWidth,
+            reserved,
+            new ColumnWish(_wantedFolderColumnWidth, FolderColumn.MinWidth),
+            new ColumnWish(tagCloudShown ? _restoredTagCloudColumnWidth : 0.0, DefaultTagCloudMinWidth));
+        FolderColumn.Width = new GridLength(widths.Folder, GridUnitType.Pixel);
+        if (tagCloudShown)
+        {
+            TagCloudColumn.Width = new GridLength(widths.TagCloud, GridUnitType.Pixel);
+        }
+    }
+
+    private void ApplyTagCloudVisibility()
+    {
+        bool visible = _viewModel.IsTagCloudShown;
         TagCloudSplitterColumn.Width = visible
             ? new GridLength(DefaultTagCloudSplitterWidth, GridUnitType.Pixel)
             : new GridLength(0.0);
         TagCloudColumn.Width = visible
             ? new GridLength(_restoredTagCloudColumnWidth, GridUnitType.Pixel)
             : new GridLength(0.0);
-        // Die Mindestbreite schlägt die Breite: Ohne diese Zeile bleibt die Spalte trotz
-        // Breite 0 stehen. Beim Ausblenden blieb ein 180 px breiter leerer Streifen am
-        // rechten Rand, der im dunklen Erscheinungsbild hell aufleuchtete.
+        // Die Mindestbreite schlägt die Breite: Ohne diese Zeile bliebe die Spalte trotz
+        // Breite 0 stehen, als 180 Einheiten breiter leerer Streifen am rechten Rand, der im
+        // dunklen Erscheinungsbild hell aufleuchtet.
         TagCloudColumn.MinWidth = visible ? DefaultTagCloudMinWidth : 0.0;
         TagCloudSplitter.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         TagCloudHost.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        FitColumnsToWindow();
     }
-
 }

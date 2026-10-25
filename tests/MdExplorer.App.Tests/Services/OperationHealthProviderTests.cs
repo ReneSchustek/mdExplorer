@@ -1,30 +1,52 @@
+using MdExplorer.App.Localization;
 using MdExplorer.App.Logging;
 using MdExplorer.App.Services;
+using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.Tests.Services;
 
-/// <summary>Tests für den Health-Aggregator des MainWindow-LED.</summary>
+/// <summary>
+/// Die Betriebsanzeige im Hauptfenster zeigt den schwersten Zustand: Fehler vor Warnung vor
+/// Normalbetrieb. Nicht verarbeitbare Dateien zählen als Warnung mit Zahl und verdrängen einen
+/// gleichzeitigen Fehler nicht.
+/// </summary>
 public sealed class OperationHealthProviderTests
 {
     [Fact]
-    public void EmptyStore_ReportsHealthy()
+    public void Current_OnAnEmptyStore_ReportsHealthy()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        using OperationHealthProvider sut = new(store, failureStatus);
+        using OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
 
         Assert.Equal(OperationHealth.Healthy, sut.Current);
         Assert.Contains("normal", sut.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void OnError_ReportsErrorAndFiresChanged()
+    public void Current_WithAStoppedService_StaysOnErrorAndNamesIt()
+    {
+        FakeStore store = new();
+        BackgroundServiceStatus serviceStatus = new();
+        using OperationHealthProvider sut = new(store, new ParseFailureStatus(), serviceStatus);
+        int changes = 0;
+        sut.Changed += (_, _) => changes++;
+
+        serviceStatus.ReportStopped(BackgroundServiceKind.SearchIndex);
+
+        Assert.Equal(OperationHealth.Error, sut.Current);
+        Assert.Equal(UiText.Format("Health_ServiceStopped", UiText.Get("Health_Service_SearchIndex")), sut.Detail);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public void Current_AfterAnError_ReportsErrorAndFiresChanged()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        using OperationHealthProvider sut = new(store, failureStatus);
+        using OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
         int changedCount = 0;
         sut.Changed += (_, _) => changedCount++;
 
@@ -36,11 +58,11 @@ public sealed class OperationHealthProviderTests
     }
 
     [Fact]
-    public void OnWarning_OverridesHealthy()
+    public void Current_AfterAWarning_ReportsWarning()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        using OperationHealthProvider sut = new(store, failureStatus);
+        using OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
 
         store.Add(LogLevel.Warning, "Spike");
 
@@ -49,11 +71,11 @@ public sealed class OperationHealthProviderTests
     }
 
     [Fact]
-    public void ErrorBeatsWarning_InSameWindow()
+    public void Current_WithErrorAndWarningInTheWindow_ReportsError()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        using OperationHealthProvider sut = new(store, failureStatus);
+        using OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
 
         store.Add(LogLevel.Warning, "weiches Problem");
         store.Add(LogLevel.Error, "harter Fehler");
@@ -62,11 +84,11 @@ public sealed class OperationHealthProviderTests
     }
 
     [Fact]
-    public void OnUnparsableFiles_ReportsWarningWithCount()
+    public void Current_WithUnparsableFiles_ReportsWarningWithCount()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        using OperationHealthProvider sut = new(store, failureStatus);
+        using OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
 
         failureStatus.Update(3);
 
@@ -75,11 +97,11 @@ public sealed class OperationHealthProviderTests
     }
 
     [Fact]
-    public void OnSingleUnparsableFile_UsesSingularWording()
+    public void Detail_WithASingleUnparsableFile_UsesSingularWording()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        using OperationHealthProvider sut = new(store, failureStatus);
+        using OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
 
         failureStatus.Update(1);
 
@@ -88,11 +110,11 @@ public sealed class OperationHealthProviderTests
     }
 
     [Fact]
-    public void OnUnparsableFilesWithError_KeepsErrorAndNamesBoth()
+    public void Current_WithUnparsableFilesAndAnError_KeepsErrorAndNamesBoth()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        using OperationHealthProvider sut = new(store, failureStatus);
+        using OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
 
         store.Add(LogLevel.Error, "Boom");
         failureStatus.Update(2);
@@ -103,11 +125,11 @@ public sealed class OperationHealthProviderTests
     }
 
     [Fact]
-    public void OnUnparsableFilesResolved_ReturnsToHealthy()
+    public void Current_WhenUnparsableFilesAreResolved_ReturnsToHealthy()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        using OperationHealthProvider sut = new(store, failureStatus);
+        using OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
         failureStatus.Update(1);
 
         failureStatus.Update(0);
@@ -117,11 +139,11 @@ public sealed class OperationHealthProviderTests
     }
 
     [Fact]
-    public void AfterDispose_StatusChangeIsIgnored()
+    public void Dispose_ThenAStatusChange_IsIgnored()
     {
         FakeStore store = new();
         ParseFailureStatus failureStatus = new();
-        OperationHealthProvider sut = new(store, failureStatus);
+        OperationHealthProvider sut = new(store, failureStatus, new BackgroundServiceStatus());
         sut.Dispose();
 
         failureStatus.Update(5);
@@ -129,21 +151,100 @@ public sealed class OperationHealthProviderTests
         Assert.Equal(OperationHealth.Healthy, sut.Current);
     }
 
+    /// <remarks>
+    /// Das Fenster umfasst die jüngsten 200 Einträge. Mit 199 neueren Einträgen ist der Fehler
+    /// noch darin, mit 200 ist er hinausgeschoben, und die Anzeige wird wieder grün.
+    /// </remarks>
+    [Theory]
+    [InlineData(199, true)]
+    [InlineData(200, false)]
+    public void AnError_StaysUntilTwoHundredNewerEntriesPushItOut(int newerEntries, bool stillAnError)
+    {
+        FakeStore store = new();
+        using OperationHealthProvider sut = new(store, new ParseFailureStatus(), new BackgroundServiceStatus());
+
+        store.Add(LogLevel.Error, "Boom");
+        for (int i = 0; i < newerEntries; i++)
+        {
+            store.Add(LogLevel.Information, "läuft");
+        }
+
+        Assert.Equal(stillAnError ? OperationHealth.Error : OperationHealth.Healthy, sut.Current);
+    }
+
+    /// <remarks>
+    /// Zwei Threads protokollieren zugleich. Der erste hat seinen Ausschnitt gelesen, als noch
+    /// alles in Ordnung war, und wird erst fertig, nachdem der zweite den Fehler gemeldet hat.
+    /// Übernähme er seinen Stand danach, stünde die Anzeige auf grün, obwohl der Fehler im
+    /// Fenster liegt. Die 200 ms geben dem zweiten Thread Gelegenheit, ohne Sperre
+    /// durchzulaufen; mit Sperre wartet er, und der Test besteht unabhängig von der Last.
+    /// </remarks>
+    [Fact]
+    public async Task Current_WhenAnEarlierEvaluationFinishesLate_KeepsTheLaterOne()
+    {
+        FakeStore store = new();
+        using OperationHealthProvider sut = new(store, new ParseFailureStatus(), new BackgroundServiceStatus());
+        using ManualResetEventSlim release = new();
+        TaskCompletionSource firstReading = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.HoldNextSnapshot(firstReading, release);
+
+        Task early = Task.Run(() => store.Add(LogLevel.Information, "früh"), TestContext.Current.CancellationToken);
+        await firstReading.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Task late = Task.Run(() => store.Add(LogLevel.Error, "Boom"), TestContext.Current.CancellationToken);
+        _ = await Task.WhenAny(late, Task.Delay(200, TestContext.Current.CancellationToken)).ConfigureAwait(true);
+        release.Set();
+        await Task.WhenAll(early, late).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Equal(OperationHealth.Error, sut.Current);
+    }
+
+    /// <summary>Protokollspeicher ohne Obergrenze; jeder Eintrag meldet sich sofort.</summary>
     private sealed class FakeStore : IMemoryLogStore
     {
-        private readonly List<LogEntry> _entries = [];
+        // Fester Zeitpunkt: Die Betriebsanzeige wertet ihn nicht aus.
+        private static readonly DateTimeOffset Timestamp = new(2026, 10, 25, 12, 0, 0, TimeSpan.Zero);
 
+        private readonly List<LogEntry> _entries = [];
+        private readonly Lock _lock = new();
+        private HeldReading? _held;
+
+        // Die Betriebsanzeige liest die Kapazität nicht; der Wert erfüllt nur die Schnittstelle.
         public int Capacity => 1000;
 
         public event EventHandler<LogEntry>? EntryAdded;
 
         public void Add(LogLevel level, string message)
         {
-            LogEntry entry = new(DateTimeOffset.UtcNow, level, "Test", message, null);
-            _entries.Add(entry);
+            LogEntry entry = new(Timestamp, level, "Test", message, null);
+            lock (_lock)
+            {
+                _entries.Add(entry);
+            }
             EntryAdded?.Invoke(this, entry);
         }
 
-        public IReadOnlyList<LogEntry> Snapshot() => [.. _entries];
+        /// <summary>Hält den nächsten Leser nach dem Lesen an, bis <paramref name="release"/> gesetzt ist.</summary>
+        public void HoldNextSnapshot(TaskCompletionSource reading, ManualResetEventSlim release) =>
+            _held = new HeldReading(reading, release);
+
+        public IReadOnlyList<LogEntry> Snapshot()
+        {
+            List<LogEntry> copy;
+            lock (_lock)
+            {
+                copy = [.. _entries];
+            }
+
+            HeldReading? held = Interlocked.Exchange(ref _held, null);
+            if (held is not null)
+            {
+                held.Reading.SetResult();
+                _ = held.Release.Wait(TimeSpan.FromSeconds(5));
+            }
+            return copy;
+        }
+
+        /// <summary>Signal an den Test, dass gelesen wurde, und das Signal, das den Leser weiterlaufen lässt.</summary>
+        private sealed record HeldReading(TaskCompletionSource Reading, ManualResetEventSlim Release);
     }
 }

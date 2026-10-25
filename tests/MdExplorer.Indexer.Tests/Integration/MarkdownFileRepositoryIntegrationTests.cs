@@ -71,10 +71,10 @@ public sealed class MarkdownFileRepositoryIntegrationTests : IAsyncDisposable
         _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         MarkdownFile duplicate = NewFile(@"C:\Wurzel\a.md", "Hash-2");
-        duplicate.Id = Guid.NewGuid();
+        duplicate.Id = new Guid("a0000001-0000-0000-0000-000000000000");
         await _sut.AddAsync(duplicate, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = await Assert.ThrowsAsync<DbUpdateException>(
+        _ = await Assert.ThrowsAsync<DatabaseOperationException>(
             () => _sut.SaveChangesAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
@@ -101,10 +101,10 @@ public sealed class MarkdownFileRepositoryIntegrationTests : IAsyncDisposable
         _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         MarkdownFile duplicate = NewFile(@"C:\wurzel\datei.md", "Hash-2");
-        duplicate.Id = Guid.NewGuid();
+        duplicate.Id = new Guid("a0000002-0000-0000-0000-000000000000");
         await _sut.AddAsync(duplicate, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = await Assert.ThrowsAsync<DbUpdateException>(
+        _ = await Assert.ThrowsAsync<DatabaseOperationException>(
             () => _sut.SaveChangesAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
@@ -172,7 +172,7 @@ public sealed class MarkdownFileRepositoryIntegrationTests : IAsyncDisposable
 
         MarkdownDocument document = new()
         {
-            Id = Guid.NewGuid(),
+            Id = new Guid("a0000003-0000-0000-0000-000000000000"),
             MarkdownFileId = entity.Id,
             SourceContentHash = "doc-hash",
             FrontmatterJson = "{}",

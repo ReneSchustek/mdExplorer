@@ -3,17 +3,18 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
+using MdExplorer.Core.Abstractions;
 
 namespace MdExplorer.App.Converters;
 
 /// <summary>
-/// Wandelt einen FTS5-Snippet-String (mit <c>&lt;mark&gt;…&lt;/mark&gt;</c>-Markern)
+/// Wandelt einen FTS5-Snippet-String (Trefferstellen zwischen den <see cref="SnippetMarkers"/>)
 /// in ein <see cref="TextBlock"/> mit hervorgehobenen <see cref="Run"/>-Elementen.
 /// </summary>
 /// <remarks>
-/// Bewusst kein <see cref="IValueConverter"/>, das <see cref="InlineCollection"/> liefert:
-/// WPF erlaubt das Binding nur über <c>TextBlock</c>-Substitution. Diese Klasse implementiert
-/// <see cref="IValueConverter"/>, der direkt ein <see cref="TextBlock"/> baut.
+/// <see cref="TextBlock.Inlines"/> ist keine Abhängigkeitseigenschaft und lässt sich nicht binden.
+/// Der Konverter liefert deshalb gleich einen ganzen <see cref="TextBlock"/>, den die Trefferliste
+/// als Inhalt eines <c>ContentControl</c> einsetzt.
 /// </remarks>
 internal sealed class HighlightToInlinesConverter : IValueConverter
 {
@@ -23,8 +24,8 @@ internal sealed class HighlightToInlinesConverter : IValueConverter
     /// <summary>Schlüssel des Vordergrundpinsels der Trefferstelle in beiden Belegungen.</summary>
     public const string HighlightForegroundKey = "SearchHighlightForegroundBrush";
 
-    private const string OpenMark = "<mark>";
-    private const string CloseMark = "</mark>";
+    private const string OpenMark = SnippetMarkers.Open;
+    private const string CloseMark = SnippetMarkers.Close;
 
     /// <inheritdoc />
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -87,6 +88,8 @@ internal sealed class HighlightToInlinesConverter : IValueConverter
             }
             int contentStart = openIndex + OpenMark.Length;
             int closeIndex = snippet.IndexOf(CloseMark, contentStart, StringComparison.Ordinal);
+            // Ein Auszug ohne schließende Marke zeigt den Rest als gewöhnlichen Text, statt
+            // das Ende stillschweigend zu verschlucken.
             if (closeIndex < 0)
             {
                 yield return new Run(snippet[contentStart..]);

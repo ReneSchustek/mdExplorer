@@ -1,5 +1,6 @@
 using MdExplorer.Core.Models;
 using MdExplorer.Indexer.Models;
+using MdExplorer.Indexer.Tests.Fakes;
 
 namespace MdExplorer.Indexer.Tests.Services;
 
@@ -8,9 +9,14 @@ namespace MdExplorer.Indexer.Tests.Services;
 /// ohne verwertbaren Vorgängerpfad und Änderungsereignisse, die gar keine Änderung sind.
 /// Diese Pfade treten im Betrieb selten auf und brechen deshalb unbemerkt.
 /// </summary>
+/// <remarks>
+/// Eine negative Prüfung („schreibt nichts“) kommt erst nach dem Speichern des Stapels. Der
+/// Verbraucher speichert jeden Stapel, auch einen leeren; danach ist ein Schreibzugriff wirklich
+/// ausgeblieben und nicht bloß noch nicht passiert.
+/// </remarks>
 public sealed class MarkdownIndexerEdgeCaseTests
 {
-    private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
+    private const string Root = IndexerTestHarness.DefaultRoot;
     private static readonly DateTime FixedWrite = new(2026, 6, 7, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
@@ -19,12 +25,11 @@ public sealed class MarkdownIndexerEdgeCaseTests
         await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: []);
 
         await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await harness.Indexer.ExecuteTask!.WaitAsync(IndexerTestHarness.Patience, TestContext.Current.CancellationToken).ConfigureAwait(true); // gesetzt durch StartAsync
 
         // Ohne Wurzel gibt es nichts zu beobachten; der Dienst darf dann auch keinen
         // Beobachter anlegen, statt leer weiterzulaufen.
         Assert.Empty(harness.WatcherFactory.Watchers);
-
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -32,23 +37,12 @@ public sealed class MarkdownIndexerEdgeCaseTests
     {
         // Der leere Eintrag wird nachträglich gesetzt: Der Prüfstand legt für jede Wurzel ein
         // Verzeichnis an und käme mit einer leeren Angabe gar nicht erst zustande.
-        await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: [IndexerTestHarness.DefaultRoot]);
-        await harness.Settings.SaveAsync(
-            harness.Settings.Current with
-            {
-                Indexing = harness.Settings.Current.Indexing with
-                {
-                    Roots = ["   ", IndexerTestHarness.DefaultRoot],
-                },
-            },
-            TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await using IndexerTestHarness harness = IndexerTestHarness.Create();
+        await SetRootsAsync(harness, ["   ", Root]).ConfigureAwait(true);
 
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
 
         _ = Assert.Single(harness.WatcherFactory.Watchers);
-
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
     }
 
     [Fact]
@@ -56,101 +50,101 @@ public sealed class MarkdownIndexerEdgeCaseTests
     {
         // Die Wurzel steht in den Einstellungen, das Verzeichnis gibt es aber nicht, etwa
         // ein abgezogenes Netzlaufwerk. Der Indexer darf daran nicht scheitern.
-        await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: [IndexerTestHarness.DefaultRoot]);
-        await harness.Settings.SaveAsync(
-            harness.Settings.Current with
-            {
-                Indexing = harness.Settings.Current.Indexing with
-                {
-                    Roots = [IndexerTestHarness.DefaultRoot, @"C:\GibtEsNicht"],
-                },
-            },
-            TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await using IndexerTestHarness harness = IndexerTestHarness.Create();
+        await SetRootsAsync(harness, [Root, @"C:\GibtEsNicht"]).ConfigureAwait(true);
 
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
 
-        _ = Assert.Single(harness.WatcherFactory.Watchers);
-        Assert.Contains(IndexerTestHarness.DefaultRoot, harness.WatcherFactory.Watchers.Keys);
+        Assert.Equal([Root], harness.WatcherFactory.Watchers.Keys);
+    }
 
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+    [Fact]
+    public async Task ExecuteAsync_WhenTheWatcherOfOneRootCannotStart_StillIndexesAllRoots()
+    {
+        // Der Watcher eines Netzlaufwerks wirft beim Start. Das kostet die Live-Aktualisierung
+        // dieser Wurzel, nicht den Dienst: Erst-Scan und Abgleich laufen weiter.
+        FakeFileWatcherFactory factory = new();
+        _ = factory.FailingRoots.Add(@"C:\Netz");
+        await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: [Root, @"C:\Netz"], watcherFactory: factory);
+        harness.FileSystem.AddFile(@"C:\Netz\a.md", "Inhalt", FixedWrite);
+
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+
+        Assert.Contains(@"C:\Netz\a.md", harness.Store.Snapshot.Keys);
+        Assert.False(harness.Indexer.ExecuteTask!.IsCompleted, "Der Dienst muss weiterlaufen.");
+        Assert.True(harness.WatcherFor(@"C:\Netz").IsDisposed, "Der gescheiterte Watcher muss freigegeben sein.");
     }
 
     [Fact]
     public async Task OnRenameWithoutOldPath_TreatsItAsANewFile()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
 
-        harness.FileSystem.AddFile(@"C:\Wurzel\ohne-vorgaenger.md", "Inhalt", FixedWrite);
-        harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
-            new FileSystemEvent(FileSystemEventKind.Renamed, @"C:\Wurzel\ohne-vorgaenger.md", OldPath: null, IndexerTestHarness.DefaultRoot));
-        harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
+        harness.FileSystem.AddFile(@"C:\Wurzel\ohne-vorlage.md", "Inhalt", FixedWrite);
+        await harness.ProcessAsync(Renamed(@"C:\Wurzel\ohne-vorlage.md", oldPath: null)).ConfigureAwait(true);
 
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        Assert.Contains(@"C:\Wurzel\ohne-vorgaenger.md", harness.Repository.Snapshot.Keys);
-
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.Contains(@"C:\Wurzel\ohne-vorlage.md", harness.Store.Snapshot.Keys);
     }
 
     [Fact]
     public async Task OnRenameWithUnknownOldPath_TreatsItAsANewFile()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
 
         harness.FileSystem.AddFile(@"C:\Wurzel\ziel.md", "Inhalt", FixedWrite);
-        harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
-            new FileSystemEvent(FileSystemEventKind.Renamed, @"C:\Wurzel\ziel.md", @"C:\Wurzel\nie-indiziert.md", IndexerTestHarness.DefaultRoot));
-        harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
+        await harness.ProcessAsync(Renamed(@"C:\Wurzel\ziel.md", @"C:\Wurzel\nie-indiziert.md")).ConfigureAwait(true);
 
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        Assert.Contains(@"C:\Wurzel\ziel.md", harness.Repository.Snapshot.Keys);
-
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.Contains(@"C:\Wurzel\ziel.md", harness.Store.Snapshot.Keys);
     }
 
     [Fact]
-    public async Task OnRenameWhereTargetDoesNotExist_RemovesTheOldEntry()
+    public async Task OnRenameOutOfTheRoot_RemovesTheOldEntry()
     {
         // Umbenennung aus dem beobachteten Bereich heraus: Das Ziel liegt nicht mehr da,
         // wo der Indexer schaut. Der alte Eintrag muss verschwinden statt zu verwaisen.
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\alt.md", "Inhalt", FixedWrite);
-
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        Assert.Contains(@"C:\Wurzel\alt.md", harness.Repository.Snapshot.Keys);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
 
         harness.FileSystem.RemoveFile(@"C:\Wurzel\alt.md");
-        harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
-            new FileSystemEvent(FileSystemEventKind.Renamed, @"C:\Woanders\alt.md", @"C:\Wurzel\alt.md", IndexerTestHarness.DefaultRoot));
-        harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
+        harness.FileSystem.AddFile(@"C:\Woanders\alt.md", "Inhalt", FixedWrite);
+        await harness.ProcessAsync(Renamed(@"C:\Woanders\alt.md", @"C:\Wurzel\alt.md")).ConfigureAwait(true);
 
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        Assert.DoesNotContain(@"C:\Wurzel\alt.md", harness.Repository.Snapshot.Keys);
+        Assert.Empty(harness.Store.Snapshot);
+    }
 
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+    [Fact]
+    public async Task OnRenameIntoAnExistingEntry_ReplacesItWithoutADuplicate()
+    {
+        // Speichern über eine Umbenennung auf eine schon indizierte Datei: Der Eintrag der
+        // ersetzten Datei muss weichen, sonst stünde derselbe Pfad zweimal im Index.
+        await using IndexerTestHarness harness = IndexerTestHarness.Create();
+        harness.FileSystem.AddFile(@"C:\Wurzel\entwurf.md", "Neu", FixedWrite);
+        harness.FileSystem.AddFile(@"C:\Wurzel\ziel.md", "Alt", FixedWrite);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+        Guid draftId = harness.Store.Snapshot[@"C:\Wurzel\entwurf.md"].Id;
+
+        harness.FileSystem.RemoveFile(@"C:\Wurzel\entwurf.md");
+        harness.FileSystem.UpdateFile(@"C:\Wurzel\ziel.md", "Neu", FixedWrite.AddMinutes(1));
+        await harness.ProcessAsync(Renamed(@"C:\Wurzel\ziel.md", @"C:\Wurzel\entwurf.md")).ConfigureAwait(true);
+
+        MarkdownFile entry = Assert.Single(harness.Store.Snapshot.Values);
+        Assert.Equal(@"C:\Wurzel\ziel.md", entry.AbsolutePath);
+        Assert.Equal(draftId, entry.Id);
     }
 
     [Fact]
     public async Task OnChangeEventForMissingFile_DoesNotWrite()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        int vorher = harness.Repository.TotalWrites;
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+        int before = harness.Store.TotalWrites;
 
-        harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
-            new FileSystemEvent(FileSystemEventKind.Changed, @"C:\Wurzel\gibt-es-nicht.md", OldPath: null, IndexerTestHarness.DefaultRoot));
-        harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        await Task.Delay(100, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await harness.ProcessAsync(Changed(@"C:\Wurzel\gibt-es-nicht.md")).ConfigureAwait(true);
 
-        Assert.Equal(vorher, harness.Repository.TotalWrites);
-
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.Equal(before, harness.Store.TotalWrites);
     }
 
     [Fact]
@@ -160,19 +154,12 @@ public sealed class MarkdownIndexerEdgeCaseTests
         // beim Öffnen in einem Editor. Ein Schreibvorgang wäre hier reine Last.
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\gleichbleibend.md", "Immer gleich", FixedWrite);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+        int before = harness.Store.TotalWrites;
 
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        int vorher = harness.Repository.TotalWrites;
+        await harness.ProcessAsync(Changed(@"C:\Wurzel\gleichbleibend.md")).ConfigureAwait(true);
 
-        harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
-            new FileSystemEvent(FileSystemEventKind.Changed, @"C:\Wurzel\gleichbleibend.md", OldPath: null, IndexerTestHarness.DefaultRoot));
-        harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        await Task.Delay(100, TestContext.Current.CancellationToken).ConfigureAwait(true);
-
-        Assert.Equal(vorher, harness.Repository.TotalWrites);
-
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.Equal(before, harness.Store.TotalWrites);
     }
 
     [Fact]
@@ -181,41 +168,41 @@ public sealed class MarkdownIndexerEdgeCaseTests
         // Nur der Zeitstempel wandert (etwa durch ein Backup-Werkzeug), der Inhalt bleibt.
         // Der Eintrag muss aktualisiert werden, der Hash aber derselbe bleiben.
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        harness.FileSystem.AddFile(@"C:\Wurzel\beruehrt.md", "Gleicher Inhalt", FixedWrite);
+        harness.FileSystem.AddFile(@"C:\Wurzel\touched.md", "Gleicher Inhalt", FixedWrite);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+        string hashBefore = harness.Store.Snapshot[@"C:\Wurzel\touched.md"].ContentHash;
 
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        MarkdownFile vorher = harness.Repository.Snapshot[@"C:\Wurzel\beruehrt.md"];
-        string hashVorher = vorher.ContentHash;
+        harness.FileSystem.UpdateFile(@"C:\Wurzel\touched.md", "Gleicher Inhalt", FixedWrite.AddHours(1));
+        await harness.ProcessAsync(Changed(@"C:\Wurzel\touched.md")).ConfigureAwait(true);
 
-        harness.FileSystem.UpdateFile(@"C:\Wurzel\beruehrt.md", "Gleicher Inhalt", FixedWrite.AddHours(1));
-        harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
-            new FileSystemEvent(FileSystemEventKind.Changed, @"C:\Wurzel\beruehrt.md", OldPath: null, IndexerTestHarness.DefaultRoot));
-        harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-
-        MarkdownFile nachher = harness.Repository.Snapshot[@"C:\Wurzel\beruehrt.md"];
-        Assert.Equal(hashVorher, nachher.ContentHash, StringComparer.Ordinal);
-        Assert.Equal(FixedWrite.AddHours(1), nachher.LastWriteTimeUtc);
-
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        MarkdownFile after = harness.Store.Snapshot[@"C:\Wurzel\touched.md"];
+        Assert.Equal(hashBefore, after.ContentHash, StringComparer.Ordinal);
+        Assert.Equal(FixedWrite.AddHours(1), after.LastWriteTimeUtc);
     }
 
     [Fact]
     public async Task OnDeleteEventForUnknownFile_DoesNotWrite()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
-        await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await harness.Repository.WaitForNextSaveAsync(Timeout, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        int vorher = harness.Repository.TotalWrites;
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+        int before = harness.Store.TotalWrites;
 
-        harness.WatcherFor(IndexerTestHarness.DefaultRoot).TriggerEvent(
-            new FileSystemEvent(FileSystemEventKind.Deleted, @"C:\Wurzel\war-nie-da.md", OldPath: null, IndexerTestHarness.DefaultRoot));
-        harness.TimeProvider.Advance(TimeSpan.FromMilliseconds(300));
-        await Task.Delay(100, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await harness.ProcessAsync(new FileSystemEvent(FileSystemEventKind.Deleted, @"C:\Wurzel\war-nie-da.md", OldPath: null, Root)).ConfigureAwait(true);
 
-        Assert.Equal(vorher, harness.Repository.TotalWrites);
-
-        await harness.Indexer.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.Equal(before, harness.Store.TotalWrites);
     }
+
+    private static async Task SetRootsAsync(IndexerTestHarness harness, string[] roots) =>
+        await harness.Settings.SaveAsync(
+            harness.Settings.Current with
+            {
+                Indexing = harness.Settings.Current.Indexing with { Roots = roots },
+            },
+            TestContext.Current.CancellationToken).ConfigureAwait(false);
+
+    private static FileSystemEvent Changed(string path) =>
+        new(FileSystemEventKind.Changed, path, OldPath: null, Root);
+
+    private static FileSystemEvent Renamed(string path, string? oldPath) =>
+        new(FileSystemEventKind.Renamed, path, oldPath, Root);
 }

@@ -6,9 +6,8 @@ namespace MdExplorer.Graph.Services;
 /// <summary>
 /// Serialisiert einen <see cref="GraphSnapshot"/> in das vom JS-Frontend
 /// erwartete Format: <c>{ "nodes": [...], "edges": [...] }</c> mit
-/// camelCase-Property-Namen. Es wird absichtlich kein d3-spezifisches
-/// Format verwendet, das Frontend kann jede vanilla-Force-Implementierung
-/// damit füttern.
+/// camelCase-Property-Namen. Das Format hängt an keiner Grafik-Bibliothek; das Graph-Fenster
+/// rechnet sein Layout selbst und liest nur diese Felder.
 /// </summary>
 public static class GraphJsonBuilder
 {
@@ -30,9 +29,15 @@ public static class GraphJsonBuilder
         return JsonSerializer.Serialize(dto, JsonOptions);
     }
 
+    /// <summary>
+    /// Wurzel des JSON-Vertrags mit <c>graph.js</c>. Eigene Typen statt der Modelle, damit eine
+    /// Umbenennung im Modell nicht unbemerkt die Feldnamen ändert, die das Skript liest.
+    /// </summary>
     private sealed record GraphDto(IReadOnlyList<GraphNodeDto> Nodes, IReadOnlyList<GraphEdgeDto> Edges);
 
+    /// <summary>Ein Knoten, wie <c>graph.js</c> ihn liest.</summary>
     private sealed record GraphNodeDto(Guid Id, string Title, string RelativePath, int IncomingLinkCount);
 
+    /// <summary>Eine Kante, wie <c>graph.js</c> sie liest; Endpunkte ohne Knoten verwirft das Skript.</summary>
     private sealed record GraphEdgeDto(Guid SourceId, Guid TargetId);
 }

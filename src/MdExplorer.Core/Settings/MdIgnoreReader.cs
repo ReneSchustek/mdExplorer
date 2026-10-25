@@ -27,8 +27,8 @@ public sealed class MdIgnoreReader
 
     /// <summary>
     /// Versucht, im angegebenen Verzeichnis eine <c>.mdignore</c> zu lesen.
-    /// Liefert eine leere Liste, wenn die Datei nicht existiert; ungültige
-    /// Zeilen werden übersprungen.
+    /// Liefert eine leere Liste, wenn die Datei nicht existiert. Leer- und Kommentarzeilen
+    /// fallen weg; jede andere Zeile kommt ungeprüft als Muster zurück.
     /// </summary>
     public ReadOnlyCollection<string> Read(string directoryAbsolutePath)
     {

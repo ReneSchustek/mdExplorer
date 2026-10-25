@@ -7,7 +7,9 @@ using Microsoft.Extensions.Options;
 namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
-/// Tests für die Builder-Pfade des RegEx-Vorfilters und der Similarity-Modi.
+/// Der Ähnlichkeits-Builder macht aus einem regulären Ausdruck einen FTS5-Vorfilter über dessen
+/// Wortteile und aus einem Suchbegriff je nach Modus eine Stamm-, Nachbarschafts- oder
+/// Synonymsuche, begrenzt auf die eingestellte Zahl erweiterter Begriffe.
 /// </summary>
 public sealed class SimilarityQueryBuilderTests
 {
@@ -33,24 +35,26 @@ public sealed class SimilarityQueryBuilderTests
     }
 
     [Fact]
-    public void BuildRegexPrefilter_ExtractsWordTokensAsOrWithPrefixWildcards()
+    public void BuildRegexPrefilter_WithoutAGuaranteedWordStart_ReturnsEmptyPlan()
     {
+        // "foo" kann mitten im Wort stehen, "bar" hinter beliebigen Zeichen. Ein Vorfilter über
+        // beide verschwiege Treffer wie "Xfoo …bar".
         SimilarityQueryBuilder sut = NewBuilder();
 
         Fts5QueryPlan plan = sut.BuildRegexPrefilter("foo.*bar");
 
-        Assert.Equal("\"foo\"* OR \"bar\"*", plan.MatchExpression);
+        Assert.Equal(string.Empty, plan.MatchExpression);
     }
 
     [Fact]
-    public void BuildRegexPrefilter_PicksUpMultiCharWordRuns()
+    public void BuildRegexPrefilter_JoinsTheGuaranteedWordStartsWithAnd()
     {
+        // Das "b" aus "\b" ist eine Wortgrenze, kein Buchstabe; beide Wörter stehen in jedem Treffer.
         SimilarityQueryBuilder sut = NewBuilder();
 
-        // \bAPI\d{3}\s+Main\b: Word-Runs ≥ 2: "bAPI" (Backslash zählt nicht, b-A-P-I bilden den Run) und "Main".
         Fts5QueryPlan plan = sut.BuildRegexPrefilter(@"\bAPI\d{3}\s+Main\b");
 
-        Assert.Equal("\"bAPI\"* OR \"Main\"*", plan.MatchExpression);
+        Assert.Equal("\"API\"* AND \"Main\"*", plan.MatchExpression);
     }
 
     [Fact]
@@ -95,7 +99,7 @@ public sealed class SimilarityQueryBuilderTests
 
         Fts5QueryPlan plan = sut.BuildSimilarity("apfel", SimilarityMode.NearStem);
 
-        // Bei nur einem Term ist NEAR nicht definiert; wir produzieren reines OR-Match.
+        // Bei nur einem Begriff ergibt NEAR keinen Sinn; es bleibt bei der einfachen Suche.
         Assert.Equal("\"apfel\"*", plan.MatchExpression);
     }
 
@@ -129,6 +133,65 @@ public sealed class SimilarityQueryBuilderTests
         Assert.Equal(12, quoteCount);
     }
 
+    [Fact]
+    public void BuildSimilarity_WithAnExclusion_KeepsItExcluded()
+    {
+        // Ohne die gemeinsame Zerlegung wurde aus "-entwurf" ein weiteres Suchwort, und die
+        // Ähnlichkeitssuche brachte genau die Dokumente, die der Nutzer ausschließen wollte.
+        SimilarityQueryBuilder sut = NewBuilder();
+
+        Fts5QueryPlan plan = sut.BuildSimilarity("bericht -entwurf", SimilarityMode.Stemmed);
+
+        Assert.Equal("(\"bericht\"*) NOT \"entwurf\"", plan.MatchExpression);
+    }
+
+    [Fact]
+    public void BuildSimilarity_WithTagAndPathFilters_KeepsBothFilters()
+    {
+        SimilarityQueryBuilder sut = NewBuilder();
+
+        Fts5QueryPlan plan = sut.BuildSimilarity("berichte tag:projekt path:notizen", SimilarityMode.Stemmed);
+
+        Assert.Equal("(\"bericht\"*) AND Tags:\"projekt\"", plan.MatchExpression);
+        Assert.Equal("notizen", Assert.Single(plan.PathPrefixes));
+    }
+
+    [Fact]
+    public void BuildSimilarity_WithAPhrase_KeepsThePhraseExact()
+    {
+        SimilarityQueryBuilder sut = NewBuilder();
+
+        Fts5QueryPlan plan = sut.BuildSimilarity("\"rote äpfel\" birnen", SimilarityMode.Stemmed);
+
+        Assert.Equal("(\"birn\"*) AND \"rote äpfel\"", plan.MatchExpression);
+    }
+
+    [Fact]
+    public void BuildSimilarity_WithOnlyAnExclusion_ProducesNoQuery()
+    {
+        SimilarityQueryBuilder sut = NewBuilder();
+
+        Fts5QueryPlan plan = sut.BuildSimilarity("-entwurf", SimilarityMode.NearStem);
+
+        Assert.Equal(string.Empty, plan.MatchExpression);
+    }
+
+    [Fact]
+    public void BuildSimilarity_WithSynonymsSharingAStem_UsesTheStemOnce()
+    {
+        InlineSynonymProvider provider = new();
+        provider.Add("auto", ["wagen", "wages"]);
+        SimilarityQueryBuilder sut = NewBuilder(provider);
+
+        Fts5QueryPlan plan = sut.BuildSimilarity("auto", SimilarityMode.NearStemSynonyms);
+
+        Assert.Equal(1, CountOccurrences(plan.MatchExpression, "NEAR(\"auto\"* \"wag\"*"));
+        Assert.DoesNotContain("\"wag\"* \"wag\"*", plan.MatchExpression, StringComparison.Ordinal);
+    }
+
+    private static int CountOccurrences(string text, string part) =>
+        (text.Length - text.Replace(part, string.Empty, StringComparison.Ordinal).Length) / part.Length;
+
     private static SimilarityQueryBuilder NewBuilder(
         ISynonymProvider? provider = null,
         SearchOptions? options = null,
@@ -140,13 +203,14 @@ public sealed class SimilarityQueryBuilderTests
         return new SimilarityQueryBuilder(effectiveBase, effectiveProvider, wrappedOptions);
     }
 
+    /// <summary>Synonyme aus einer Tabelle im Test statt aus einer Datei.</summary>
     private sealed class InlineSynonymProvider : ISynonymProvider
     {
         private readonly Dictionary<string, string[]> _map = new(StringComparer.OrdinalIgnoreCase);
 
         public void Add(string key, string[] synonyms) => _map[key] = synonyms;
 
-        public IReadOnlyList<string> GetSynonyms(string lemma) =>
-            _map.TryGetValue(lemma, out string[]? hits) ? hits : [];
+        public IReadOnlyList<string> GetSynonyms(string stem) =>
+            _map.TryGetValue(stem, out string[]? hits) ? hits : [];
     }
 }

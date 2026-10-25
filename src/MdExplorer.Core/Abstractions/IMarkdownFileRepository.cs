@@ -17,13 +17,6 @@ public interface IMarkdownFileRepository
     /// <summary>Lädt alle Dateien unterhalb der angegebenen Wurzel.</summary>
     Task<IReadOnlyList<MarkdownFile>> GetAllUnderRootAsync(string rootAbsolutePath, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Sucht eine Datei anhand des Dateinamens ohne Erweiterung (Vergleich case-insensitive).
-    /// Liefert die <c>Id</c> der ersten in stabiler Reihenfolge gefundenen Datei oder
-    /// <see langword="null"/>, wenn keine existiert. Wird vom UI für die WikiLink-Auflösung verwendet.
-    /// </summary>
-    Task<Guid?> FindIdByFileNameAsync(string fileNameWithoutExtension, CancellationToken cancellationToken);
-
     /// <summary>Zählt alle Dateien im Index (Statusleiste in der UI).</summary>
     Task<int> CountAsync(CancellationToken cancellationToken);
 
@@ -48,11 +41,16 @@ public interface IMarkdownFileRepository
     /// Zeile zu schreiben.
     /// </para>
     /// <para>
-    /// Diese Methode geht den anderen Weg: Sie setzt die Löschung als Anweisung ab, portionsweise
-    /// und ohne Änderungsverfolgung. Was an den Einträgen hängt (Dokumente, Zuordnungen und der
-    /// Volltext), fällt über die Regeln der Datenbank mit weg; das ist dort hinterlegt und nicht
-    /// hier. Weil jede Portion für sich abgeschlossen wird, ist ein abgebrochener Durchgang kein
-    /// Schaden: Der nächste Abgleich holt den Rest.
+    /// Deshalb geht die Löschung hier als Anweisung an die Datenbank, portionsweise und ohne
+    /// Änderungsverfolgung. Dokumente, Schlagwort-Zuordnungen und Fehlschlag-Vermerke fallen über
+    /// den Cascade-Delete der Datenbank mit weg. Die Zeilen im Volltext-Index räumt der
+    /// Abgleich des Suchindex bei seinem nächsten Durchlauf ab. Weil jede Portion für sich
+    /// abgeschlossen wird, ist ein abgebrochener Durchgang kein Schaden: Der nächste Abgleich
+    /// holt den Rest.
+    /// </para>
+    /// <para>
+    /// Was der Kontext zu den entfernten Dateien noch verfolgt, ist danach gelöst; andere
+    /// vorgemerkte Änderungen im selben Kontext bleiben stehen.
     /// </para>
     /// </remarks>
     /// <param name="ids">Die Schlüssel der zu entfernenden Dateien.</param>

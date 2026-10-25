@@ -25,7 +25,6 @@ public static class SearchServiceCollectionExtensions
         _ = services.AddSingleton<ISimilarityQueryBuilder, SimilarityQueryBuilder>();
         _ = services.AddScoped<ISearchService, Fts5SearchService>();
         _ = services.AddSingleton<Fts5IndexMaintainer>();
-        _ = services.AddSingleton<ISearchIndexer>(sp => sp.GetRequiredService<Fts5IndexMaintainer>());
         _ = services.AddHostedService(sp => sp.GetRequiredService<Fts5IndexMaintainer>());
 
         return services;

@@ -1,5 +1,6 @@
-using System.Windows;
 using System.Windows.Input;
+using System.Windows;
+using MdExplorer.App.Localization;
 
 namespace MdExplorer.App.Controls;
 
@@ -45,7 +46,7 @@ internal sealed partial class EmptyState
         nameof(ResetLabel),
         typeof(string),
         typeof(EmptyState),
-        new PropertyMetadata("Suche zurücksetzen"));
+        new PropertyMetadata(UiText.Get("EmptyState_Reset")));
 
     /// <summary>Erzeugt den Leerzustand.</summary>
     public EmptyState()

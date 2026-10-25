@@ -2,19 +2,17 @@
              x:ClassModifier="internal"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:MdExplorer.App.Localization"
              xmlns:vm="clr-namespace:MdExplorer.App.ViewModels"
              d:DataContext="{d:DesignInstance Type=vm:DocumentPanelViewModel}"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-    <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
-    </UserControl.Resources>
     <DockPanel LastChildFill="True">
         <!--
             Mit eigener Fläche, nicht durchsichtig: Eine Leiste ohne Hintergrund zeigt, was
             zufällig dahinter liegt (hier der eingebettete Browser, der seine eigene weiße
-            Grundfarbe mitbringt und sie über die Leiste zog).
+            Grundfarbe mitbringt und sie über die Leiste zieht).
         -->
         <Border DockPanel.Dock="Top"
                 Background="{DynamicResource ToolBarBackgroundBrush}"
@@ -29,27 +27,26 @@
                 </Grid.ColumnDefinitions>
                 <ToggleButton Grid.Column="0"
                               x:Name="ModeToggle"
-                              Content="Bearbeiten"
+                              Content="{l:Loc Document_EditToggle}"
                               Padding="8,2"
-                              IsChecked="{Binding IsEditMode, Mode=OneWay}"
-                              Command="{Binding ToggleModeCommand}"
-                              ToolTip="Lese-/Bearbeiten-Modus umschalten (Strg+E)" />
+                              IsChecked="{Binding IsEditMode, Mode=TwoWay}"
+                              ToolTip="{l:Loc Document_EditToggle_ToolTip}" />
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
-                            Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}">
+                            Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}">
                     <Button Margin="6,0,0,0"
                             Padding="8,2"
-                            Content="✏️ Bearbeiten"
+                            Content="{l:Loc Document_EnterEdit}"
                             Command="{Binding Editor.EnterEditModeCommand}"
-                            Visibility="{Binding Editor.IsLocked, Converter={StaticResource BoolToVis}}"
-                            ToolTip="Bearbeiten-Modus aktivieren — danach können Änderungen gespeichert werden" />
+                            Visibility="{Binding Editor.IsLocked, Converter={StaticResource BoolToVisibility}}"
+                            ToolTip="{l:Loc Document_EnterEdit_ToolTip}" />
                     <Button Margin="6,0,0,0"
                             Padding="8,2"
-                            Content="👁 Anzeigen"
+                            Content="{l:Loc Document_ExitEdit}"
                             Command="{Binding Editor.ExitEditModeCommand}"
-                            ToolTip="Zurück in den Anzeigen-Modus">
+                            ToolTip="{l:Loc Document_ExitEdit_ToolTip}">
                         <Button.Style>
-                            <Style TargetType="Button">
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding Editor.IsLocked}" Value="False">
@@ -61,31 +58,33 @@
                     </Button>
                     <Button Margin="6,0,0,0"
                             Padding="8,2"
-                            Content="Speichern"
+                            Content="{l:Loc Document_Save}"
                             Command="{Binding SaveCommand}"
-                            ToolTip="Änderungen speichern (Strg+S)" />
+                            ToolTip="{l:Loc Document_Save_ToolTip}" />
                 </StackPanel>
                 <TextBlock Grid.Column="2"
                            Margin="12,0,0,0"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Text="{Binding Editor.StatusMessage, Mode=OneWay, FallbackValue=''}"
+                           AutomationProperties.LiveSetting="Polite"
                            TextTrimming="CharacterEllipsis" />
             </Grid>
         </Border>
         <Border DockPanel.Dock="Top"
-                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"
+                Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}"
                 BorderBrush="{DynamicResource DividerBrush}"
                 BorderThickness="0,0,0,1"
                 Padding="6,4">
             <DockPanel LastChildFill="True">
-                <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" Text="Tags:" Margin="0,0,6,0" FontWeight="SemiBold" />
+                <TextBlock x:Name="TagsLabel" DockPanel.Dock="Left" VerticalAlignment="Center" Text="{l:Loc Document_Tags_Label}" Margin="0,0,6,0" FontWeight="SemiBold" />
                 <TextBox DockPanel.Dock="Left"
+                         AutomationProperties.LabeledBy="{Binding ElementName=TagsLabel}"
                          Width="120"
                          VerticalAlignment="Center"
                          Margin="0,0,4,0"
                          Text="{Binding Editor.TagInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                         ToolTip="Neuen Tag eingeben und 'Hinzufügen' drücken">
+                         ToolTip="{l:Loc Document_NewTag_ToolTip}">
                     <TextBox.InputBindings>
                         <KeyBinding Key="Return" Command="{Binding Editor.AddTagCommand}" />
                     </TextBox.InputBindings>
@@ -96,8 +95,15 @@
                         Margin="0,0,12,0"
                         VerticalAlignment="Center"
                         Command="{Binding Editor.AddTagCommand}"
-                        ToolTip="Tag hinzufügen" />
+                        ToolTip="{l:Loc Document_AddTag_ToolTip}"
+                        AutomationProperties.Name="{l:Loc Document_AddTag_ToolTip}" />
                 <ItemsControl ItemsSource="{Binding Editor.Tags}">
+                    <!-- Ohne Namen hieße der Eintrag im Automatisierungsbaum nach seinem Datentyp. -->
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="AutomationProperties.Name" Value="{Binding}" />
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Horizontal" />
@@ -122,7 +128,8 @@
                                             VerticalAlignment="Center"
                                             Command="{Binding DataContext.Editor.RemoveTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}"
-                                            ToolTip="Tag entfernen" />
+                                            ToolTip="{l:Loc Document_RemoveTag_ToolTip}"
+                                            AutomationProperties.Name="{Binding StringFormat={l:Loc Document_RemoveTag_Name}}" />
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
@@ -144,8 +151,9 @@
                     BorderThickness="0,0,0,1"
                     Padding="6,4">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Center" Margin="0,0,6,0" Text="Suchen:" />
+                    <TextBlock x:Name="FindLabel" VerticalAlignment="Center" Margin="0,0,6,0" Text="{l:Loc Document_Find_Label}" />
                     <TextBox x:Name="FindInput"
+                             AutomationProperties.LabeledBy="{Binding ElementName=FindLabel}"
                              Width="220"
                              VerticalAlignment="Center"
                              KeyDown="OnFindInputKeyDown"
@@ -154,13 +162,16 @@
                             Padding="6,2"
                             Content="▼"
                             Click="OnFindNextClick"
-                            ToolTip="Nächster Treffer (Enter / F3)" />
+                            ToolTip="{l:Loc Document_FindNext_ToolTip}"
+                            AutomationProperties.Name="{l:Loc Document_FindNext_ToolTip}" />
                     <Button Margin="2,0,0,0"
                             Padding="6,2"
                             Content="▲"
                             Click="OnFindPreviousClick"
-                            ToolTip="Vorheriger Treffer (Shift+Enter / Shift+F3)" />
+                            ToolTip="{l:Loc Document_FindPrevious_ToolTip}"
+                            AutomationProperties.Name="{l:Loc Document_FindPrevious_ToolTip}" />
                     <TextBlock x:Name="FindStatus"
+                               AutomationProperties.LiveSetting="Polite"
                                VerticalAlignment="Center"
                                Margin="12,0,0,0"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -168,7 +179,8 @@
                             Padding="6,2"
                             Content="x"
                             Click="OnFindCloseClick"
-                            ToolTip="Suche schließen (Esc)" />
+                            ToolTip="{l:Loc Document_FindClose_ToolTip}"
+                            AutomationProperties.Name="{l:Loc Document_FindClose_ToolTip}" />
                 </StackPanel>
             </Border>
             <!--
@@ -178,12 +190,12 @@
             -->
             <Expander Grid.Row="2"
                       DataContext="{Binding Relations}"
-                      Header="Zusammenhänge"
+                      Header="{l:Loc Relations_Header}"
                       MaxHeight="220"
                       Background="{DynamicResource SurfaceBrush}"
                       BorderBrush="{DynamicResource DividerBrush}"
                       BorderThickness="0,1,0,0"
-                      Visibility="{Binding HasDocument, Converter={StaticResource BoolToVis}}">
+                      Visibility="{Binding HasDocument, Converter={StaticResource BoolToVisibility}}">
                 <!--
                     Eigene Fläche, wie die Leiste darüber: Ohne sie scheint der eingebettete
                     Browser mit seiner weißen Grundfarbe durch, und die helle Schrift steht
@@ -193,21 +205,32 @@
                               Padding="8,4"
                               Background="{DynamicResource SurfaceBrush}">
                     <StackPanel>
-                        <TextBlock Text="Wird ermittelt …"
+                        <TextBlock Text="{l:Loc Relations_Loading}"
                                    Style="{StaticResource SectionHeadingStyle}"
-                                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVis}}" />
+                                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
 
-                        <TextBlock Text="Dieses Dokument steht für sich — keine Verweise, keine Kennzeichnungen."
+                        <TextBlock Text="{l:Loc Relations_Empty}"
                                    TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextSecondaryBrush}"
-                                   Visibility="{Binding ShowsNothingRelated, Converter={StaticResource BoolToVis}}" />
+                                   Visibility="{Binding ShowsNothingRelated, Converter={StaticResource BoolToVisibility}}" />
 
-                        <StackPanel Visibility="{Binding ShowsRelations, Converter={StaticResource BoolToVis}}">
-                            <TextBlock Text="VERWEIST AUF"
+                        <TextBlock Text="{l:Loc Relations_Failed}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Visibility="{Binding ShowsFailure, Converter={StaticResource BoolToVisibility}}" />
+
+                        <StackPanel Visibility="{Binding ShowsRelations, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{l:Loc Relations_Outgoing}"
                                        Style="{StaticResource SectionHeadingStyle}"
                                        Margin="0,0,0,2"
-                                       Visibility="{Binding HasOutgoing, Converter={StaticResource BoolToVis}}" />
+                                       Visibility="{Binding HasOutgoing, Converter={StaticResource BoolToVisibility}}" />
                             <ItemsControl ItemsSource="{Binding Outgoing}">
+                                <!-- Ohne Namen hieße der Eintrag im Automatisierungsbaum nach seinem Datentyp. -->
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Button HorizontalAlignment="Left"
@@ -219,16 +242,22 @@
                                                 ToolTip="{Binding RelativePath}"
                                                 Command="{Binding DataContext.OpenRelatedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}"
-                                                AutomationProperties.Name="{Binding Title, StringFormat='{}{0} öffnen'}" />
+                                                AutomationProperties.Name="{Binding Title, StringFormat={l:Loc Document_Open_Format}}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <TextBlock Text="VERWIESEN VON"
+                            <TextBlock Text="{l:Loc Relations_Incoming}"
                                        Style="{StaticResource SectionHeadingStyle}"
                                        Margin="0,8,0,2"
-                                       Visibility="{Binding HasIncoming, Converter={StaticResource BoolToVis}}" />
+                                       Visibility="{Binding HasIncoming, Converter={StaticResource BoolToVisibility}}" />
                             <ItemsControl ItemsSource="{Binding Incoming}">
+                                <!-- Ohne Namen hieße der Eintrag im Automatisierungsbaum nach seinem Datentyp. -->
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Button HorizontalAlignment="Left"
@@ -240,12 +269,12 @@
                                                 ToolTip="{Binding RelativePath}"
                                                 Command="{Binding DataContext.OpenRelatedCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}"
-                                                AutomationProperties.Name="{Binding Title, StringFormat='{}{0} öffnen'}" />
+                                                AutomationProperties.Name="{Binding Title, StringFormat={l:Loc Document_Open_Format}}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <TextBlock Text="ORDNER" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
+                            <TextBlock Text="{l:Loc Relations_Folder}" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
                             <Button HorizontalAlignment="Left"
                                     HorizontalContentAlignment="Left"
                                     Background="Transparent"
@@ -253,45 +282,56 @@
                                     Padding="0,1"
                                     Content="{Binding FolderPath}"
                                     Command="{Binding ShowFolderCommand}"
-                                    ToolTip="Zeigt, was sonst noch in diesem Ordner liegt"
-                                    AutomationProperties.Name="Ordner anzeigen" />
+                                    ToolTip="{l:Loc Relations_ShowFolder_ToolTip}"
+                                    AutomationProperties.Name="{l:Loc Relations_ShowFolder_Name}" />
 
                             <!--
                                 Bearbeiten geschieht im Zusammenhang: Wer zum Umbenennen erst
                                 in eine Verwaltungsseite wechseln muss, verliert genau den
                                 Zusammenhang, den er vor sich hatte.
                             -->
-                            <TextBlock Text="DIESE DATEI" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
+                            <TextBlock Text="{l:Loc Relations_ThisFile}" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
                             <StackPanel Orientation="Horizontal">
                                 <TextBox Width="180"
                                          VerticalAlignment="Center"
-                                         Text="{Binding NewName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         ToolTip="Neuer Dateiname — die Erweiterung .md wird ergänzt"
-                                         AutomationProperties.Name="Neuer Dateiname">
+                                         Text="{Binding FileActions.NewName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="{l:Loc Relations_NewName_ToolTip}"
+                                         AutomationProperties.Name="{l:Loc Relations_NewName_Name}">
                                     <TextBox.InputBindings>
-                                        <KeyBinding Key="Return" Command="{Binding RenameCommand}" />
+                                        <KeyBinding Key="Return" Command="{Binding FileActions.RenameCommand}" />
                                     </TextBox.InputBindings>
                                 </TextBox>
                                 <Button Margin="4,0,0,0"
-                                        Content="Umbenennen"
-                                        Command="{Binding RenameCommand}"
-                                        ToolTip="Benennt die Datei um; der Ordner bleibt derselbe" />
+                                        Content="{l:Loc Relations_Rename}"
+                                        Command="{Binding FileActions.RenameCommand}"
+                                        ToolTip="{l:Loc Relations_Rename_ToolTip}" />
                                 <Button Margin="4,0,0,0"
-                                        Content="Verschieben …"
-                                        Command="{Binding MoveCommand}"
-                                        ToolTip="Verschiebt die Datei in ein anderes Verzeichnis" />
+                                        Content="{l:Loc Relations_Move}"
+                                        Command="{Binding FileActions.MoveCommand}"
+                                        ToolTip="{l:Loc Relations_Move_ToolTip}" />
                                 <Button Margin="4,0,0,0"
-                                        Content="Löschen …"
-                                        Command="{Binding DeleteCommand}"
-                                        ToolTip="Löscht die Datei — die Rückfrage nennt vorher die Folgen" />
+                                        Content="{l:Loc Relations_Delete}"
+                                        Command="{Binding FileActions.DeleteCommand}"
+                                        ToolTip="{l:Loc Relations_Delete_ToolTip}" />
                             </StackPanel>
-                            <TextBlock Text="{Binding OperationMessage}"
+                            <TextBlock Text="{l:Loc Relations_NewName_Invalid}"
+                                       Margin="0,4,0,0"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       Visibility="{Binding FileActions.ShowsInvalidName, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{Binding FileActions.OperationMessage}"
                                        Margin="0,4,0,0"
                                        TextWrapping="Wrap"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
 
-                            <TextBlock Text="KENNZEICHNUNGEN" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
+                            <TextBlock Text="{l:Loc Relations_Tags}" Style="{StaticResource SectionHeadingStyle}" Margin="0,8,0,2" />
                             <ItemsControl ItemsSource="{Binding Tags}">
+                                <!-- Ohne Namen hieße der Eintrag im Automatisierungsbaum nach seinem Datentyp. -->
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel />
@@ -309,8 +349,8 @@
                                                 FontSize="{StaticResource FontSizeCaption}"
                                                 Command="{Binding DataContext.ShowTagCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                 CommandParameter="{Binding}"
-                                                ToolTip="{Binding StringFormat='Zeigt, was sonst noch {0} trägt'}"
-                                                AutomationProperties.Name="{Binding StringFormat='Kennzeichnung {0} anzeigen'}" />
+                                                ToolTip="{Binding StringFormat={l:Loc Document_Tag_ToolTip}}"
+                                                AutomationProperties.Name="{Binding StringFormat={l:Loc Document_Tag_Name}}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -321,9 +361,10 @@
 
             <Grid Grid.Row="1">
                 <ContentControl x:Name="PreviewHost"
-                                Visibility="{Binding IsReadMode, Converter={StaticResource BoolToVis}}" />
+                                Visibility="{Binding IsReadMode, Converter={StaticResource BoolToVisibility}}" />
                 <TextBox x:Name="EditorTextBox"
-                         Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVis}}"
+                         AutomationProperties.Name="{l:Loc Document_Editor_Name}"
+                         Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}"
                          FontFamily="Consolas, Courier New, monospace"
                          FontSize="13"
                          AcceptsReturn="True"

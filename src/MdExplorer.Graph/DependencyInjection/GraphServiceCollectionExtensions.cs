@@ -11,10 +11,11 @@ namespace MdExplorer.Graph.DependencyInjection;
 public static class GraphServiceCollectionExtensions
 {
     /// <summary>
-    /// Registriert <see cref="IGraphService"/>. <see cref="GraphJsonBuilder"/> ist eine
+    /// Registriert <see cref="IGraphService"/> und <see cref="IWikiLinkResolver"/>, beide über
+    /// dieselbe <see cref="GraphService"/>-Instanz je Scope. <see cref="GraphJsonBuilder"/> ist eine
     /// statische Utility-Klasse und benötigt keine DI-Registrierung. Erwartet, dass
     /// <see cref="IGraphSourceProvider"/> bereits aus der Data-Schicht registriert ist und
-    /// ein <c>ITagNormalizer</c> aus dem Parser-Modul aufgelöst werden kann.
+    /// ein <see cref="ITagNormalizer"/> (Umsetzung im Parser-Modul) aufgelöst werden kann.
     /// </summary>
     /// <param name="services">Service-Sammlung, in die das Graph-Modul registriert wird.</param>
     /// <returns>Die übergebene <paramref name="services"/>-Instanz zur Methoden-Verkettung.</returns>
@@ -22,7 +23,9 @@ public static class GraphServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        _ = services.AddScoped<IGraphService, GraphService>();
+        _ = services.AddScoped<GraphService>();
+        _ = services.AddScoped<IGraphService>(provider => provider.GetRequiredService<GraphService>());
+        _ = services.AddScoped<IWikiLinkResolver>(provider => provider.GetRequiredService<GraphService>());
 
         return services;
     }

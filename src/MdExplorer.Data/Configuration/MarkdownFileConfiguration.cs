@@ -31,8 +31,11 @@ public sealed class MarkdownFileConfiguration : IEntityTypeConfiguration<Markdow
 
         // NOCASE-Collation: Windows-Dateipfade sind case-insensitiv. Damit vergleicht der
         // Unique-Index und GetByAbsolutePathAsync (== auf der Spalte) groß-/kleinschreibungs-
-        // unabhängig. Das verhindert Duplikat-Inserts bei abweichender Casing und hält den
-        // Abgleich konsistent zum case-insensitiven Tombstone-Vergleich im Indexer.
+        // unabhängig, und eine abweichende Schreibweise legt keinen zweiten Eintrag an.
+        // NOCASE faltet allerdings nur die ASCII-Buchstaben: "Ä" und "ä" bleiben verschieden,
+        // während der Indexer Pfade mit OrdinalIgnoreCase vergleicht und sie gleichsetzt. Damit
+        // dieselbe Datei nicht unter zwei Schreibweisen ankommt, bringt der Indexer jede Wurzel
+        // auf die Schreibweise der Platte (RootPathCasing im Indexer).
         _ = builder.Property(file => file.AbsolutePath)
             .IsRequired()
             .HasMaxLength(PathMaxLength)

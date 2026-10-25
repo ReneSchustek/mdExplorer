@@ -14,6 +14,9 @@ public sealed class AboutViewModelTests
     private static readonly TimeZoneInfo TestZone =
         TimeZoneInfo.CreateCustomTimeZone("MdExplorer-TestZone", TimeSpan.FromHours(2), "TestZone", "TestZone");
 
+    /// <summary>Fester Bauzeitpunkt, damit kein Test von der Wanduhr abhängt.</summary>
+    private static readonly DateTime BuildTime = new(2026, 10, 24, 9, 30, 0, DateTimeKind.Utc);
+
     [Fact]
     public void Constructor_WithoutProvider_Throws() =>
         Assert.Throws<ArgumentNullException>(() => new AboutViewModel(null!, new StubTimeProvider(TestZone)));
@@ -51,8 +54,8 @@ public sealed class AboutViewModelTests
     [Fact]
     public void Constructor_KeepsLibraryListAsProvided()
     {
-        LibraryInfo[] bibliotheken = [new("Alpha", "MIT"), new("Beta", "Apache-2.0")];
-        StubAboutInfoProvider provider = new("1.0.0", DateTime.UtcNow, bibliotheken);
+        LibraryInfo[] libraries = [new("Alpha", "MIT"), new("Beta", "Apache-2.0")];
+        StubAboutInfoProvider provider = new("1.0.0", BuildTime, libraries);
 
         AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
@@ -64,7 +67,7 @@ public sealed class AboutViewModelTests
     [Fact]
     public void Constructor_ReadsFromProviderExactlyOnce()
     {
-        StubAboutInfoProvider provider = new("1.0.0", DateTime.UtcNow);
+        StubAboutInfoProvider provider = new("1.0.0", BuildTime);
 
         AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
@@ -78,7 +81,7 @@ public sealed class AboutViewModelTests
     [Fact]
     public void DonationVisibility_MatchesTheConfiguredState()
     {
-        StubAboutInfoProvider provider = new("1.0.0", DateTime.UtcNow);
+        StubAboutInfoProvider provider = new("1.0.0", BuildTime);
 
         AboutViewModel sut = new(provider, new StubTimeProvider(TestZone));
 
@@ -96,7 +99,7 @@ public sealed class AboutViewModelTests
     public void BuildDateDisplay_IsIndependentOfTheCurrentCulture()
     {
         StubAboutInfoProvider provider = new("1.0.0", new DateTime(2026, 12, 24, 18, 5, 0, DateTimeKind.Utc));
-        CultureInfo vorher = CultureInfo.CurrentCulture;
+        CultureInfo before = CultureInfo.CurrentCulture;
         try
         {
             CultureInfo.CurrentCulture = new CultureInfo("ar-SA");
@@ -105,10 +108,11 @@ public sealed class AboutViewModelTests
         }
         finally
         {
-            CultureInfo.CurrentCulture = vorher;
+            CultureInfo.CurrentCulture = before;
         }
     }
 
+    /// <summary>Liefert feste Angaben und zählt, wie oft sie abgefragt werden.</summary>
     private sealed class StubAboutInfoProvider(string version, DateTime buildDateUtc, IReadOnlyList<LibraryInfo>? libraries = null)
         : IAboutInfoProvider
     {
@@ -121,6 +125,7 @@ public sealed class AboutViewModelTests
         }
     }
 
+    /// <summary>Feste Ortszeitzone, damit das Ergebnis nicht vom Prüfrechner abhängt.</summary>
     private sealed class StubTimeProvider(TimeZoneInfo zone) : TimeProvider
     {
         public override TimeZoneInfo LocalTimeZone => zone;

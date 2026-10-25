@@ -12,7 +12,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace MdExplorer.App.Tests.ViewModels;
 
 /// <summary>
-/// Tests für den Zusammenhangs-Bereich am geöffneten Dokument.
+/// Der Zusammenhangs-Bereich am geöffneten Dokument zeigt Links in beide Richtungen, Ordner
+/// und Schlagwörter und nennt vor dem Löschen oder Umbenennen, wie viele Verweise brechen.
 /// </summary>
 /// <remarks>
 /// Geprüft wird vor allem, dass jeder Eintrag ein Weg ist: Ein Klick meldet, wohin es gehen
@@ -137,181 +138,85 @@ public sealed class DocumentRelationsViewModelTests
         Assert.Empty(sut.FolderPath);
     }
 
-    [Fact]
-    public async Task WhenTheLookupFails_TheAreaSaysSoInsteadOfClaimingNoRelations()
+    [Theory]
+    [InlineData(TestFailures.Database)]
+    [InlineData(TestFailures.InvalidState)]
+    public async Task WhenTheLookupFails_TheAreaSaysSoInsteadOfClaimingNoRelations(string kind)
     {
-        using ServiceProvider provider = BuildProvider(new FailingGraphService(), new FakeMarkdownFileRepository());
+        using ServiceProvider provider = BuildProvider(new FailingGraphService(TestFailures.Of(kind)), new FakeMarkdownFileRepository());
         DocumentRelationsViewModel sut = Create(provider);
 
         await sut.LoadAsync(OpenId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
 
+        Assert.True(sut.ShowsFailure);
+        Assert.False(sut.IsLoading);
         Assert.False(sut.ShowsNothingRelated);
         Assert.False(sut.ShowsRelations);
         Assert.True(sut.HasDocument);
     }
 
     [Fact]
-    public async Task DeleteCommand_NamesTheConsequencesBeforeTheClick()
+    public async Task WhenTheNextLookupFails_TheFileCommandsNoLongerActOnThePreviousFile()
     {
-        RecordingDocumentFileService fileService = new() { Impact = new DocumentImpact("Offen", 3) };
-        FakeDialogService dialog = new() { ConfirmResult = false };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, dialog).ConfigureAwait(true);
-
-        await sut.DeleteCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Contains("3 Dokumente verweisen darauf", dialog.LastConfirmMessage, StringComparison.Ordinal);
-        // Abgelehnt heißt abgelehnt: Es darf nichts passiert sein.
-        Assert.False(fileService.DeleteCalled);
-    }
-
-    [Fact]
-    public async Task DeleteCommand_WithoutIncomingLinks_SaysSoPlainly()
-    {
-        RecordingDocumentFileService fileService = new() { Impact = new DocumentImpact("Offen", 0) };
-        FakeDialogService dialog = new() { ConfirmResult = true };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, dialog).ConfigureAwait(true);
-
-        await sut.DeleteCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Contains("Kein anderes Dokument verweist darauf", dialog.LastConfirmMessage, StringComparison.Ordinal);
-        Assert.True(fileService.DeleteCalled);
-    }
-
-    [Fact]
-    public async Task DeleteCommand_WithASingleIncomingLink_UsesTheSingular()
-    {
-        RecordingDocumentFileService fileService = new() { Impact = new DocumentImpact("Offen", 1) };
-        FakeDialogService dialog = new() { ConfirmResult = false };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, dialog).ConfigureAwait(true);
-
-        await sut.DeleteCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Contains("Ein Dokument verweist darauf", dialog.LastConfirmMessage, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task RenameCommand_PassesTheTypedNameAndReportsTheOutcome()
-    {
-        RecordingDocumentFileService fileService = new();
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, new FakeDialogService()).ConfigureAwait(true);
-        string? changedTo = "unverändert";
-        sut.DocumentChanged += path => changedTo = path;
-
-        sut.NewName = "Neuer Name";
-        await sut.RenameCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Equal("Neuer Name", fileService.RenamedTo);
-        Assert.Equal("Erledigt.", sut.OperationMessage);
-        Assert.Equal(@"C:\notes\Neu.md", changedTo);
-    }
-
-    [Fact]
-    public async Task RenameCommand_WithIncomingLinks_AsksBeforeBreakingThem()
-    {
-        // Ein WikiLink zeigt auf den Dateinamen; beim Umbenennen bricht er, beim
-        // Verschieben nicht. Genau darum wird hier gefragt und beim Verschieben nicht.
-        RecordingDocumentFileService fileService = new() { Impact = new DocumentImpact("Offen", 2) };
-        FakeDialogService dialog = new() { ConfirmResult = false };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, dialog).ConfigureAwait(true);
-
-        sut.NewName = "Anders";
-        await sut.RenameCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Contains("2 Dokumente verweisen auf den bisherigen Namen", dialog.LastConfirmMessage, StringComparison.Ordinal);
-        Assert.Null(fileService.RenamedTo);
-    }
-
-    [Fact]
-    public async Task RenameCommand_WithoutIncomingLinks_AsksNothing()
-    {
-        RecordingDocumentFileService fileService = new() { Impact = new DocumentImpact("Offen", 0) };
-        FakeDialogService dialog = new() { ConfirmResult = false };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, dialog).ConfigureAwait(true);
-
-        sut.NewName = "Anders";
-        await sut.RenameCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Empty(dialog.LastConfirmMessage);
-        Assert.Equal("Anders", fileService.RenamedTo);
-    }
-
-    [Fact]
-    public async Task MoveCommand_AsksNothing_BecauseLinksSurviveAMove()
-    {
-        RecordingDocumentFileService fileService = new() { Impact = new DocumentImpact("Offen", 5) };
-        FakeDialogService dialog = new() { DirectoryToReturn = @"C:\ziel", ConfirmResult = false };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, dialog).ConfigureAwait(true);
-
-        await sut.MoveCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Empty(dialog.LastConfirmMessage);
-        Assert.Equal(@"C:\ziel", fileService.MovedTo);
-    }
-
-    [Fact]
-    public async Task RenameCommand_StaysDisabledWithoutAName()
-    {
-        DocumentRelationsViewModel sut = await LoadedAsync(new RecordingDocumentFileService(), new FakeDialogService()).ConfigureAwait(true);
-
-        sut.NewName = "   ";
-
-        Assert.False(sut.RenameCommand.CanExecute(null));
-    }
-
-    [Fact]
-    public async Task MoveCommand_WhenTheDialogIsCancelled_DoesNothing()
-    {
-        RecordingDocumentFileService fileService = new();
-        FakeDialogService dialog = new() { DirectoryToReturn = null };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, dialog).ConfigureAwait(true);
-
-        await sut.MoveCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Null(fileService.MovedTo);
-        Assert.Empty(sut.OperationMessage);
-    }
-
-    [Fact]
-    public async Task MoveCommand_PassesTheChosenDirectory()
-    {
-        RecordingDocumentFileService fileService = new();
-        FakeDialogService dialog = new() { DirectoryToReturn = @"C:\ziel" };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, dialog).ConfigureAwait(true);
-
-        await sut.MoveCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Equal(@"C:\ziel", fileService.MovedTo);
-    }
-
-    [Fact]
-    public async Task WhenAnOperationFails_TheMessageIsShownAndNothingFollows()
-    {
-        RecordingDocumentFileService fileService = new()
-        {
-            Result = DocumentFileResult.Failed("Die Datei ließ sich nicht umbenennen: Zugriff verweigert"),
-        };
-        DocumentRelationsViewModel sut = await LoadedAsync(fileService, new FakeDialogService()).ConfigureAwait(true);
-        bool followed = false;
-        sut.DocumentChanged += _ => followed = true;
-
-        sut.NewName = "Neu";
-        await sut.RenameCommand.ExecuteAsync(null).ConfigureAwait(true);
-
-        Assert.Contains("Zugriff verweigert", sut.OperationMessage, StringComparison.Ordinal);
-        Assert.False(followed);
-    }
-
-    private static async Task<DocumentRelationsViewModel> LoadedAsync(
-        IDocumentFileService fileService,
-        IDialogService dialogService)
-    {
+        // Die Befehle hingen an der Kennung des zuletzt geladenen Dokuments. Nach einem
+        // Fehlschlag beim nächsten hätten Umbenennen und Löschen das vorige getroffen.
+        SwitchableGraphService graph = new();
         FakeMarkdownFileRepository files = new();
         files.Add(FileWith(OpenId, "notizen/Offen.md"));
-        ServiceProvider provider = BuildProvider(new FakeGraphService(DocumentRelations.Empty), files);
-        DocumentRelationsViewModel viewModel = Create(provider, fileService, dialogService);
-        await viewModel.LoadAsync(OpenId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
+        using ServiceProvider provider = BuildProvider(graph, files);
+        DocumentRelationsViewModel sut = Create(provider);
+        await sut.LoadAsync(OpenId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
+        sut.FileActions.NewName = "Neu";
 
-        return viewModel;
+        graph.Failure = new TestDbException("database is locked");
+        await sut.LoadAsync(TargetId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.False(sut.FileActions.RenameCommand.CanExecute(null));
+        Assert.False(sut.FileActions.MoveCommand.CanExecute(null));
+        Assert.False(sut.FileActions.DeleteCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task WhileLoading_TheFileCommandsAreDisabled()
+    {
+        SwitchableGraphService graph = new();
+        FakeMarkdownFileRepository files = new();
+        files.Add(FileWith(OpenId, "notizen/Offen.md"));
+        using ServiceProvider provider = BuildProvider(graph, files);
+        DocumentRelationsViewModel sut = Create(provider);
+        await sut.LoadAsync(OpenId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
+        sut.FileActions.NewName = "Neu";
+
+        graph.Pending = new TaskCompletionSource<DocumentRelations>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task loading = sut.LoadAsync(TargetId, [], TestContext.Current.CancellationToken);
+
+        Assert.True(sut.IsLoading);
+        Assert.False(sut.FileActions.RenameCommand.CanExecute(null));
+        Assert.False(sut.FileActions.MoveCommand.CanExecute(null));
+        Assert.False(sut.FileActions.DeleteCommand.CanExecute(null));
+
+        graph.Pending.SetResult(DocumentRelations.Empty);
+        await loading.ConfigureAwait(true);
+    }
+
+    [Fact]
+    public async Task WhenLoadingIsCancelled_TheAreaDoesNotKeepSayingItIsLoading()
+    {
+        SwitchableGraphService graph = new()
+        {
+            Pending = new TaskCompletionSource<DocumentRelations>(TaskCreationOptions.RunContinuationsAsynchronously),
+        };
+        using ServiceProvider provider = BuildProvider(graph, new FakeMarkdownFileRepository());
+        DocumentRelationsViewModel sut = Create(provider);
+        using CancellationTokenSource cancellation = new();
+
+        Task loading = sut.LoadAsync(OpenId, [], cancellation.Token);
+        await cancellation.CancelAsync().ConfigureAwait(true);
+        graph.Pending.SetCanceled(cancellation.Token);
+        await loading.ConfigureAwait(true);
+
+        Assert.False(sut.IsLoading);
+        Assert.True(sut.ShowsNoDocument);
     }
 
     private static MarkdownFile FileWith(Guid id, string relativePath) => new()
@@ -324,16 +229,11 @@ public sealed class DocumentRelationsViewModelTests
     };
 
     private static DocumentRelationsViewModel Create(ServiceProvider provider) =>
-        Create(provider, new RecordingDocumentFileService(), new FakeDialogService());
-
-    private static DocumentRelationsViewModel Create(
-        ServiceProvider provider,
-        IDocumentFileService fileService,
-        IDialogService dialogService) =>
         new(
             provider.GetRequiredService<IServiceScopeFactory>(),
-            fileService,
-            dialogService,
+            new RecordingDocumentFileService(),
+            new FakeDialogService(),
+            new StubUnsavedChangesGuard(),
             NullLogger<DocumentRelationsViewModel>.Instance);
 
     private static ServiceProvider BuildProvider(IGraphService graph, IMarkdownFileRepository files)
@@ -344,6 +244,7 @@ public sealed class DocumentRelationsViewModelTests
         return services.BuildServiceProvider(validateScopes: true);
     }
 
+    /// <summary>Liefert vorgegebene Verbindungen des Dokuments.</summary>
     private sealed class FakeGraphService(DocumentRelations relations) : IGraphService
     {
         public Task<GraphSnapshot> BuildSnapshotAsync(GraphFilter filter, CancellationToken cancellationToken) =>
@@ -353,13 +254,36 @@ public sealed class DocumentRelationsViewModelTests
             Task.FromResult(relations);
     }
 
-    /// <summary>Ein Graph, der nicht antwortet, die Lage, die wie „nichts verknüpft" aussieht.</summary>
-    private sealed class FailingGraphService : IGraphService
+    /// <summary>
+    /// Ein Graph, der nicht antwortet. Ohne eigene Meldung sähe das aus wie ein Dokument ohne
+    /// Verknüpfungen.
+    /// </summary>
+    private sealed class FailingGraphService(Exception failure) : IGraphService
     {
         public Task<GraphSnapshot> BuildSnapshotAsync(GraphFilter filter, CancellationToken cancellationToken) =>
             Task.FromResult(GraphSnapshot.Empty);
 
         public Task<DocumentRelations> GetRelationsAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
-            throw new InvalidOperationException("Der Index ist nicht ansprechbar.");
+            Task.FromException<DocumentRelations>(failure);
+    }
+
+    /// <summary>Ein Graph, dessen nächste Antwort der Test bestimmt: gleich, später oder als Fehler.</summary>
+    private sealed class SwitchableGraphService : IGraphService
+    {
+        public Exception? Failure { get; set; }
+
+        public TaskCompletionSource<DocumentRelations>? Pending { get; set; }
+
+        public Task<GraphSnapshot> BuildSnapshotAsync(GraphFilter filter, CancellationToken cancellationToken) =>
+            Task.FromResult(GraphSnapshot.Empty);
+
+        public Task<DocumentRelations> GetRelationsAsync(Guid markdownFileId, CancellationToken cancellationToken)
+        {
+            if (Failure is not null)
+            {
+                return Task.FromException<DocumentRelations>(Failure);
+            }
+            return Pending?.Task ?? Task.FromResult(DocumentRelations.Empty);
+        }
     }
 }

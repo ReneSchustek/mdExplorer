@@ -7,12 +7,6 @@ namespace MdExplorer.Data.Repositories;
 /// <summary>EF-Core-gestützte Implementierung von <see cref="ITagRepository"/>.</summary>
 public sealed class TagRepository(MdExplorerDbContext dbContext) : ITagRepository
 {
-    /// <summary>
-    /// Maximalgröße für SQLite-IN-Listen, gleiche Begründung wie in
-    /// <see cref="MarkdownDocumentRepository"/>: defensiv unter dem 999-Parameter-Limit alter SQLite-Builds.
-    /// </summary>
-    private const int SqliteInListBatchSize = 500;
-
     private readonly MdExplorerDbContext _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 
     /// <inheritdoc />
@@ -26,7 +20,7 @@ public sealed class TagRepository(MdExplorerDbContext dbContext) : ITagRepositor
 
         string[] slugArray = [.. slugs];
         List<Tag> result = new(slugArray.Length);
-        foreach (string[] chunk in slugArray.Chunk(SqliteInListBatchSize))
+        foreach (string[] chunk in slugArray.Chunk(SqliteInList.BatchSize))
         {
             List<Tag> chunkResult = await _dbContext.Set<Tag>()
                 .AsNoTracking()
@@ -46,22 +40,20 @@ public sealed class TagRepository(MdExplorerDbContext dbContext) : ITagRepositor
     }
 
     /// <inheritdoc />
-    public async Task ReplaceFileTagsAsync(Guid markdownFileId, IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken)
+    public async Task ReplaceFileTagsAsync(
+        IReadOnlyDictionary<Guid, IReadOnlyCollection<Guid>> tagIdsByFile,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(tagIds);
-
-        List<MarkdownFileTag> existing = await _dbContext.Set<MarkdownFileTag>()
-            .Where(link => link.MarkdownFileId == markdownFileId)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        _dbContext.Set<MarkdownFileTag>().RemoveRange(existing);
-
-        foreach (Guid tagId in tagIds)
+        ArgumentNullException.ThrowIfNull(tagIdsByFile);
+        if (tagIdsByFile.Count == 0)
         {
-            _ = await _dbContext.Set<MarkdownFileTag>().AddAsync(
-                new MarkdownFileTag { MarkdownFileId = markdownFileId, TagId = tagId },
-                cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        ILookup<Guid, MarkdownFileTag> existing = await LoadLinksAsync([.. tagIdsByFile.Keys], cancellationToken).ConfigureAwait(false);
+        foreach ((Guid markdownFileId, IReadOnlyCollection<Guid> tagIds) in tagIdsByFile)
+        {
+            ApplyDifference(markdownFileId, existing[markdownFileId], [.. tagIds]);
         }
     }
 
@@ -78,4 +70,34 @@ public sealed class TagRepository(MdExplorerDbContext dbContext) : ITagRepositor
     /// <inheritdoc />
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _dbContext.SaveChangesAsync(cancellationToken);
+
+    // Getrackt geladen: Was nicht mehr gewünscht ist, wird über den Änderungsverfolger entfernt.
+    private async Task<ILookup<Guid, MarkdownFileTag>> LoadLinksAsync(Guid[] markdownFileIds, CancellationToken cancellationToken)
+    {
+        List<MarkdownFileTag> links = [];
+        foreach (Guid[] chunk in markdownFileIds.Chunk(SqliteInList.BatchSize))
+        {
+            links.AddRange(await _dbContext.Set<MarkdownFileTag>()
+                .Where(link => chunk.Contains(link.MarkdownFileId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false));
+        }
+
+        return links.ToLookup(link => link.MarkdownFileId);
+    }
+
+    // Nur die Differenz: Bleibende Zuordnungen bleiben unberührt, statt entfernt und gleich wieder
+    // angelegt zu werden. Das spart Schreibvorgänge beim häufigsten Fall, dem Neu-Parsen mit
+    // unveränderten Schlagworten.
+    private void ApplyDifference(Guid markdownFileId, IEnumerable<MarkdownFileTag> current, HashSet<Guid> wanted)
+    {
+        List<MarkdownFileTag> links = [.. current];
+        _dbContext.Set<MarkdownFileTag>().RemoveRange(links.Where(link => !wanted.Contains(link.TagId)));
+
+        wanted.ExceptWith(links.Select(link => link.TagId));
+        foreach (Guid tagId in wanted)
+        {
+            _ = _dbContext.Set<MarkdownFileTag>().Add(new MarkdownFileTag { MarkdownFileId = markdownFileId, TagId = tagId });
+        }
+    }
 }

@@ -3,6 +3,15 @@ using MdExplorer.Core.FileSystem;
 
 namespace MdExplorer.Core.Tests.FileSystem;
 
+/// <summary>
+/// Gespeichert wird über eine Zwischendatei im selben Ordner, die danach an die Stelle des
+/// Ziels rückt. Ein abgebrochenes Speichern hinterlässt so weder eine halbe Notiz noch Reste,
+/// und der Inhalt kommt Byte für Byte an, ohne vorangestellte Byte-Order-Mark.
+/// </summary>
+/// <remarks>
+/// Dazu gehört <see cref="LocalFileSystem.GetDirectoryFinalPath"/>: Wo die Auflösung eines
+/// Ordners scheitert, gilt der Ausgangspfad statt einer Ausnahme.
+/// </remarks>
 public sealed class LocalFileSystemAtomicWriteTests : IDisposable
 {
     private readonly string _testRoot;
@@ -10,8 +19,7 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
 
     public LocalFileSystemAtomicWriteTests()
     {
-        _testRoot = Path.Combine(Path.GetTempPath(), "MdExplorer.AtomicWriteTests", Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(_testRoot);
+        _testRoot = Directory.CreateTempSubdirectory("MdExplorer.Tests-").FullName;
         _sut = new LocalFileSystem();
     }
 
@@ -92,17 +100,65 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
     [Fact]
     public async Task WriteAllBytesAtomicAsync_WithoutADirectoryInThePath_Throws()
     {
-        _ = await Assert.ThrowsAnyAsync<Exception>(
+        // Der Aufruf muss scheitern, statt relativ zum Arbeitsverzeichnis zu schreiben.
+        _ = await Assert.ThrowsAsync<ArgumentException>(
             () => _sut.WriteAllBytesAtomicAsync("relativ.md", Encoding.UTF8.GetBytes("x"), TestContext.Current.CancellationToken))
             .ConfigureAwait(true);
     }
 
     [Fact]
+    public async Task WriteAllBytesAtomicAsync_WhenCancelled_KeepsTheOldFileAndLeavesNoTempFile()
+    {
+        string path = Path.Combine(_testRoot, "notiz.md");
+        await File.WriteAllTextAsync(path, "alt", TestContext.Current.CancellationToken).ConfigureAwait(true);
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync().ConfigureAwait(true);
+
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => _sut.WriteAllBytesAtomicAsync(path, Encoding.UTF8.GetBytes("neu"), cts.Token)).ConfigureAwait(true);
+
+        Assert.Equal("alt", await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken).ConfigureAwait(true));
+        Assert.Equal([path], Directory.GetFiles(_testRoot));
+    }
+
+    [Fact]
+    public void WriteAllBytesAtomic_OnExistingFile_ReplacesItAndLeavesNoTempFile()
+    {
+        string directory = Path.Combine(_testRoot, "neu-angelegt");
+        string path = Path.Combine(directory, "layout.json");
+        _sut.WriteAllBytesAtomic(path, Encoding.UTF8.GetBytes("alt"));
+
+        _sut.WriteAllBytesAtomic(path, Encoding.UTF8.GetBytes("neu"));
+
+        Assert.Equal("neu", File.ReadAllText(path));
+        Assert.Empty(Directory.GetFiles(directory, ".*.tmp"));
+    }
+
+    /// <remarks>
+    /// Scheitert das abschließende Umbenennen, bleibt der alte Inhalt, wie er war, und keine
+    /// Zwischendatei liegt herum. Das ist die Zusage des atomaren Schreibens: ganz oder gar nicht.
+    /// </remarks>
+    [Fact]
+    public void WriteAllBytesAtomic_WhenTheMoveFails_KeepsTheOldContentAndRemovesTheTemporaryFile()
+    {
+        string path = Path.Combine(_testRoot, "gesperrt.json");
+        File.WriteAllText(path, "alt");
+
+        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            _ = Assert.ThrowsAny<SystemException>(() => _sut.WriteAllBytesAtomic(path, Encoding.UTF8.GetBytes("neu")));
+        }
+
+        Assert.Equal("alt", File.ReadAllText(path));
+        Assert.Empty(Directory.GetFiles(_testRoot, ".*.tmp"));
+    }
+
+    [Fact]
     public void GetDirectoryFinalPath_OnAPlainDirectory_ReturnsTheFullPath()
     {
-        string ergebnis = _sut.GetDirectoryFinalPath(_testRoot);
+        string outcome = _sut.GetDirectoryFinalPath(_testRoot);
 
-        Assert.Equal(Path.GetFullPath(_testRoot), ergebnis, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(Path.GetFullPath(_testRoot), outcome, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -110,22 +166,22 @@ public sealed class LocalFileSystemAtomicWriteTests : IDisposable
     {
         // Eine Datei ist kein Verzeichnis. Die Auflösung scheitert und muss auf den
         // Ausgangspfad zurückfallen statt zu werfen.
-        string datei = Path.Combine(_testRoot, "keine-mappe.md");
-        await File.WriteAllTextAsync(datei, "x", TestContext.Current.CancellationToken).ConfigureAwait(true);
+        string storedFile = Path.Combine(_testRoot, "keine-mappe.md");
+        await File.WriteAllTextAsync(storedFile, "x", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        string ergebnis = _sut.GetDirectoryFinalPath(datei);
+        string outcome = _sut.GetDirectoryFinalPath(storedFile);
 
-        Assert.Equal(Path.GetFullPath(datei), ergebnis, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(Path.GetFullPath(storedFile), outcome, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void GetDirectoryFinalPath_OnAMissingDirectory_FallsBackToTheOriginalPath()
     {
-        string fehlt = Path.Combine(_testRoot, "gibt-es-nicht");
+        string absentPath = Path.Combine(_testRoot, "gibt-es-nicht");
 
-        string ergebnis = _sut.GetDirectoryFinalPath(fehlt);
+        string outcome = _sut.GetDirectoryFinalPath(absentPath);
 
-        Assert.Equal(Path.GetFullPath(fehlt), ergebnis, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(Path.GetFullPath(absentPath), outcome, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]

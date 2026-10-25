@@ -1,3 +1,4 @@
+using MdExplorer.Data;
 using MdExplorer.Indexer.Tests.Fakes;
 
 namespace MdExplorer.Indexer.Tests.Services;
@@ -19,22 +20,22 @@ public sealed class MarkdownIndexerCleanupTests
     /// verschwundene Datei muss trotzdem aus dem Bestand fallen.
     /// </remarks>
     [Fact]
-    public async Task AFailedBatchDoesNotStopTheCleanup()
+    public async Task RunInitialScanAsync_AfterAFailedBatch_StillRemovesVanishedFiles()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create(initialScanBatchSize: 1);
         harness.FileSystem.AddFile(@"C:\Wurzel\bleibt.md", "Inhalt", FixedWrite);
         harness.FileSystem.AddFile(@"C:\Wurzel\verschwindet.md", "Inhalt", FixedWrite);
         await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        Assert.Equal(2, harness.Repository.Snapshot.Count);
+        Assert.Equal(2, harness.Store.Snapshot.Count);
 
         harness.FileSystem.RemoveFile(@"C:\Wurzel\verschwindet.md");
         harness.FileSystem.AddFile(@"C:\Wurzel\neu.md", "Inhalt", FixedWrite);
-        harness.Repository.ThrowOnNextSave = new FakeDbException();
+        harness.Store.ThrowOnNextSave = new DatabaseOperationException("Speichern fehlgeschlagen.");
 
         await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        Assert.DoesNotContain(@"C:\Wurzel\verschwindet.md", harness.Repository.Snapshot.Keys);
-        Assert.Contains(@"C:\Wurzel\bleibt.md", harness.Repository.Snapshot.Keys);
+        Assert.DoesNotContain(@"C:\Wurzel\verschwindet.md", harness.Store.Snapshot.Keys);
+        Assert.Contains(@"C:\Wurzel\bleibt.md", harness.Store.Snapshot.Keys);
     }
 
     /// <remarks>
@@ -42,14 +43,14 @@ public sealed class MarkdownIndexerCleanupTests
     /// aus wie gelöscht. Ein halb gelesener Baum darf deshalb nichts entfernen.
     /// </remarks>
     [Fact]
-    public async Task AHalfReadTreeRemovesNothing()
+    public async Task RunInitialScanAsync_OnAHalfReadTree_RemovesNothing()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\eins.md", "Inhalt", FixedWrite);
         harness.FileSystem.AddFile(@"C:\Wurzel\zwei.md", "Inhalt", FixedWrite);
         harness.FileSystem.AddFile(@"C:\Wurzel\drei.md", "Inhalt", FixedWrite);
         await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        Assert.Equal(3, harness.Repository.Snapshot.Count);
+        Assert.Equal(3, harness.Store.Snapshot.Count);
 
         // Der Zugriff bricht nach der ersten Datei ab; die beiden anderen sind nicht
         // verschwunden, sie wurden nur nicht gesehen.
@@ -57,7 +58,7 @@ public sealed class MarkdownIndexerCleanupTests
 
         await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        Assert.Equal(3, harness.Repository.Snapshot.Count);
+        Assert.Equal(3, harness.Store.Snapshot.Count);
     }
 
     /// <remarks>
@@ -65,7 +66,7 @@ public sealed class MarkdownIndexerCleanupTests
     /// Aufräumdurchgang beim nächsten Lauf.
     /// </remarks>
     [Fact]
-    public async Task TheNextCompleteRunCleansUpAgain()
+    public async Task RunInitialScanAsync_AfterAHalfReadTree_CleansUpOnTheNextCompleteRun()
     {
         await using IndexerTestHarness harness = IndexerTestHarness.Create();
         harness.FileSystem.AddFile(@"C:\Wurzel\eins.md", "Inhalt", FixedWrite);
@@ -77,13 +78,13 @@ public sealed class MarkdownIndexerCleanupTests
         harness.FileSystem.RemoveFile(@"C:\Wurzel\drei.md");
         harness.FileSystem.ThrowAfterEnumerating = 1;
         await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        Assert.Equal(3, harness.Repository.Snapshot.Count);
+        Assert.Equal(3, harness.Store.Snapshot.Count);
 
         // Beim nächsten vollständigen Lauf greift der Aufräumdurchgang wieder.
         harness.FileSystem.ThrowAfterEnumerating = null;
         await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        Assert.Equal(2, harness.Repository.Snapshot.Count);
-        Assert.DoesNotContain(@"C:\Wurzel\drei.md", harness.Repository.Snapshot.Keys);
+        Assert.Equal(2, harness.Store.Snapshot.Count);
+        Assert.DoesNotContain(@"C:\Wurzel\drei.md", harness.Store.Snapshot.Keys);
     }
 }

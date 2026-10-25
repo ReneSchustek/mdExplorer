@@ -2,6 +2,7 @@
              x:ClassModifier="internal"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:MdExplorer.App.Localization"
              xmlns:vm="clr-namespace:MdExplorer.App.ViewModels"
              xmlns:controls="clr-namespace:MdExplorer.App.Controls"
              xmlns:conv="clr-namespace:MdExplorer.App.Converters"
@@ -32,7 +33,7 @@
             <controls:SearchBox x:Name="QuerySearchBox"
                                 Grid.Column="0"
                                 Text="{Binding QueryText, Mode=TwoWay}"
-                                Placeholder="Volltext, tag: und path: durchsuchen" />
+                                Placeholder="{l:Loc Search_Placeholder}" />
             <ProgressBar Grid.Column="1"
                          Width="80"
                          Height="6"
@@ -40,31 +41,36 @@
                          Margin="8,0,0,0"
                          Visibility="{Binding IsSearching, Converter={StaticResource BoolToVisibility}}" />
         </Grid>
-        <Grid DockPanel.Dock="Top" Margin="8,0,8,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="2*" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="Modus:" VerticalAlignment="Center" Margin="0,0,4,0" />
-            <ComboBox Grid.Column="1"
-                      ItemsSource="{StaticResource SearchModes}"
-                      SelectedItem="{Binding Mode, Mode=TwoWay}" />
-            <TextBlock Grid.Column="2" Text="Ähnlichkeit:" VerticalAlignment="Center" Margin="8,0,4,0" />
-            <ComboBox Grid.Column="3"
-                      ItemsSource="{StaticResource SimilarityModes}"
-                      SelectedItem="{Binding Similarity, Mode=TwoWay}" />
-        </Grid>
+        <!--
+            Beide Auswahlen so breit wie ihr Eintrag; reicht die Spalte nicht, rutscht die
+            Ähnlichkeit in die nächste Zeile. In festen Spaltenanteilen schnitt die schmale linke
+            Spalte „Volltext“ ab, und „Regulärer Ausdruck“ passte gar nicht.
+        -->
+        <WrapPanel DockPanel.Dock="Top" Margin="8,0,8,4">
+            <StackPanel Orientation="Horizontal" Margin="0,0,12,4">
+                <TextBlock x:Name="ModeLabel" Text="{l:Loc Search_Mode_Label}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <ComboBox AutomationProperties.LabeledBy="{Binding ElementName=ModeLabel}"
+                          Style="{StaticResource EnumComboBoxStyle}"
+                          ItemsSource="{StaticResource SearchModes}"
+                          SelectedItem="{Binding Mode, Mode=TwoWay}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBlock x:Name="SimilarityLabel" Text="{l:Loc Search_Similarity_Label}" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <ComboBox AutomationProperties.LabeledBy="{Binding ElementName=SimilarityLabel}"
+                          Style="{StaticResource EnumComboBoxStyle}"
+                          ItemsSource="{StaticResource SimilarityModes}"
+                          SelectedItem="{Binding Similarity, Mode=TwoWay}" />
+            </StackPanel>
+        </WrapPanel>
         <CheckBox DockPanel.Dock="Top"
                   Margin="8,0,8,8"
-                  Content="Nur aktueller Ordner"
-                  ToolTip="Beschränkt die Treffer auf den im Ordnerbaum gewählten Pfad. Ohne Haken wird über alle Wurzeln gesucht."
+                  Content="{l:Loc Search_CurrentFolderOnly}"
+                  ToolTip="{l:Loc Search_CurrentFolderOnly_ToolTip}"
                   IsChecked="{Binding ScopeToSelectedFolder, Mode=TwoWay}" />
         <!--
-            Drei Lagen, die eine Trefferliste allein nicht auseinanderhält: noch nicht gesucht,
-            gesucht und nichts gefunden, oder Treffer. Die ersten beiden brauchen verschiedene
-            Sätze, sonst hält der Nutzer seinen Bestand für leer.
+            Vier Lagen, die eine Trefferliste allein nicht auseinanderhält: noch nicht gesucht,
+            gesucht und nichts gefunden, Suche gescheitert, oder Treffer. Die drei leeren Lagen
+            brauchen verschiedene Sätze, sonst hält der Nutzer seinen Bestand für leer.
         -->
         <Grid>
             <ListBox ItemsSource="{Binding Results}"
@@ -75,6 +81,8 @@
                      BorderThickness="0">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                        <!-- Ohne Namen läse der Screenreader den Typ des ViewModels vor. -->
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                     </Style>
                 </ListBox.ItemContainerStyle>
@@ -89,20 +97,20 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <controls:EmptyState Headline="Noch nichts gesucht"
-                                 Hint="Tippen Sie einen Begriff ein. Mehrere Wörter werden mit UND verknüpft; tag: und path: schränken auf Kennzeichnung und Pfad ein."
+            <controls:EmptyState Headline="{l:Loc Search_Empty_Idle_Headline}"
+                                 Hint="{l:Loc Search_Empty_Idle_Hint}"
                                  Visibility="{Binding ShowsNothingSearchedYet, Converter={StaticResource BoolToVisibility}}" />
 
-            <controls:EmptyState Headline="Nichts gefunden"
-                                 Hint="Zu dieser Anfrage gibt es keinen Treffer. Ein kürzerer Begriff oder eine andere Ähnlichkeit hilft oft weiter."
+            <controls:EmptyState Headline="{l:Loc Search_Empty_NoMatch_Headline}"
+                                 Hint="{l:Loc Search_Empty_NoMatch_Hint}"
                                  ShowsReset="True"
                                  ResetCommand="{Binding ClearSearchCommand}"
                                  Visibility="{Binding ShowsNoMatches, Converter={StaticResource BoolToVisibility}}" />
 
-            <controls:EmptyState Headline="Die Suche ist gescheitert"
-                                 Hint="Die Anfrage konnte nicht ausgeführt werden. Einzelheiten stehen im Protokoll unter Ansicht → Logs…."
+            <controls:EmptyState Headline="{l:Loc Search_Empty_Failed_Headline}"
+                                 Hint="{l:Loc Search_Empty_Failed_Hint}"
                                  ShowsReset="True"
-                                 ResetLabel="Anfrage zurücksetzen"
+                                 ResetLabel="{l:Loc Search_Reset}"
                                  ResetCommand="{Binding ClearSearchCommand}"
                                  Visibility="{Binding ShowsSearchFailure, Converter={StaticResource BoolToVisibility}}" />
         </Grid>

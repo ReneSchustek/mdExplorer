@@ -2,8 +2,8 @@ namespace MdExplorer.App.Services;
 
 /// <summary>
 /// Liefert den aggregierten Betriebs-Status der Anwendung für die Statusleiste.
-/// Implementierungen leiten den Status aus Subsystem-Signalen ab (jüngste Log-Einträge,
-/// Indexer-Heartbeat, Settings-Service-State).
+/// Implementierungen leiten den Status aus den jüngsten Log-Einträgen, den nicht verarbeitbaren
+/// Dateien und den angehaltenen Hintergrunddiensten ab.
 /// </summary>
 internal interface IOperationHealthProvider
 {

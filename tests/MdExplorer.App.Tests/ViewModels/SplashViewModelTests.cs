@@ -22,12 +22,12 @@ public sealed class SplashViewModelTests
     {
         // Ohne die Benachrichtigung bliebe der Text während des Starts auf dem ersten Wert stehen.
         SplashViewModel sut = new();
-        List<string?> gemeldet = [];
-        sut.PropertyChanged += (_, e) => gemeldet.Add(e.PropertyName);
+        List<string?> reported = [];
+        sut.PropertyChanged += (_, e) => reported.Add(e.PropertyName);
 
         sut.StatusText = "Bestand wird geladen …";
 
-        Assert.Contains(nameof(SplashViewModel.StatusText), gemeldet, StringComparer.Ordinal);
+        Assert.Contains(nameof(SplashViewModel.StatusText), reported, StringComparer.Ordinal);
         Assert.Equal("Bestand wird geladen …", sut.StatusText, StringComparer.Ordinal);
     }
 
@@ -39,23 +39,25 @@ public sealed class SplashViewModelTests
         Assert.False(string.IsNullOrWhiteSpace(sut.VersionText));
     }
 
-    [Fact]
-    public void VersionText_DropsTheCommitHashSuffix()
+    [Theory]
+    [InlineData("0.15.5+3f2a9c1d", "0.15.5")]
+    [InlineData("0.15.5", "0.15.5")]
+    [InlineData("1.0.0-beta.2+abc", "1.0.0-beta.2")]
+    public void StripCommitSuffix_DropsTheCommitHash(string informationalVersion, string expected)
     {
-        // Beim Bauen hängt SourceRevisionId ein "+<hash>" an die Informationsversion.
-        // Auf dem Startbild wäre das nur Rauschen.
-        SplashViewModel sut = new();
-
-        Assert.DoesNotContain("+", sut.VersionText, StringComparison.Ordinal);
+        // Beim Bauen hängt SourceRevisionId ein "+<hash>" an die Informationsversion. Auf dem
+        // Startbild wäre das nur Rauschen. Geprüft wird die Funktion selbst: Die Version des
+        // laufenden Programms ist im Testlauf die des Testprogramms und trägt keinen Hash.
+        Assert.Equal(expected, SplashViewModel.StripCommitSuffix(informationalVersion), StringComparer.Ordinal);
     }
 
     [Fact]
     public void VersionText_IsStableAcrossInstances()
     {
-        SplashViewModel erste = new();
-        SplashViewModel zweite = new();
+        SplashViewModel first = new();
+        SplashViewModel second = new();
 
-        Assert.Equal(erste.VersionText, zweite.VersionText, StringComparer.Ordinal);
+        Assert.Equal(first.VersionText, second.VersionText, StringComparer.Ordinal);
     }
 
     [Fact]

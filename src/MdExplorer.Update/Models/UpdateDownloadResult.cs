@@ -11,8 +11,8 @@ public enum UpdateDownloadStatus
 
     /// <summary>
     /// Der berechnete Hash weicht vom veröffentlichten ab. Die Datei wird verworfen:
-    /// eine Abweichung bedeutet entweder einen abgebrochenen Download oder eine
-    /// manipulierte Datei, und beide Fälle darf man nicht ausführen.
+    /// eine Abweichung bedeutet einen abgebrochenen oder unterwegs veränderten Download,
+    /// und beides darf man nicht ausführen.
     /// </summary>
     ChecksumMismatch = 2,
 
@@ -21,6 +21,18 @@ public enum UpdateDownloadStatus
 
     /// <summary>Das Paket ließ sich lokal nicht ablegen.</summary>
     StorageFailed = 4,
+
+    /// <summary>
+    /// Das Release liefert keine Signatur mit, oder diese Fassung kennt keinen Schlüssel, gegen
+    /// den sie prüfen könnte. Es wird nicht installiert.
+    /// </summary>
+    NoSignaturePublished = 5,
+
+    /// <summary>
+    /// Die Signatur passt nicht zum Paket. Prüfsumme und Paket stimmen dann zwar überein, das
+    /// Paket stammt aber nicht vom Herausgeber; die Datei wird verworfen.
+    /// </summary>
+    SignatureInvalid = 6,
 }
 
 /// <summary>

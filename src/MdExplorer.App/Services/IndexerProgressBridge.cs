@@ -1,4 +1,5 @@
 using MdExplorer.App.ViewModels;
+using MdExplorer.Core.Hosting;
 using MdExplorer.Indexer.Abstractions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -72,7 +73,10 @@ internal sealed partial class IndexerProgressBridge : IHostedService, IDisposabl
     {
         ArgumentNullException.ThrowIfNull(args);
         LogProgress(_logger, args.Root, args.ProcessedCount, args.IsCompleted);
-        _dispatcher.Invoke(() => _ = RefreshSafelyAsync());
+        // Anstellen statt warten: Das Ereignis kommt vom Indexer-Thread, und der soll nicht
+        // stehen, bis die Oberfläche geladen hat. Meldungen während eines Ladens merkt sich die
+        // Liste und lädt danach einmal nach.
+        _dispatcher.Post(() => _ = RefreshSafelyAsync());
     }
 
     private async Task RefreshSafelyAsync()
@@ -85,11 +89,11 @@ internal sealed partial class IndexerProgressBridge : IHostedService, IDisposabl
         {
             // Erwartet: Shutdown reißt den Refresh ab; nicht loggen.
         }
-#pragma warning disable CA1031 // Grund: Bridge ist die letzte Auffangstelle gegen UnobservedTaskException, daher Catch(Exception) bewusst.
-        catch (Exception ex)
+        catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex, CancellationToken.None))
         {
+            // Die Brücke ist die letzte Auffangstelle: Ein Fehler hier bliebe sonst als
+            // unbeobachtete Ausnahme liegen. Speichermangel und Stapelüberlauf gehen weiter.
             LogRefreshFailed(_logger, ex);
         }
-#pragma warning restore CA1031
     }
 }

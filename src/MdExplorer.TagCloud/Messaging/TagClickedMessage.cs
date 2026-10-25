@@ -2,7 +2,7 @@ namespace MdExplorer.TagCloud.Messaging;
 
 /// <summary>
 /// Nachricht: der Anwender hat einen Tag in der Cloud angeklickt.
-/// Empfänger (i. d. R. das Such-ViewModel) fügt einen entsprechenden Filter
+/// Der Empfänger, in der Regel das Such-ViewModel, fügt einen entsprechenden Filter
 /// in das aktive Such-Query ein.
 /// </summary>
 /// <param name="Slug">Normalisierter Tag-Slug (Lowercase, Umlaute erhalten).</param>

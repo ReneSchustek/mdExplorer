@@ -1,26 +1,19 @@
 using Markdig;
 using Markdig.Syntax;
-using MdExplorer.Parser.MarkdigExtensions;
 using MdExplorer.Parser.Services;
 
 namespace MdExplorer.Parser.Tests.Helpers;
 
 /// <summary>
-/// Stellt eine produktionsnahe Markdig-Pipeline für die Service-Tests bereit:
-/// AdvancedExtensions, EmphasisExtras, YamlFrontMatter, HTML disabled und die MdExplorer-WikiLink-Extension.
+/// Stellt die Markdig-Pipeline des Index für die Service-Tests bereit. Gebaut wird sie über
+/// <see cref="IndexPipeline.CreateBuilder"/>, damit eine geänderte Index-Pipeline auch hier wirkt.
 /// </summary>
 internal static class TestPipelineFactory
 {
     private static readonly TagNormalizer Normalizer = new();
 
     public static MarkdownPipeline CreatePipeline() =>
-        new MarkdownPipelineBuilder()
-            .UseAdvancedExtensions()
-            .UseEmphasisExtras()
-            .UseYamlFrontMatter()
-            .DisableHtml()
-            .UseMdExplorerWikiLinks(Normalizer.TryToSlug)
-            .Build();
+        IndexPipeline.CreateBuilder(Normalizer.TryToSlug).Build();
 
     public static MarkdownDocument Parse(string markdown) =>
         Markdown.Parse(markdown, CreatePipeline());

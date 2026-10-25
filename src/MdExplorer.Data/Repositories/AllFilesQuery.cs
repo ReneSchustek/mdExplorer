@@ -6,9 +6,8 @@ namespace MdExplorer.Data.Repositories;
 
 /// <summary>
 /// EF-Core-Implementierung von <see cref="IAllFilesQuery"/>. Holt alle indizierten Dateien
-/// und joint die zugehörigen Tag-Slugs in zwei untracked Queries (keine N+1, kein
-/// Cartesian-Product). Tag-Slugs werden in der ersten DB-Antwort projiziert, anschließend
-/// pro Datei zugeordnet. Das vermeidet das LEFT-JOIN-Explosionsproblem bei mehreren Tags pro Datei.
+/// und die zugehörigen Tag-Slugs in zwei untracked Queries: erst die Dateien, dann alle
+/// Zuordnungen samt Slug, die <see cref="TagsByFile"/> je Datei einsortiert.
 /// </summary>
 public sealed class AllFilesQuery : IAllFilesQuery
 {
@@ -24,11 +23,28 @@ public sealed class AllFilesQuery : IAllFilesQuery
     /// <inheritdoc />
     public async Task<IReadOnlyList<AllFilesRow>> GetAllAsync(CancellationToken cancellationToken)
     {
-        IQueryable<MarkdownFile> files = _dbContext.Set<MarkdownFile>().AsNoTracking();
-        IQueryable<MarkdownFileTag> links = _dbContext.Set<MarkdownFileTag>().AsNoTracking();
-        IQueryable<Tag> tags = _dbContext.Set<Tag>().AsNoTracking();
+        List<FileRowProjection> rawFiles = await LoadFilesAsync(cancellationToken).ConfigureAwait(false);
+        if (rawFiles.Count == 0)
+        {
+            return [];
+        }
 
-        List<FileRowProjection> rawFiles = await files
+        Dictionary<Guid, IReadOnlyList<string>> slugsByFile = await LoadSlugsByFileAsync(cancellationToken).ConfigureAwait(false);
+        return
+        [
+            .. rawFiles.Select(file => new AllFilesRow(
+                file.Id,
+                file.FileNameWithoutExtension,
+                file.RelativePath,
+                file.AbsolutePath,
+                file.LastWriteTimeUtc,
+                slugsByFile.TryGetValue(file.Id, out IReadOnlyList<string>? slugs) ? slugs : [])),
+        ];
+    }
+
+    private Task<List<FileRowProjection>> LoadFilesAsync(CancellationToken cancellationToken) =>
+        _dbContext.Set<MarkdownFile>()
+            .AsNoTracking()
             .OrderByDescending(file => file.LastWriteTimeUtc)
             .ThenBy(file => file.RelativePath)
             .Select(file => new FileRowProjection(
@@ -37,50 +53,21 @@ public sealed class AllFilesQuery : IAllFilesQuery
                 file.RelativePath,
                 file.AbsolutePath,
                 file.LastWriteTimeUtc))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .ToListAsync(cancellationToken);
 
-        if (rawFiles.Count == 0)
-        {
-            return [];
-        }
-
+    private async Task<Dictionary<Guid, IReadOnlyList<string>>> LoadSlugsByFileAsync(CancellationToken cancellationToken)
+    {
         IQueryable<TagSlugProjection> tagQuery =
-            from link in links
-            join tag in tags on link.TagId equals tag.Id
+            from link in _dbContext.Set<MarkdownFileTag>().AsNoTracking()
+            join tag in _dbContext.Set<Tag>().AsNoTracking() on link.TagId equals tag.Id
             orderby tag.Slug
             select new TagSlugProjection(link.MarkdownFileId, tag.Slug);
 
-        List<TagSlugProjection> rawTags = await tagQuery
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        Dictionary<Guid, List<string>> slugsByFile = new(rawFiles.Count);
-        foreach (TagSlugProjection projection in rawTags)
-        {
-            if (!slugsByFile.TryGetValue(projection.FileId, out List<string>? bucket))
-            {
-                bucket = [];
-                slugsByFile[projection.FileId] = bucket;
-            }
-            bucket.Add(projection.Slug);
-        }
-
-        List<AllFilesRow> result = new(rawFiles.Count);
-        foreach (FileRowProjection file in rawFiles)
-        {
-            IReadOnlyList<string> slugs = slugsByFile.TryGetValue(file.Id, out List<string>? bucket) ? bucket : [];
-            result.Add(new AllFilesRow(
-                file.Id,
-                file.FileNameWithoutExtension,
-                file.RelativePath,
-                file.AbsolutePath,
-                file.LastWriteTimeUtc,
-                slugs));
-        }
-        return result;
+        List<TagSlugProjection> rawTags = await tagQuery.ToListAsync(cancellationToken).ConfigureAwait(false);
+        return TagsByFile.Group(rawTags.Select(row => (row.FileId, row.Slug)));
     }
 
+    /// <summary>Die Spalten einer Datei, die die Liste braucht; der Inhalts-Hash bleibt in der Datenbank.</summary>
     private sealed record FileRowProjection(
         Guid Id,
         string FileNameWithoutExtension,
@@ -88,5 +75,6 @@ public sealed class AllFilesQuery : IAllFilesQuery
         string AbsolutePath,
         DateTime LastWriteTimeUtc);
 
+    /// <summary>Eine Zuordnung von Datei und Schlagwort, schon auf den Slug verkürzt.</summary>
     private sealed record TagSlugProjection(Guid FileId, string Slug);
 }

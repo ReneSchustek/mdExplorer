@@ -3,8 +3,8 @@ namespace MdExplorer.TagCloud.Abstractions;
 /// <summary>
 /// Projektweite Tag-Verwaltung: Vorschau, Umbenennen, Mergen, Löschen. Operationen
 /// schreiben die Quelldateien atomar (Temp + Move via <see cref="Core.Abstractions.IFileSystem"/>)
-/// und überlassen die DB-Aktualisierung dem regulären Indexer-Re-Scan, der vom
-/// <c>FileSystemWatcher</c> getriggert wird.
+/// und überlassen die DB-Aktualisierung dem Indexer, den der <c>FileSystemWatcher</c> über die
+/// geänderten Dateien informiert.
 /// </summary>
 public interface ITagManagementService
 {
@@ -30,7 +30,7 @@ public interface ITagManagementService
 
     /// <summary>
     /// Entfernt den Tag überall: Body-Vorkommen werden gelöscht, Frontmatter-Einträge ebenfalls.
-    /// Nach dem Re-Index werden verwaiste Tag-Einträge durch den FK-Cascade entfernt.
+    /// Den dann verwaisten Tag-Eintrag räumt der nächste Parser-Durchlauf weg.
     /// </summary>
     Task<TagRewriteResult> DeleteAsync(string slug, CancellationToken cancellationToken);
 }

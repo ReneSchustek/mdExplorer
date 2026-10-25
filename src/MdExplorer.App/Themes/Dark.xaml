@@ -17,7 +17,7 @@
     <!-- ── Text ─────────────────────────────────────────────────────────── -->
     <SolidColorBrush x:Key="TextPrimaryBrush"        Color="#E4EDF2" />
     <SolidColorBrush x:Key="TextSecondaryBrush"      Color="#8AA3B0" />
-    <SolidColorBrush x:Key="TextTertiaryBrush"       Color="#6B8090" />
+    <SolidColorBrush x:Key="TextTertiaryBrush"       Color="#7D92A2" />
     <SolidColorBrush x:Key="TextDisabledBrush"       Color="#4A5A68" />
 
     <!-- Dunkle Schrift auf heller Primärfläche, die Umkehrung von Light.xaml. -->
@@ -31,17 +31,13 @@
     <SolidColorBrush x:Key="AccentSoftBrush"            Color="#94A3AB" />
 
     <!-- ── Schaltflächen ────────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="ButtonBackgroundBrush"         Color="#C5D0D6" />
-    <SolidColorBrush x:Key="ButtonBackgroundHoverBrush"    Color="#DDE5E9" />
-    <SolidColorBrush x:Key="ButtonBackgroundPressedBrush"  Color="#94A3AB" />
     <SolidColorBrush x:Key="ButtonBackgroundDisabledBrush" Color="#243244" />
-    <SolidColorBrush x:Key="ButtonForegroundBrush"         Color="#0F1923" />
     <SolidColorBrush x:Key="ButtonForegroundDisabledBrush" Color="#5A6B7A" />
 
     <SolidColorBrush x:Key="ButtonSecondaryBackgroundBrush"      Color="#152030" />
     <SolidColorBrush x:Key="ButtonSecondaryBackgroundHoverBrush" Color="#213048" />
     <SolidColorBrush x:Key="ButtonSecondaryForegroundBrush"      Color="#E4EDF2" />
-    <SolidColorBrush x:Key="ButtonSecondaryBorderBrush"          Color="#2E3E50" />
+    <SolidColorBrush x:Key="ButtonSecondaryBorderBrush"          Color="#6B7C88" />
 
     <!-- ── Karten und Kacheln ───────────────────────────────────────────── -->
     <SolidColorBrush x:Key="CardBackgroundBrush"      Color="#152030" />
@@ -96,7 +92,7 @@
 
     <!--
         Die Fläche des Aufklappmenüs kommt aus den Systemfarben: WPF zeichnet es in einem
-        eigenen Fenster und fragt dort nicht den Style des Eintrags. Ohne diese Werte stand
+        eigenen Fenster und fragt dort nicht den Style des Eintrags. Ohne diese Werte stünde
         im dunklen Erscheinungsbild helle Schrift auf weißem Grund.
     -->
     <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#152030" />

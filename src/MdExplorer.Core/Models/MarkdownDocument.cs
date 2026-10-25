@@ -4,6 +4,9 @@ namespace MdExplorer.Core.Models;
 /// Parser-Ergebnis-Entität, 1:1 zu <see cref="MarkdownFile"/> über <see cref="MarkdownFileId"/>.
 /// Hält gerendertes HTML (GZip-komprimiert), Frontmatter und Outlinks.
 /// </summary>
+/// <remarks>
+/// Öffentliche Setter aus demselben Grund wie bei <see cref="MarkdownFile"/>.
+/// </remarks>
 public sealed class MarkdownDocument
 {
     private byte[] _renderedHtmlGz = [];

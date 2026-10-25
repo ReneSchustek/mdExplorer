@@ -12,8 +12,6 @@
     --graph-node-outline: #ffffff;
     --graph-overlay: rgba(255, 255, 255, 0.85);
     --graph-overlay-text: #1c1c1c;
-    --graph-tooltip: rgba(30, 30, 30, 0.9);
-    --graph-tooltip-text: #f5f5f5;
 }
 
 :root[data-theme="dark"] {
@@ -24,8 +22,6 @@
     --graph-node-outline: #1e1e1e;
     --graph-overlay: rgba(0, 0, 0, 0.5);
     --graph-overlay-text: #e6e6e6;
-    --graph-tooltip: rgba(0, 0, 0, 0.85);
-    --graph-tooltip-text: #ffffff;
 }
 
 html, body {
@@ -59,16 +55,4 @@ canvas:active {
     color: var(--graph-overlay-text);
     border-radius: 4px;
     pointer-events: none;
-}
-
-#tooltip {
-    position: absolute;
-    padding: 6px 10px;
-    background: var(--graph-tooltip);
-    color: var(--graph-tooltip-text);
-    border-radius: 4px;
-    pointer-events: none;
-    display: none;
-    max-width: 280px;
-    word-break: break-word;
 }

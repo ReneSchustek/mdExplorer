@@ -19,7 +19,7 @@
         mc:Ignorable="d">
 
     <!-- Weißer Grund mit dunkelblauer Schrift: Das Logo hat selbst einen weißen
-         Hintergrund und saß auf der früheren dunklen Fläche als helle Kachel auf.
+         Hintergrund und säße auf einer dunklen Fläche als helle Kachel auf.
          Auf Weiß verschwindet der Rahmen, und es wirkt als eigenes Zeichen. -->
     <Border CornerRadius="12"
             Background="{StaticResource BrandSurfaceBrush}"

@@ -5,20 +5,41 @@ on:
     tags: [ 'v*' ]
 
 permissions:
-  contents: write
+  contents: read
 
+# Fremde Actions laufen über ihren Commit, nicht über einen beweglichen Tag: Ein umgehängter Tag
+# brächte sonst ungeprüften Code in einen Lauf, der Schreibrechte auf die Releases hat. Die
+# Fassung steht jeweils dahinter.
 jobs:
   publish:
     name: Publish self-contained Windows build
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
           dotnet-version: '10.0.x'
+
+      # Die Programmdatei trägt die Version aus VERSION, der Installer die aus dem Tag. Weichen
+      # beide ab, meldete die Update-Prüfung eine Fassung, die es nicht gibt.
+      - name: Tag gegen VERSION prüfen
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          $file = (Get-Content VERSION -Raw).Trim()
+          if ($tag -ne $file) { throw "Tag v$tag passt nicht zu VERSION $file." }
+
+      - name: Build (warnings as errors)
+        run: dotnet build MdExplorer.slnx -c Release -warnaserror
+
+      - name: Test
+        # Wie in der CI: Performance-Tests hängen von der Rechenlast des Runners ab.
+        run: dotnet test MdExplorer.slnx -c Release --no-build --filter "Category!=Performance"
 
       - name: Publish (self-contained win-x64, single file)
         run: >
@@ -35,31 +56,54 @@ jobs:
       - name: Build installer (Inno Setup)
         shell: pwsh
         run: |
-          choco install innosetup --no-progress -y
-          # Installer-Version aus dem Tag ableiten (ohne führendes 'v'),
-          # damit Setup-Version und Release-Tag stets übereinstimmen.
+          choco install innosetup --version 6.7.1 --no-progress -y
+          # Installer-Version aus dem Tag (ohne führendes 'v'); oben gegen VERSION geprüft.
           $version = "${{ github.ref_name }}".TrimStart('v')
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           & $iscc "/DSourceDir=$((Resolve-Path publish).Path)" "/DMyAppVersion=$version" installer\MdExplorer.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen." }
 
-      # Der Installer ist nicht signiert. Die veröffentlichte Prüfsumme ist damit der
-      # einzige Beleg, dass eine heruntergeladene Datei die veröffentlichte ist; die
-      # Update-Funktion der Anwendung installiert ohne sie bewusst nicht.
-      - name: Prüfsumme des Installers veröffentlichen
+      # Prüfsumme und Signatur neben das Setup. Die Update-Funktion der Anwendung installiert nur,
+      # wenn die Signatur zu ihrem eingebauten Schlüssel passt. Der private Schlüssel liegt
+      # nur als Secret vor und wird nie auf die Platte des Runners geschrieben.
+      - name: Installer signieren und Prüfsumme veröffentlichen
         shell: pwsh
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
         run: |
           $setup = Get-ChildItem dist/MdExplorer-*-setup.exe | Select-Object -First 1
           if (-not $setup) { throw "Setup.exe nicht gefunden." }
-          $hash = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
-          "$hash  $($setup.Name)" | Out-File -FilePath "$($setup.FullName).sha256" -Encoding ascii -NoNewline
+          if (-not $env:RELEASE_SIGNING_KEY) { throw "Secret RELEASE_SIGNING_KEY fehlt." }
+          $publicKey = 'src/MdExplorer.Update/Signing/release-public-key.pem'
+          if (-not (Test-Path -LiteralPath $publicKey)) { throw "$publicKey fehlt; die Anwendung könnte nichts prüfen." }
+          $sha256 = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+          $der = [System.Security.Cryptography.DSASignatureFormat]::Rfc3279DerSequence
+          $content = [System.IO.File]::ReadAllBytes($setup.FullName)
+          $hash = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($content)).ToLowerInvariant()
+          [System.IO.File]::WriteAllText("$($setup.FullName).sha256", "$hash  $($setup.Name)", [System.Text.Encoding]::ASCII)
+          $signer = [System.Security.Cryptography.ECDsa]::Create()
+          $verifier = [System.Security.Cryptography.ECDsa]::Create()
+          try {
+            $signer.ImportFromPem($env:RELEASE_SIGNING_KEY)
+            $signature = $signer.SignData($content, $sha256, $der)
+            # Gegenprobe mit dem Schlüssel, den die Anwendung einbaut: Ein falsches Paar ergäbe
+            # ein Release, das keine installierte Fassung selbst einspielen kann.
+            $verifier.ImportFromPem((Get-Content -LiteralPath $publicKey -Raw))
+            if (-not $verifier.VerifyData($content, $signature, $sha256, $der)) { throw "Signatur passt nicht zu $publicKey." }
+            [System.IO.File]::WriteAllBytes("$($setup.FullName).sig", $signature)
+          }
+          finally {
+            $signer.Dispose()
+            $verifier.Dispose()
+          }
           Write-Host "SHA-256 $hash"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: |
             MdExplorer-${{ github.ref_name }}-win-x64.zip
             dist/MdExplorer-*-setup.exe
             dist/MdExplorer-*-setup.exe.sha256
+            dist/MdExplorer-*-setup.exe.sig
           generate_release_notes: true

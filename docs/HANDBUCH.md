@@ -11,7 +11,7 @@ Anwendung ihre Daten ablegt.
 
 1. [Was MdExplorer ist — und was nicht](#einfuehrung)
 2. [Installation und erster Start](#installation)
-3. [Die Drei-Spalten-Oberfläche](#layout)
+3. [Die Oberfläche](#layout)
 4. [Indexierung, Ausschlüsse und `.mdignore`](#indexierung)
 5. [Suche und Vorschau](#suche)
 6. [Tag-Cloud und Tag-Verwaltung](#tagcloud)
@@ -64,28 +64,66 @@ Werkzeug.
 
 ## 2. Installation und erster Start {#installation}
 
-MdExplorer setzt **Windows 10 oder 11**, das **.NET 10 SDK** sowie die
-**WebView2-Runtime** voraus. Auf aktuellen Windows-Installationen ist
+MdExplorer setzt **Windows 10 oder 11** und die **WebView2-Runtime**
+voraus; ein installiertes .NET braucht die Anwendung nicht, sie bringt es
+mit. Auf aktuellen Windows-Installationen ist
 die WebView2-Runtime bereits Teil des Systems; sollte sie fehlen,
 liefert Microsoft sie kostenlos auf
-<https://developer.microsoft.com/microsoft-edge/webview2/>. SQLite
+<https://developer.microsoft.com/microsoft-edge/webview2/>. Fehlt sie,
+stehen Vorschau, Handbuch und Graph mit einem Hinweis darauf leer; der
+Rest der Anwendung funktioniert. Verweise im Handbuch auf Seiten im
+Netz öffnen im Standardbrowser. SQLite
 wird über das NuGet-Paket `Microsoft.Data.Sqlite` bezogen und
 benötigt keine separate Installation.
 
-Nach dem Auschecken des Repositorys reicht ein einzelner Aufruf, um
-das Projekt zu bauen und zu starten:
+Installiert wird über das Setup von der Releases-Seite; alternativ läuft
+das Archiv aus jedem beliebigen Ordner, ohne Installation. Wer aus dem
+Quelltext baut, braucht zusätzlich das .NET 10 SDK:
 
 ```powershell
 git clone <repository-url> MdExplorer
 cd MdExplorer
-dotnet run --project MdExplorer.App
+dotnet run --project src/MdExplorer.App
 ```
 
-Beim ersten Start öffnet MdExplorer das Hauptfenster im Drei-Spalten-
-Layout, hat aber noch keine Inhalte: weil keine Indexierungs-Wurzel
-konfiguriert ist, bleiben Ordner-Baum, Trefferliste und Vorschau leer.
+### Markdown-Dateien per Doppelklick öffnen
+
+Das Setup trägt MdExplorer bei Windows als Programm für `.md` und
+`.markdown` ein. Im Explorer steht es danach im Kontextmenü unter
+„Öffnen mit“. Zum Standardprogramm wird es mit „Öffnen mit → Andere App
+auswählen“, dort MdExplorer markieren und „Immer“ wählen; diese Wahl
+trifft Windows nur auf Anweisung des Nutzers, kein Setup darf sie
+vorwegnehmen. Wer das Archiv ohne Setup nutzt, sucht in demselben Dialog
+die `MdExplorer.exe` im entpackten Ordner aus.
+
+Ein Doppelklick öffnet die Datei dann im Dokumentbereich, auch wenn sie
+in keinem indizierten Ordner liegt. Sie erscheint in Vorschau und Editor
+wie jede andere; nur die Bezüge bleiben leer, bis der Ordner indiziert
+ist.
+
+- **Programm läuft schon:** Die Datei öffnet im vorhandenen Fenster, und
+  das Fenster kommt nach vorn, auch aus der Taskleiste heraus. Eine
+  zweite Instanz entsteht nicht; sie teilte sich sonst Datenbank und
+  Indexer mit der ersten.
+- **Ungespeicherte Änderungen:** Steht im Editor noch Ungespeichertes,
+  kommt dieselbe Frage wie beim Wechsel der Datei. „Abbrechen“ lässt
+  das bisherige Dokument offen.
+- **Datei fehlt oder ist keine Markdown-Datei:** MdExplorer meldet das
+  mit dem Pfad und öffnet nichts.
+- **Programm antwortet nicht:** Reagiert das laufende Programm nicht
+  binnen fünf Sekunden, meldet das die neu gestartete Instanz und
+  beendet sich wieder. Endet das laufende Programm gerade, übernimmt
+  die neue Instanz und öffnet die Datei selbst.
+
+Werden mehrere Dateien zugleich geöffnet, zeigt MdExplorer die zuletzt
+übergebene. Beim Deinstallieren entfernt das Setup die Zuordnung
+wieder; andere Programme, die Markdown öffnen, behalten ihre.
+
+Beim ersten Start öffnet MdExplorer das Hauptfenster, hat aber noch keine
+Inhalte: weil keine Indexierungs-Wurzel konfiguriert ist, bleiben
+Ordner-Baum, Dateiliste und Vorschau leer.
 Der erste sinnvolle Schritt ist daher der Aufruf der Einstellungen
-über `Datei → Einstellungen…` oder das Tastenkürzel `Strg+,`. Im
+über das Zahnrad in der Kopfleiste oder das Tastenkürzel `Strg+,`. Im
 Reiter „Indexierung" lässt sich ein oder mehrere Ordner-Pfade
 eintragen, in denen sich Markdown-Dateien befinden. Sobald die
 Einstellungen mit „Anwenden" bestätigt sind, beginnt der Hintergrund-
@@ -95,23 +133,30 @@ nach wenigen Sekunden verfügbar.
 Alle Benutzerdaten liegen unterhalb von `%LOCALAPPDATA%\MdExplorer\`.
 Dort finden sich die Datei `settings.json` mit den persistierten
 Einstellungen, die Datei `ui-layout.json` mit den Spaltenbreiten des
-Hauptfensters, die SQLite-Datenbank `app.db` mit dem FTS5-Suchindex
+Hauptfensters und weiteren Fensterzuständen, die SQLite-Datenbank `app.db` mit dem FTS5-Suchindex
 und ein Unterverzeichnis `logs\` mit tageweise rotierten Logdateien.
 Wer die Anwendung deinstalliert, kann diesen Ordner gefahrlos löschen;
 umgekehrt lässt sich der gesamte Zustand durch Kopieren des Ordners
 auf einen anderen Rechner mitnehmen.
 
-## 3. Die Drei-Spalten-Oberfläche {#layout}
+## 3. Die Oberfläche {#layout}
 
-Das Hauptfenster gliedert sich von links nach rechts in drei
-Hauptbereiche, die mit Splittern frei in der Breite anpassbar sind.
-Die Spaltenbreiten persistieren beim Schließen der Anwendung in
-`ui-layout.json`, sodass das gewohnte Layout beim nächsten Start
-wiederhergestellt wird. Ganz rechts lässt sich zusätzlich eine
-Tag-Cloud-Spalte einblenden, sodass im Maximalausbau vier Spalten
-sichtbar sind.
+Oben im Hauptfenster steht eine schlanke Kopfleiste: links der Name,
+rechts die Werkzeuge als Symbole — Tag-Cloud ein und aus, Tag-Verwaltung,
+Graph, Protokoll, Einstellungen, Handbuch und Info. Wer mit der Maus auf
+einem Symbol verweilt, liest, was es tut und welches Tastenkürzel dazu
+gehört.
 
-Die **linke Spalte** zeigt zwei Reiter. Der erste Reiter „Ordner"
+Darunter gliedert sich das Fenster in Spalten, die mit einem Splitter
+frei in der Breite anpassbar sind: links die Register zum Finden, rechts
+das Dokument. Die Spaltenbreiten persistieren beim Schließen der
+Anwendung in `ui-layout.json`, sodass das gewohnte Layout beim nächsten
+Start wiederhergestellt wird. Ganz rechts lässt sich zusätzlich eine
+Tag-Cloud-Spalte einblenden.
+
+Die **linke Spalte** zeigt drei Register als Segmentleiste: „Ordner",
+„Alle Dateien" und „Suche"; das gewählte hebt sich hell und fett ab. Das
+erste Register „Ordner"
 stellt die konfigurierten Indexierungs-Wurzeln als Baum dar; jeder
 Wurzelpfad bildet einen eigenen Stamm. Ein Klick auf einen Ordner
 wählt diesen als Bezugspfad; ob die Trefferliste daraufhin auf
@@ -120,17 +165,17 @@ Kontrollkästchen „Nur aktueller Ordner" unter dem Suchfeld (siehe
 Abschnitt 5). Per Rechtsklick lässt sich ein Ordner über das Kontextmenü
 „Indexierung pausieren" temporär aus dem Index nehmen; der Ordner
 und alle Unterordner werden grau dargestellt und beim nächsten
-Indexer-Lauf übersprungen. Der zweite Reiter „Alle Dateien" zeigt
+Indexer-Lauf übersprungen. Das zweite Register „Alle Dateien" zeigt
 demgegenüber eine flache Liste aller indizierten Dateien ohne Baum-
 Struktur; das hilft, wenn man weiß, wonach man sucht, sich aber den
 genauen Ablageort nicht merken möchte.
 
 Diese Liste bringt drei Hilfen mit. Das **Suchfeld** darüber filtert
-beim Tippen über Titel, Pfad und Kennzeichnungen; `Escape` leert es.
+beim Tippen über Titel, Pfad und Tags; `Escape` leert es.
 Darunter stehen die **Zeitraum-Umschalter** „Alle", „Heute", „7 Tage"
 und „30 Tage", die auf die letzte Änderung sehen. Ein Klick auf den
 Pfad eines Eintrags schränkt auf dessen **Ordner** ein, ein Klick auf
-eine Kennzeichnung auf diese **Kennzeichnung**; mehrere davon wirken
+einen Tag auf diesen **Tag**; mehrere davon wirken
 zusammen. Jeder gesetzte Filter erscheint als Merkzettel über der
 Liste und lässt sich dort einzeln wieder abnehmen — ein Filter, der
 wirkt, aber nicht zu sehen ist, sieht aus wie ein leerer Bestand.
@@ -148,17 +193,16 @@ leerem Bestand, „Nichts gefunden" bei zu enger Suche (dort mit einer
 Schaltfläche, die Suche und Filter zurücknimmt) und „Die Liste konnte
 nicht geladen werden", wenn der Abruf gescheitert ist.
 
-Die **mittlere Spalte** ist die Trefferliste der Suche. Solange das
-Suchfeld leer ist, listet sie alle Dateien, die der aktive linke
-Reiter beisteuert, eingeschränkt auf eine konfigurierbare Treffer-
-Höchstzahl. Sobald im Suchfeld am oberen Rand eine Anfrage steht,
-übernimmt die FTS5-Suche und liefert Snippets mit hervorgehobenen
-Treffern. Ein Klick auf einen Eintrag öffnet die Datei in der rechten
-Spalte.
+Das dritte Register „Suche" trägt das Suchfeld und darunter die
+Trefferliste. Sobald im Suchfeld eine Anfrage steht, liefert die
+FTS5-Suche Snippets mit hervorgehobenen Treffern, begrenzt auf die
+eingestellte Zahl an Treffern je Seite. Ein Klick auf einen Eintrag
+öffnet die Datei in der rechten Spalte. Einzelheiten stehen in
+Kapitel 5.
 
 Die **rechte Spalte** ist das Dokument-Panel. Im Standard-Modus
 „Lesen" rendert eine eingebettete WebView2-Instanz die Markdown-Datei
-als HTML mit den im Settings-Dialog gewählten Schriftgrößen. Über
+als HTML in der im Settings-Dialog gewählten Schriftgröße. Über
 `Strg+E` oder den Toolbar-Button „Bearbeiten" lässt sich der Modus
 auf „Bearbeiten" umschalten; an dieser Stelle erscheint eine
 Monospace-TextBox mit dem Rohtext. Tags lassen sich über eine Leiste
@@ -170,7 +214,7 @@ Konflikt manuell auflösen.
 
 Unter dem Dokument steht der Bereich **Zusammenhänge**. Er zeigt, worauf
 das Dokument verweist, welche Dokumente auf es verweisen, in welchem
-Ordner es liegt und welche Kennzeichnungen es trägt; jeder Eintrag führt
+Ordner es liegt und welche Tags es trägt; jeder Eintrag führt
 weiter. Dort wird die Datei auch **umbenannt, verschoben oder gelöscht**,
 im Zusammenhang, nicht in einer getrennten Verwaltungsseite. Vor dem
 Löschen und vor einer Umbenennung, die Verweise bricht, nennt die
@@ -178,14 +222,19 @@ Rückfrage vorher, wie viele Dokumente danach ins Leere zeigen. Beim
 Verschieben entfällt die Rückfrage, weil ein WikiLink auf den Dateinamen
 zeigt und nicht auf den Pfad.
 
-Die **optionale vierte Spalte** ist die Tag-Cloud. Über das Menü
-„Ansicht → Tag-Cloud" lässt sie sich ein- und ausblenden. Sie zeigt
+Die **optionale Spalte ganz rechts** ist die Tag-Cloud. Der Knopf in der
+Kopfleiste, das ✕ in ihrem Kopf und `Strg+T` blenden sie ein und aus.
+In einem Fenster unter 960 Pixeln Breite blendet sie sich selbst aus,
+damit die Vorschau Platz behält, und kommt beim Verbreitern zurück; die
+gespeicherte Wahl bleibt dabei unberührt. Wer sie im schmalen Fenster
+über den Knopf einschaltet, behält sie. Wird es eng, gibt zuerst die
+linke Spalte nach, dann die Tag-Cloud bis zu ihrer Mindestbreite. Sie zeigt
 die häufigsten Tags des aktuellen Bestands; Details dazu folgen in
 Kapitel 6.
 
 ### Helles und dunkles Erscheinungsbild
 
-Unter „Datei → Einstellungen → Darstellung" steht die Wahl zwischen
+In den Einstellungen unter „Darstellung" steht die Wahl zwischen
 **System**, **Hell** und **Dunkel**. „System" folgt der Einstellung von
 Windows; die beiden anderen setzen sich darüber hinweg. Der Wechsel wirkt
 sofort und ohne Neustart.
@@ -195,7 +244,7 @@ den Verweis-Graphen und die Titelleisten der Fenster. Wer „Dunkel" wählt,
 während Windows hell steht, bekommt deshalb keine weiße Fläche mitten in einer
 dunklen Anwendung.
 
-Spaltenbreiten, sichtbare Tag-Cloud und der zuletzt gewählte Reiter bleiben
+Spaltenbreiten, sichtbare Tag-Cloud und das zuletzt gewählte Register bleiben
 vom Erscheinungsbild unberührt; sie stehen in `ui-layout.json` und gelten
 unabhängig davon.
 
@@ -221,11 +270,13 @@ Dateien beim Re-Scan in Bruchteilen einer Sekunde abgearbeitet sind.
 Welche Dateien überhaupt durchsucht werden, entscheidet ein dreistufiges
 Filter-System. Zuerst gelten die **Glob-Ausschluss-Muster** aus der
 `settings.json`. Standardmäßig sind die typischen Werkzeug-Verzeichnisse
-`.git`, `node_modules`, `bin`, `obj` und `.vs` ausgeschlossen; weitere
+`.git`, `node_modules`, `vendor`, `bin`, `obj` und `.vs` ausgeschlossen; weitere
 Muster lassen sich im Einstellungs-Dialog ergänzen. Danach kommt die
 **`.mdignore`-Hierarchie**: in jedem Verzeichnis unterhalb einer Wurzel
 darf eine Datei `.mdignore` liegen, die zusätzliche Ausschluss-Muster
-mit `.gitignore`-ähnlicher Syntax beisteuert. Die Wirkung ist additiv:
+mit `.gitignore`-ähnlicher Syntax beisteuert. Wie bei `.gitignore` gelten
+ihre Muster relativ zu dem Ordner, in dem sie liegt; die Muster aus den
+Einstellungen gelten relativ zur Wurzel. Die Wirkung ist additiv:
 eine Datei gilt als ausgeschlossen, sobald **eine** Quelle sie matched.
 Drittens wirken die **UI-Pausen**: Ordner, die per Rechtsklick im
 Folder-Tree pausiert wurden, werden über einen Pfad-Präfix-Check
@@ -252,12 +303,12 @@ Rest komplett ausschließen:
 ```
 
 Und wer eine einzelne Datei trotz eines pauschalen Verbots im Index
-behalten will (typisches `.mdignore`-Szenario im Drafts-Ordner)
-schreibt:
+behalten will, legt eine `.mdignore` in den Ordner selbst, etwa nach
+`drafts/.mdignore`:
 
 ```text
-drafts/*
-!drafts/important.md
+*
+!important.md
 ```
 
 Tritt eine Datei in keiner Quelle als ausgeschlossen auf, läuft sie
@@ -279,12 +330,13 @@ es Phrasen-, Wildcard- und Prefix-Anfragen, und drittens liefert es
 zusammen mit dem Treffer ein „Snippet", einen kurzen Auszug rund um
 die Fundstelle, mit hervorgehobenen Treffer-Begriffen.
 
-Im Suchfeld am oberen Rand der mittleren Spalte genügt das Tippen,
+Im Suchfeld des Registers „Suche" in der linken Spalte genügt das Tippen,
 um eine Suche auszulösen; nach einem konfigurierbaren Debounce
 (standardmäßig 300 Millisekunden) feuert die Anfrage. Wer den Fokus
 ins Suchfeld setzen möchte, ohne zur Maus zu greifen, erreicht das
-mit `Strg+F` von jedem Punkt der Anwendung aus; `Esc` leert das
-Suchfeld wieder.
+mit `Strg+F`; das Register wechselt dabei mit. Nur im Bearbeiten-Modus
+des Dokuments sucht `Strg+F` stattdessen im Text der Datei. `Esc` leert
+das Suchfeld wieder.
 
 Die Anfrage darf aus mehreren Wörtern bestehen, die implizit mit
 „UND" verknüpft werden. Phrasen (Wortfolgen in genau dieser
@@ -293,6 +345,13 @@ Driven Design"` liefert ausschließlich Treffer, in denen alle drei
 Wörter in dieser Reihenfolge stehen. Wer den Anfang eines Worts
 sucht, ohne die genaue Endung zu kennen, hängt einen Stern an:
 `indizi*` findet sowohl `indizieren` als auch `Indizierung`.
+
+Über die beiden Auswahlfelder neben dem Suchfeld wählen Sie den
+**Modus** („Volltext“ oder „Regulärer Ausdruck“) und die
+**Ähnlichkeit**: „Genau“ sucht die Wörter, wie sie getippt sind,
+„Wortstamm“ findet auch gebeugte Formen, „Ähnlicher Wortstamm“
+zusätzlich leicht abweichende Schreibweisen, und „Ähnlicher Wortstamm
+und Synonyme“ nimmt bedeutungsgleiche Wörter hinzu.
 
 Drei spezielle Filter erweitern die Suche um Metadaten. Der Filter
 `tag:projekt` schränkt auf Dateien ein, die den Tag `projekt`
@@ -312,7 +371,12 @@ den aktuell gewählten Ordner und dessen Unterordner; die Auswahl der
 Baum-Wurzel selbst hebt die Einschränkung wieder auf (globale Suche).
 Im Gegensatz zum `path:`-Filter, den man pro Anfrage tippt, bleibt
 diese Einstellung über alle Suchen hinweg aktiv, bis man sie wieder
-abwählt. Das Umschalten löst die laufende Suche sofort neu aus.
+abwählt. Das Umschalten löst die laufende Suche sofort neu aus, ebenso
+die Wahl eines anderen Ordners im Baum, solange der Haken gesetzt ist.
+Die Beschränkung wirkt in der Abfrage selbst: Auch Treffer, die über
+alle Wurzeln betrachtet weit hinten lägen, erscheinen vollständig.
+Wie viele Treffer eine Suche holt, bestimmt die Einstellung „Treffer
+pro Seite" unter Darstellung.
 
 Jeder Eintrag der Trefferliste zeigt einen Ausschnitt aus dem Fundstück, in
 dem die **Trefferstellen hervorgehoben** sind. Die Hervorhebung folgt dem
@@ -320,12 +384,21 @@ gewählten Erscheinungsbild und bleibt in beiden lesbar.
 
 Ein Klick auf einen Treffer öffnet die Datei in der rechten Spalte.
 Die Vorschau rendert das Markdown in einer eingebetteten WebView2-
-Instanz. Frontmatter-Blöcke werden ausgeblendet, Code-Blöcke
-syntaxgefärbt dargestellt, und WikiLinks der Form `[[Notiz-Slug]]`
-werden als interne Links auf die Zieldatei aufgelöst; ein Klick
-darauf wechselt die Vorschau auf das Verlinkungsziel. Bilder werden
-relativ zur Quelldatei aufgelöst, sodass Markdown-Notizen mit
-Bildordnern unverändert dargestellt werden.
+Instanz. Frontmatter-Blöcke werden ausgeblendet, Code-Blöcke in einer
+Festbreitenschrift abgesetzt dargestellt (ohne Syntaxfärbung: die Vorschau
+führt aus Sicherheitsgründen kein Skript aus), und WikiLinks der Form
+`[[Notiz-Slug]]` werden als interne Links auf die Zieldatei aufgelöst; ein
+Klick darauf wechselt die Vorschau auf das Verlinkungsziel. Bilder werden
+relativ zur Quelldatei aufgelöst, auch mit `..` in einen Nachbarordner,
+sodass Markdown-Notizen mit Bildordnern unverändert dargestellt werden.
+Ein Pfad mit führendem `/` meint die Index-Wurzel. Was über die Wurzel
+hinausführt, zeigt die Vorschau nicht; für eine Datei, die nicht im Index
+steht, gilt ihr eigener Ordner als Grenze.
+
+Verweise ins Netz (`https://…`, `http://…`) öffnen im Standardbrowser,
+`mailto:`-Verweise im Mailprogramm. In der Vorschau selbst bleibt immer
+die Notiz stehen. Andere Verweisarten, etwa auf lokale Dateien
+(`file:`), führt die Vorschau nicht aus.
 
 Bilder von fremden Servern bleiben dabei aus. Der Schalter dafür heißt
 „Bilder aus dem Netz in der Vorschau laden" und steht unter
@@ -341,6 +414,12 @@ TextBox erlaubt dann direkte Änderungen; `Strg+S` schreibt sie
 atomar zurück in die Datei. Das ursprüngliche Zeilenende (CRLF
 unter Windows, LF aus einem Linux-Editor) bleibt erhalten, sodass
 sich Konflikte mit Versionskontroll-Systemen vermeiden lassen.
+
+Stehen ungespeicherte Änderungen an und Sie öffnen eine andere Datei,
+benennen die offene Datei um, verschieben oder löschen sie oder
+schließen das Programm, fragt MdExplorer nach: „Ja“ speichert, „Nein“
+verwirft die Änderungen, „Abbrechen“ lässt Sie beim Dokument. Escape
+wirkt wie Abbrechen.
 
 ## 6. Tag-Cloud und Tag-Verwaltung {#tagcloud}
 
@@ -376,7 +455,7 @@ ausgeschlossen (`-tag:<slug>`), was etwa bei „alles außer Archiv"
 hilft.
 
 Wer Tags umbenennen, zusammenführen oder löschen möchte, öffnet über
-„Ansicht → Tag-Verwaltung…" einen modalen Dialog. Er listet alle
+den Tag-Knopf in der Kopfleiste einen modalen Dialog. Er listet alle
 Tags des Bestands mit der jeweiligen Anzahl betroffener Dateien.
 Drei Operationen stehen zur Auswahl. Beim **Umbenennen** werden
 alle Vorkommen `#alt` durch `#neu` ersetzt, sowohl im Fließtext als
@@ -394,7 +473,7 @@ weniger Sekunden den neuen Stand zeigen.
 
 ## 7. Die Graph-Ansicht {#graph}
 
-Die Graph-Ansicht öffnet sich über „Ansicht → Graph…" in einem
+Die Graph-Ansicht öffnet sich über den Graph-Knopf in der Kopfleiste in einem
 eigenen Fenster und zeigt den WikiLink-Graphen des aktuellen
 Bestands. Jeder Knoten ist eine Markdown-Datei, jede Kante ist eine
 `[[WikiLink]]`-Referenz aus dem Parser. Die Darstellung erfolgt in
@@ -414,18 +493,20 @@ Knoten ohne eingehende oder ausgehende Verbindungen (sogenannte
 „Waisen") sind kleine, isolierte Punkte am Rand des Layouts und
 zeigen oft Notizen, die im Zettelkasten nicht angebunden sind.
 
-Der **Graph reagiert auf Maus-Interaktionen**: mit der linken
-Maustaste lässt sich der gesamte Graph durch den sichtbaren Bereich
-ziehen, mit dem Mausrad zoomt man stufenlos. Einzelne Knoten
-lassen sich anklicken; im Tooltip erscheint der Dateiname, ein
-Doppelklick öffnet die Datei im Vorschau-Bereich des Hauptfensters.
-Die Legende in der oberen linken Ecke zeigt die aktuelle Knoten-
-und Kantenzahl, sodass auf einen Blick erkennbar ist, wie groß der
-Graph gerade ist.
+Der **Graph lässt sich mit Maus und Tastatur bedienen**: Mit der
+linken Maustaste zieht man den gesamten Graphen durch den sichtbaren
+Bereich oder einen einzelnen Knoten an eine andere Stelle; seine
+Nachbarn folgen ihm. Das Mausrad zoomt stufenlos. Ohne Maus erreicht
+`Tab` die Zeichenfläche; dort zoomen `+` und `-`, die Pfeiltasten
+verschieben, und `0` setzt die Ansicht zurück. Ein Screenreader liest
+die Zeichenfläche als Bild mit Knoten- und Kantenzahl und dieser
+Bedienung vor. Die Legende in der oberen linken Ecke zeigt die
+aktuelle Knoten- und Kantenzahl, sodass auf einen Blick erkennbar
+ist, wie groß der Graph gerade ist.
 
 Aus Sicherheitssicht läuft das Graph-Fenster mit einer strikten
-Content-Security-Policy: nur ressourcen-eigene Skripte mit
-korrektem Nonce dürfen ausgeführt werden, externe Quellen sind per
+Content-Security-Policy: nur ressourcen-eigene Skripte und Stile mit
+korrektem Nonce dürfen wirken, externe Quellen sind per
 `default-src 'none'` blockiert. Die Übergabe der Graph-Daten ans
 JavaScript erfolgt über einen `<script type="application/json">`-
 Block, kein Inline-Code, keine Eval-Aufrufe.
@@ -458,7 +539,13 @@ Stufe `Error` oder `Critical` weisen meist auf die Ursache hin,
 etwa eine korrupt gewordene SQLite-Datei oder einen unerreichbaren
 Index-Pfad nach einem getrennten Netzlaufwerk. Bei wiederkehrenden
 Problemen hilft das Löschen der `app.db`, um eine beschädigte
-Datenbank auszuschließen.
+Datenbank auszuschließen. Für eine genauere Spur lässt sich die
+Protokollstufe anheben: mit der Umgebungsvariable
+`Serilog__MinimumLevel=Debug` oder einer Datei `appsettings.json`
+neben `MdExplorer.exe` mit `{ "Serilog": { "MinimumLevel": "Debug" } }`.
+Im Protokollfenster (Protokoll-Knopf in der Kopfleiste) grenzt der Zeitraumfilter die
+Einträge auf die letzten 15 Minuten, die letzte Stunde oder die
+letzten 24 Stunden ein.
 
 **Welche Markdown-Dialekte werden unterstützt?**
 MdExplorer nutzt Markdig mit den Standard-CommonMark-Erweiterungen

@@ -29,8 +29,8 @@ public sealed class HelpViewModelTests
 
         sut.SetToc([new HelpTocEntry("suche", "Suchen")]);
 
-        HelpTocEntry einziger = Assert.Single(sut.Toc);
-        Assert.Equal("suche", einziger.Slug, StringComparer.Ordinal);
+        HelpTocEntry single = Assert.Single(sut.Toc);
+        Assert.Equal("suche", single.Slug, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -56,12 +56,44 @@ public sealed class HelpViewModelTests
     public void SelectedEntry_WhenChanged_RaisesPropertyChanged()
     {
         HelpViewModel sut = new();
-        List<string?> gemeldet = [];
-        sut.PropertyChanged += (_, e) => gemeldet.Add(e.PropertyName);
+        List<string?> reported = [];
+        sut.PropertyChanged += (_, e) => reported.Add(e.PropertyName);
 
         sut.SelectedEntry = new HelpTocEntry("suche", "Suchen");
 
-        Assert.Contains(nameof(HelpViewModel.SelectedEntry), gemeldet, StringComparer.Ordinal);
+        Assert.Contains(nameof(HelpViewModel.SelectedEntry), reported, StringComparer.Ordinal);
         Assert.Equal("suche", sut.SelectedEntry!.Slug, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public void FindEntry_KnownSlug_ReturnsItsEntry()
+    {
+        HelpViewModel sut = new();
+        sut.SetToc([new HelpTocEntry("start", "Erste Schritte"), new HelpTocEntry("suche", "Suchen")]);
+
+        Assert.Equal("Suchen", sut.FindEntry("suche")?.Title);
+    }
+
+    [Fact]
+    public void FindEntry_UnknownSlug_ReturnsNothing()
+    {
+        HelpViewModel sut = new();
+        sut.SetToc([new HelpTocEntry("start", "Erste Schritte")]);
+
+        Assert.Null(sut.FindEntry("graph"));
+    }
+
+    [Theory]
+    [InlineData(0, -1, "0 / 0")]
+    [InlineData(7, -1, "1 / 7")]
+    [InlineData(7, 0, "1 / 7")]
+    [InlineData(7, 6, "7 / 7")]
+    public void ShowHits_CountsFromOne(int count, int index, string expected)
+    {
+        HelpViewModel sut = new();
+
+        sut.ShowHits(count, index);
+
+        Assert.Equal(expected, sut.HitSummary, StringComparer.Ordinal);
     }
 }

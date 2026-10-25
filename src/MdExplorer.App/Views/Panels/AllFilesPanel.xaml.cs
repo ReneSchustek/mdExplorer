@@ -63,6 +63,7 @@ internal sealed partial class AllFilesPanel : UserControl
     private static void GroupByLabel(AllFilesViewModel viewModel)
     {
         ICollectionView view = CollectionViewSource.GetDefaultView(viewModel.Items);
+        // Schon gruppiert: Ein erneuter Wechsel des DataContext darf keine zweite Ebene anlegen.
         if (view.GroupDescriptions is null || view.GroupDescriptions.Count > 0)
         {
             return;

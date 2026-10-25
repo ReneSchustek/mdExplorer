@@ -1,3 +1,4 @@
+using MdExplorer.Core.Abstractions;
 using MdExplorer.Search.Abstractions;
 using MdExplorer.Search.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,7 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            Guid fileId = Guid.NewGuid();
+            Guid fileId = IdOf(1);
             await harness.SeedAsync(new SeedDocument(
                 fileId,
                 Title: "Notizen",
@@ -48,8 +49,8 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Alpha", "foo-bar.md", "foo bar baz"), TestContext.Current.CancellationToken).ConfigureAwait(true);
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Beta", "bar-foo.md", "bar foo baz"), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(IdOf(2), "Alpha", "foo-bar.md", "foo bar baz"), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(IdOf(3), "Beta", "bar-foo.md", "bar foo baz"), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -77,7 +78,7 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            Guid fileId = Guid.NewGuid();
+            Guid fileId = IdOf(4);
             await harness.SeedAsync(SeedFor(fileId, "München", "muenchen.md", "Spaziergang durch München im Sommer."), TestContext.Current.CancellationToken).ConfigureAwait(true);
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -98,7 +99,7 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            Guid taggedId = Guid.NewGuid();
+            Guid taggedId = IdOf(5);
             await harness.SeedAsync(new SeedDocument(
                 taggedId,
                 Title: "Projekt-Notiz",
@@ -109,7 +110,7 @@ public sealed class Fts5SearchServiceIntegrationTests
                 Body: "Inhalt zum Projekt.",
                 RawSource: "Inhalt zum Projekt.",
                 Tags: [("projekt", "Projekt")]), TestContext.Current.CancellationToken).ConfigureAwait(true);
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Andere", "andere.md", "Inhalt zum Projekt aber ohne Tag."), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(IdOf(6), "Andere", "andere.md", "Inhalt zum Projekt aber ohne Tag."), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -130,8 +131,9 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Notiz", @"C:\Wurzel\notes\eins.md", "Inhalt mit alpha.", "notes/eins.md"), TestContext.Current.CancellationToken).ConfigureAwait(true);
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Sonstig", @"C:\Wurzel\sonstig\zwei.md", "Inhalt mit alpha.", "sonstig/zwei.md"), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            // Gespeichert wird der relative Pfad des Betriebssystems, wie ihn der Indexer bildet.
+            await harness.SeedAsync(SeedFor(new Guid("41111111-1111-1111-1111-111111111111"), "Notiz", @"C:\Wurzel\notes\eins.md", "Inhalt mit alpha.", Path.Combine("notes", "eins.md")), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(new Guid("42222222-2222-2222-2222-222222222222"), "Sonstig", @"C:\Wurzel\sonstig\zwei.md", "Inhalt mit alpha.", Path.Combine("sonstig", "zwei.md")), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -141,8 +143,29 @@ public sealed class Fts5SearchServiceIntegrationTests
                 .SearchAsync(new SearchQuery("alpha path:notes/"), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
-            _ = Assert.Single(results);
-            Assert.StartsWith("notes/", results[0].Path, StringComparison.Ordinal);
+            Assert.Equal("Notiz", Assert.Single(results).Title);
+        }
+    }
+
+    [Fact]
+    public async Task SearchAsync_OnPathFilterWithUnderscore_MatchesTheUnderscoreLiterally()
+    {
+        // Im LIKE steht "_" für ein beliebiges Zeichen. Ohne Maskierung träfe "my_docs" auch
+        // "myXdocs"; der Test läuft gegen echtes SQLite, weil nur dort ESCAPE wirkt.
+        SearchTestHarness harness = new();
+        await using (harness.ConfigureAwait(true))
+        {
+            await harness.SeedAsync(SeedFor(new Guid("51111111-1111-1111-1111-111111111111"), "Gemeint", @"C:\Wurzel\my_docs\a.md", "Inhalt mit alpha.", Path.Combine("my_docs", "a.md")), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(new Guid("52222222-2222-2222-2222-222222222222"), "Fremd", @"C:\Wurzel\myXdocs\b.md", "Inhalt mit alpha.", Path.Combine("myXdocs", "b.md")), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+            using IServiceScope scope = harness.Services.CreateScope();
+            ISearchService service = harness.CreateSearchService(scope);
+            IReadOnlyList<SearchResult> results = await service
+                .SearchAsync(new SearchQuery("alpha path:my_docs"), TestContext.Current.CancellationToken)
+                .ConfigureAwait(true);
+
+            Assert.Equal("Gemeint", Assert.Single(results).Title);
         }
     }
 
@@ -152,7 +175,7 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            await harness.SeedAsync(SeedFor(Guid.NewGuid(), "Doku", "doku.md", "Eine harmlose Notiz."), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await harness.SeedAsync(SeedFor(IdOf(7), "Doku", "doku.md", "Eine harmlose Notiz."), TestContext.Current.CancellationToken).ConfigureAwait(true);
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();
@@ -171,12 +194,35 @@ public sealed class Fts5SearchServiceIntegrationTests
     }
 
     [Fact]
+    public async Task SearchAsync_OnANoteContainingMarkupText_KeepsItAsTextAndMarksOnlyTheHit()
+    {
+        // Eine Notiz über HTML enthält <mark> wörtlich. Als Trennzeichen der Trefferstellen hätte
+        // es die Hervorhebung verschoben; mit eigenen Zeichen bleibt es gewöhnlicher Text.
+        SearchTestHarness harness = new();
+        await using (harness.ConfigureAwait(true))
+        {
+            await harness.SeedAsync(SeedFor(IdOf(9), "Html", "html.md", "Das Element <mark> hebt ein wort hervor."), TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+            using IServiceScope scope = harness.Services.CreateScope();
+            IReadOnlyList<SearchResult> results = await harness.CreateSearchService(scope)
+                .SearchAsync(new SearchQuery("wort"), TestContext.Current.CancellationToken)
+                .ConfigureAwait(true);
+
+            string snippet = Assert.Single(results).Snippet;
+            Assert.Contains("<mark>", snippet, StringComparison.Ordinal);
+            Assert.Contains(SnippetMarkers.Open + "wort" + SnippetMarkers.Close, snippet, StringComparison.Ordinal);
+            Assert.Equal(1, snippet.Split(SnippetMarkers.Open).Length - 1);
+        }
+    }
+
+    [Fact]
     public async Task SearchAsync_OnSnippetMarker_ReturnsHighlightPositions()
     {
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            Guid fileId = Guid.NewGuid();
+            Guid fileId = IdOf(8);
             await harness.SeedAsync(SeedFor(fileId, "Highlight", "highlight.md", "Treffer auf wort in einem Absatz."), TestContext.Current.CancellationToken).ConfigureAwait(true);
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -187,8 +233,7 @@ public sealed class Fts5SearchServiceIntegrationTests
                 .ConfigureAwait(true);
 
             _ = Assert.Single(results);
-            Assert.Contains("<mark>", results[0].Snippet, StringComparison.Ordinal);
-            Assert.NotEmpty(results[0].Highlights);
+            Assert.Contains(SnippetMarkers.Open + "wort" + SnippetMarkers.Close, results[0].Snippet, StringComparison.Ordinal);
         }
     }
 
@@ -201,7 +246,7 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            Guid fileId = Guid.NewGuid();
+            Guid fileId = IdOf(9);
             await harness.SeedAsync(SeedFor(fileId, "Delete-Me", "delete.md", "Inhalt zum löschen."), TestContext.Current.CancellationToken).ConfigureAwait(true);
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -230,7 +275,7 @@ public sealed class Fts5SearchServiceIntegrationTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            Guid fileId = Guid.NewGuid();
+            Guid fileId = IdOf(10);
             await harness.SeedAsync(SeedFor(fileId, "Update", "update.md", "Erste Fassung mit alpha."), TestContext.Current.CancellationToken).ConfigureAwait(true);
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -269,16 +314,18 @@ public sealed class Fts5SearchServiceIntegrationTests
     }
 
     [Fact]
-    public async Task SearchAsync_OnLargeDataset_RespondsBelow100MilliSeconds()
+    public async Task SearchAsync_OnTwoHundredDocuments_FindsEveryOneOfThem()
     {
+        // Die Laufzeit misst SearchBenchmarks im Messprojekt; eine Stoppuhr im Testlauf hinge an
+        // der Auslastung. Hier zählt, dass ein größerer Bestand vollständig gefunden wird.
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            const int documentCount = 200;
-            for (int i = 0; i < documentCount; i++)
+            const int DocumentCount = 200;
+            for (int i = 0; i < DocumentCount; i++)
             {
                 await harness.SeedAsync(SeedFor(
-                    Guid.NewGuid(),
+                    IdOf(1000 + i),
                     $"Dokument-{i}",
                     $@"C:\Wurzel\doc-{i}.md",
                     $"Inhalt {i} mit gemeinsamem wort und einem eigenen begriff-{i}."),
@@ -289,35 +336,15 @@ public sealed class Fts5SearchServiceIntegrationTests
 
             using IServiceScope scope = harness.Services.CreateScope();
             ISearchService service = harness.CreateSearchService(scope);
-
-            // Warmup
-            _ = await service
-                .SearchAsync(new SearchQuery("wort"), TestContext.Current.CancellationToken)
+            // Eine Seite fasst höchstens 100 Treffer; die zweite Seite muss den Rest bringen.
+            IReadOnlyList<SearchResult> first = await service
+                .SearchAsync(new SearchQuery("wort", Take: 100), TestContext.Current.CancellationToken)
+                .ConfigureAwait(true);
+            IReadOnlyList<SearchResult> second = await service
+                .SearchAsync(new SearchQuery("wort", Take: 100, Skip: 100), TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
-            // Gewertet wird die kleinste von mehreren Messungen. Im vollständigen Lauf
-            // arbeiten neun Testprozesse gleichzeitig; eine Verdrängung verlängert eine
-            // Messung, verkürzt sie aber nie. Das Minimum schätzt deshalb die ungestörte
-            // Laufzeit und schlägt bei einer echten Regression weiterhin an, ohne bei
-            // hoher Auslastung umzufallen.
-            const int MeasurementAttempts = 5;
-            long bestMilliseconds = long.MaxValue;
-            IReadOnlyList<SearchResult> results = [];
-            for (int attempt = 0; attempt < MeasurementAttempts; attempt++)
-            {
-                System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                results = await service
-                    .SearchAsync(new SearchQuery("wort"), TestContext.Current.CancellationToken)
-                    .ConfigureAwait(true);
-                stopwatch.Stop();
-                bestMilliseconds = Math.Min(bestMilliseconds, stopwatch.ElapsedMilliseconds);
-            }
-
-            Assert.NotEmpty(results);
-            Assert.True(
-                bestMilliseconds < 100,
-                $"FTS5-Suche brauchte im schnellsten von {MeasurementAttempts} Durchläufen "
-                    + $"{bestMilliseconds} ms — Performance-Budget 100 ms verletzt.");
+            Assert.Equal(DocumentCount, first.Concat(second).Select(result => result.MarkdownFileId).Distinct().Count());
         }
     }
 
@@ -330,9 +357,12 @@ public sealed class Fts5SearchServiceIntegrationTests
             Title: title,
             AbsolutePath: absolutePath,
             RelativePath: relativePath,
-            SourceContentHash: Guid.NewGuid().ToString("N"),
+            SourceContentHash: "hash-" + fileId.ToString("N"),
             FrontmatterJson: "{}",
             Body: body,
             RawSource: body,
             Tags: []);
+
+    private static Guid IdOf(int index) =>
+        new(index.ToString("D8", System.Globalization.CultureInfo.InvariantCulture) + "-0000-0000-0000-000000000000");
 }

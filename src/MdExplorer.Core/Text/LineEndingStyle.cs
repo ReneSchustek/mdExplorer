@@ -1,9 +1,9 @@
 namespace MdExplorer.Core.Text;
 
 /// <summary>
-/// Zeilenende-Konvention einer Textdatei. Beim Editieren wird die ursprüngliche
-/// Konvention der Datei erkannt und beim Speichern unverändert zurückgeschrieben,
-/// damit MdExplorer keine plattformfremden Markdown-Dateien um-formatiert.
+/// Zeilenende-Konvention einer Textdatei. Der Editor erkennt die Konvention beim Laden und
+/// schreibt sie beim Speichern unverändert zurück; eine Datei aus einem Unix-Repository bleibt
+/// so bei LF, statt nach dem ersten Speichern in jeder Zeile als geändert zu gelten.
 /// </summary>
 public enum LineEndingStyle
 {

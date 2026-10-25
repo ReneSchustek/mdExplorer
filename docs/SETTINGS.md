@@ -165,7 +165,10 @@ mit drei Tabs:
 
 `Abbrechen` verwirft Änderungen, `Anwenden` schreibt sie atomar und
 löst die abhängigen Services über das `SettingsChanged`-Event aus
-(z. B. Indexer-Re-Scan, Glob-Matcher-Cache-Invalidierung).
+(z. B. Indexer-Re-Scan, Glob-Matcher-Cache-Invalidierung). Einen Re-Scan
+gibt es nur nach einer Änderung unter `indexing`; ein weiterer Speichervorgang
+bricht einen noch laufenden ab. Theme, `previewFontSize` und
+`loadRemoteImagesInPreview` wirken sofort in der Vorschau.
 
 ## Migration
 

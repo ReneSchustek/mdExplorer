@@ -6,9 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
-/// Direkt-Tests für die statischen/internen Helfer aus <see cref="Fts5IndexMaintainer"/>.
-/// Indirekt sind sie über <c>Fts5SearchServiceIntegrationTests</c> abgedeckt; diese Tests fixieren
-/// das Verhalten in Isolation, damit Refactorings im Maintainer nicht unbeobachtet driften.
+/// Die Helfer des <see cref="Fts5IndexMaintainer"/> einzeln: Der Abgleich nimmt neue und geänderte
+/// Dokumente portionsweise auf, erklärt nur wirklich verschwundene zu Waisen und kommt über mehrere
+/// Takte zum vollständigen Index. Hielte er ein lebendes Dokument jenseits der Portionsgrenze für
+/// verwaist, löschte jeder Takt, was der vorige gerade eingetragen hat.
 /// </summary>
 public sealed class Fts5IndexMaintainerTests
 {
@@ -16,7 +17,8 @@ public sealed class Fts5IndexMaintainerTests
     private static readonly Guid IdB = new("22222222-2222-2222-2222-222222222222");
     private static readonly Guid IdC = new("33333333-3333-3333-3333-333333333333");
 
-    // ============ ComputeDiff ============
+    // Kein Dokument wartet auf einen neuen Leseversuch; der Abgleich entscheidet allein nach Hash.
+    private static readonly Func<SearchSourceDocument, bool> NothingWaits = static _ => false;
 
     [Fact]
     public void ComputeDiff_OnEmptyIndexAndEmptySource_ReturnsEmptyDiff()
@@ -24,7 +26,7 @@ public sealed class Fts5IndexMaintainerTests
         Dictionary<Guid, string> indexedHashes = [];
         SearchSourceData source = new([], new Dictionary<Guid, IReadOnlyList<string>>());
 
-        Fts5IndexMaintainer.SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100);
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100, NothingWaits);
 
         Assert.Empty(diff.Targets);
         Assert.Empty(diff.Orphans);
@@ -38,7 +40,7 @@ public sealed class Fts5IndexMaintainerTests
             [NewDoc(IdA, "hash-A")],
             new Dictionary<Guid, IReadOnlyList<string>>());
 
-        Fts5IndexMaintainer.SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100);
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100, NothingWaits);
 
         SearchSourceDocument single = Assert.Single(diff.Targets);
         Assert.Equal(IdA, single.MarkdownFileId);
@@ -53,7 +55,7 @@ public sealed class Fts5IndexMaintainerTests
             [NewDoc(IdA, "hash-A")],
             new Dictionary<Guid, IReadOnlyList<string>>());
 
-        Fts5IndexMaintainer.SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100);
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100, NothingWaits);
 
         Assert.Empty(diff.Targets);
         Assert.Empty(diff.Orphans);
@@ -67,7 +69,7 @@ public sealed class Fts5IndexMaintainerTests
             [NewDoc(IdA, "hash-A-new")],
             new Dictionary<Guid, IReadOnlyList<string>>());
 
-        Fts5IndexMaintainer.SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100);
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100, NothingWaits);
 
         SearchSourceDocument single = Assert.Single(diff.Targets);
         Assert.Equal(IdA, single.MarkdownFileId);
@@ -81,7 +83,7 @@ public sealed class Fts5IndexMaintainerTests
             [NewDoc(IdA, "hash-A")],
             new Dictionary<Guid, IReadOnlyList<string>>());
 
-        Fts5IndexMaintainer.SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100);
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100, NothingWaits);
 
         Assert.Empty(diff.Targets);
         Guid orphan = Assert.Single(diff.Orphans);
@@ -96,19 +98,32 @@ public sealed class Fts5IndexMaintainerTests
             [NewDoc(IdA, "hash-A"), NewDoc(IdB, "hash-B"), NewDoc(IdC, "hash-C")],
             new Dictionary<Guid, IReadOnlyList<string>>());
 
-        Fts5IndexMaintainer.SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 2);
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 2, NothingWaits);
 
         Assert.Equal(2, diff.Targets.Count);
     }
 
-    // ============ StripFrontmatter ============
+    [Fact]
+    public void ComputeDiff_OnADocumentWaitingForRetry_LeavesItsBatchSlotToTheNext()
+    {
+        Dictionary<Guid, string> indexedHashes = new() { [IdA] = Fts5IndexMaintainer.UnreadBodyHash };
+        SearchSourceData source = new(
+            [NewDoc(IdA, "hash-A"), NewDoc(IdB, "hash-B")],
+            new Dictionary<Guid, IReadOnlyList<string>>());
+
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(
+            indexedHashes, source, batchSize: 1, document => document.MarkdownFileId == IdA);
+
+        Assert.Equal(IdB, Assert.Single(diff.Targets).MarkdownFileId);
+        Assert.Empty(diff.Orphans);
+    }
 
     [Fact]
     public void StripFrontmatter_OnNoFrontmatter_ReturnsSourceUnchanged()
     {
         const string Source = "# Heading\n\nBody.";
 
-        string result = Fts5IndexMaintainer.StripFrontmatter(Source);
+        string result = SearchIndexText.StripFrontmatter(Source);
 
         Assert.Equal(Source, result);
     }
@@ -118,7 +133,7 @@ public sealed class Fts5IndexMaintainerTests
     {
         const string Source = "---\ntitle: Test\n# Heading\n";
 
-        string result = Fts5IndexMaintainer.StripFrontmatter(Source);
+        string result = SearchIndexText.StripFrontmatter(Source);
 
         Assert.Equal(Source, result);
     }
@@ -128,7 +143,7 @@ public sealed class Fts5IndexMaintainerTests
     {
         const string Source = "---\ntitle: Test\n---\nBody-Inhalt.";
 
-        string result = Fts5IndexMaintainer.StripFrontmatter(Source);
+        string result = SearchIndexText.StripFrontmatter(Source);
 
         Assert.Equal("Body-Inhalt.", result);
     }
@@ -138,17 +153,15 @@ public sealed class Fts5IndexMaintainerTests
     {
         const string Source = "---\ntitle: Test\n---";
 
-        string result = Fts5IndexMaintainer.StripFrontmatter(Source);
+        string result = SearchIndexText.StripFrontmatter(Source);
 
         Assert.Equal(string.Empty, result);
     }
 
-    // ============ FlattenFrontmatter ============
-
     [Fact]
     public void FlattenFrontmatter_OnInvalidJson_ReturnsEmpty()
     {
-        string result = Fts5IndexMaintainer.FlattenFrontmatter("{ kaputt :: ");
+        string result = SearchIndexText.FlattenFrontmatter("{ kaputt :: ");
 
         Assert.Equal(string.Empty, result);
     }
@@ -156,14 +169,14 @@ public sealed class Fts5IndexMaintainerTests
     [Fact]
     public void FlattenFrontmatter_OnNullOrWhitespace_ReturnsEmpty()
     {
-        Assert.Equal(string.Empty, Fts5IndexMaintainer.FlattenFrontmatter(string.Empty));
-        Assert.Equal(string.Empty, Fts5IndexMaintainer.FlattenFrontmatter("   "));
+        Assert.Equal(string.Empty, SearchIndexText.FlattenFrontmatter(string.Empty));
+        Assert.Equal(string.Empty, SearchIndexText.FlattenFrontmatter("   "));
     }
 
     [Fact]
     public void FlattenFrontmatter_OnSimpleObject_ReturnsKeyValuePairs()
     {
-        string result = Fts5IndexMaintainer.FlattenFrontmatter("""{"title":"Foo","author":"Bar"}""");
+        string result = SearchIndexText.FlattenFrontmatter("""{"title":"Foo","author":"Bar"}""");
 
         Assert.Contains("title", result, StringComparison.Ordinal);
         Assert.Contains("Foo", result, StringComparison.Ordinal);
@@ -174,9 +187,9 @@ public sealed class Fts5IndexMaintainerTests
     [Fact]
     public void FlattenFrontmatter_OnArrayValue_ReturnsJsonRepresentation()
     {
-        string result = Fts5IndexMaintainer.FlattenFrontmatter("""{"tags":["a","b"]}""");
+        string result = SearchIndexText.FlattenFrontmatter("""{"tags":["a","b"]}""");
 
-        // Aktuelles dokumentiertes Verhalten: Arrays werden via ToString() in den Body geschrieben.
+        // Ein Array landet in seiner JSON-Schreibweise im Text, nicht als einzelne Werte.
         Assert.Contains("tags", result, StringComparison.Ordinal);
         Assert.Contains("a", result, StringComparison.Ordinal);
         Assert.Contains("b", result, StringComparison.Ordinal);
@@ -185,14 +198,14 @@ public sealed class Fts5IndexMaintainerTests
     [Fact]
     public void FlattenFrontmatter_OnNonObjectRoot_ReturnsEmpty()
     {
-        string result = Fts5IndexMaintainer.FlattenFrontmatter("[1, 2, 3]");
+        string result = SearchIndexText.FlattenFrontmatter("[1, 2, 3]");
 
         Assert.Equal(string.Empty, result);
     }
 
-    // TrySynchronizeAsync muss erholbare Exceptions abfangen; Periodic-Loop läuft weiter.
+    // TrySynchronizeAsync fängt erholbare Ausnahmen ab, damit der Abgleichtakt weiterläuft.
     [Fact]
-    public async Task TrySynchronizeAsync_OnArgumentException_LogsAndDoesNotThrow()
+    public async Task TrySynchronizeAsync_OnArgumentException_KeepsTheLoopAlive()
     {
         using ThrowingMaintainerHarness harness = new(new ArgumentException("simulated invariant"));
 
@@ -203,7 +216,7 @@ public sealed class Fts5IndexMaintainerTests
     }
 
     [Fact]
-    public async Task TrySynchronizeAsync_OnInvalidOperationException_LogsAndDoesNotThrow()
+    public async Task TrySynchronizeAsync_OnInvalidOperationException_KeepsTheLoopAlive()
     {
         using ThrowingMaintainerHarness harness = new(new InvalidOperationException("simulated bad state"));
 
@@ -212,23 +225,22 @@ public sealed class Fts5IndexMaintainerTests
         Assert.Equal(1, harness.Source.CallCount);
     }
 
-    // ============ Konvergenz: BatchSize darf liveIds nicht abschneiden ============
-
+    // Die Portionsgrenze begrenzt nur, was eingetragen wird, nicht die Menge der lebenden Ids.
     [Fact]
     public void ComputeDiff_OnMoreDocumentsThanBatchSize_DoesNotMarkLiveAsOrphan()
     {
+        // Fünf volle Portionen; jedes fünfte Dokument ist schon aktuell im Index.
         const int DocumentCount = 500;
         const int BatchSize = 100;
         List<SearchSourceDocument> documents = BuildDocuments(DocumentCount);
         SearchSourceData source = new(documents, new Dictionary<Guid, IReadOnlyList<string>>());
         Dictionary<Guid, string> indexedHashes = new(BatchSize);
-        // 100 über den gesamten Bereich verteilte IDs (jeder 5.) sind bereits aktuell indiziert.
         for (int i = 0; i < DocumentCount; i += 5)
         {
             indexedHashes[documents[i].MarkdownFileId] = documents[i].SourceContentHash;
         }
 
-        Fts5IndexMaintainer.SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, BatchSize);
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, BatchSize, NothingWaits);
 
         Assert.Equal(BatchSize, diff.Targets.Count);
         Assert.Empty(diff.Orphans);
@@ -237,6 +249,7 @@ public sealed class Fts5IndexMaintainerTests
     [Fact]
     public async Task Synchronize_OnMoreDocumentsThanBatchSize_ConvergesOverMultipleTicks()
     {
+        // Fünf Portionen zu 100 brauchen genau fünf Takte; ein sechster darf nichts mehr ändern.
         const int DocumentCount = 500;
         const int BatchSize = 100;
         List<SearchSourceDocument> documents = BuildDocuments(DocumentCount);
@@ -284,6 +297,7 @@ public sealed class Fts5IndexMaintainerTests
     private static SearchSourceDocument NewDoc(Guid id, string hash) =>
         new(id, "title", @"C:\path\file.md", "file.md", hash, "{}");
 
+    /// <summary>Echter Maintainer über einer Quelle, die beim Laden wirft.</summary>
     private sealed class ThrowingMaintainerHarness : IDisposable
     {
         public ThrowingSearchSourceProvider Source { get; }
@@ -309,14 +323,22 @@ public sealed class Fts5IndexMaintainerTests
                 fs,
                 wrappedOptions,
                 timeProvider,
+                new MdExplorer.Core.Diagnostics.BackgroundServiceStatus(),
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<Fts5IndexMaintainer>.Instance);
         }
 
         public void Dispose() => _provider.Dispose();
     }
 
+    /// <summary>Quelle, die jeden Ladeversuch mit derselben Ausnahme scheitern lässt und mitzählt.</summary>
     private sealed class ThrowingSearchSourceProvider : MdExplorer.Core.Abstractions.ISearchSourceProvider
     {
+        private int _versionCalls;
+
+        // Jeder Aufruf meldet einen neuen Stand; der volle Abgleich läuft damit jedes Mal.
+        public Task<MdExplorer.Core.Abstractions.SearchSourceVersion> LoadVersionAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new MdExplorer.Core.Abstractions.SearchSourceVersion(Interlocked.Increment(ref _versionCalls), null, 0, null));
+
         private readonly Exception _failure;
 
         public int CallCount { get; private set; }
@@ -330,6 +352,7 @@ public sealed class Fts5IndexMaintainerTests
         }
     }
 
+    /// <summary>Leerer Suchindex, der jede Änderung annimmt und verwirft.</summary>
     private sealed class NoopSearchIndexStorage : MdExplorer.Core.Abstractions.ISearchIndexStorage
     {
         public Task<IReadOnlyDictionary<Guid, string>> LoadIndexedHashesAsync(CancellationToken cancellationToken) =>
@@ -345,6 +368,7 @@ public sealed class Fts5IndexMaintainerTests
             Task.FromResult<IReadOnlyDictionary<Guid, string>>(new Dictionary<Guid, string>());
     }
 
+    /// <summary>Dateisystem ohne Dateien; jede gelesene Datei ist leer.</summary>
     private sealed class NoopFileSystem : MdExplorer.Core.Abstractions.IFileSystem
     {
         public bool DirectoryExists(string path) => false;
@@ -361,6 +385,10 @@ public sealed class Fts5IndexMaintainerTests
         public long GetFileSize(string path) => 0;
         public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken) => Task.CompletedTask;
 
+        public void WriteAllBytesAtomic(string path, ReadOnlySpan<byte> content)
+        {
+        }
+
         /// <inheritdoc />
         public void MoveFile(string sourcePath, string destinationPath) =>
             throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
@@ -370,6 +398,7 @@ public sealed class Fts5IndexMaintainerTests
             throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
     }
 
+    /// <summary>Echter Maintainer mit fester Portionsgröße über Quelle und Index im Arbeitsspeicher.</summary>
     private sealed class ConvergenceMaintainerHarness : IDisposable
     {
         public InMemorySearchIndexStorage Storage { get; }
@@ -395,14 +424,22 @@ public sealed class Fts5IndexMaintainerTests
                 fs,
                 wrappedOptions,
                 timeProvider,
+                new MdExplorer.Core.Diagnostics.BackgroundServiceStatus(),
                 Microsoft.Extensions.Logging.Abstractions.NullLogger<Fts5IndexMaintainer>.Instance);
         }
 
         public void Dispose() => _provider.Dispose();
     }
 
+    /// <summary>Quelle, die immer denselben Datenstand liefert.</summary>
     private sealed class InMemorySearchSourceProvider : MdExplorer.Core.Abstractions.ISearchSourceProvider
     {
+        private int _versionCalls;
+
+        // Jeder Aufruf meldet einen neuen Stand; der volle Abgleich läuft damit jedes Mal.
+        public Task<MdExplorer.Core.Abstractions.SearchSourceVersion> LoadVersionAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new MdExplorer.Core.Abstractions.SearchSourceVersion(Interlocked.Increment(ref _versionCalls), null, 0, null));
+
         private readonly SearchSourceData _data;
 
         public InMemorySearchSourceProvider(SearchSourceData data) => _data = data;
@@ -410,6 +447,7 @@ public sealed class Fts5IndexMaintainerTests
         public Task<SearchSourceData> LoadAsync(CancellationToken cancellationToken) => Task.FromResult(_data);
     }
 
+    /// <summary>Suchindex im Arbeitsspeicher, der nur Id und Hash je Dokument festhält.</summary>
     private sealed class InMemorySearchIndexStorage : MdExplorer.Core.Abstractions.ISearchIndexStorage
     {
         public Dictionary<Guid, string> Indexed { get; } = [];

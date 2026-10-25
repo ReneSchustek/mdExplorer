@@ -2,6 +2,11 @@ using MdExplorer.Parser.Services;
 
 namespace MdExplorer.Parser.Tests.Services;
 
+/// <summary>
+/// Der Normalisierer bildet Schlagworte und Dateinamen auf denselben Slug ab: klein, Trenner
+/// zusammengefasst, Satzzeichen entfernt, Umlaute erhalten. Weicht die Abbildung ab, finden
+/// Schlagwortwolke und WikiLinks zusammengehörige Einträge nicht mehr.
+/// </summary>
 public sealed class TagNormalizerTests
 {
     private readonly TagNormalizer _sut = new();
@@ -19,6 +24,8 @@ public sealed class TagNormalizerTests
     [InlineData("Café-Straße", "café-straße")]
     [InlineData("Tag42", "tag42")]
     [InlineData("---Foo---", "foo")]
+    [InlineData("Bär", "bär")]
+    [InlineData("München", "münchen")]
     public void ToSlug_NormalizesAsExpected(string input, string expected)
     {
         string actual = _sut.ToSlug(input);

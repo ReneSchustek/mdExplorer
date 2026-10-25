@@ -13,14 +13,14 @@ namespace MdExplorer.App.ViewModels.Graph;
 /// ViewModel des Graph-Panels. Lädt den Snapshot über einen eigenen DI-Scope
 /// (<see cref="IServiceScopeFactory"/>), serialisiert ihn via
 /// <see cref="GraphJsonBuilder"/> und exponiert das Ergebnis als
-/// <see cref="SnapshotJson"/>-Property für die View. Der Pfad-Prefix-Filter wird
-/// in <see cref="UiSettingsStore"/> persistiert, damit das Fenster beim Wiederöffnen
-/// in derselben Sicht startet.
+/// <see cref="SnapshotJson"/>-Property für die View. Der Pfad-Prefix-Filter, mit dem zuletzt
+/// geladen wurde, wird im <see cref="IUiLayoutStore"/> gemerkt, damit das Fenster beim
+/// Wiederöffnen in derselben Sicht startet.
 /// </summary>
 internal sealed partial class GraphViewModel : ObservableObject
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly UiSettingsStore _settingsStore;
+    private readonly IUiLayoutStore _settingsStore;
     private readonly ILogger<GraphViewModel> _logger;
 
     /// <summary>
@@ -28,11 +28,10 @@ internal sealed partial class GraphViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
-    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// wartete das Schließen auf Arbeit, die niemand mehr braucht. Ohne Wirt, also im Test,
+    /// bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
-    private bool _suppressPrefixSave;
 
     [ObservableProperty]
     private string? _snapshotJson;
@@ -58,7 +57,7 @@ internal sealed partial class GraphViewModel : ObservableObject
     /// <summary>Erzeugt das ViewModel und löst Pflichtabhängigkeiten auf.</summary>
     public GraphViewModel(
         IServiceScopeFactory scopeFactory,
-        UiSettingsStore settingsStore,
+        IUiLayoutStore settingsStore,
         ILogger<GraphViewModel> logger,
         CancellationToken shutdownToken = default)
     {
@@ -71,19 +70,16 @@ internal sealed partial class GraphViewModel : ObservableObject
         _logger = logger;
         _shutdownToken = shutdownToken;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
-
-        _suppressPrefixSave = true;
         _pathPrefix = settingsStore.Load().GraphPathPrefix ?? string.Empty;
-        _suppressPrefixSave = false;
     }
 
     /// <summary>Lädt den Snapshot neu und aktualisiert die View.</summary>
     public AsyncRelayCommand RefreshCommand { get; }
 
     /// <summary>
-    /// Lädt asynchron einen frischen Snapshot. Fehler werden geloggt; das
-    /// vorher angezeigte Snapshot bleibt sichtbar, bis ein erfolgreicher Lauf
-    /// es ersetzt.
+    /// Lädt einen frischen Snapshot. Fehler landen im Protokoll; der zuletzt angezeigte
+    /// Snapshot bleibt sichtbar, bis ein erfolgreicher Lauf ihn ersetzt. Ein Aufruf, während
+    /// noch einer läuft, kehrt sofort zurück.
     /// </summary>
     public async Task RefreshAsync()
     {
@@ -94,23 +90,18 @@ internal sealed partial class GraphViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            GraphFilter filter = new(string.IsNullOrWhiteSpace(PathPrefix) ? null : PathPrefix);
-            AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
-            await using (scope.ConfigureAwait(true))
-            {
-                IGraphService service = scope.ServiceProvider.GetRequiredService<IGraphService>();
-                GraphSnapshot snapshot = await service.BuildSnapshotAsync(filter, _shutdownToken).ConfigureAwait(true);
-                NodeCount = snapshot.Nodes.Count;
-                EdgeCount = snapshot.Edges.Count;
-                OriginalNodeCount = snapshot.OriginalNodeCount;
-                OriginalEdgeCount = snapshot.OriginalEdgeCount;
-                SnapshotJson = GraphJsonBuilder.Serialize(snapshot);
-                LogRefreshCompleted(_logger, NodeCount, EdgeCount, OriginalNodeCount, OriginalEdgeCount);
-            }
+            string? prefix = string.IsNullOrWhiteSpace(PathPrefix) ? null : PathPrefix;
+            RememberPrefix(prefix);
+            GraphSnapshot snapshot = await BuildSnapshotAsync(new GraphFilter(prefix)).ConfigureAwait(true);
+            Show(snapshot);
         }
-        catch (Exception ex) when (ex is InvalidOperationException or TaskCanceledException)
+        catch (OperationCanceledException)
         {
-            LogRefreshFailed(_logger, ex);
+            // Die Anwendung wird beendet; das Bild sieht niemand mehr.
+        }
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
+        {
+            LogRefreshFailed(_logger, exception);
         }
         finally
         {
@@ -124,18 +115,41 @@ internal sealed partial class GraphViewModel : ObservableObject
     [LoggerMessage(EventId = 1201, Level = LogLevel.Information, Message = "Graph-Snapshot aktualisiert — {NodeCount} von {OriginalNodeCount} Knoten, {EdgeCount} von {OriginalEdgeCount} Kanten.")]
     private static partial void LogRefreshCompleted(ILogger logger, int nodeCount, int edgeCount, int originalNodeCount, int originalEdgeCount);
 
-    partial void OnPathPrefixChanged(string value)
+    private async Task<GraphSnapshot> BuildSnapshotAsync(GraphFilter filter)
     {
-        if (_suppressPrefixSave)
+        AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+        await using (scope.ConfigureAwait(true))
         {
-            return;
+            IGraphService service = scope.ServiceProvider.GetRequiredService<IGraphService>();
+            return await service.BuildSnapshotAsync(filter, _shutdownToken).ConfigureAwait(true);
         }
+    }
+
+    private void Show(GraphSnapshot snapshot)
+    {
+        NodeCount = snapshot.Nodes.Count;
+        EdgeCount = snapshot.Edges.Count;
+        OriginalNodeCount = snapshot.OriginalNodeCount;
+        OriginalEdgeCount = snapshot.OriginalEdgeCount;
+        SnapshotJson = GraphJsonBuilder.Serialize(snapshot);
+        LogRefreshCompleted(_logger, NodeCount, EdgeCount, OriginalNodeCount, OriginalEdgeCount);
+    }
+
+    /// <summary>
+    /// Merkt sich den Filter, mit dem geladen wird.
+    /// </summary>
+    /// <remarks>
+    /// Beim Laden und nicht bei jedem Tastenanschlag: Das Eingabefeld meldet jedes Zeichen, und
+    /// jedes Mal die Layout-Datei zu lesen und zu schreiben hielte die Oberfläche an. Gemerkt
+    /// wird ohnehin die Sicht, die das Fenster zeigt, und die entsteht erst beim Laden.
+    /// </remarks>
+    private void RememberPrefix(string? prefix)
+    {
         UiLayout current = _settingsStore.Load();
-        string? normalized = string.IsNullOrWhiteSpace(value) ? null : value;
-        if (string.Equals(current.GraphPathPrefix, normalized, StringComparison.Ordinal))
+        if (string.Equals(current.GraphPathPrefix, prefix, StringComparison.Ordinal))
         {
             return;
         }
-        _settingsStore.Save(current with { GraphPathPrefix = normalized });
+        _settingsStore.Save(current with { GraphPathPrefix = prefix });
     }
 }

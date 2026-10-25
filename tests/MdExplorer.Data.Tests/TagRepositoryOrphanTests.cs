@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Prüft das Wegräumen von Schlagworten, an denen keine Datei mehr hängt.
+/// Schlagworte, an denen keine Datei mehr hängt, verschwinden aus der Tabelle; verknüpfte bleiben.
 /// </summary>
 /// <remarks>
 /// Ein Schlagwort ist abgeleitet: Es entsteht, weil eine Datei es nennt. Nennt es keine
@@ -16,6 +16,7 @@ namespace MdExplorer.Data.Tests;
 /// </remarks>
 public sealed class TagRepositoryOrphanTests : IAsyncDisposable
 {
+    private readonly TestIdSequence _ids = new();
     private readonly SqliteConnection _connection;
     private readonly MdExplorerDbContext _dbContext;
     private readonly TagRepository _sut;
@@ -45,9 +46,9 @@ public sealed class TagRepositoryOrphanTests : IAsyncDisposable
     public async Task RemoveOrphanedTagsAsync_RemovesOnlyTagsWithoutFile()
     {
         Guid fileId = await SeedFileAsync("notiz.md").ConfigureAwait(true);
-        Guid gebunden = await SeedTagAsync("sicherheit").ConfigureAwait(true);
-        Guid frei = await SeedTagAsync("f59e0b").ConfigureAwait(true);
-        await LinkAsync(fileId, gebunden).ConfigureAwait(true);
+        Guid linked = await SeedTagAsync("sicherheit").ConfigureAwait(true);
+        Guid unlinked = await SeedTagAsync("f59e0b").ConfigureAwait(true);
+        await LinkAsync(fileId, linked).ConfigureAwait(true);
 
         int removed = await _sut.RemoveOrphanedTagsAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -58,7 +59,7 @@ public sealed class TagRepositoryOrphanTests : IAsyncDisposable
             .ToListAsync(TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
         Assert.Equal(["sicherheit"], remaining);
-        Assert.False(await _dbContext.Set<Tag>().AnyAsync(tag => tag.Id == frei, TestContext.Current.CancellationToken).ConfigureAwait(true));
+        Assert.False(await _dbContext.Set<Tag>().AnyAsync(tag => tag.Id == unlinked, TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     [Fact]
@@ -83,7 +84,9 @@ public sealed class TagRepositoryOrphanTests : IAsyncDisposable
         Guid tagId = await SeedTagAsync("f59e0b").ConfigureAwait(true);
         await LinkAsync(fileId, tagId).ConfigureAwait(true);
 
-        await _sut.ReplaceFileTagsAsync(fileId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await _sut.ReplaceFileTagsAsync(
+            new Dictionary<Guid, IReadOnlyCollection<Guid>> { [fileId] = [] },
+            TestContext.Current.CancellationToken).ConfigureAwait(true);
         _ = await _sut.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         int removed = await _sut.RemoveOrphanedTagsAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -96,7 +99,7 @@ public sealed class TagRepositoryOrphanTests : IAsyncDisposable
     {
         MarkdownFile file = new()
         {
-            Id = Guid.NewGuid(),
+            Id = _ids.Next(),
             AbsolutePath = @"C:\notes\" + name,
             RelativePath = name,
             FileNameWithoutExtension = Path.GetFileNameWithoutExtension(name),
@@ -113,7 +116,7 @@ public sealed class TagRepositoryOrphanTests : IAsyncDisposable
 
     private async Task<Guid> SeedTagAsync(string slug)
     {
-        Tag tag = new() { Id = Guid.NewGuid(), Slug = slug, Name = slug };
+        Tag tag = new() { Id = _ids.Next(), Slug = slug, Name = slug };
         _ = await _dbContext.Set<Tag>().AddAsync(tag, TestContext.Current.CancellationToken).ConfigureAwait(true);
         _ = await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         return tag.Id;

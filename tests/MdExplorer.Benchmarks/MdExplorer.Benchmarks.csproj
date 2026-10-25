@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Messprojekt für die Geschwindigkeit. Kein Testprojekt: Es läuft nicht in "dotnet test",
+    weil eine Messung Minuten dauert und eine ruhige Maschine braucht. Gebaut wird es trotzdem
+    mit der Solution, damit es nicht unbemerkt veraltet.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>MdExplorer.Benchmarks</RootNamespace>
+    <AssemblyName>MdExplorer.Benchmarks</AssemblyName>
+    <IsTestProject>false</IsTestProject>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MdExplorer.Core\MdExplorer.Core.csproj" />
+    <ProjectReference Include="..\..\src\MdExplorer.Data\MdExplorer.Data.csproj" />
+    <ProjectReference Include="..\..\src\MdExplorer.Graph\MdExplorer.Graph.csproj" />
+    <ProjectReference Include="..\..\src\MdExplorer.Indexer\MdExplorer.Indexer.csproj" />
+    <ProjectReference Include="..\..\src\MdExplorer.Parser\MdExplorer.Parser.csproj" />
+    <ProjectReference Include="..\..\src\MdExplorer.Search\MdExplorer.Search.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+</Project>

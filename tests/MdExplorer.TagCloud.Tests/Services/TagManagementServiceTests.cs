@@ -1,17 +1,18 @@
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Parser.Services;
 using MdExplorer.TagCloud.Abstractions;
 using MdExplorer.TagCloud.Services;
+using MdExplorer.TagCloud.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.TagCloud.Tests.Services;
 
 /// <summary>
-/// Unit-Tests: Rename / Merge / Delete inkl. Frontmatter- und Body-Schreibstrategie.
-/// Sowie Integrationstest für projektweites Rename in 100 Dateien (Performance-Budget &lt; 5 s).
+/// Umbenennen, Zusammenführen und Löschen eines Schlagworts schreibt alle betroffenen Dateien in
+/// Frontmatter und Text um, fasst Dateien ohne Vorkommen nicht an und zeigt in der Vorschau höchstens
+/// zehn Pfade. Ein Fehler hier verändert Dateien des Nutzers.
 /// </summary>
 public sealed class TagManagementServiceTests
 {
@@ -23,8 +24,8 @@ public sealed class TagManagementServiceTests
         fs.AddFile(@"C:\notes\b.md", "Mehr #foo und mehr.");
         FakeTagFileLookupQuery query = new();
         query.SetFiles("foo",
-            new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"),
-            new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\b.md", "b.md"));
+            new TagFileLookupRow(IdOf(1), @"C:\notes\a.md", "a.md"),
+            new TagFileLookupRow(IdOf(2), @"C:\notes\b.md", "b.md"));
         TagManagementService sut = CreateSut(query, fs);
 
         TagRewriteResult result = await sut.RenameAsync("foo", "bar", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -44,7 +45,7 @@ public sealed class TagManagementServiceTests
         const string Input = "---\ntitle: x\ntags:\n  - foo\n  - keep\n---\nBody.\n";
         fs.AddFile(@"C:\notes\a.md", Input);
         FakeTagFileLookupQuery query = new();
-        query.SetFiles("foo", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
+        query.SetFiles("foo", new TagFileLookupRow(IdOf(3), @"C:\notes\a.md", "a.md"));
         TagManagementService sut = CreateSut(query, fs);
 
         TagRewriteResult result = await sut.RenameAsync("foo", "neu", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -62,7 +63,7 @@ public sealed class TagManagementServiceTests
         const string Input = "---\ntags: [source, target]\n---\nBody mit #source und #target.\n";
         fs.AddFile(@"C:\notes\a.md", Input);
         FakeTagFileLookupQuery query = new();
-        query.SetFiles("source", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
+        query.SetFiles("source", new TagFileLookupRow(IdOf(4), @"C:\notes\a.md", "a.md"));
         TagManagementService sut = CreateSut(query, fs);
 
         TagRewriteResult result = await sut.MergeAsync("source", "target", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -80,7 +81,7 @@ public sealed class TagManagementServiceTests
         const string Input = "---\ntags:\n  - keep\n  - kill\n---\nBefore #kill after.\n";
         fs.AddFile(@"C:\notes\a.md", Input);
         FakeTagFileLookupQuery query = new();
-        query.SetFiles("kill", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
+        query.SetFiles("kill", new TagFileLookupRow(IdOf(5), @"C:\notes\a.md", "a.md"));
         TagManagementService sut = CreateSut(query, fs);
 
         TagRewriteResult result = await sut.DeleteAsync("kill", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -99,7 +100,7 @@ public sealed class TagManagementServiceTests
         TagFileLookupRow[] rows = new TagFileLookupRow[25];
         for (int index = 0; index < rows.Length; index++)
         {
-            rows[index] = new TagFileLookupRow(Guid.NewGuid(), $@"C:\notes\file-{index:D2}.md", $"file-{index:D2}.md");
+            rows[index] = new TagFileLookupRow(IdOf(index + 600), $@"C:\notes\file-{index:D2}.md", $"file-{index:D2}.md");
         }
         query.SetFiles("foo", rows);
         TagManagementService sut = CreateSut(query, fs);
@@ -127,11 +128,11 @@ public sealed class TagManagementServiceTests
     public async Task RenameAsync_OnFileWithoutOccurrence_CountsAsUnchanged()
     {
         InMemoryFileSystem fs = new();
-        // Datei wird laut Index zwar referenziert, im aktuellen Text aber nicht mehr, z. B. weil
-        // sie zwischen Index-Lauf und Operation verändert wurde. Soll keinen Schreib-Roundtrip auslösen.
+        // Laut Index trägt die Datei das Schlagwort, im aktuellen Text aber nicht mehr, etwa weil sie
+        // seit dem letzten Indexlauf bearbeitet wurde. Dann wird sie nicht neu geschrieben.
         fs.AddFile(@"C:\notes\a.md", "Kein passender Hashtag im Body.");
         FakeTagFileLookupQuery query = new();
-        query.SetFiles("foo", new TagFileLookupRow(Guid.NewGuid(), @"C:\notes\a.md", "a.md"));
+        query.SetFiles("foo", new TagFileLookupRow(IdOf(7), @"C:\notes\a.md", "a.md"));
         TagManagementService sut = CreateSut(query, fs);
 
         TagRewriteResult result = await sut.RenameAsync("foo", "bar", TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -141,8 +142,7 @@ public sealed class TagManagementServiceTests
     }
 
     [Fact]
-    [Trait("Category", "Performance")]
-    public async Task RenameAsync_OnHundredFiles_CompletesWithoutStalling()
+    public async Task RenameAsync_OnHundredFiles_RewritesEveryFile()
     {
         InMemoryFileSystem fs = new();
         FakeTagFileLookupQuery query = new();
@@ -155,28 +155,17 @@ public sealed class TagManagementServiceTests
                 System.Globalization.CultureInfo.InvariantCulture,
                 $"---\ntitle: doc{index}\ntags:\n  - foo\n  - keep\n---\nBody {index} mit #foo Tag.\n");
             fs.AddFile(path, content);
-            rows[index] = new TagFileLookupRow(Guid.NewGuid(), path, $"bulk-{index:D3}.md");
+            rows[index] = new TagFileLookupRow(IdOf(index + 800), path, $"bulk-{index:D3}.md");
         }
         query.SetFiles("foo", rows);
         TagManagementService sut = CreateSut(query, fs);
 
-        Stopwatch stopwatch = Stopwatch.StartNew();
         TagRewriteResult result = await sut.RenameAsync("foo", "neu", TestContext.Current.CancellationToken).ConfigureAwait(true);
-        stopwatch.Stop();
 
-        // Die Zusicherung liegt auf der Vollständigkeit: Alle hundert Dateien sind
-        // angefasst, keine mit Fehler, und der Inhalt stimmt (Schleife unten). Das
-        // Dateisystem ist hier im Speicher, die Operation dauert Millisekunden; die
-        // Zeitgrenze prüft deshalb keine Geschwindigkeit, sondern erkennt einen echten
-        // Stillstand. Ein knappes Budget würde an dieser Stelle nur die Auslastung der
-        // Maschine messen, weil im vollständigen Lauf neun Testprozesse gleichzeitig
-        // arbeiten.
+        // Die Zusicherung liegt auf der Vollständigkeit: Alle hundert Dateien sind angefasst,
+        // keine mit Fehler, und der Inhalt stimmt. Eine Zeitgrenze mäße nur die Auslastung.
         Assert.Equal(FileCount, result.FilesAffected);
         Assert.Empty(result.Errors);
-        Assert.True(
-            stopwatch.Elapsed < TimeSpan.FromSeconds(30),
-            $"Projektweites Rename benötigte {stopwatch.Elapsed.TotalSeconds:F2}s und "
-                + "überschritt damit die Stillstandsgrenze von 30 s.");
         for (int index = 0; index < FileCount; index++)
         {
             string actual = fs.ReadText($@"C:\notes\bulk-{index:D3}.md");
@@ -186,81 +175,101 @@ public sealed class TagManagementServiceTests
         }
     }
 
+    [Theory]
+    [InlineData("zwei worte")]
+    [InlineData("a,b")]
+    [InlineData("1zahl")]
+    public async Task RenameAsync_WithAnInvalidName_ThrowsBeforeTouchingAFile(string name)
+    {
+        InMemoryFileSystem fs = new();
+        fs.AddFile(@"C:\notes\a.md", "Body mit #foo Tag.");
+        FakeTagFileLookupQuery query = new();
+        query.SetFiles("foo", new TagFileLookupRow(IdOf(901), @"C:\notes\a.md", "a.md"));
+        TagManagementService sut = CreateSut(query, fs);
+
+        _ = await Assert.ThrowsAsync<ArgumentException>(
+            () => sut.RenameAsync("foo", name, TestContext.Current.CancellationToken)).ConfigureAwait(true);
+
+        Assert.Equal("Body mit #foo Tag.", fs.ReadText(@"C:\notes\a.md"));
+    }
+
+    [Fact]
+    public async Task RenameAsync_OnAFileWithByteOrderMark_KeepsTheMark()
+    {
+        InMemoryFileSystem fs = new();
+        fs.AddBytes(@"C:\notes\a.md", [.. Encoding.UTF8.Preamble, .. Encoding.UTF8.GetBytes("Body mit #foo Tag.")]);
+        FakeTagFileLookupQuery query = new();
+        query.SetFiles("foo", new TagFileLookupRow(IdOf(902), @"C:\notes\a.md", "a.md"));
+        TagManagementService sut = CreateSut(query, fs);
+
+        _ = await sut.RenameAsync("foo", "bar", TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        byte[] written = fs.ReadBytes(@"C:\notes\a.md");
+        Assert.True(written.AsSpan().StartsWith(Encoding.UTF8.Preamble));
+        Assert.Equal("Body mit #bar Tag.", Encoding.UTF8.GetString(written.AsSpan(Encoding.UTF8.Preamble.Length)));
+    }
+
+    [Fact]
+    public async Task RenameAsync_OnAFileThatIsNotUtf8_LeavesItUntouchedAndReportsIt()
+    {
+        InMemoryFileSystem fs = new();
+        byte[] latin1 = Encoding.Latin1.GetBytes("Gr\u00fc\u00dfe mit #foo Tag.");
+        fs.AddBytes(@"C:\notes\alt.md", latin1);
+        FakeTagFileLookupQuery query = new();
+        query.SetFiles("foo", new TagFileLookupRow(IdOf(903), @"C:\notes\alt.md", "alt.md"));
+        TagManagementService sut = CreateSut(query, fs);
+
+        TagRewriteResult result = await sut.RenameAsync("foo", "bar", TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Equal(latin1, fs.ReadBytes(@"C:\notes\alt.md"));
+        _ = Assert.Single(result.Errors);
+        Assert.Equal(0, result.FilesAffected);
+    }
+
+    [Fact]
+    public async Task RenameAsync_WhenOneFileCannotBeWritten_ReportsItAndRewritesTheOthers()
+    {
+        InMemoryFileSystem fs = new();
+        fs.AddFile(@"C:\notes\a.md", "Body mit #foo Tag.");
+        fs.AddFile(@"C:\notes\b.md", "Mehr #foo und mehr.");
+        fs.LockForWriting(@"C:\notes\a.md");
+        FakeTagFileLookupQuery query = new();
+        query.SetFiles("foo",
+            new TagFileLookupRow(IdOf(904), @"C:\notes\a.md", "a.md"),
+            new TagFileLookupRow(IdOf(905), @"C:\notes\b.md", "b.md"));
+        TagManagementService sut = CreateSut(query, fs);
+
+        TagRewriteResult result = await sut.RenameAsync("foo", "bar", TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Equal([@"C:\notes\a.md"], result.Errors.Keys);
+        Assert.Equal(1, result.FilesAffected);
+        Assert.Equal("Body mit #foo Tag.", fs.ReadText(@"C:\notes\a.md"));
+        Assert.Equal("Mehr #bar und mehr.", fs.ReadText(@"C:\notes\b.md"));
+    }
+
+    [Fact]
+    public async Task RenameAsync_OnACancelledToken_WritesNothing()
+    {
+        InMemoryFileSystem fs = new();
+        fs.AddFile(@"C:\notes\a.md", "Body mit #foo Tag.");
+        FakeTagFileLookupQuery query = new();
+        query.SetFiles("foo", new TagFileLookupRow(IdOf(906), @"C:\notes\a.md", "a.md"));
+        TagManagementService sut = CreateSut(query, fs);
+        using CancellationTokenSource cancelled = new();
+        await cancelled.CancelAsync().ConfigureAwait(true);
+
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => sut.RenameAsync("foo", "bar", cancelled.Token)).ConfigureAwait(true);
+
+        Assert.Equal("Body mit #foo Tag.", fs.ReadText(@"C:\notes\a.md"));
+    }
+
+    private static Guid IdOf(int index) =>
+        new(index.ToString("D8", System.Globalization.CultureInfo.InvariantCulture) + "-0000-0000-0000-000000000000");
+
     private static TagManagementService CreateSut(FakeTagFileLookupQuery query, InMemoryFileSystem fs)
     {
         MarkdownTagRewriter rewriter = new(new TagNormalizer());
         return new TagManagementService(query, fs, rewriter, NullLogger<TagManagementService>.Instance);
     }
-}
-
-internal sealed class FakeTagFileLookupQuery : ITagFileLookupQuery
-{
-    private readonly Dictionary<string, IReadOnlyList<TagFileLookupRow>> _files = new(StringComparer.Ordinal);
-
-    public void SetFiles(string slug, params TagFileLookupRow[] rows) =>
-        _files[slug] = rows;
-
-    public Task<IReadOnlyList<TagFileLookupRow>> GetFilesByTagSlugAsync(string slug, CancellationToken cancellationToken)
-    {
-        if (_files.TryGetValue(slug, out IReadOnlyList<TagFileLookupRow>? rows))
-        {
-            return Task.FromResult(rows);
-        }
-        return Task.FromResult<IReadOnlyList<TagFileLookupRow>>([]);
-    }
-}
-
-internal sealed class InMemoryFileSystem : IFileSystem
-{
-    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-    private readonly Dictionary<string, byte[]> _files = new(StringComparer.OrdinalIgnoreCase);
-
-    public void AddFile(string path, string content)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        _files[path] = Utf8NoBom.GetBytes(content);
-    }
-
-    public string ReadText(string path) => Utf8NoBom.GetString(_files[path]);
-
-    public bool DirectoryExists(string path) => false;
-    public bool FileExists(string path) => _files.ContainsKey(path);
-    public void EnsureDirectoryExists(string path)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-    }
-
-    public IEnumerable<string> EnumerateFiles(string directory, string searchPattern, bool recursive) => [];
-
-    public IEnumerable<string> EnumerateDirectories(string directory) => [];
-
-    public bool IsReparsePoint(string path) => false;
-
-    public string GetDirectoryFinalPath(string path) => path;
-
-    public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken) =>
-        Task.FromResult(_files[path]);
-
-    public byte[] ReadAllBytes(string path) => _files[path];
-
-    public Stream OpenRead(string path) => new MemoryStream(_files[path], writable: false);
-
-    public DateTime GetLastWriteTimeUtc(string path) => DateTime.UnixEpoch;
-
-    public long GetFileSize(string path) => _files[path].LongLength;
-
-    public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        _files[path] = content.ToArray();
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc />
-    public void MoveFile(string sourcePath, string destinationPath) =>
-        throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
-
-    /// <inheritdoc />
-    public void DeleteFile(string path) =>
-        throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
 }

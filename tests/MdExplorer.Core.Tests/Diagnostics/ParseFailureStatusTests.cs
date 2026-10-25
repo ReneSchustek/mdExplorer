@@ -2,7 +2,11 @@ using MdExplorer.Core.Diagnostics;
 
 namespace MdExplorer.Core.Tests.Diagnostics;
 
-/// <summary>Tests für den Betriebs-Stand der nicht verarbeitbaren Dateien.</summary>
+/// <summary>
+/// Die Zahl der nicht verarbeitbaren Dateien meldet sich nur bei einer echten Änderung. Der
+/// Parser setzt sie auch dann, wenn ein Vermerk entstanden und ein anderer verschwunden ist;
+/// feuerte jedes Setzen, bewertete die Betriebsanzeige ohne Anlass neu.
+/// </summary>
 public sealed class ParseFailureStatusTests
 {
     [Fact]

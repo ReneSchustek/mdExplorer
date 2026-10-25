@@ -1,29 +1,25 @@
 using System.IO;
 using System.Text;
-using MdExplorer.App.Services;
 using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels;
-using MdExplorer.Core.Abstractions;
-using MdExplorer.Core.Models;
-using MdExplorer.Parser.Services;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels;
 
 /// <summary>
 /// Prüft die Schutzmechanismen des Editors. Er schreibt Dateien des Nutzers, deshalb geht es
-/// hier fast durchgehend darum, dass er in Zweifelsfällen <em>nichts</em> tut: kein Schreiben
+/// hier fast durchgehend darum, dass er in Zweifelsfällen nichts tut: kein Schreiben
 /// ohne Bearbeiten-Modus, keine Tag-Änderung an einer gesperrten Datei, und eine verständliche
 /// Meldung statt eines Absturzes, wenn das Schreiben scheitert.
 /// </summary>
 public sealed class MarkdownEditorViewModelEdgeCaseTests
 {
-    private const string Testpfad = @"C:\notizen\datei.md";
+    private const string TestPath = @"C:\notizen\datei.md";
+    private static readonly Guid TestId = new("ffffffff-0000-0000-0000-000000000001");
 
     [Fact]
     public void EnterEditMode_WithoutAFile_StaysInReadMode()
     {
-        using MarkdownEditorViewModel sut = Erzeuge(new FakeFileSystem());
+        using MarkdownEditorViewModel sut = Create(new FakeFileSystem());
 
         sut.EnterEditMode();
 
@@ -34,9 +30,9 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     [Fact]
     public async Task ExitEditMode_ReturnsToReadMode()
     {
-        FakeFileSystem fs = ErzeugeDateisystem("alt");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        FakeFileSystem fs = CreateFileSystem("alt");
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         Assert.False(sut.IsLocked);
 
@@ -50,7 +46,7 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     public async Task SaveAsync_WithoutAFile_WritesNothing()
     {
         FakeFileSystem fs = new();
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
+        using MarkdownEditorViewModel sut = Create(fs);
 
         await sut.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -62,10 +58,10 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     {
         // Der Text darf auf keinen Fall als gespeichert gelten, sonst geht die Arbeit
         // beim nächsten Wechsel der Datei verloren.
-        FakeFileSystem fs = ErzeugeDateisystem("alt");
+        FakeFileSystem fs = CreateFileSystem("alt");
         fs.FailOnWrite = new IOException("Datei ist belegt");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         sut.Text = "neu";
 
@@ -79,10 +75,10 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     [Fact]
     public async Task SaveAsync_WhenAccessIsDenied_ReportsItAndKeepsTheChanges()
     {
-        FakeFileSystem fs = ErzeugeDateisystem("alt");
+        FakeFileSystem fs = CreateFileSystem("alt");
         fs.FailOnWrite = new UnauthorizedAccessException("Kein Zugriff");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         sut.Text = "neu";
 
@@ -98,23 +94,23 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         // Nach einem Direktladen liegt die Datei nicht im Bestand. Die Prüfung auf
         // Fremdänderung muss das durchlassen, sonst lässt sich eine neue Datei nie speichern.
         FakeFileSystem fs = new();
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadDirectAsync(Testpfad, "Inhalt", TestContext.Current.CancellationToken).ConfigureAwait(true);
+        using MarkdownEditorViewModel sut = Create(fs);
+        sut.LoadDirect(TestPath, Encoding.UTF8.GetBytes("Inhalt"));
         sut.EnterEditMode();
         sut.Text = "geänderter Text";
 
         await sut.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        Assert.True(fs.WrittenFiles.ContainsKey(Testpfad));
+        Assert.True(fs.WrittenFiles.ContainsKey(TestPath));
         Assert.False(sut.IsDirty);
     }
 
     [Fact]
     public async Task AddTag_WhileLocked_ChangesNothing()
     {
-        FakeFileSystem fs = ErzeugeDateisystem("Text");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        FakeFileSystem fs = CreateFileSystem("Text");
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.TagInput = "bericht";
 
         sut.AddTag();
@@ -125,9 +121,9 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     [Fact]
     public async Task AddTag_WithOnlyAHashSign_ChangesNothing()
     {
-        FakeFileSystem fs = ErzeugeDateisystem("Text");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        FakeFileSystem fs = CreateFileSystem("Text");
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
         sut.TagInput = "#";
 
@@ -136,12 +132,27 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
         Assert.Equal("Text", sut.Text, StringComparer.Ordinal);
     }
 
+    [Theory]
+    [InlineData("zwei worte")]
+    [InlineData("a-->b")]
+    public async Task AddTag_WithAnInvalidName_CannotBeExecuted(string name)
+    {
+        FakeFileSystem fs = CreateFileSystem("Text");
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        sut.EnterEditMode();
+
+        sut.TagInput = name;
+
+        Assert.False(sut.AddTagCommand.CanExecute(null));
+    }
+
     [Fact]
     public async Task RemoveTag_WhileLocked_ChangesNothing()
     {
-        FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        FakeFileSystem fs = CreateFileSystem("Text mit #bericht.");
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         sut.RemoveTag("bericht");
 
@@ -151,9 +162,9 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     [Fact]
     public async Task RemoveTag_WithoutAName_ChangesNothing()
     {
-        FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        FakeFileSystem fs = CreateFileSystem("Text mit #bericht.");
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.EnterEditMode();
 
         sut.RemoveTag("   ");
@@ -164,9 +175,9 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     [Fact]
     public async Task RenameTag_WhileLocked_ChangesNothing()
     {
-        FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        FakeFileSystem fs = CreateFileSystem("Text mit #bericht.");
+        using MarkdownEditorViewModel sut = Create(fs);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         sut.RenameTag("bericht", "notiz");
 
@@ -176,98 +187,48 @@ public sealed class MarkdownEditorViewModelEdgeCaseTests
     [Fact]
     public void RenameTag_WithoutNames_Throws()
     {
-        using MarkdownEditorViewModel sut = Erzeuge(new FakeFileSystem());
+        using MarkdownEditorViewModel sut = Create(new FakeFileSystem());
 
         _ = Assert.Throws<ArgumentException>(() => sut.RenameTag("   ", "notiz"));
         _ = Assert.Throws<ArgumentException>(() => sut.RenameTag("bericht", "   "));
     }
 
     [Fact]
-    public async Task LoadDirectAsync_WithoutText_Throws()
+    public void LoadDirect_WithoutContent_Throws()
     {
-        using MarkdownEditorViewModel sut = Erzeuge(new FakeFileSystem());
+        using MarkdownEditorViewModel sut = Create(new FakeFileSystem());
 
-        _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => sut.LoadDirectAsync(Testpfad, null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
+        _ = Assert.Throws<ArgumentNullException>(() => sut.LoadDirect(TestPath, null!));
     }
 
     [Fact]
     public void Dispose_CalledTwice_DoesNotThrow()
     {
-        MarkdownEditorViewModel sut = Erzeuge(new FakeFileSystem());
+        MarkdownEditorViewModel sut = Create(new FakeFileSystem());
 
         sut.Dispose();
         sut.Dispose();
     }
 
     [Fact]
-    public async Task HasUnsavedChanges_MirrorsTheDirtyFlag()
+    public async Task LoadAsync_ReadsTheTagsWithoutWaiting()
     {
-        // Das Hauptfenster fragt diese Eigenschaft beim Schließen ab.
-        FakeFileSystem fs = ErzeugeDateisystem("alt");
-        using MarkdownEditorViewModel sut = Erzeuge(fs);
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        Assert.False(sut.HasUnsavedChanges);
+        // Beim Laden stehen die Schlagworte sofort da; die Wartezeit gilt nur für das Tippen.
+        FakeFileSystem fs = CreateFileSystem("Text mit #bericht.");
+        using MarkdownEditorViewModel sut = Create(fs);
 
-        sut.EnterEditMode();
-        sut.Text = "neu";
-
-        Assert.True(sut.HasUnsavedChanges);
-    }
-
-    [Fact]
-    public async Task Constructor_WithConfirmationDialog_UsesTheDefaultDebounce()
-    {
-        // Der Weg, den die Anwendung selbst nimmt, mit Bestätigungsdialog und ohne
-        // ausdrücklich gesetzte Verzögerung.
-        FakeFileSystem fs = ErzeugeDateisystem("Text mit #bericht.");
-        using MarkdownEditorViewModel sut = new(
-            fs,
-            new TagExtractor(new StubSettings()),
-            TimeProvider.System,
-            new AlwaysConfirms(),
-            NullLogger<MarkdownEditorViewModel>.Instance);
-
-        await sut.LoadAsync(Guid.NewGuid(), Testpfad, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await sut.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal("Text mit #bericht.", sut.Text, StringComparer.Ordinal);
         Assert.Contains("bericht", sut.Tags, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static FakeFileSystem ErzeugeDateisystem(string inhalt)
+    private static FakeFileSystem CreateFileSystem(string content)
     {
         FakeFileSystem fs = new();
-        fs.Files[Testpfad] = Encoding.UTF8.GetBytes(inhalt);
+        fs.Files[TestPath] = Encoding.UTF8.GetBytes(content);
         return fs;
     }
 
-    private static MarkdownEditorViewModel Erzeuge(FakeFileSystem fs) =>
-        new(fs,
-            new TagExtractor(new StubSettings()),
-            TimeProvider.System,
-            NullLogger<MarkdownEditorViewModel>.Instance,
-            TimeSpan.Zero);
-
-    private sealed class AlwaysConfirms : IEditorConfirmationDialogService
-    {
-        public bool ConfirmSave() => true;
-    }
-
-    private sealed class StubSettings : ISettingsService
-    {
-        public AppSettings Current { get; private set; } = AppSettings.Default;
-
-        public event EventHandler<SettingsChangedEventArgs>? SettingsChanged;
-
-        public Task<AppSettings> LoadAsync(CancellationToken cancellationToken) => Task.FromResult(Current);
-
-        public Task SaveAsync(AppSettings settings, CancellationToken cancellationToken)
-        {
-            ArgumentNullException.ThrowIfNull(settings);
-            AppSettings vorher = Current;
-            Current = settings;
-            SettingsChanged?.Invoke(this, new SettingsChangedEventArgs(vorher, settings));
-            return Task.CompletedTask;
-        }
-    }
+    private static MarkdownEditorViewModel Create(FakeFileSystem fs) => TestEditors.Create(fs);
 }

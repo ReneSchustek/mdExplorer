@@ -43,6 +43,7 @@ using Microsoft.Extensions.Options;
 using Serilog;
 
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 
 namespace MdExplorer.App.Hosting;
 
@@ -55,18 +56,42 @@ namespace MdExplorer.App.Hosting;
 internal static class AppHostBuilder
 {
     /// <summary>
+    /// Einstellungen des Hosts. Die Konfiguration liest er aus <c>appsettings.json</c> neben der
+    /// Programmdatei und aus Umgebungsvariablen; ohne festes Verzeichnis hinge die Datei davon
+    /// ab, aus welchem Ordner die Anwendung gestartet wurde.
+    /// </summary>
+    public static HostApplicationBuilderSettings Settings() => new() { ContentRootPath = AppContext.BaseDirectory };
+
+    /// <summary>
     /// Erzeugt einen vollständig konfigurierten <see cref="IHost"/>.
     /// </summary>
-    public static IHost Build()
-    {
-        HostApplicationBuilder builder = Host.CreateApplicationBuilder();
+    public static IHost Build() => Build(Settings());
 
+    /// <summary>
+    /// Erzeugt den Host mit eigenen Einstellungen. In der Umgebung „Development“ prüft der
+    /// Container Lebensdauern bei jeder Auflösung; die Tests bauen den Host deshalb so.
+    /// </summary>
+    /// <param name="settings">Einstellungen des Host-Builders.</param>
+    public static IHost Build(HostApplicationBuilderSettings settings) => CreateBuilder(settings).Build();
+
+    /// <summary>
+    /// Stellt den Builder mit allen Registrierungen bereit, ohne ihn zu bauen. Die Tests lesen
+    /// daraus jede Registrierung und lösen sie einzeln auf: Die Prüfung beim Bauen erreicht
+    /// Fabrik-Registrierungen nicht, und davon gibt es hier viele.
+    /// </summary>
+    /// <param name="settings">Einstellungen des Host-Builders.</param>
+    internal static HostApplicationBuilder CreateBuilder(HostApplicationBuilderSettings settings)
+    {
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(settings);
+
+        // Ohne die Standardausgaben: Jeder ILogger schreibt in den statischen Serilog-Logger, den
+        // App.OnStartup vorher gebaut hat, und damit in Datei, Debug-Ausgabe und Log-Viewer.
         _ = builder.Logging.ClearProviders();
         _ = builder.Services.AddSerilog();
 
         _ = builder.Services
             .AddOptions<DatabaseOptions>()
-            .Configure(options => options.DatabasePath = AppPaths.GetDatabasePath())
+            .Configure(options => options.DatabasePath = AppPaths.Default.DatabasePath)
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
@@ -115,177 +140,11 @@ internal static class AppHostBuilder
         _ = builder.Services.AddGraph();
         _ = builder.Services.AddUpdate();
 
-        _ = builder.Services.AddSingleton<ISystemThemeProvider>(sp => new SystemThemeProvider());
-        _ = builder.Services.AddSingleton<IEffectiveThemeProvider>(sp => new EffectiveThemeProvider(
-            sp.GetRequiredService<ISettingsService>(),
-            sp.GetRequiredService<ISystemThemeProvider>()));
-        _ = builder.Services.AddSingleton(sp => new PreviewHtmlBuilder(
-            sp.GetRequiredService<IEffectiveThemeProvider>(),
-            sp.GetRequiredService<ISettingsService>()));
-        _ = builder.Services.AddSingleton(sp => new ThemeApplier(sp.GetRequiredService<IEffectiveThemeProvider>()));
-        _ = builder.Services.AddSingleton(sp => new UiSettingsStore(sp.GetRequiredService<ILogger<UiSettingsStore>>()));
-        _ = builder.Services.AddSingleton<IDocumentLocator>(sp =>
-            new MarkdownFileDocumentLocator(sp.GetRequiredService<IServiceScopeFactory>()));
-        _ = builder.Services.AddSingleton<IDialogService, DialogService>();
-        _ = builder.Services.AddSingleton<IUiDispatcher, WpfUiDispatcher>();
-        _ = builder.Services.AddSingleton<IFileSaveDialogService, FileSaveDialogService>();
-        _ = builder.Services.AddSingleton<IMemoryLogStore>(_ => MemorySink.Instance);
-        _ = builder.Services.AddSingleton<IOperationHealthProvider>(sp => new OperationHealthProvider(
-            sp.GetRequiredService<IMemoryLogStore>(),
-            sp.GetRequiredService<IParseFailureStatus>()));
+        _ = builder.Services.AddAppViewModels();
+        _ = builder.Services.AddAppWindows();
 
-        _ = builder.Services.AddSingleton(sp => new FolderTreeViewModel(
-            sp.GetRequiredService<ISettingsService>(),
-            sp.GetRequiredService<IFileSystem>(),
-            sp.GetRequiredService<IExclusionFilter>(),
-            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
-        _ = builder.Services.AddSingleton(sp => new AllFilesViewModel(
-            sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<TimeProvider>(),
-            sp.GetRequiredService<ILogger<AllFilesViewModel>>(),
-            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
-        _ = builder.Services.AddSingleton(sp => new SearchViewModel(
-            sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<TimeProvider>(),
-            sp.GetRequiredService<IMessenger>(),
-            sp.GetRequiredService<ILogger<SearchViewModel>>()));
-        _ = builder.Services.AddSingleton(sp => new TagCloudViewModel(
-            sp.GetRequiredService<ITagStatisticsService>(),
-            sp.GetRequiredService<IMessenger>(),
-            sp.GetRequiredService<IOptions<TagCloudOptions>>(),
-            sp.GetRequiredService<ILogger<TagCloudViewModel>>()));
-        _ = builder.Services.AddSingleton(sp => new PreviewViewModel(
-            sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<PreviewHtmlBuilder>(),
-            sp.GetRequiredService<ILogger<PreviewViewModel>>()));
-        _ = builder.Services.AddSingleton<IEditorConfirmationDialogService, EditorConfirmationDialogService>();
-        _ = builder.Services.AddSingleton(sp => new MarkdownEditorViewModel(
-            sp.GetRequiredService<IFileSystem>(),
-            sp.GetRequiredService<ITagExtractor>(),
-            sp.GetRequiredService<TimeProvider>(),
-            sp.GetRequiredService<IEditorConfirmationDialogService>(),
-            sp.GetRequiredService<ILogger<MarkdownEditorViewModel>>()));
-        _ = builder.Services.AddSingleton<IDocumentFileService>(sp => new DocumentFileService(
-            sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<IFileSystem>(),
-            sp.GetRequiredService<ILogger<DocumentFileService>>()));
-        _ = builder.Services.AddSingleton(sp => new DocumentRelationsViewModel(
-            sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<IDocumentFileService>(),
-            sp.GetRequiredService<IDialogService>(),
-            sp.GetRequiredService<ILogger<DocumentRelationsViewModel>>(),
-            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
-        _ = builder.Services.AddSingleton(sp => new DocumentPanelViewModel(
-            sp.GetRequiredService<PreviewViewModel>(),
-            sp.GetRequiredService<MarkdownEditorViewModel>(),
-            sp.GetRequiredService<DocumentRelationsViewModel>(),
-            sp.GetRequiredService<IMarkdownParser>(),
-            sp.GetRequiredService<PreviewHtmlBuilder>(),
-            sp.GetRequiredService<IDocumentLocator>(),
-            sp.GetRequiredService<IFileSystem>(),
-            sp.GetRequiredService<ILogger<DocumentPanelViewModel>>()));
-        _ = builder.Services.AddSingleton(sp => new MainViewModel(
-            sp.GetRequiredService<FolderTreeViewModel>(),
-            sp.GetRequiredService<AllFilesViewModel>(),
-            sp.GetRequiredService<SearchViewModel>(),
-            sp.GetRequiredService<DocumentPanelViewModel>(),
-            sp.GetRequiredService<TagCloudViewModel>(),
-            sp.GetRequiredService<IDocumentLocator>(),
-            sp.GetRequiredService<UiSettingsStore>(),
-            sp.GetRequiredService<IOperationHealthProvider>(),
-            sp.GetRequiredService<IUiDispatcher>(),
-            sp.GetRequiredService<MdExplorer.Indexer.Abstractions.IIndexer>(),
-            sp.GetRequiredService<IMessenger>(),
-            sp.GetRequiredService<TimeProvider>(),
-            sp.GetRequiredService<ILogger<MainViewModel>>(),
-            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
-        _ = builder.Services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<MainViewModel>());
-
-        _ = builder.Services.AddSingleton(sp => new PreviewPanel(
-            sp.GetRequiredService<INavigationService>(),
-            sp.GetRequiredService<ILogger<PreviewPanel>>()));
-        _ = builder.Services.AddSingleton(sp => new DocumentPanel(sp.GetRequiredService<PreviewPanel>()));
-        _ = builder.Services.AddSingleton(sp => new AllFilesPanel());
-        _ = builder.Services.AddSingleton(sp => new TagCloudPanel());
-
-        _ = builder.Services.AddSingleton(sp => new SplashViewModel());
-        _ = builder.Services.AddTransient(sp => new SettingsWindowViewModel(
-            sp.GetRequiredService<ISettingsService>(),
-            sp.GetRequiredService<SettingsValidator>(),
-            sp.GetRequiredService<IDialogService>(),
-            sp.GetRequiredService<MdExplorer.Update.Abstractions.IUpdateChecker>(),
-            sp.GetRequiredService<MdExplorer.Update.Abstractions.IUpdateInstaller>(),
-            sp.GetRequiredService<ILogger<SettingsWindowViewModel>>(),
-            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
-        _ = builder.Services.AddTransient(sp => new SettingsWindow(
-            sp.GetRequiredService<SettingsWindowViewModel>(),
-            sp.GetRequiredService<IHelpContextProvider>()));
-        _ = builder.Services.AddSingleton<Func<SettingsWindow>>(sp => () => sp.GetRequiredService<SettingsWindow>());
-
-        _ = builder.Services.AddTransient(sp => new GraphViewModel(
-            sp.GetRequiredService<IServiceScopeFactory>(),
-            sp.GetRequiredService<UiSettingsStore>(),
-            sp.GetRequiredService<ILogger<GraphViewModel>>(),
-            sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
-        _ = builder.Services.AddTransient(sp => new GraphWindow(
-            sp.GetRequiredService<GraphViewModel>(),
-            sp.GetRequiredService<IHelpContextProvider>(),
-            sp.GetRequiredService<IEffectiveThemeProvider>()));
-        _ = builder.Services.AddSingleton<Func<GraphWindow>>(sp => () => sp.GetRequiredService<GraphWindow>());
-
-        _ = builder.Services.AddSingleton<ITagManagementDialogService>(sp => new TagManagementDialogService());
-        _ = builder.Services.AddTransient<TagManagementWindow>(sp =>
-        {
-            IServiceScope scope = sp.CreateScope();
-            ITagStatisticsService statistics = scope.ServiceProvider.GetRequiredService<ITagStatisticsService>();
-            ITagManagementService management = scope.ServiceProvider.GetRequiredService<ITagManagementService>();
-            ITagManagementDialogService dialog = sp.GetRequiredService<ITagManagementDialogService>();
-            ILogger<TagManagementViewModel> logger = sp.GetRequiredService<ILogger<TagManagementViewModel>>();
-            TagManagementViewModel viewModel = new(statistics, management, dialog, logger);
-            TagManagementWindow window = new(viewModel);
-            window.Closed += (_, _) => scope.Dispose();
-            return window;
-        });
-        _ = builder.Services.AddSingleton<Func<TagManagementWindow>>(sp => () => sp.GetRequiredService<TagManagementWindow>());
-
-        _ = builder.Services.AddSingleton<IHelpContextProvider>(sp => new HelpContextProvider());
-        _ = builder.Services.AddSingleton<IHelpContentService>(sp => new HelpContentService(
-            sp.GetRequiredService<ILogger<HelpContentService>>()));
-        _ = builder.Services.AddSingleton<IAboutInfoProvider>(sp => new AboutInfoProvider());
-        _ = builder.Services.AddSingleton(sp => new HelpWindowGeometryStore(sp.GetRequiredService<UiSettingsStore>()));
-        _ = builder.Services.AddTransient(sp => new HelpWindow(
-            sp.GetRequiredService<IHelpContentService>(),
-            sp.GetRequiredService<ISettingsService>(),
-            sp.GetRequiredService<HelpWindowGeometryStore>(),
-            sp.GetRequiredService<ILogger<HelpWindow>>()));
-        _ = builder.Services.AddSingleton<Func<HelpWindow>>(sp => () => sp.GetRequiredService<HelpWindow>());
-        _ = builder.Services.AddTransient(sp => new AboutViewModel(
-            sp.GetRequiredService<IAboutInfoProvider>(),
-            sp.GetRequiredService<TimeProvider>()));
-        _ = builder.Services.AddTransient(sp => new AboutWindow(sp.GetRequiredService<AboutViewModel>()));
-        _ = builder.Services.AddSingleton<Func<AboutWindow>>(sp => () => sp.GetRequiredService<AboutWindow>());
-
-        _ = builder.Services.AddTransient(sp => new LogViewerViewModel(
-            sp.GetRequiredService<IMemoryLogStore>(),
-            sp.GetRequiredService<IUiDispatcher>(),
-            sp.GetRequiredService<IFileSaveDialogService>()));
-        _ = builder.Services.AddTransient(sp => new LogViewerWindow(sp.GetRequiredService<LogViewerViewModel>()));
-        _ = builder.Services.AddSingleton<Func<LogViewerWindow>>(sp => () => sp.GetRequiredService<LogViewerWindow>());
-
-        _ = builder.Services.AddSingleton(sp => new MainWindow(
-            sp.GetRequiredService<MainViewModel>(),
-            sp.GetRequiredService<DocumentPanel>(),
-            sp.GetRequiredService<AllFilesPanel>(),
-            sp.GetRequiredService<TagCloudPanel>(),
-            sp.GetRequiredService<Func<SettingsWindow>>(),
-            sp.GetRequiredService<Func<GraphWindow>>(),
-            sp.GetRequiredService<Func<TagManagementWindow>>(),
-            sp.GetRequiredService<Func<HelpWindow>>(),
-            sp.GetRequiredService<Func<AboutWindow>>(),
-            sp.GetRequiredService<Func<LogViewerWindow>>(),
-            sp.GetRequiredService<IHelpContextProvider>()));
-        _ = builder.Services.AddSingleton(sp => new SplashWindow());
-
+        // Erst als Singleton, dann als Hosted Service auf dieselbe Instanz: Wer die Brücke
+        // anfordert, bekommt das Objekt, das der Host startet und stoppt.
         _ = builder.Services.AddSingleton<SettingsChangeBridge>();
         _ = builder.Services.AddHostedService(sp => sp.GetRequiredService<SettingsChangeBridge>());
 
@@ -299,6 +158,6 @@ internal static class AppHostBuilder
             sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<ILogger<UpdateCheckBackgroundService>>()));
 
-        return builder.Build();
+        return builder;
     }
 }

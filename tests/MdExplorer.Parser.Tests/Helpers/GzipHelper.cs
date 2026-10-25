@@ -3,6 +3,9 @@ using System.Text;
 
 namespace MdExplorer.Parser.Tests.Helpers;
 
+/// <summary>
+/// Entpackt das GZip-komprimiert gespeicherte HTML eines Dokuments, damit Tests den Klartext prüfen.
+/// </summary>
 internal static class GzipHelper
 {
     public static string Decompress(ReadOnlyMemory<byte> compressed)

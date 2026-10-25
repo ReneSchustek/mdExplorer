@@ -1,58 +1,53 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
 using System.Windows;
 using MdExplorer.App.Services;
 using MdExplorer.App.Services.Help;
 using MdExplorer.App.ViewModels.Graph;
-using MdExplorer.Core;
+using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.Views.Graph;
 
 /// <summary>
-/// WebView2-basiertes Graph-Fenster. Lädt die eingebetteten Assets
-/// (HTML/CSS/JS), injiziert das aktuelle Snapshot-JSON über String-Replacement
-/// und schreibt das Ergebnis in eine Temp-Datei unter <c>%LOCALAPPDATA%\MdExplorer\webview2</c>.
-/// Die View navigiert per <c>file://</c>-URI dorthin, denn <see cref="Microsoft.Web.WebView2.Wpf.WebView2.NavigateToString(string)"/>
-/// hat ein hartes Größen-Limit (Edge meldet <c>E_INVALIDARG</c> oberhalb von ~2 MB),
-/// das bei großen Wikis (&gt;10k Knoten) regelmäßig überschritten wird.
+/// WebView2-basiertes Graph-Fenster. Setzt das Dokument aus den eingebetteten Vorlagen und dem
+/// aktuellen Snapshot zusammen (<see cref="GraphDocumentBuilder"/>) und lädt es über die eigene
+/// Datei des Fensters (<see cref="GraphSnapshotFile"/>).
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class GraphWindow : Window
 {
-    private const string CssPlaceholder = "__INLINE_CSS__";
-    private const string JsPlaceholder = "__INLINE_JS__";
-    private const string JsonPlaceholder = "__GRAPH_JSON__";
-    private const string NoncePlaceholder = "__SCRIPT_NONCE__";
-    private const string ThemePlaceholder = "__THEME__";
-    private const int NonceByteLength = 16;
-    private const string SnapshotFileName = "graph-snapshot.html";
-
-    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
-
     private readonly GraphViewModel _viewModel;
     private readonly IHelpContextProvider _helpContextProvider;
     private readonly IEffectiveThemeProvider _themeProvider;
-    private readonly string _snapshotFilePath;
+    private readonly GraphSnapshotFile _snapshotFile;
+    private readonly IExternalLinkLauncher _linkLauncher;
+    private readonly ILogger<GraphWindow> _logger;
+    private EmbeddedNavigationGuard? _navigationGuard;
     private bool _isInitialized;
 
     /// <summary>Erzeugt das Fenster und verdrahtet das ViewModel.</summary>
     public GraphWindow(
         GraphViewModel viewModel,
         IHelpContextProvider helpContextProvider,
-        IEffectiveThemeProvider themeProvider)
+        IEffectiveThemeProvider themeProvider,
+        GraphSnapshotFile snapshotFile,
+        IExternalLinkLauncher linkLauncher,
+        ILogger<GraphWindow> logger)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         ArgumentNullException.ThrowIfNull(helpContextProvider);
         ArgumentNullException.ThrowIfNull(themeProvider);
+        ArgumentNullException.ThrowIfNull(snapshotFile);
+        ArgumentNullException.ThrowIfNull(linkLauncher);
+        ArgumentNullException.ThrowIfNull(logger);
         InitializeComponent();
         _viewModel = viewModel;
         _helpContextProvider = helpContextProvider;
         _themeProvider = themeProvider;
-        _snapshotFilePath = Path.Combine(AppPaths.GetApplicationDataDirectory(), "webview2", SnapshotFileName);
+        _snapshotFile = snapshotFile;
+        _linkLauncher = linkLauncher;
+        _logger = logger;
         DataContext = viewModel;
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
         Loaded += OnLoadedAsync;
@@ -60,60 +55,32 @@ internal sealed partial class GraphWindow : Window
         Closed += OnWindowClosed;
     }
 
-    /// <summary>
-    /// Baut das Dokument für die Zeichenfläche. Die Belegung wird als Kennzeichen am
-    /// Wurzelelement mitgegeben; die Farben stehen im Stylesheet, nicht im Zeichencode.
-    /// </summary>
-    internal static string BuildHtml(string snapshotJson, bool isDarkMode)
-    {
-        ArgumentNullException.ThrowIfNull(snapshotJson);
-        string htmlTemplate = ReadEmbeddedResource("graph.html");
-        string css = ReadEmbeddedResource("graph.css");
-        string js = ReadEmbeddedResource("graph.js");
-        string nonce = GenerateNonce();
-        // Reihenfolge bewusst: vertraünswürdige Platzhalter zuerst, das nutzerkontrollierte
-        // Snapshot-JSON ganz zum Schluss. So ersetzt das Platzhalter-Replace im JSON nichts mehr.
-        return htmlTemplate
-            .Replace(CssPlaceholder, css, StringComparison.Ordinal)
-            .Replace(JsPlaceholder, js, StringComparison.Ordinal)
-            .Replace(NoncePlaceholder, nonce, StringComparison.Ordinal)
-            .Replace(ThemePlaceholder, isDarkMode ? "dark" : "light", StringComparison.Ordinal)
-            .Replace(JsonPlaceholder, snapshotJson, StringComparison.Ordinal);
-    }
+    [LoggerMessage(EventId = 1510, Level = LogLevel.Error, Message = "Graph-Dokument ließ sich nicht schreiben: {Path}.")]
+    private static partial void LogSnapshotWriteFailed(ILogger logger, Exception exception, string path);
 
-    private static string GenerateNonce()
-    {
-        Span<byte> buffer = stackalloc byte[NonceByteLength];
-        RandomNumberGenerator.Fill(buffer);
-        return Convert.ToBase64String(buffer);
-    }
-
-    private static string ReadEmbeddedResource(string fileName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
-        Assembly assembly = typeof(GraphWindow).Assembly;
-        string resourceName = "MdExplorer.App.Assets.Graph." + fileName;
-        using Stream? stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream is null)
-        {
-            throw new InvalidOperationException($"Eingebettete Ressource fehlt: {resourceName}.");
-        }
-        using StreamReader reader = new(stream, Encoding.UTF8);
-        return reader.ReadToEnd();
-    }
+    [LoggerMessage(EventId = 1511, Level = LogLevel.Warning, Message = "Graph-Dokument ließ sich nicht löschen: {Path}.")]
+    private static partial void LogSnapshotDeleteFailed(ILogger logger, Exception exception, string path);
 
     private void OnActivatedHandler(object? sender, EventArgs args) =>
         _helpContextProvider.SetSlug(HelpContext.Graph);
 
+    // Ein Fehler beim Start der Browserfläche darf das Fenster nicht abreißen: Es bleibt leer
+    // stehen, ein Hinweis nennt den Grund. Fehler beim Laden des Graphen behandelt RefreshAsync
+    // selbst.
     private async void OnLoadedAsync(object sender, RoutedEventArgs args)
     {
-        await GraphView.EnsureCoreWebView2Async(
-            await WebView2EnvironmentProvider.GetAsync().ConfigureAwait(true)).ConfigureAwait(true);
+        if (!await EmbeddedBrowser.TryStartAsync(GraphView, UnavailableHint, _logger).ConfigureAwait(true))
+        {
+            return;
+        }
+        EmbeddedBrowser.Restrict(GraphView.CoreWebView2, allowScripts: true);
+        _navigationGuard = new EmbeddedNavigationGuard(GraphView.CoreWebView2, _snapshotFile.IsThisDocument, _linkLauncher, _logger);
+
         _isInitialized = true;
         await _viewModel.RefreshAsync().ConfigureAwait(true);
     }
 
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
+    private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
         if (!_isInitialized || !string.Equals(args.PropertyName, nameof(GraphViewModel.SnapshotJson), StringComparison.Ordinal))
@@ -125,28 +92,52 @@ internal sealed partial class GraphWindow : Window
         {
             return;
         }
-        string html = BuildHtml(json, _themeProvider.IsDarkMode);
-        string? directory = Path.GetDirectoryName(_snapshotFilePath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            _ = Directory.CreateDirectory(directory);
-        }
-        File.WriteAllText(_snapshotFilePath, html, Utf8NoBom);
+        await ShowAsync(GraphDocumentBuilder.Build(json, _themeProvider.IsDarkMode)).ConfigureAwait(true);
+    }
 
-        // CoreWebView2.Navigate erzwingt einen Reload auch bei gleicher URI; ein Setter
-        // auf Source ignoriert identische Werte und würde den frisch geschriebenen Inhalt
-        // nicht laden. Der Cache-Buster verhindert zusätzlich, dass Chromium die alte
-        // Datei aus dem Memory-Cache liefert, wenn sich nur der Inhalt geändert hat.
-        string uri = new Uri(_snapshotFilePath).AbsoluteUri + "?t=" + DateTime.UtcNow.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        GraphView.CoreWebView2.Navigate(uri);
+    private async Task ShowAsync(string html)
+    {
+        try
+        {
+            Uri document = await _snapshotFile.WriteAsync(html, CancellationToken.None).ConfigureAwait(true);
+            if (!_isInitialized)
+            {
+                // Während des Schreibens geschlossen; die Fläche ist schon freigegeben.
+                return;
+            }
+            // Navigate lädt auch dann neu, wenn sich nur der Inhalt geändert hat; ein Setzen von
+            // Source mit gleicher Adresse übergingen WebView2 und der Zwischenspeicher.
+            GraphView.CoreWebView2.Navigate(document.AbsoluteUri);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LogSnapshotWriteFailed(_logger, exception, _snapshotFile.FilePath);
+        }
     }
 
     private void OnWindowClosed(object? sender, EventArgs args)
     {
+        _isInitialized = false;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         Loaded -= OnLoadedAsync;
         Activated -= OnActivatedHandler;
         Closed -= OnWindowClosed;
+        _navigationGuard?.Detach();
         GraphView.Dispose();
+        DeleteSnapshot();
+    }
+
+    // Erst nach dem Freigeben der Fläche: Solange sie die Datei geöffnet hat, ließe sie sich
+    // nicht löschen.
+    private void DeleteSnapshot()
+    {
+        try
+        {
+            _snapshotFile.Delete();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            LogSnapshotDeleteFailed(_logger, exception, _snapshotFile.FilePath);
+        }
     }
 }

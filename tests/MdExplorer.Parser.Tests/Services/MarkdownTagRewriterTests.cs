@@ -3,9 +3,10 @@ using MdExplorer.Parser.Services;
 namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
-/// Tests für den Tag-Rewriter: prüfen Body-Regex, YAML-Frontmatter (inline + block),
-/// Rename / Merge / Delete und Edge-Cases (Code-Blöcke werden NICHT geschont, Indexer-
-/// Re-Sync triggert ohnehin neuen Parse).
+/// Umbenennen, Zusammenführen und Löschen eines Schlagworts ändert es im Text und im Frontmatter
+/// (Inline-Liste, Block-Liste, Kommaliste), lässt alles andere byte-gleich und behält die
+/// Zeilenenden der Datei. Rauten in Code, Codeblöcken und Verweiszielen bleiben stehen; das
+/// belegen die Strukturtests.
 /// </summary>
 public sealed class MarkdownTagRewriterTests
 {

@@ -1,14 +1,15 @@
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
+using MdExplorer.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace MdExplorer.Parser.Tests.Fakes;
 
 /// <summary>
-/// EF-realistischer Fake: <see cref="AddAsync"/> puffert in eine Pending-Liste,
-/// <see cref="SaveChangesAsync"/> committet sie. Damit reproduziert der Fake das
-/// SQLite-Verhalten (UNIQUE constraint failed: Tags.Slug); der echte EF
-/// macht erst beim <c>SaveChanges</c> die Inserts, vorher sieht <c>GetBySlugsAsync</c>
-/// nur den committeten DB-Stand.
+/// Schlagwort-Repository im Arbeitsspeicher, das sich beim Speichern wie EF mit SQLite verhält:
+/// <see cref="AddAsync"/> merkt nur vor, erst <see cref="SaveChangesAsync"/> schreibt. Bis dahin
+/// sieht <c>GetBySlugsAsync</c> nur den gespeicherten Stand, und ein doppelter Slug scheitert wie
+/// der eindeutige Index (UNIQUE constraint failed: Tags.Slug).
 /// </summary>
 internal sealed class FakeTagRepository : ITagRepository
 {
@@ -40,9 +41,14 @@ internal sealed class FakeTagRepository : ITagRepository
         return Task.CompletedTask;
     }
 
-    public Task ReplaceFileTagsAsync(Guid markdownFileId, IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken)
+    public Task ReplaceFileTagsAsync(IReadOnlyDictionary<Guid, IReadOnlyCollection<Guid>> tagIdsByFile, CancellationToken cancellationToken)
     {
-        _fileTagLinks[markdownFileId] = [.. tagIds];
+        ArgumentNullException.ThrowIfNull(tagIdsByFile);
+        foreach ((Guid markdownFileId, IReadOnlyCollection<Guid> tagIds) in tagIdsByFile)
+        {
+            _fileTagLinks[markdownFileId] = [.. tagIds.Distinct()];
+        }
+
         return Task.CompletedTask;
     }
 
@@ -73,13 +79,11 @@ internal sealed class FakeTagRepository : ITagRepository
         {
             if (!pendingSlugs.Add(pending.Slug))
             {
-                throw new InvalidOperationException(
-                    $"UNIQUE constraint failed: Tags.Slug (duplicate '{pending.Slug}' in pending inserts).");
+                throw UniqueViolation($"UNIQUE constraint failed: Tags.Slug (duplicate '{pending.Slug}' in pending inserts).");
             }
             if (_tagsBySlug.ContainsKey(pending.Slug))
             {
-                throw new InvalidOperationException(
-                    $"UNIQUE constraint failed: Tags.Slug (slug '{pending.Slug}' already committed).");
+                throw UniqueViolation($"UNIQUE constraint failed: Tags.Slug (slug '{pending.Slug}' already committed).");
             }
         }
         foreach (Tag pending in _pendingTagAdds)
@@ -90,4 +94,9 @@ internal sealed class FakeTagRepository : ITagRepository
         _pendingTagAdds.Clear();
         return Task.FromResult(added);
     }
+
+    // So meldet das echte Repository den Verstoß: EF Core wirft eine DbUpdateException, der
+    // Datenkontext reicht sie als DatabaseOperationException weiter.
+    private static DatabaseOperationException UniqueViolation(string message) =>
+        new(message, new DbUpdateException(message));
 }

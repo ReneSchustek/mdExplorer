@@ -21,7 +21,7 @@ public sealed class HashCalculator(IFileSystem fileSystem) : IHashCalculator
         await using (stream.ConfigureAwait(false))
         {
             byte[] hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
-            // Convert.ToHexStringLower: allokationsfrei (kein StringBuilder + 32 Byte-Strings pro Hash),
+            // Convert.ToHexStringLower: ohne Zwischen-Strings (kein StringBuilder, kein String je Byte),
             // Lowercase-Ergebnis im selben "x2"-Format wie die im Index gespeicherten Hashes. Hot-Path bei jedem (Re-)Sync.
             return Convert.ToHexStringLower(hash);
         }

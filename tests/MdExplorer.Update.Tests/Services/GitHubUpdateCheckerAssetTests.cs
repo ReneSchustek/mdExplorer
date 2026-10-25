@@ -9,54 +9,73 @@ using Microsoft.Extensions.Time.Testing;
 namespace MdExplorer.Update.Tests.Services;
 
 /// <summary>
-/// Prüft, wie der Checker das Installationspaket und dessen Prüfsumme aus einem Release
-/// ermittelt. Der Prüfwert entscheidet darüber, ob überhaupt installiert werden darf;
-/// fehlt oder taugt er nicht, muss das Ergebnis „nicht installierbar" lauten statt zu raten.
+/// Prüft, wie der Checker das Installationspaket, dessen Prüfsumme und dessen Signatur aus einem
+/// Release ermittelt. Prüfwert und Signatur entscheiden darüber, ob überhaupt installiert werden
+/// darf; fehlt eines oder taugt es nicht, muss das Ergebnis „nicht installierbar" lauten statt zu raten.
 /// </summary>
 public sealed class GitHubUpdateCheckerAssetTests : IDisposable
 {
-    private const string GueltigerHash = "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08";
+    private const string ValidHash = "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08";
+    private const string AssetBase = "https://github.com/ReneSchustek/mdExplorer/releases/download/v1.0.0/";
 
-    private static readonly DateTimeOffset Jetzt = new(2026, 6, 26, 12, 0, 0, TimeSpan.Zero);
-    private static readonly Uri ApiBasis = new UriBuilder("https", "api.github.com").Uri;
+    // Der Prüfer liest die Signatur nur ein; ob sie stimmt, entscheidet erst der Installer.
+    private static readonly byte[] SignatureBytes = [0x30, 0x44, 0x02, 0x20];
 
-    private readonly FakeTimeProvider _zeit = new(Jetzt);
-    private readonly List<IDisposable> _verwerfbare = [];
+    private static readonly DateTimeOffset FixedNow = new(2026, 6, 26, 12, 0, 0, TimeSpan.Zero);
+    private static readonly Uri ApiBase = new UriBuilder("https", "api.github.com").Uri;
+
+    private readonly FakeTimeProvider _time = new(FixedNow);
+    private readonly List<IDisposable> _disposables = [];
 
     public void Dispose()
     {
-        foreach (IDisposable einzelnes in _verwerfbare)
+        foreach (IDisposable single in _disposables)
         {
-            einzelnes.Dispose();
+            single.Dispose();
         }
     }
 
     [Fact]
     public async Task CheckForUpdate_WithSetupAndChecksum_ReturnsInstallableAsset()
     {
-        GitHubUpdateChecker checker = CreateChecker(ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: $"{GueltigerHash}  MdExplorer-1.0.0-setup.exe"));
+        GitHubUpdateChecker checker = CreateChecker(ReleaseWithAssets(withChecksum: true, checksumContent: $"{ValidHash}  MdExplorer-1.0.0-setup.exe"));
 
         UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
-        Assert.NotNull(result.Asset);
-        Assert.Equal("MdExplorer-1.0.0-setup.exe", result.Asset!.FileName, StringComparer.Ordinal);
-        Assert.Equal(GueltigerHash, result.Asset.ExpectedSha256, StringComparer.OrdinalIgnoreCase);
-        Assert.True(result.Asset.IsVerifiable);
+        UpdateAsset asset = Assert.IsType<UpdateAsset>(result.Asset);
+        Assert.Equal("MdExplorer-1.0.0-setup.exe", asset.FileName, StringComparer.Ordinal);
+        Assert.Equal(ValidHash, asset.ExpectedSha256, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(SignatureBytes, asset.Signature.ToArray());
+        Assert.True(asset.IsVerifiable);
         Assert.True(result.IsInstallable);
+    }
+
+    [Fact]
+    public async Task CheckForUpdate_WithoutSignatureAsset_IsNotInstallable()
+    {
+        GitHubUpdateChecker checker = CreateChecker(
+            ReleaseWithAssets(withChecksum: true, checksumContent: $"{ValidHash}  MdExplorer-1.0.0-setup.exe", withSignature: false));
+
+        UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
+
+        UpdateAsset asset = Assert.IsType<UpdateAsset>(result.Asset);
+        Assert.Equal(ValidHash, asset.ExpectedSha256, StringComparer.OrdinalIgnoreCase);
+        Assert.True(asset.Signature.IsEmpty);
+        Assert.False(result.IsInstallable);
     }
 
     [Fact]
     public async Task CheckForUpdate_WithoutChecksumAsset_ReturnsAssetWithoutHash()
     {
-        GitHubUpdateChecker checker = CreateChecker(ReleaseMitAssets(mitPruefsumme: false));
+        GitHubUpdateChecker checker = CreateChecker(ReleaseWithAssets(withChecksum: false));
 
         UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(UpdateCheckStatus.UpdateAvailable, result.Status);
-        Assert.NotNull(result.Asset);
-        Assert.Null(result.Asset!.ExpectedSha256);
-        Assert.False(result.Asset.IsVerifiable);
+        UpdateAsset asset = Assert.IsType<UpdateAsset>(result.Asset);
+        Assert.Null(asset.ExpectedSha256);
+        Assert.False(asset.IsVerifiable);
         // Ohne Prüfwert darf nicht installiert werden; der Weg über die Release-Seite bleibt.
         Assert.False(result.IsInstallable);
     }
@@ -64,12 +83,12 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     [Fact]
     public async Task CheckForUpdate_WithUnparsableChecksumFile_ReturnsAssetWithoutHash()
     {
-        GitHubUpdateChecker checker = CreateChecker(ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: "das ist kein hexwert"));
+        GitHubUpdateChecker checker = CreateChecker(ReleaseWithAssets(withChecksum: true, checksumContent: "das ist kein hexwert"));
 
         UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.Asset);
-        Assert.Null(result.Asset!.ExpectedSha256);
+        UpdateAsset asset = Assert.IsType<UpdateAsset>(result.Asset);
+        Assert.Null(asset.ExpectedSha256);
         Assert.False(result.IsInstallable);
     }
 
@@ -77,11 +96,12 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     public async Task CheckForUpdate_WithTruncatedChecksum_ReturnsAssetWithoutHash()
     {
         // Zu kurzer Wert: sieht auf den ersten Blick nach Hex aus, ist aber kein SHA-256.
-        GitHubUpdateChecker checker = CreateChecker(ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: "9F86D081"));
+        GitHubUpdateChecker checker = CreateChecker(ReleaseWithAssets(withChecksum: true, checksumContent: "9F86D081"));
 
         UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
-        Assert.Null(result.Asset!.ExpectedSha256);
+        UpdateAsset asset = Assert.IsType<UpdateAsset>(result.Asset);
+        Assert.Null(asset.ExpectedSha256);
     }
 
     [Fact]
@@ -89,26 +109,26 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     {
         StubHttpMessageHandler handler = StubHttpMessageHandler.WithRoutes(
         [
-            new("releases/latest", StubHttpMessageHandler.Text(ReleaseJson(mitPruefsumme: true), HttpStatusCode.OK)),
+            new("releases/latest", StubHttpMessageHandler.Text(ReleaseJson(withChecksum: true), HttpStatusCode.OK)),
             new(".sha256", StubHttpMessageHandler.Text(string.Empty, HttpStatusCode.InternalServerError)),
         ]);
         GitHubUpdateChecker checker = CreateChecker(handler);
 
         UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
-        Assert.NotNull(result.Asset);
-        Assert.Null(result.Asset!.ExpectedSha256);
+        UpdateAsset asset = Assert.IsType<UpdateAsset>(result.Asset);
+        Assert.Null(asset.ExpectedSha256);
     }
 
     [Fact]
     public async Task CheckForUpdate_WithoutSetupAsset_ReturnsNoAsset()
     {
-        const string OhneSetup = """
-            {"tag_name":"v1.0.0","html_url":"https://example.invalid/r","assets":[
-              {"name":"MdExplorer-1.0.0-win-x64.zip","browser_download_url":"https://example.invalid/paket.zip"}
+        const string WithoutSetup = """
+            {"tag_name":"v1.0.0","html_url":"https://github.com/ReneSchustek/mdExplorer/releases/tag/v1.0.0","assets":[
+              {"name":"MdExplorer-1.0.0-win-x64.zip","browser_download_url":"https://github.com/ReneSchustek/mdExplorer/releases/download/v1.0.0/paket.zip"}
             ]}
             """;
-        GitHubUpdateChecker checker = CreateChecker(StubHttpMessageHandler.WithJson(OhneSetup));
+        GitHubUpdateChecker checker = CreateChecker(StubHttpMessageHandler.WithJson(WithoutSetup));
 
         UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
@@ -120,10 +140,10 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     [Fact]
     public async Task CheckForUpdate_WithoutAssetsAtAll_ReturnsNoAsset()
     {
-        const string OhneAssets = """
-            {"tag_name":"v1.0.0","html_url":"https://example.invalid/r"}
+        const string WithoutAssets = """
+            {"tag_name":"v1.0.0","html_url":"https://github.com/ReneSchustek/mdExplorer/releases/tag/v1.0.0"}
             """;
-        GitHubUpdateChecker checker = CreateChecker(StubHttpMessageHandler.WithJson(OhneAssets));
+        GitHubUpdateChecker checker = CreateChecker(StubHttpMessageHandler.WithJson(WithoutAssets));
 
         UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
@@ -135,42 +155,53 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
     {
         // Das übliche Format ist "<hex>  <dateiname>"; der Dateiname darf nicht mitgelesen werden.
         GitHubUpdateChecker checker = CreateChecker(
-            ReleaseMitAssets(mitPruefsumme: true, pruefsummenInhalt: $"{GueltigerHash} *MdExplorer-1.0.0-setup.exe\n"));
+            ReleaseWithAssets(withChecksum: true, checksumContent: $"{ValidHash} *MdExplorer-1.0.0-setup.exe\n"));
 
         UpdateCheckResult result = await checker.CheckForUpdateAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(GueltigerHash, result.Asset!.ExpectedSha256, StringComparer.OrdinalIgnoreCase);
+        UpdateAsset asset = Assert.IsType<UpdateAsset>(result.Asset);
+        Assert.Equal(ValidHash, asset.ExpectedSha256, StringComparer.OrdinalIgnoreCase);
     }
 
-    private static string ReleaseJson(bool mitPruefsumme)
+    private static string ReleaseJson(bool withChecksum, bool withSignature = true)
     {
-        const string SetupAsset =
-            "{\"name\":\"MdExplorer-1.0.0-setup.exe\",\"browser_download_url\":\"https://example.invalid/setup.exe\"}";
-        const string PruefsummenAsset =
-            "{\"name\":\"MdExplorer-1.0.0-setup.exe.sha256\",\"browser_download_url\":\"https://example.invalid/setup.exe.sha256\"}";
+        List<string> assets = [Asset("MdExplorer-1.0.0-setup.exe")];
+        if (withChecksum)
+        {
+            assets.Add(Asset("MdExplorer-1.0.0-setup.exe.sha256"));
+        }
 
-        string assets = mitPruefsumme ? SetupAsset + "," + PruefsummenAsset : SetupAsset;
-        return "{\"tag_name\":\"v1.0.0\",\"html_url\":\"https://example.invalid/r\",\"assets\":[" + assets + "]}";
+        if (withSignature)
+        {
+            assets.Add(Asset("MdExplorer-1.0.0-setup.exe.sig"));
+        }
+
+        return "{\"tag_name\":\"v1.0.0\",\"html_url\":\"https://github.com/ReneSchustek/mdExplorer/releases/tag/v1.0.0\",\"assets\":["
+            + string.Join(',', assets) + "]}";
     }
 
-    private static StubHttpMessageHandler ReleaseMitAssets(bool mitPruefsumme, string pruefsummenInhalt = "") =>
+    private static string Asset(string name) =>
+        "{\"name\":\"" + name + "\",\"browser_download_url\":\"" + AssetBase + name + "\"}";
+
+    private static StubHttpMessageHandler ReleaseWithAssets(bool withChecksum, string checksumContent = "", bool withSignature = true) =>
         StubHttpMessageHandler.WithRoutes(
         [
-            new("releases/latest", StubHttpMessageHandler.Text(ReleaseJson(mitPruefsumme))),
-            new(".sha256", StubHttpMessageHandler.Text(pruefsummenInhalt)),
+            new("releases/latest", StubHttpMessageHandler.Text(ReleaseJson(withChecksum, withSignature))),
+            new(".sha256", StubHttpMessageHandler.Text(checksumContent)),
+            new(".sig", () => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(SignatureBytes) }),
         ]);
 
     private GitHubUpdateChecker CreateChecker(StubHttpMessageHandler handler)
     {
-        _verwerfbare.Add(handler);
-        HttpClient client = new(handler, disposeHandler: false) { BaseAddress = ApiBasis };
-        _verwerfbare.Add(client);
+        _disposables.Add(handler);
+        HttpClient client = new(handler, disposeHandler: false) { BaseAddress = ApiBase };
+        _disposables.Add(client);
         return new GitHubUpdateChecker(
             client,
             Microsoft.Extensions.Options.Options.Create(new UpdateOptions()),
             new FakeAppVersionProvider(new SemanticVersion(0, 9, 0)),
             new FakeUpdateCheckJournal(),
-            _zeit,
+            _time,
             NullLogger<GitHubUpdateChecker>.Instance);
     }
 }

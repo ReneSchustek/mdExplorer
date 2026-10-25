@@ -19,7 +19,7 @@
     <!-- ── Text ─────────────────────────────────────────────────────────── -->
     <SolidColorBrush x:Key="TextPrimaryBrush"        Color="#1A1A1A" />
     <SolidColorBrush x:Key="TextSecondaryBrush"      Color="#5A5A5A" />
-    <SolidColorBrush x:Key="TextTertiaryBrush"       Color="#8A8A8A" />
+    <SolidColorBrush x:Key="TextTertiaryBrush"       Color="#6E6E6E" />
     <SolidColorBrush x:Key="TextDisabledBrush"       Color="#B4B4B4" />
 
     <!--
@@ -34,22 +34,18 @@
     <SolidColorBrush x:Key="AccentPrimaryHoverBrush"    Color="#166F96" />
     <SolidColorBrush x:Key="AccentPrimaryPressedBrush"  Color="#0B3D53" />
     <SolidColorBrush x:Key="AccentPrimaryDisabledBrush" Color="#A8B8C2" />
-    <SolidColorBrush x:Key="AccentSoftBrush"            Color="#2D7FA8" />
+    <SolidColorBrush x:Key="AccentSoftBrush"            Color="#28759C" />
 
     <!-- ── Schaltflächen ────────────────────────────────────────────────── -->
-    <SolidColorBrush x:Key="ButtonBackgroundBrush"         Color="#105776" />
-    <SolidColorBrush x:Key="ButtonBackgroundHoverBrush"    Color="#166F96" />
-    <SolidColorBrush x:Key="ButtonBackgroundPressedBrush"  Color="#0B3D53" />
     <SolidColorBrush x:Key="ButtonBackgroundDisabledBrush" Color="#E0E0E0" />
-    <SolidColorBrush x:Key="ButtonForegroundBrush"         Color="#FFFFFF" />
     <SolidColorBrush x:Key="ButtonForegroundDisabledBrush" Color="#9A9A9A" />
 
-    <!-- Zweitrangige Schaltflächen: Umriss statt Fläche, damit auf einer Seite klar
-         bleibt, welche Aktion die vorgesehene ist. -->
+    <!-- Schaltflächen tragen einen Umriss statt einer gefüllten Fläche. Der Umriss braucht
+         3:1 gegen Fläche und Grund, sonst hebt sich der Knopf kaum ab (WCAG 1.4.11). -->
     <SolidColorBrush x:Key="ButtonSecondaryBackgroundBrush"      Color="#FFFFFF" />
     <SolidColorBrush x:Key="ButtonSecondaryBackgroundHoverBrush" Color="#EBEBEB" />
     <SolidColorBrush x:Key="ButtonSecondaryForegroundBrush"      Color="#1A1A1A" />
-    <SolidColorBrush x:Key="ButtonSecondaryBorderBrush"          Color="#D0D7DE" />
+    <SolidColorBrush x:Key="ButtonSecondaryBorderBrush"          Color="#8A8A8A" />
 
     <!-- ── Karten und Kacheln ───────────────────────────────────────────── -->
     <SolidColorBrush x:Key="CardBackgroundBrush"      Color="#FFFFFF" />
@@ -110,8 +106,9 @@
 
     <!--
         Die Fläche des Aufklappmenüs kommt aus den Systemfarben: WPF zeichnet es in einem
-        eigenen Fenster und fragt dort nicht den Style des Eintrags. Ohne diese Werte stand
-        im dunklen Erscheinungsbild helle Schrift auf weißem Grund.
+        eigenen Fenster und fragt dort nicht den Style des Eintrags. Die hellen Werte stehen
+        hier, damit das Menü auch dann in den Farben der Anwendung erscheint, wenn Windows
+        andere Systemfarben meldet.
     -->
     <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#FFFFFF" />
     <SolidColorBrush x:Key="{x:Static SystemColors.MenuBarBrushKey}" Color="#FFFFFF" />

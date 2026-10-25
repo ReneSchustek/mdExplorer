@@ -7,7 +7,10 @@ namespace MdExplorer.Core.Abstractions;
 /// </summary>
 public interface IMarkdownDocumentRepository
 {
-    /// <summary>Lädt das Dokument für die angegebene MarkdownFile-Id, sofern vorhanden.</summary>
+    /// <summary>
+    /// Lädt das Dokument für die angegebene MarkdownFile-Id, sofern vorhanden, nur zum Lesen
+    /// (nicht verfolgt). Wer ändern will, lädt über <see cref="GetByMarkdownFileIdsAsync"/>.
+    /// </summary>
     Task<MarkdownDocument?> GetByMarkdownFileIdAsync(Guid markdownFileId, CancellationToken cancellationToken);
 
     /// <summary>

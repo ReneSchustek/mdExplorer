@@ -26,13 +26,15 @@ internal sealed class ContentBasedThrowingParser : IMarkdownParser
 
     public string EngineVersion { get; set; } = InitialEngineVersion;
 
+    private int _parseCallCount;
+
     // Zählt jeden Aufruf; die Zahl belegt, dass eine bekannte unparsbare Datei gar nicht
-    // erst wieder beim Parser ankommt.
-    public int ParseCallCount { get; private set; }
+    // erst wieder beim Parser ankommt. Der Orchestrator parst parallel, deshalb atomar.
+    public int ParseCallCount => Volatile.Read(ref _parseCallCount);
 
     public ParseResult Parse(string markdownText)
     {
-        ParseCallCount++;
+        _ = Interlocked.Increment(ref _parseCallCount);
         if (string.Equals(markdownText, _failingContent, StringComparison.Ordinal))
         {
             ExceptionDispatchInfo.Capture(_failure).Throw();

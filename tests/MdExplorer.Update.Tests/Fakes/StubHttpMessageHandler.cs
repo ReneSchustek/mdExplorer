@@ -27,6 +27,13 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     public static StubHttpMessageHandler WithStatus(HttpStatusCode statusCode) =>
         new(_ => new HttpResponseMessage(statusCode));
 
+    /// <summary>
+    /// Erzeugt einen Handler mit frei gebauter Antwort: eigener Inhalt, eigene Kopfzeilen oder eine
+    /// nachgestellte Weiterleitung über <see cref="HttpResponseMessage.RequestMessage"/>.
+    /// </summary>
+    public static StubHttpMessageHandler Responding(Func<HttpRequestMessage, HttpResponseMessage> responder) =>
+        new(responder);
+
     /// <summary>Erzeugt einen Handler, der die angegebene Ausnahme wirft.</summary>
     public static StubHttpMessageHandler Throwing(Exception exception) =>
         new(_ => throw exception);
@@ -35,35 +42,35 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     /// Erzeugt einen Handler, der je nach Adresse unterschiedlich antwortet. Nötig, sobald ein
     /// Ablauf mehrere Ressourcen abruft, etwa erst das Release und dann dessen Prüfsummen-Datei.
     /// </summary>
-    /// <param name="routen">
+    /// <param name="routes">
     /// Zuordnung von Adress-Bestandteil zu Antwort. Der erste Eintrag, dessen Schlüssel in der
     /// angefragten Adresse vorkommt, gewinnt.
     /// </param>
-    /// <param name="standard">Antwort, wenn keine Route greift.</param>
+    /// <param name="fallback">Antwort, wenn keine Route greift.</param>
     public static StubHttpMessageHandler WithRoutes(
-        IReadOnlyList<KeyValuePair<string, Func<HttpResponseMessage>>> routen,
-        Func<HttpResponseMessage>? standard = null)
+        IReadOnlyList<KeyValuePair<string, Func<HttpResponseMessage>>> routes,
+        Func<HttpResponseMessage>? fallback = null)
     {
-        ArgumentNullException.ThrowIfNull(routen);
+        ArgumentNullException.ThrowIfNull(routes);
 
-        return new StubHttpMessageHandler(anfrage =>
+        return new StubHttpMessageHandler(request =>
         {
-            string adresse = anfrage.RequestUri?.AbsoluteUri ?? string.Empty;
-            foreach (KeyValuePair<string, Func<HttpResponseMessage>> route in routen)
+            string address = request.RequestUri?.AbsoluteUri ?? string.Empty;
+            foreach (KeyValuePair<string, Func<HttpResponseMessage>> route in routes)
             {
-                if (adresse.Contains(route.Key, StringComparison.OrdinalIgnoreCase))
+                if (address.Contains(route.Key, StringComparison.OrdinalIgnoreCase))
                 {
                     return route.Value();
                 }
             }
 
-            return standard?.Invoke() ?? new HttpResponseMessage(HttpStatusCode.NotFound);
+            return fallback?.Invoke() ?? new HttpResponseMessage(HttpStatusCode.NotFound);
         });
     }
 
     /// <summary>Kurzform für eine Route, die Text mit dem angegebenen Status liefert.</summary>
-    public static Func<HttpResponseMessage> Text(string inhalt, HttpStatusCode status = HttpStatusCode.OK) =>
-        () => new HttpResponseMessage(status) { Content = new StringContent(inhalt) };
+    public static Func<HttpResponseMessage> Text(string content, HttpStatusCode status = HttpStatusCode.OK) =>
+        () => new HttpResponseMessage(status) { Content = new StringContent(content) };
 
     /// <summary>
     /// Erzeugt einen Handler, der die angegebenen Bytes als Datenstrom liefert.
@@ -77,18 +84,18 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     {
         ArgumentNullException.ThrowIfNull(content);
 
-        // Der Lambda-Parameter heißt bewusst nicht '_': innerhalb des Rumpfes wäre '_' sonst
+        // Der Lambda-Parameter heißt nicht '_': Innerhalb des Rumpfes wäre '_' sonst
         // der Parameter und keine Verwerfung, und die Zuweisung schlüge fehl.
-        return new StubHttpMessageHandler(anfrage =>
+        return new StubHttpMessageHandler(request =>
         {
-            StreamContent inhalt = new(new MemoryStream(content, writable: false));
+            StreamContent streamContent = new(new MemoryStream(content, writable: false));
             if (!setContentLength)
             {
-                _ = inhalt.Headers.Remove("Content-Length");
-                inhalt.Headers.ContentLength = null;
+                _ = streamContent.Headers.Remove("Content-Length");
+                streamContent.Headers.ContentLength = null;
             }
 
-            return new HttpResponseMessage(HttpStatusCode.OK) { Content = inhalt };
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = streamContent };
         });
     }
 
@@ -96,6 +103,11 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         LastRequestUri = request.RequestUri;
-        return Task.FromResult(_responder(request));
+        HttpResponseMessage response = _responder(request);
+        // Echte Handler hängen die Anfrage an, die die Antwort geliefert hat; nach einer
+        // Weiterleitung ist das die neue Adresse. Eine Antwort, die eine Weiterleitung
+        // nachstellt, setzt sie selbst und behält sie.
+        response.RequestMessage ??= request;
+        return Task.FromResult(response);
     }
 }

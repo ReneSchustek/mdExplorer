@@ -5,9 +5,9 @@ using MdExplorer.App.Views.Menus;
 namespace MdExplorer.App.Tests.Views;
 
 /// <summary>
-/// Hält fest, wo das Aufklappteil eines Menütitels landet. Auf Rechnern, an denen Windows
-/// „Menüs rechtsbündig ausrichten" meldet, hängte WPF es an die rechte Kante des Titels;
-/// bei „Datei" ganz links lief es dadurch über den Fensterrand hinaus.
+/// Hält fest, wo das Aufklappteil eines Menütitels landet. Meldet Windows „Menüs rechtsbündig
+/// ausrichten", hängt WPF es von sich aus an die rechte Kante des Titels; bei „Datei" ganz
+/// links liefe es dann über den Fensterrand hinaus.
 /// </summary>
 public sealed class MenuPopupPlacementTests
 {
@@ -17,33 +17,33 @@ public sealed class MenuPopupPlacementTests
     [Fact]
     public void BelowLeftAligned_PutsThePopupUnderTheTitle_FlushWithItsLeftEdge()
     {
-        CustomPopupPlacement[] vorschlaege = MenuPopupPlacement.BelowLeftAligned(PopupSize, TitleSize, default);
+        CustomPopupPlacement[] suggestions = MenuPopupPlacement.BelowLeftAligned(PopupSize, TitleSize, default);
 
-        CustomPopupPlacement erster = vorschlaege[0];
-        Assert.Equal(0d, erster.Point.X);
-        Assert.Equal(TitleSize.Height, erster.Point.Y);
+        CustomPopupPlacement first = suggestions[0];
+        Assert.Equal(0d, first.Point.X);
+        Assert.Equal(TitleSize.Height, first.Point.Y);
     }
 
     [Fact]
     public void BelowLeftAligned_OffersAnUpwardFallback_ForTitlesNearTheScreenEdge()
     {
         // Reicht der Platz nach unten nicht, greift WPF auf den zweiten Vorschlag zurück.
-        // Ohne einen solchen bliebe nur die Voreinstellung und damit der alte Versatz.
-        CustomPopupPlacement[] vorschlaege = MenuPopupPlacement.BelowLeftAligned(PopupSize, TitleSize, default);
+        // Ohne einen solchen bliebe nur die Voreinstellung und damit der Versatz nach links.
+        CustomPopupPlacement[] suggestions = MenuPopupPlacement.BelowLeftAligned(PopupSize, TitleSize, default);
 
-        Assert.Equal(2, vorschlaege.Length);
-        CustomPopupPlacement zweiter = vorschlaege[1];
-        Assert.Equal(0d, zweiter.Point.X);
-        Assert.Equal(-PopupSize.Height, zweiter.Point.Y);
+        Assert.Equal(2, suggestions.Length);
+        CustomPopupPlacement second = suggestions[1];
+        Assert.Equal(0d, second.Point.X);
+        Assert.Equal(-PopupSize.Height, second.Point.Y);
     }
 
     [Fact]
     public void BelowLeftAligned_NeverShiftsThePopupToTheLeftOfItsTitle()
     {
-        // Der eigentliche Fehler: eine negative X-Verschiebung schob das Aufklappteil
-        // aus dem Fenster heraus.
-        CustomPopupPlacement[] vorschlaege = MenuPopupPlacement.BelowLeftAligned(PopupSize, TitleSize, default);
+        // Eine negative X-Verschiebung schiebt das Aufklappteil des ersten Menütitels aus
+        // dem Fenster heraus.
+        CustomPopupPlacement[] suggestions = MenuPopupPlacement.BelowLeftAligned(PopupSize, TitleSize, default);
 
-        Assert.All(vorschlaege, vorschlag => Assert.True(vorschlag.Point.X >= 0d));
+        Assert.All(suggestions, suggestion => Assert.True(suggestion.Point.X >= 0d));
     }
 }

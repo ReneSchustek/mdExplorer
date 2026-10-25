@@ -8,7 +8,8 @@ namespace MdExplorer.Core.Abstractions;
 public interface IAllFilesQuery
 {
     /// <summary>
-    /// Lädt alle Markdown-Dateien mit ihren Tag-Slugs in einem Query-Roundtrip.
+    /// Lädt alle Markdown-Dateien mit ihren Tag-Slugs in zwei Abfragen, eine für die Dateien
+    /// und eine für alle Zuordnungen; eine Abfrage je Datei gibt es nicht.
     /// Reihenfolge: <see cref="AllFilesRow.LastWriteTimeUtc"/> absteigend, bei Gleichstand
     /// <see cref="AllFilesRow.RelativePath"/> aufsteigend (stabil für UI-Bindings).
     /// </summary>
@@ -21,7 +22,7 @@ public interface IAllFilesQuery
 /// <param name="RelativePath">Pfad relativ zum konfigurierten Root.</param>
 /// <param name="AbsolutePath">Vollqualifizierter Pfad (für Navigation).</param>
 /// <param name="LastWriteTimeUtc">Letzte Änderung auf Disk (UTC).</param>
-/// <param name="TagSlugs">Slugs der auf diese Datei angewendeten Tags (deduziert in Insertion-Order).</param>
+/// <param name="TagSlugs">Slugs der auf diese Datei angewendeten Tags, alphabetisch nach Slug. Doppelte gibt es nicht, weil Datei und Tag zusammen den Schlüssel der Zuordnung bilden.</param>
 public sealed record AllFilesRow(
     Guid MarkdownFileId,
     string Title,

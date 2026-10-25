@@ -3,7 +3,8 @@ namespace MdExplorer.Graph.Models;
 /// <summary>
 /// Knoten im WikiLink-Graphen; repräsentiert genau eine Markdown-Datei.
 /// <see cref="IncomingLinkCount"/> bestimmt die Knoten-Größe in der Visualisierung;
-/// die Größe selbst wird im JS-Frontend aus <c>log(IncomingLinkCount + 1)</c> berechnet.
+/// der Radius wächst im JS-Frontend mit <c>log10(IncomingLinkCount + 1)</c>, damit ein viel
+/// verlinktes Dokument nicht das ganze Bild bedeckt.
 /// </summary>
 /// <param name="Id">Stabiler Identifier, entspricht der <c>MarkdownFile.Id</c>.</param>
 /// <param name="Title">Anzeigename des Knotens (Dateiname ohne Erweiterung).</param>

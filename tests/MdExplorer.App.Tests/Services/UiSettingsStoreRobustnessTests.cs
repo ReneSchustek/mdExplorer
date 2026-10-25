@@ -1,172 +1,135 @@
 using System.IO;
+using System.Text;
 using MdExplorer.App.Services;
+using MdExplorer.App.Tests.Fakes;
+using MdExplorer.Core.Abstractions;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.Services;
 
 /// <summary>
 /// Prüft, dass eine beschädigte oder unzugängliche Layout-Datei den Programmstart nicht
-/// verhindert. Der Speicher liegt in <c>%LOCALAPPDATA%</c> und kann durch einen abgebrochenen
-/// Schreibvorgang halb geschrieben zurückbleiben. Würde das Laden dann werfen, käme die
+/// verhindert und ein Schreibfehler das Beenden nicht aufhält. Würde das Laden werfen, käme die
 /// Anwendung nie bis zum Hauptfenster.
 /// </summary>
-public sealed class UiSettingsStoreRobustnessTests : IDisposable
+/// <remarks>
+/// Die Fehler kommen aus dem Dateisystem im Speicher. Welche Ausnahme Windows für eine gesperrte
+/// oder verweigerte Datei wirft, belegen die Tests des echten Dateisystems; hier zählt, dass der
+/// Speicher beide Arten auffängt.
+/// </remarks>
+public sealed class UiSettingsStoreRobustnessTests
 {
-    private readonly string _ordner = Path.Combine(Path.GetTempPath(), "mdexp-ui-" + Guid.NewGuid().ToString("N"));
+    private const string FilePath = @"C:\Anwendungsdaten\MdExplorer\" + UiSettingsStore.LayoutFileName;
 
-    private string DateiPfad => Path.Combine(_ordner, UiSettingsStore.LayoutFileName);
+    private readonly FakeFileSystem _fileSystem = new();
 
-    [Fact]
-    public void Load_OnCorruptJson_FallsBackToTheDefaultLayout()
+    [Theory]
+    [InlineData("{ das ist kein json")]
+    // "null" ist gültiges JSON, ergibt aber kein Layout. Ohne die Absicherung bekäme der
+    // Aufrufer null statt eines Layouts.
+    [InlineData("null")]
+    public void Load_OnUnusableContent_FallsBackToTheDefaultLayout(string content)
     {
-        _ = Directory.CreateDirectory(_ordner);
-        File.WriteAllText(DateiPfad, "{ das ist kein json");
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
+        _fileSystem.Files[FilePath] = Encoding.UTF8.GetBytes(content);
 
-        UiLayout layout = sut.Load();
-
-        Assert.Equal(UiLayout.Default, layout);
+        Assert.Equal(UiLayout.Default, CreateStore().Load());
     }
 
-    [Fact]
-    public void Load_OnJsonNull_FallsBackToTheDefaultLayout()
+    /// <remarks>
+    /// Eine zweite Programm-Instanz oder ein Virenscanner hält die Datei (E/A-Fehler), oder Rechte
+    /// nach einer Wiederherstellung verweigern das Lesen (Zugriffsfehler). Der Start darf an
+    /// beidem nicht scheitern.
+    /// </remarks>
+    [Theory]
+    [InlineData(typeof(IOException))]
+    [InlineData(typeof(UnauthorizedAccessException))]
+    public void Load_WhenReadingFails_FallsBackToTheDefaultLayout(Type failure)
     {
-        // "null" ist gültiges JSON, ergibt aber kein Layout; ohne die Absicherung
-        // liefe die Oberfläche mit Breite 0 an.
-        _ = Directory.CreateDirectory(_ordner);
-        File.WriteAllText(DateiPfad, "null");
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
+        _fileSystem.Files[FilePath] = Encoding.UTF8.GetBytes("{}");
+        _fileSystem.FailOnRead = Assert.IsAssignableFrom<Exception>(Activator.CreateInstance(failure, "simuliert"));
 
-        UiLayout layout = sut.Load();
-
-        Assert.Equal(UiLayout.Default, layout);
+        Assert.Equal(UiLayout.Default, CreateStore().Load());
     }
 
-    [Fact]
-    public void Load_WhenThePathIsADirectory_FallsBackToTheDefaultLayout()
+    /// <remarks>
+    /// Gespeichert wird beim Schließen des Fensters. Ein Schreibfehler darf das Beenden nicht
+    /// aufhalten, der Verlust der Spaltenbreiten ist verschmerzbar.
+    /// </remarks>
+    [Theory]
+    [InlineData(typeof(IOException))]
+    [InlineData(typeof(UnauthorizedAccessException))]
+    public void Save_WhenWritingFails_DoesNotThrow(Type failure)
     {
-        // Ein Verzeichnis an Stelle der Datei löst beim Öffnen einen E/A-Fehler aus.
-        _ = Directory.CreateDirectory(DateiPfad);
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
+        _fileSystem.FailOnWrite = Assert.IsAssignableFrom<Exception>(Activator.CreateInstance(failure, "simuliert"));
 
-        UiLayout layout = sut.Load();
+        Exception? thrown = Record.Exception(() => CreateStore().Save(new UiLayout(300, 500)));
 
-        Assert.Equal(UiLayout.Default, layout);
-    }
-
-    [Fact]
-    public void Save_WhenThePathIsADirectory_DoesNotThrow()
-    {
-        // Speichern läuft beim Schließen des Fensters. Ein Fehler darf das Beenden nicht stören.
-        _ = Directory.CreateDirectory(DateiPfad);
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
-
-        sut.Save(UiLayout.Default);
-    }
-
-    [Fact]
-    public void Load_WhenTheFileIsLockedByAnotherProcess_FallsBackToTheDefaultLayout()
-    {
-        // Kommt beim Start vor, wenn eine zweite Programm-Instanz oder ein Virenscanner die
-        // Datei gerade hält. Der Start darf daran nicht scheitern.
-        _ = Directory.CreateDirectory(_ordner);
-        File.WriteAllText(DateiPfad, "{}");
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
-
-        using (new FileStream(DateiPfad, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-        {
-            UiLayout layout = sut.Load();
-
-            Assert.Equal(UiLayout.Default, layout);
-        }
-    }
-
-    [Fact]
-    public void Save_WhenTheFileIsLockedByAnotherProcess_DoesNotThrow()
-    {
-        // Gespeichert wird beim Schließen des Fensters. Ein Schreibfehler darf das
-        // Beenden nicht aufhalten, der Verlust der Spaltenbreiten ist verschmerzbar.
-        _ = Directory.CreateDirectory(_ordner);
-        File.WriteAllText(DateiPfad, "{}");
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
-
-        using (new FileStream(DateiPfad, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-        {
-            sut.Save(new UiLayout(300, 400, 500));
-        }
-    }
-
-    [Fact]
-    public void Save_OnAMissingDirectory_CreatesItFirst()
-    {
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
-
-        sut.Save(new UiLayout(300, 400, 500));
-
-        Assert.True(File.Exists(DateiPfad));
+        Assert.Null(thrown);
+        Assert.Empty(_fileSystem.WrittenFiles);
     }
 
     [Fact]
     public void SaveAndLoad_WithWindowGeometryAndFlags_RoundTripsEveryField()
     {
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
-        UiLayout erwartet = new(
+        UiSettingsStore sut = CreateStore();
+        UiLayout expected = new(
             300,
-            400,
             500,
             new WindowGeometry(10, 20, 800, 600),
             IsTagCloudVisible: false,
             LeftTabIndex: 2,
             GraphPathPrefix: @"notizen\projekt");
 
-        sut.Save(erwartet);
+        sut.Save(expected);
 
-        Assert.Equal(erwartet, sut.Load());
+        Assert.Equal(expected, sut.Load());
+    }
+
+    [Fact]
+    public void Load_AFileFromAnEarlierVersion_KeepsTheKnownFields()
+    {
+        // Frühere Fassungen schrieben noch eine Breite für eine eigene Trefferspalte. Das
+        // unbekannte Feld darf das Laden nicht kippen, sonst verlöre jedes Update die Breiten.
+        _fileSystem.Files[FilePath] = Encoding.UTF8.GetBytes(
+            """{ "FolderColumnWidth": 300, "ResultColumnWidth": 448, "PreviewColumnWidth": 500, "LeftTabIndex": 1 }""");
+
+        Assert.Equal(new UiLayout(300, 500, LeftTabIndex: 1), CreateStore().Load());
     }
 
     [Fact]
     public void Save_WithoutLayout_Throws()
     {
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
-
-        _ = Assert.Throws<ArgumentNullException>(() => sut.Save(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => CreateStore().Save(null!));
     }
 
     [Fact]
     public void Constructor_WithBlankPath_Throws()
     {
-        _ = Assert.Throws<ArgumentException>(() => new UiSettingsStore("   ", NullLogger<UiSettingsStore>.Instance));
+        _ = Assert.Throws<ArgumentException>(() => new UiSettingsStore(_fileSystem, "   ", NullLogger<UiSettingsStore>.Instance));
     }
 
     [Fact]
-    public void Constructor_WithoutLogger_Throws()
+    public void Constructor_WithoutLoggerOrFileSystem_Throws()
     {
-        _ = Assert.Throws<ArgumentNullException>(() => new UiSettingsStore(DateiPfad, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new UiSettingsStore(_fileSystem, FilePath, null!));
+        _ = Assert.Throws<ArgumentNullException>(() => new UiSettingsStore((IFileSystem)null!, FilePath, NullLogger<UiSettingsStore>.Instance));
     }
 
     [Fact]
-    public void StorageLocation_ReportsTheConfiguredPath()
+    public void StorageLocation_WithAnExplicitPath_ReportsThatPath()
     {
-        UiSettingsStore sut = new(DateiPfad, NullLogger<UiSettingsStore>.Instance);
-
-        Assert.Equal(DateiPfad, sut.StorageLocation, StringComparer.Ordinal);
+        Assert.Equal(FilePath, CreateStore().StorageLocation, StringComparer.Ordinal);
     }
 
     [Fact]
     public void Constructor_WithoutAnExplicitPath_UsesTheApplicationDataDirectory()
     {
-        // Der parameterlose Weg ist der, den die Anwendung tatsächlich nimmt.
-        UiSettingsStore sut = new(NullLogger<UiSettingsStore>.Instance);
+        // Der Weg ohne Pfad ist der, den die Anwendung tatsächlich nimmt.
+        UiSettingsStore sut = new(_fileSystem, NullLogger<UiSettingsStore>.Instance);
 
         Assert.EndsWith(UiSettingsStore.LayoutFileName, sut.StorageLocation, StringComparison.Ordinal);
         Assert.True(Path.IsPathFullyQualified(sut.StorageLocation));
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_ordner))
-        {
-            Directory.Delete(_ordner, recursive: true);
-        }
-    }
+    private UiSettingsStore CreateStore() => new(_fileSystem, FilePath, NullLogger<UiSettingsStore>.Instance);
 }

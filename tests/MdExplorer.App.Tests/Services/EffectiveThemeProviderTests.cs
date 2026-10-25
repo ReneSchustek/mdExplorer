@@ -5,7 +5,7 @@ using MdExplorer.Core.Models;
 namespace MdExplorer.App.Tests.Services;
 
 /// <summary>
-/// Tests für die Frage, welches Erscheinungsbild gilt.
+/// Die Wahl in den Einstellungen geht vor der von Windows; nur „System" folgt Windows.
 /// </summary>
 /// <remarks>
 /// Oberfläche und Vorschau fragen dieselbe Regel. Fragte die Vorschau nur Windows, bekäme,
@@ -37,7 +37,7 @@ public sealed class EffectiveThemeProviderTests
     }
 
     [Fact]
-    public async Task FollowsAChangedSettingWithoutBeingRecreated()
+    public async Task IsDarkMode_AfterTheSettingChanges_FollowsWithoutBeingRecreated()
     {
         FakeSettingsService settings = new(SettingsWith(AppTheme.Light));
         EffectiveThemeProvider sut = new(settings, new FakeSystemTheme(isDarkMode: false));
@@ -65,6 +65,7 @@ public sealed class EffectiveThemeProviderTests
     private static AppSettings SettingsWith(AppTheme theme) =>
         AppSettings.Default with { Appearance = AppearanceSettings.Default with { Theme = theme } };
 
+    /// <summary>Windows-Erscheinungsbild als fester Wert statt aus der Registry.</summary>
     private sealed class FakeSystemTheme(bool isDarkMode) : ISystemThemeProvider
     {
         public bool IsDarkMode { get; } = isDarkMode;

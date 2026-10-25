@@ -1,16 +1,26 @@
 using System.Globalization;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Unicode;
 
 namespace MdExplorer.Core.Settings;
 
 /// <summary>
 /// Strukturierter JSON-Diff zwischen zwei <see cref="MdExplorer.Core.Models.AppSettings"/>-
-/// Snapshots. Trifft pro geänderter Property einen <see cref="SettingsChangeEntry"/>.
+/// Snapshots. Liefert je geänderter Property einen <see cref="SettingsChangeEntry"/>; eine
+/// geänderte Liste erscheint als Änderung je Index.
 /// Rein funktional: kein State, keine Seiteneffekte.
 /// </summary>
 public static class SettingsDiff
 {
+    // Die Werte landen im Audit-Protokoll, das ein Mensch liest: Umlaute in Pfaden bleiben
+    // lesbar, <, > und & werden trotzdem maskiert.
+    private static readonly JsonSerializerOptions LiteralOptions = new()
+    {
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+    };
+
     /// <summary>
     /// Berechnet den Diff zwischen den beiden serialisierten Snapshots.
     /// </summary>
@@ -34,9 +44,9 @@ public static class SettingsDiff
 
     private static void Walk(string path, JsonNode? previous, JsonNode? current, List<SettingsChangeEntry> changes)
     {
-        if (previous is JsonObject prevObj && current is JsonObject currObj)
+        if (previous is JsonObject previousObject && current is JsonObject currentObject)
         {
-            WalkObject(path, prevObj, currObj, changes);
+            WalkObject(path, previousObject, currentObject, changes);
             return;
         }
 
@@ -52,21 +62,21 @@ public static class SettingsDiff
         }
     }
 
-    private static void WalkObject(string path, JsonObject prevObj, JsonObject currObj, List<SettingsChangeEntry> changes)
+    private static void WalkObject(string path, JsonObject previousObject, JsonObject currentObject, List<SettingsChangeEntry> changes)
     {
         HashSet<string> keys = new(StringComparer.Ordinal);
-        foreach (KeyValuePair<string, JsonNode?> kvp in prevObj)
+        foreach (KeyValuePair<string, JsonNode?> kvp in previousObject)
         {
             _ = keys.Add(kvp.Key);
         }
-        foreach (KeyValuePair<string, JsonNode?> kvp in currObj)
+        foreach (KeyValuePair<string, JsonNode?> kvp in currentObject)
         {
             _ = keys.Add(kvp.Key);
         }
         foreach (string key in keys.OrderBy(static k => k, StringComparer.Ordinal))
         {
-            _ = prevObj.TryGetPropertyValue(key, out JsonNode? prevChild);
-            _ = currObj.TryGetPropertyValue(key, out JsonNode? currChild);
+            _ = previousObject.TryGetPropertyValue(key, out JsonNode? prevChild);
+            _ = currentObject.TryGetPropertyValue(key, out JsonNode? currChild);
             string childPath = string.IsNullOrEmpty(path) ? key : path + "." + key;
             Walk(childPath, prevChild, currChild, changes);
         }
@@ -98,5 +108,5 @@ public static class SettingsDiff
         return string.Equals(a.ToJsonString(), b.ToJsonString(), StringComparison.Ordinal);
     }
 
-    private static string? ToLiteral(JsonNode? node) => node?.ToJsonString();
+    private static string? ToLiteral(JsonNode? node) => node?.ToJsonString(LiteralOptions);
 }

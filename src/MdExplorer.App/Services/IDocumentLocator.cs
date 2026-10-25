@@ -3,7 +3,7 @@ namespace MdExplorer.App.Services;
 /// <summary>
 /// Schmaler Adapter zum Auflösen von WikiLink-Zielen oder absoluten Pfaden gegen den Indexer-Store.
 /// Eigene Abstraktion (nicht im Indexer-Modul), damit das Auflösungs-Verhalten in der App-Schicht
-/// austauschbar bleibt und ohne Datenbank in Tests faktbar ist.
+/// austauschbar bleibt und sich in Tests ohne Datenbank durch eine Attrappe ersetzen lässt.
 /// </summary>
 internal interface IDocumentLocator
 {

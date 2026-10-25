@@ -2,20 +2,26 @@
 <html lang="de" data-theme="__THEME__">
 <head>
     <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-__SCRIPT_NONCE__'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;" />
-    <title>WikiLink-Graph</title>
-    <style>__INLINE_CSS__</style>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-__NONCE__'; style-src 'nonce-__NONCE__'; img-src 'self' data:;" />
+    <title>__TITLE__</title>
+    <style nonce="__NONCE__">__INLINE_CSS__</style>
 </head>
 <body>
-    <div id="legend"><span id="legend-count">0 Knoten / 0 Kanten</span></div>
-    <canvas id="graph"></canvas>
+    <div id="legend" aria-hidden="true"><span id="legend-count"></span></div>
+    <!-- Die Zeichenfläche ist für Screenreader ein Bild mit Beschreibung und per Tastatur
+         erreichbar; die Bedienung steht in der Beschreibung. -->
+    <canvas id="graph" role="img" tabindex="0"></canvas>
+    <!-- Datenblöcke statt Skripte: Der Browser führt sie nicht aus, und die Sicherheitsregel
+         kommt ohne 'unsafe-inline' aus. -->
+    <script type="application/json" id="graph-texts">__GRAPH_TEXTS__</script>
     <script type="application/json" id="graph-payload">__GRAPH_JSON__</script>
-    <script nonce="__SCRIPT_NONCE__">__INLINE_JS__</script>
-    <script nonce="__SCRIPT_NONCE__">
+    <script nonce="__NONCE__">__INLINE_JS__</script>
+    <script nonce="__NONCE__">
         (function () {
-            const payloadElement = document.getElementById('graph-payload');
-            const payload = JSON.parse(payloadElement.textContent);
-            window.MdExplorerGraph.render(payload);
+            function read(id) {
+                return JSON.parse(document.getElementById(id).textContent);
+            }
+            window.MdExplorerGraph.render(read('graph-payload'), read('graph-texts'));
         })();
     </script>
 </body>

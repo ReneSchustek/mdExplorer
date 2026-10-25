@@ -1,12 +1,13 @@
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Graph.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MdExplorer.App.Services;
 
 /// <summary>
 /// Standard-Implementierung von <see cref="IDocumentLocator"/>. Öffnet pro Aufruf einen eigenen
-/// DI-Scope und delegiert an <see cref="IMarkdownFileRepository"/> und vermeidet das Captive-Dependency-
-/// Antipattern (Singleton hält Scoped → DbContext lebt ewig).
+/// DI-Scope und delegiert an <see cref="IMarkdownFileRepository"/> und <see cref="IWikiLinkResolver"/>;
+/// so vermeidet er das Captive-Dependency-Antipattern (Singleton hält Scoped → DbContext lebt ewig).
 /// </summary>
 internal sealed class MarkdownFileDocumentLocator : IDocumentLocator
 {
@@ -27,8 +28,10 @@ internal sealed class MarkdownFileDocumentLocator : IDocumentLocator
         AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            IMarkdownFileRepository repository = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
-            return await repository.FindIdByFileNameAsync(wikiLinkTarget, cancellationToken).ConfigureAwait(false);
+            // Dieselbe Regel wie für die Kanten im Graphen: Ein Klick öffnet die Datei, auf die
+            // die Kante zeigt, auch bei gleichnamigen Dateien und bei Namen mit Leerzeichen.
+            IWikiLinkResolver resolver = scope.ServiceProvider.GetRequiredService<IWikiLinkResolver>();
+            return await resolver.ResolveAsync(wikiLinkTarget, cancellationToken).ConfigureAwait(false);
         }
     }
 

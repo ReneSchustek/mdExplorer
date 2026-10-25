@@ -8,12 +8,14 @@ using Microsoft.EntityFrameworkCore;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Integrationstests für <see cref="SqliteSearchIndexStorage"/> gegen ein echtes FTS5-Schema
-/// (per Migration erzeugt). Fokus: die gechunkte <see cref="SqliteSearchIndexStorage.LoadBodiesAsync"/>
-/// liefert korrekte Bodies für beliebige Id-Mengen inklusive nicht existenter Ids.
+/// <see cref="SqliteSearchIndexStorage.LoadBodiesAsync"/> liefert gegen ein echtes, per Migration
+/// erzeugtes FTS5-Schema den Fließtext zu beliebig vielen Ids, auch zu mehr, als SQLite als einzelne
+/// Parameter zuließe, und übergeht unbekannte Ids. Ein verlorener Text ließe den RegEx-Nachfilter
+/// einen Treffer verwerfen.
 /// </summary>
 public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
 {
+    private readonly TestIdSequence _ids = new();
     private readonly SqliteConnection _connection;
     private readonly MdExplorerDbContext _dbContext;
     private readonly SqliteSearchIndexStorage _sut;
@@ -70,14 +72,15 @@ public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task LoadBodiesAsync_OnMoreThanOneChunk_ReturnsAllBodies()
+    public async Task LoadBodiesAsync_OnMoreIdsThanTheOldParameterLimit_ReturnsAllBodies()
     {
-        // 1.200 > SqliteInListBatchSize (500): erzwingt drei Chunks und deckt die Chunk-Grenze ab.
+        // 1.200 Kennungen: mehr als die 999 Parameter, die ältere SQLite-Fassungen zuließen. Sie
+        // gehen als ein JSON-Parameter hinein; keine darf dabei verloren gehen.
         const int Count = 1_200;
         List<Guid> ids = new(Count);
         for (int i = 0; i < Count; i++)
         {
-            Guid id = Guid.NewGuid();
+            Guid id = _ids.Next();
             ids.Add(id);
             await SeedAsync(id, $"Body-{i}").ConfigureAwait(true);
         }
@@ -89,6 +92,31 @@ public sealed class SqliteSearchIndexStorageTests : IAsyncDisposable
         Assert.Equal(Count, bodies.Count);
         Assert.Equal("Body-0", bodies[ids[0]]);
         Assert.Equal($"Body-{Count - 1}", bodies[ids[Count - 1]]);
+    }
+
+    [Fact]
+    public async Task LoadBodiesAsync_OnACancelledToken_ThrowsWithoutReading()
+    {
+        using CancellationTokenSource cancelled = new();
+        await cancelled.CancelAsync().ConfigureAwait(true);
+
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => _sut.LoadBodiesAsync([new Guid("44444444-4444-4444-4444-444444444444")], cancelled.Token)).ConfigureAwait(true);
+    }
+
+    [Fact]
+    public async Task ApplyChangesAsync_OnACancelledToken_WritesNothing()
+    {
+        Guid id = new("55555555-5555-5555-5555-555555555555");
+        SearchIndexEntry entry = new(id, "Titel", "Inhalt", string.Empty, string.Empty, "notes/datei.md", "hash");
+        using CancellationTokenSource cancelled = new();
+        await cancelled.CancelAsync().ConfigureAwait(true);
+
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => _sut.ApplyChangesAsync([], [entry], cancelled.Token)).ConfigureAwait(true);
+
+        IReadOnlyDictionary<Guid, string> stored = await _sut.LoadBodiesAsync([id], TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.Empty(stored);
     }
 
     private Task SeedAsync(Guid markdownFileId, string body)

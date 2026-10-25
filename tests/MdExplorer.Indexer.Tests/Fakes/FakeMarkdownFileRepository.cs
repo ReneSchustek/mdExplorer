@@ -4,64 +4,44 @@ using MdExplorer.Core.Models;
 namespace MdExplorer.Indexer.Tests.Fakes;
 
 /// <summary>
-/// In-Memory-Repository für Indexer-Unit-Tests.
-/// Indiziert nach Primärschlüssel (analog zu EF-Tracking) und liefert eine
-/// Snapshot-Ansicht nach AbsolutePath für Asserts.
+/// Eine Sitzung auf dem <see cref="FakeMarkdownFileStore"/>, so wie ein DbContext je Scope: eigene
+/// Vormerkliste, Speichern schreibt alles auf einmal oder nichts.
 /// </summary>
-internal sealed class FakeMarkdownFileRepository : IMarkdownFileRepository, IDisposable
+/// <remarks>
+/// Die frühere Attrappe teilte eine Instanz über alle Scopes und gab den gespeicherten Eintrag
+/// selbst heraus. Damit waren Änderungen schon vor dem Speichern „persistiert“, und vorgemerkte
+/// Änderungen eines gescheiterten Speicherns lagen beim nächsten Scope noch bereit. Tests zu
+/// Fehlerfällen konnten so aus dem falschen Grund grün sein.
+/// </remarks>
+internal sealed class FakeMarkdownFileRepository(FakeMarkdownFileStore store) : IMarkdownFileRepository
 {
-    private readonly Dictionary<Guid, MarkdownFile> _store = [];
     private readonly List<MarkdownFile> _pendingAdds = [];
-    private readonly HashSet<MarkdownFile> _pendingUpdates = [];
+    private readonly Dictionary<Guid, MarkdownFile> _pendingUpdates = [];
     private readonly List<MarkdownFile> _pendingRemoves = [];
-    private readonly SemaphoreSlim _saveSignal = new(0, int.MaxValue);
-
-    public int TotalWrites { get; private set; }
-
-    public int SaveCallCount { get; private set; }
-
-    /// <summary>Aktueller Stand der persistierten Dateien, indiziert nach <c>AbsolutePath</c>.</summary>
-    public IReadOnlyDictionary<string, MarkdownFile> Snapshot =>
-        _store.Values.ToDictionary(file => file.AbsolutePath, StringComparer.OrdinalIgnoreCase);
-
-    public Task<bool> WaitForNextSaveAsync(TimeSpan timeout, CancellationToken cancellationToken = default) =>
-        _saveSignal.WaitAsync(timeout, cancellationToken);
-
-    public void Dispose() => _saveSignal.Dispose();
 
     public Task<MarkdownFile?> GetByAbsolutePathAsync(string absolutePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(absolutePath);
-        MarkdownFile? match = _store.Values
-            .FirstOrDefault(file => string.Equals(file.AbsolutePath, absolutePath, StringComparison.OrdinalIgnoreCase));
-        return Task.FromResult(match);
+        return Task.FromResult(store.FindByPath(absolutePath));
     }
 
     public Task<MarkdownFile?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        Task.FromResult(_store.TryGetValue(id, out MarkdownFile? file) ? file : null);
+        Task.FromResult(store.FindById(id));
 
     public Task<IReadOnlyList<MarkdownFile>> GetAllUnderRootAsync(string rootAbsolutePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootAbsolutePath);
-        List<MarkdownFile> result =
-        [
-            .. _store.Values.Where(file => file.AbsolutePath.StartsWith(rootAbsolutePath, StringComparison.OrdinalIgnoreCase)),
-        ];
-        return Task.FromResult<IReadOnlyList<MarkdownFile>>(result);
+        try
+        {
+            return Task.FromResult(store.FindUnder(rootAbsolutePath));
+        }
+        catch (Exception ex) when (ex is System.Data.Common.DbException)
+        {
+            return Task.FromException<IReadOnlyList<MarkdownFile>>(ex);
+        }
     }
 
-    public Task<Guid?> FindIdByFileNameAsync(string fileNameWithoutExtension, CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileNameWithoutExtension);
-        MarkdownFile? match = _store.Values
-            .Where(file => string.Equals(file.FileNameWithoutExtension, fileNameWithoutExtension, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(file => file.RelativePath, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
-        return Task.FromResult<Guid?>(match?.Id);
-    }
-
-    public Task<int> CountAsync(CancellationToken cancellationToken) =>
-        Task.FromResult(_store.Count);
+    public Task<int> CountAsync(CancellationToken cancellationToken) => Task.FromResult(store.Count());
 
     public Task AddAsync(MarkdownFile entity, CancellationToken cancellationToken)
     {
@@ -73,56 +53,42 @@ internal sealed class FakeMarkdownFileRepository : IMarkdownFileRepository, IDis
     public void Update(MarkdownFile entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        _ = _pendingUpdates.Add(entity);
+        if (!_pendingAdds.Contains(entity))
+        {
+            _pendingUpdates[entity.Id] = entity;
+        }
     }
 
     public void Remove(MarkdownFile entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
+        _ = _pendingAdds.Remove(entity);
+        _ = _pendingUpdates.Remove(entity.Id);
         _pendingRemoves.Add(entity);
     }
 
-    /// <summary>Die Schlüssel, die als Menge entfernt wurden, je Aufruf eine Liste.</summary>
-    public List<IReadOnlyCollection<Guid>> RemovedRanges { get; } = [];
-
+    // Wie die Datenschicht: sofort und ohne Vormerkliste. Sie leert dort den Change-Tracker; was
+    // diese Sitzung vorgemerkt hatte, ist danach verworfen.
     public Task<int> RemoveRangeAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(ids);
-        RemovedRanges.Add(ids);
-        int entfernt = ids.Count(_store.Remove);
-        return Task.FromResult(entfernt);
+        int removed = store.RemoveRange(ids);
+        Discard();
+        return Task.FromResult(removed);
     }
 
-    /// <summary>Optionaler Throw bei N-tem <see cref="SaveChangesAsync"/>-Aufruf (Test-Hook).</summary>
-    public Exception? ThrowOnNextSave { get; set; }
-
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
     {
-        SaveCallCount++;
-        Exception? toThrow = ThrowOnNextSave;
-        if (toThrow is not null)
-        {
-            ThrowOnNextSave = null;
-            return Task.FromException<int>(toThrow);
-        }
-        int writes = _pendingAdds.Count + _pendingUpdates.Count + _pendingRemoves.Count;
-        foreach (MarkdownFile add in _pendingAdds)
-        {
-            _store[add.Id] = add;
-        }
-        foreach (MarkdownFile update in _pendingUpdates)
-        {
-            _store[update.Id] = update;
-        }
-        foreach (MarkdownFile remove in _pendingRemoves)
-        {
-            _ = _store.Remove(remove.Id);
-        }
+        await store.EnterSaveAsync().ConfigureAwait(false);
+        int writes = store.Commit(_pendingAdds, _pendingUpdates.Values, _pendingRemoves);
+        Discard();
+        return writes;
+    }
+
+    private void Discard()
+    {
         _pendingAdds.Clear();
         _pendingUpdates.Clear();
         _pendingRemoves.Clear();
-        TotalWrites += writes;
-        _ = _saveSignal.Release();
-        return Task.FromResult(writes);
     }
 }

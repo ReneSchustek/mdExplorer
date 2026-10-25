@@ -8,7 +8,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels.Settings;
 
-/// <summary>Tests für die Settings-Tab-ViewModels und deren Orchestrierung.</summary>
+/// <summary>
+/// Die Reiter des Einstellungsdialogs geben unverändert zurück, was sie bekommen haben, und
+/// nehmen keine Dubletten auf. Gespeichert und geschlossen wird nur, was der Validator
+/// durchlässt; ein Fehler beim Speichern erscheint als Meldung.
+/// </summary>
 public sealed class SettingsViewModelsTests
 {
     [Fact]
@@ -57,7 +61,7 @@ public sealed class SettingsViewModelsTests
         IndexingTabViewModel sut = new(IndexingSettings.Default, dialog);
 
         sut.AddRootCommand.Execute(null);
-        sut.AddRootCommand.Execute(null); // dieselbe Directory erneut -> keine Dublette
+        sut.AddRootCommand.Execute(null); // derselbe Ordner erneut, ohne Dublette
 
         _ = Assert.Single(sut.Roots);
         Assert.Equal(@"C:\Vault", sut.Roots[0]);
@@ -132,11 +136,11 @@ public sealed class SettingsViewModelsTests
         {
             NewExclusionPattern = "   ",
         };
-        int vorher = sut.ExclusionPatterns.Count;
+        int before = sut.ExclusionPatterns.Count;
 
         sut.AddExclusionCommand.Execute(null);
 
-        Assert.Equal(vorher, sut.ExclusionPatterns.Count);
+        Assert.Equal(before, sut.ExclusionPatterns.Count);
     }
 
     [Fact]
@@ -202,7 +206,7 @@ public sealed class SettingsViewModelsTests
     public async Task SettingsWindow_ApplyAndClose_OnValidSettings_SavesAndRequestsCloseWithSaved()
     {
         FakeSettingsService settings = new(AppSettings.Default);
-        SettingsWindowViewModel sut = BuildWindow(settings, new FakeDialogService());
+        using SettingsWindowViewModel sut = BuildWindow(settings, new FakeDialogService());
         SettingsCloseEventArgs? closeArgs = null;
         sut.CloseRequested += (_, e) => closeArgs = e;
 
@@ -218,7 +222,7 @@ public sealed class SettingsViewModelsTests
     {
         FakeSettingsService settings = new(AppSettings.Default);
         FakeDialogService dialog = new();
-        SettingsWindowViewModel sut = BuildWindow(settings, dialog);
+        using SettingsWindowViewModel sut = BuildWindow(settings, dialog);
         sut.Indexing.Roots.Add("relative/not/qualified"); // SettingsValidator: nicht vollqualifiziert -> ungültig
         bool closed = false;
         sut.CloseRequested += (_, _) => closed = true;
@@ -235,7 +239,7 @@ public sealed class SettingsViewModelsTests
     {
         FakeSettingsService settings = new(AppSettings.Default) { SaveException = new IOException("disk full") };
         FakeDialogService dialog = new();
-        SettingsWindowViewModel sut = BuildWindow(settings, dialog);
+        using SettingsWindowViewModel sut = BuildWindow(settings, dialog);
 
         await sut.ApplyAndCloseCommand.ExecuteAsync(null).ConfigureAwait(true);
 
@@ -247,7 +251,7 @@ public sealed class SettingsViewModelsTests
     public void SettingsWindow_Cancel_RequestsCloseWithoutSaved()
     {
         FakeSettingsService settings = new(AppSettings.Default);
-        SettingsWindowViewModel sut = BuildWindow(settings, new FakeDialogService());
+        using SettingsWindowViewModel sut = BuildWindow(settings, new FakeDialogService());
         SettingsCloseEventArgs? closeArgs = null;
         sut.CloseRequested += (_, e) => closeArgs = e;
 
@@ -256,6 +260,39 @@ public sealed class SettingsViewModelsTests
         Assert.NotNull(closeArgs);
         Assert.False(closeArgs!.SavedChanges);
         Assert.Null(settings.SavedSettings);
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_StaysQuiet()
+    {
+        using SettingsWindowViewModel sut = BuildWindow(new FakeSettingsService(AppSettings.Default), new FakeDialogService());
+
+        sut.Dispose();
+        sut.Dispose();
+
+        Assert.NotNull(sut.Behavior.Update);
+    }
+
+    [Fact]
+    public async Task InstallerStarted_ReachesTheWindowWhenTheInstallerRuns()
+    {
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", new Uri("https://example.invalid/setup.exe"), new string('a', 64), new byte[] { 0x30 });
+        FakeUpdateChecker checker = new(UpdateCheckResult.Available(
+            new SemanticVersion(1, 0, 0), new SemanticVersion(1, 1, 0), new Uri("https://example.invalid/releases/latest"), asset));
+        using SettingsWindowViewModel sut = new(
+            new FakeSettingsService(AppSettings.Default),
+            new SettingsValidator(new FakeFileSystem()),
+            new FakeDialogService(),
+            checker,
+            new FakeUpdateInstaller(UpdateDownloadResult.Verified("setup.exe")),
+            NullLogger<SettingsWindowViewModel>.Instance);
+        bool started = false;
+        sut.InstallerStarted += (_, _) => started = true;
+
+        await sut.Behavior.Update.CheckCommand.ExecuteAsync(null);
+        await sut.Behavior.Update.InstallCommand.ExecuteAsync(null);
+
+        Assert.True(started);
     }
 
     private static SettingsWindowViewModel BuildWindow(FakeSettingsService settings, FakeDialogService dialog) =>

@@ -63,6 +63,7 @@ publish/
 
 # Test/Coverage-Ergebnisse (lokal, gehören nicht ins Repo)
 TestResults/
+BenchmarkDotNet.Artifacts/
 *.cobertura.xml
 *.opencover.xml
 

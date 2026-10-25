@@ -2,6 +2,7 @@
              x:ClassModifier="internal"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:MdExplorer.App.Localization"
              xmlns:vm="clr-namespace:MdExplorer.App.ViewModels"
              d:DataContext="{d:DesignInstance Type=vm:FolderTreeViewModel}"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -9,7 +10,7 @@
              mc:Ignorable="d">
     <DockPanel LastChildFill="True">
         <TextBlock DockPanel.Dock="Top"
-                   Text="Ordner"
+                   Text="{l:Loc FolderTree_Header}"
                    FontWeight="SemiBold"
                    Margin="8,8,8,4" />
         <TreeView ItemsSource="{Binding Roots}"
@@ -19,7 +20,9 @@
                   VirtualizingStackPanel.VirtualizationMode="Recycling"
                   SelectedItemChanged="OnSelectedItemChanged">
             <TreeView.ItemContainerStyle>
-                <Style TargetType="TreeViewItem">
+                <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                    <!-- Ohne Namen läse der Screenreader den Typ des ViewModels vor. -->
+                    <Setter Property="AutomationProperties.Name" Value="{Binding DisplayName}" />
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                     <!-- Tag-Trick: holt das FolderTreeViewModel über den TreeView-DataContext in den ContextMenu-Scope. -->
@@ -27,11 +30,11 @@
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                <MenuItem Header="Indexierung pausieren"
+                                <MenuItem Header="{l:Loc FolderTree_PauseIndexing}"
                                           Command="{Binding PlacementTarget.Tag.PauseIndexingCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                           CommandParameter="{Binding}">
                                     <MenuItem.Style>
-                                        <Style TargetType="MenuItem">
+                                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                                             <Setter Property="Visibility" Value="Visible" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsMarkdownFile}" Value="True">
@@ -44,11 +47,11 @@
                                         </Style>
                                     </MenuItem.Style>
                                 </MenuItem>
-                                <MenuItem Header="Indexierung wieder aufnehmen"
+                                <MenuItem Header="{l:Loc FolderTree_ResumeIndexing}"
                                           Command="{Binding PlacementTarget.Tag.ResumeIndexingCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                           CommandParameter="{Binding}">
                                     <MenuItem.Style>
-                                        <Style TargetType="MenuItem">
+                                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsDirectlyExcluded}" Value="True">

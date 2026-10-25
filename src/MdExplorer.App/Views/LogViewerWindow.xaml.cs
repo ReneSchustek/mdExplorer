@@ -7,36 +7,25 @@ namespace MdExplorer.App.Views;
 
 /// <summary>
 /// Live-Log-Viewer auf Basis des In-Memory-Sinks. Bindet das
-/// <see cref="LogViewerViewModel"/> und schließt sich entweder
-/// per Esc/Close-Button oder durch die Hauptanwendung.
+/// <see cref="LogViewerViewModel"/>; freigegeben wird es mit dem Scope des Fensters. Esc löst
+/// über <c>IsCancel</c> denselben Schließen-Knopf aus.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class LogViewerWindow : Window
 {
-    private readonly LogViewerViewModel _viewModel;
-
     /// <summary>Erstellt das Fenster und setzt den DataContext.</summary>
     public LogViewerWindow(LogViewerViewModel viewModel)
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         InitializeComponent();
-        _viewModel = viewModel;
         DataContext = viewModel;
-        Closed += OnWindowClosed;
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs args) => Close();
 
-    private void OnWindowClosed(object? sender, EventArgs args)
-    {
-        Closed -= OnWindowClosed;
-        _viewModel.Dispose();
-    }
-
     /// <summary>
-    /// Versteht <see cref="GridViewColumnHeader"/>-Klicks als „keine Aktion"; das
-    /// Routing-Event bubble-up käme sonst beim DockPanel an und würde im
-    /// Snoop-Tool als unbehandeltes Routed-Event auffallen.
+    /// Die Spaltenköpfe sortieren nicht. Ein Klick auf einen <see cref="GridViewColumnHeader"/>
+    /// endet hier, statt unbehandelt durch den Baum aufzusteigen.
     /// </summary>
     private void OnHeaderClick(object sender, RoutedEventArgs args)
     {

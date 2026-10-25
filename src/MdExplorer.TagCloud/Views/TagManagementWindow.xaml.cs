@@ -24,6 +24,9 @@ public sealed partial class TagManagementWindow : Window
         Loaded += OnLoaded;
     }
 
+    // Ohne eigenes try/catch: RefreshAsync fängt die erwartbaren Fehler beim Laden selbst und
+    // meldet sie in der Statuszeile. Was dennoch durchschlägt, ist ein Programmfehler und
+    // landet wie bei jedem anderen Handler in der zentralen Fehlerbehandlung der Anwendung.
     private async void OnLoaded(object sender, RoutedEventArgs args)
     {
         await _viewModel.RefreshAsync(CancellationToken.None).ConfigureAwait(true);

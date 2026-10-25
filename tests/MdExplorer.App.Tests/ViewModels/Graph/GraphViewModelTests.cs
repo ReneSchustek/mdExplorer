@@ -1,5 +1,5 @@
-using System.IO;
 using MdExplorer.App.Services;
+using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels.Graph;
 using MdExplorer.Graph.Abstractions;
 using MdExplorer.Graph.Models;
@@ -8,21 +8,20 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels.Graph;
 
-/// <summary>Tests für das Graph-Panel-ViewModel: Snapshot-Laden und Pfad-Prefix-Persistenz.</summary>
+/// <summary>
+/// Das Graph-Fenster lädt den Snapshot mit dem gewählten Pfadfilter, übersteht einen Fehler des
+/// Dienstes ohne Ausnahme und ohne hängende Belegt-Anzeige und merkt sich den Filter, mit dem
+/// zuletzt geladen wurde, über einen Neustart hinweg.
+/// </summary>
 public sealed class GraphViewModelTests : IDisposable
 {
     private static readonly Guid NodeId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-    private readonly string _layoutPath = Path.Combine(Path.GetTempPath(), $"mdex-uilayout-{Guid.NewGuid():N}.json");
+    private readonly ServiceCollection _services = [];
+    private ServiceProvider? _provider;
 
     /// <inheritdoc />
-    public void Dispose()
-    {
-        if (File.Exists(_layoutPath))
-        {
-            File.Delete(_layoutPath);
-        }
-    }
+    public void Dispose() => _provider?.Dispose();
 
     [Fact]
     public async Task RefreshAsync_OnSnapshot_PopulatesCountsAndJson()
@@ -35,7 +34,7 @@ public sealed class GraphViewModelTests : IDisposable
                 OriginalNodeCount: 5,
                 OriginalEdgeCount: 3),
         };
-        GraphViewModel sut = BuildViewModel(graph, out UiSettingsStore _);
+        GraphViewModel sut = BuildViewModel(graph, new FakeUiLayoutStore());
 
         await sut.RefreshAsync().ConfigureAwait(true);
 
@@ -52,7 +51,7 @@ public sealed class GraphViewModelTests : IDisposable
     public async Task RefreshAsync_WithPathPrefix_PassesFilterToService()
     {
         FakeGraphService graph = new();
-        GraphViewModel sut = BuildViewModel(graph, out UiSettingsStore _);
+        GraphViewModel sut = BuildViewModel(graph, new FakeUiLayoutStore());
         sut.PathPrefix = "notizen/";
 
         await sut.RefreshAsync().ConfigureAwait(true);
@@ -60,11 +59,13 @@ public sealed class GraphViewModelTests : IDisposable
         Assert.Equal("notizen/", graph.LastFilter?.PathPrefix);
     }
 
-    [Fact]
-    public async Task RefreshAsync_OnServiceFailure_DoesNotThrowAndResetsBusy()
+    [Theory]
+    [InlineData(TestFailures.Database)]
+    [InlineData(TestFailures.InvalidState)]
+    public async Task RefreshAsync_OnServiceFailure_DoesNotThrowAndResetsBusy(string kind)
     {
-        FakeGraphService graph = new() { Failure = new InvalidOperationException("scope broken") };
-        GraphViewModel sut = BuildViewModel(graph, out UiSettingsStore _);
+        FakeGraphService graph = new() { Failure = TestFailures.Of(kind) };
+        GraphViewModel sut = BuildViewModel(graph, new FakeUiLayoutStore());
 
         await sut.RefreshAsync().ConfigureAwait(true);
 
@@ -73,54 +74,88 @@ public sealed class GraphViewModelTests : IDisposable
     }
 
     [Fact]
-    public void OnPathPrefixChanged_PersistsPrefixToStore()
+    public async Task RefreshAsync_WhenTheApplicationShutsDown_EndsQuietly()
     {
-        GraphViewModel sut = BuildViewModel(new FakeGraphService(), out UiSettingsStore store);
+        // EF Core meldet den Abbruch als OperationCanceledException, nicht als deren Unterart
+        // TaskCanceledException; ein Fang nur für die Unterart ließ ihn aus dem Befehl fliegen.
+        FakeGraphService graph = new() { Failure = new OperationCanceledException() };
+        GraphViewModel sut = BuildViewModel(graph, new FakeUiLayoutStore());
 
+        await sut.RefreshAsync().ConfigureAwait(true);
+
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public void TypingThePrefix_DoesNotWriteTheLayoutOnEveryKeystroke()
+    {
+        FakeUiLayoutStore store = new();
+        GraphViewModel sut = BuildViewModel(new FakeGraphService(), store);
+
+        sut.PathPrefix = "d";
+        sut.PathPrefix = "do";
         sut.PathPrefix = "docs/";
+
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_RemembersThePrefixItLoadedWith()
+    {
+        FakeUiLayoutStore store = new();
+        GraphViewModel sut = BuildViewModel(new FakeGraphService(), store);
+        sut.PathPrefix = "docs/";
+
+        await sut.RefreshAsync().ConfigureAwait(true);
 
         Assert.Equal("docs/", store.Load().GraphPathPrefix);
     }
 
     [Fact]
-    public void OnPathPrefixChanged_OnWhitespace_PersistsNull()
+    public async Task RefreshAsync_WithAWhitespacePrefix_RemembersNoPrefix()
     {
-        GraphViewModel sut = BuildViewModel(new FakeGraphService(), out UiSettingsStore store);
-        sut.PathPrefix = "docs/";
-
+        FakeUiLayoutStore store = new() { Layout = UiLayout.Default with { GraphPathPrefix = "docs/" } };
+        GraphViewModel sut = BuildViewModel(new FakeGraphService(), store);
         sut.PathPrefix = "   ";
+
+        await sut.RefreshAsync().ConfigureAwait(true);
 
         Assert.Null(store.Load().GraphPathPrefix);
     }
 
     [Fact]
+    public async Task RefreshAsync_WithTheRememberedPrefix_WritesNothing()
+    {
+        FakeUiLayoutStore store = new() { Layout = UiLayout.Default with { GraphPathPrefix = "docs/" } };
+        GraphViewModel sut = BuildViewModel(new FakeGraphService(), store);
+
+        await sut.RefreshAsync().ConfigureAwait(true);
+
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Fact]
     public void Constructor_LoadsPersistedPrefix()
     {
-        UiSettingsStore store = new(_layoutPath, NullLogger<UiSettingsStore>.Instance);
-        store.Save(UiLayout.Default with { GraphPathPrefix = "vorher/" });
+        FakeUiLayoutStore store = new() { Layout = UiLayout.Default with { GraphPathPrefix = "vorher/" } };
 
         GraphViewModel sut = BuildViewModel(new FakeGraphService(), store);
 
         Assert.Equal("vorher/", sut.PathPrefix);
+        Assert.Equal(0, store.SaveCount);
     }
 
-    private GraphViewModel BuildViewModel(FakeGraphService graph, out UiSettingsStore store)
+    private GraphViewModel BuildViewModel(FakeGraphService graph, FakeUiLayoutStore store)
     {
-        store = new UiSettingsStore(_layoutPath, NullLogger<UiSettingsStore>.Instance);
-        return BuildViewModel(graph, store);
-    }
-
-    private static GraphViewModel BuildViewModel(FakeGraphService graph, UiSettingsStore store)
-    {
-        ServiceCollection services = [];
-        _ = services.AddScoped<IGraphService>(_ => graph);
-        ServiceProvider provider = services.BuildServiceProvider();
+        _ = _services.AddScoped<IGraphService>(_ => graph);
+        _provider = _services.BuildServiceProvider();
         return new GraphViewModel(
-            provider.GetRequiredService<IServiceScopeFactory>(),
+            _provider.GetRequiredService<IServiceScopeFactory>(),
             store,
             NullLogger<GraphViewModel>.Instance);
     }
 
+    /// <summary>Liefert einen vorgegebenen Snapshot oder Fehler und merkt sich den Filter.</summary>
     private sealed class FakeGraphService : IGraphService
     {
         public GraphSnapshot Snapshot { get; init; } = GraphSnapshot.Empty;

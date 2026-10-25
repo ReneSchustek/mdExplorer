@@ -4,6 +4,11 @@ using MdExplorer.Parser.Tests.Helpers;
 
 namespace MdExplorer.Parser.Tests.Services;
 
+/// <summary>
+/// Der Extractor liefert aus einem Dokument jedes WikiLink-Ziel einmal, ohne Anzeigetext und ohne
+/// Verweise aus Inline-Code. Diese Liste speist den Graphen; ein falscher Eintrag zöge dort eine
+/// Kante, die im Text nicht steht.
+/// </summary>
 public sealed class WikiLinkExtractorTests
 {
     private readonly WikiLinkExtractor _sut = new();

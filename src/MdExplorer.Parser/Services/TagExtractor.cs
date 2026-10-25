@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using Markdig;
 using Markdig.Syntax;
@@ -19,8 +20,15 @@ namespace MdExplorer.Parser.Services;
 /// </remarks>
 public sealed partial class TagExtractor : ITagExtractor
 {
-    [GeneratedRegex(HashtagPattern.Expression, RegexOptions.CultureInvariant)]
+    [GeneratedRegex(HashtagPattern.Expression, RegexOptions.CultureInvariant, HashtagPattern.MatchTimeoutMilliseconds)]
     private static partial Regex HashtagRegex();
+
+    // Dieselben Erweiterungen wie der Index, einmal gebaut und von allen Aufrufen geteilt: Die
+    // Pipeline ist nach dem Bauen unveränderlich und damit threadsicher. Der Normalisierer bildet
+    // nur die Slugs der WikiLink-Ziele, die für das Zählen keine Rolle spielen; er sorgt dafür,
+    // dass ein WikiLink hier dieselbe Gestalt hat wie im Index.
+    private static readonly MarkdownPipeline EditorPipeline =
+        IndexPipeline.CreateBuilder(new TagNormalizer().TryToSlug).Build();
 
     private readonly ISettingsService _settingsService;
 
@@ -43,9 +51,10 @@ public sealed partial class TagExtractor : ITagExtractor
         {
             return [];
         }
-        // Minimal-Pipeline: kein WikiLink-Render nötig, kein YAML-Frontmatter; ExtractFromAst überspringt
-        // CodeBlocks ohnehin. Reduziert Allokationen pro Tastendruck.
-        MarkdownDocument ast = Markdown.Parse(markdownText);
+        // Der Editor zählt mit der Pipeline des Index. Ohne die YAML-Erweiterung läse er einen
+        // Frontmatter-Block als gewöhnlichen Text und zeigte eine Raute daraus als Schlagwort an,
+        // das der Index nie erfasst.
+        MarkdownDocument ast = Markdown.Parse(markdownText, EditorPipeline);
         return ExtractFromAstCore(ast);
     }
 
@@ -60,6 +69,32 @@ public sealed partial class TagExtractor : ITagExtractor
         return ExtractFromAstCore(ast);
     }
 
+    /// <summary>
+    /// Liefert die Textstücke, in denen ein Hashtag als Schlagwort zählt, in Dokumentreihenfolge.
+    /// </summary>
+    /// <remarks>
+    /// Die eine Antwort auf die Frage „wo zählt eine Raute?“. Der Umschreiber benutzt sie ebenfalls,
+    /// damit er genau das ersetzt, was hier gezählt wird: kein Code, kein Frontmatter, kein
+    /// Verweisziel.
+    /// </remarks>
+    /// <param name="ast">Das mit der Index-Pipeline gelesene Dokument.</param>
+    /// <returns>Die Literale außerhalb von Code und Frontmatter.</returns>
+    internal static IEnumerable<LiteralInline> EnumerateBodyLiterals(MarkdownDocument ast)
+    {
+        foreach (Block block in ast)
+        {
+            // Der Frontmatter-Block ist in Markdig ebenfalls ein CodeBlock und fällt hier mit heraus.
+            if (block is CodeBlock)
+            {
+                continue;
+            }
+            foreach (LiteralInline literal in EnumerateLiteralsInBlock(block))
+            {
+                yield return literal;
+            }
+        }
+    }
+
     private static List<string> ExtractFromAstCore(MarkdownDocument ast)
     {
         List<string> ordered = [];
@@ -70,7 +105,10 @@ public sealed partial class TagExtractor : ITagExtractor
             string text = literal.Content.ToString();
             foreach (Match match in HashtagRegex().Matches(text))
             {
-                string tag = match.Groups["name"].Value;
+                // Der Name kommt in der zusammengesetzten Form (NFC) in den Index, auch wenn die
+                // Datei „ä“ als „a“ mit nachgestellten Punkten speichert: Angezeigt und verglichen
+                // wird dann ein Zeichen, nicht zwei.
+                string tag = match.Groups["name"].Value.Normalize(NormalizationForm.FormC);
                 // Ein Farbwert erfüllt jede Bedingung eines Schlagworts und ist doch keines.
                 if (HashtagPattern.IsColorLiteral(tag))
                 {
@@ -84,21 +122,6 @@ public sealed partial class TagExtractor : ITagExtractor
         }
 
         return ordered;
-    }
-
-    private static IEnumerable<LiteralInline> EnumerateBodyLiterals(MarkdownDocument ast)
-    {
-        foreach (Block block in ast)
-        {
-            if (block is CodeBlock)
-            {
-                continue;
-            }
-            foreach (LiteralInline literal in EnumerateLiteralsInBlock(block))
-            {
-                yield return literal;
-            }
-        }
     }
 
     private static IEnumerable<LiteralInline> EnumerateLiteralsInBlock(Block block)

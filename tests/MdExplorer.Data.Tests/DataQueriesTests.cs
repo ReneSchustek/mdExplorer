@@ -9,7 +9,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MdExplorer.Data.Tests;
 
-/// <summary>Integrationstests für die Read-Query-Klassen gegen eine echte In-Memory-SQLite.</summary>
+/// <summary>
+/// Die Lese-Abfragen für den Parser (<see cref="MarkdownSourceProvider"/>) und die Schlagwortpflege
+/// (<see cref="TagFileLookupQuery"/>) liefern gegen eine echte In-Memory-SQLite die verknüpften Dateien
+/// vollständig, ohne fremde Dateien und in der zugesagten Reihenfolge.
+/// </summary>
 public sealed class DataQueriesTests : IAsyncDisposable
 {
     private static readonly DateTime FixedUtc = new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc);
@@ -40,8 +44,9 @@ public sealed class DataQueriesTests : IAsyncDisposable
     {
         Guid a = Guid.Parse("11111111-1111-1111-1111-111111111111");
         Guid b = Guid.Parse("22222222-2222-2222-2222-222222222222");
-        await SeedFileAsync(a, @"C:\V\a.md", "a.md", "hash-a").ConfigureAwait(true);
+        // In umgekehrter Reihenfolge angelegt: Käme die Liste in Einfügereihenfolge, stünde b vorn.
         await SeedFileAsync(b, @"C:\V\b.md", "b.md", "hash-b").ConfigureAwait(true);
+        await SeedFileAsync(a, @"C:\V\a.md", "a.md", "hash-a").ConfigureAwait(true);
         MarkdownSourceProvider sut = new(_dbContext);
 
         List<MarkdownSourceSnapshot> result = [];
@@ -50,9 +55,9 @@ public sealed class DataQueriesTests : IAsyncDisposable
             result.Add(snapshot);
         }
 
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, s => s.Id == a && s.ContentHash == "hash-a");
-        Assert.Contains(result, s => s.Id == b && s.AbsolutePath == @"C:\V\b.md");
+        Assert.Equal([a, b], result.Select(snapshot => snapshot.Id));
+        Assert.Equal("hash-a", result[0].ContentHash);
+        Assert.Equal(@"C:\V\b.md", result[1].AbsolutePath);
     }
 
     [Fact]

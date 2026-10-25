@@ -30,15 +30,15 @@ public sealed class ParseOrchestratorScopeTests
         // Fünf Dateien bei Stapelgröße zwei: drei Stapel, dazu der Lesebereich, der Bereich
         // fürs Wegräumen der Schlagworte ohne Datei und der, in dem die Zahl der nicht
         // verarbeitbaren Dateien gelesen wird.
-        ScopeCountingHarness harness = new(batchSize: 2);
+        using OrchestratorHarness harness = new(batchSize: 2, decorateScopes: inner => new CountingScopeFactory(inner));
         for (int i = 0; i < 5; i++)
         {
-            harness.AddSource($"/r/datei-{i}.md", $"hash-{i}", $"# Titel {i}");
+            _ = harness.AddSource($"/r/datei-{i}.md", $"hash-{i}", $"# Titel {i}");
         }
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(6, harness.ScopeFactory.Created);
+        Assert.Equal(6, ((CountingScopeFactory)harness.ScopeFactory).Created);
     }
 
     [Fact]
@@ -46,11 +46,11 @@ public sealed class ParseOrchestratorScopeTests
     {
         // Ein Schlagwort verliert seine letzte Datei meist durch den Indexer, nicht durch den
         // Parser. Ein Durchlauf ohne eigene Arbeit muss deshalb trotzdem aufräumen.
-        ScopeCountingHarness harness = new(batchSize: 2);
+        using OrchestratorHarness harness = new(batchSize: 2, decorateScopes: inner => new CountingScopeFactory(inner));
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(3, harness.ScopeFactory.Created);
+        Assert.Equal(3, ((CountingScopeFactory)harness.ScopeFactory).Created);
     }
 
     [Theory]
@@ -64,72 +64,17 @@ public sealed class ParseOrchestratorScopeTests
     {
         // Erwartet: ein Lesebereich, einer je Stapel, einer fürs Aufräumen und einer für den
         // Betriebs-Stand am Ende.
-        // Die Zahl hängt damit an der Stapelgröße, nicht am Bestand. Ohne den eigenen
-        // Bereich je Stapel stünde hier immer 2, egal wie groß der Bestand wird.
-        ScopeCountingHarness harness = new(batchSize);
+        // Die Zahl hängt damit an der Stapelgröße. Ohne den eigenen Bereich je Stapel stünde
+        // hier dieselbe Zahl, egal wie groß der Bestand wird.
+        using OrchestratorHarness harness = new(batchSize: batchSize, decorateScopes: inner => new CountingScopeFactory(inner));
         for (int i = 0; i < fileCount; i++)
         {
-            harness.AddSource($"/r/datei-{i}.md", $"hash-{i}", $"# Titel {i}");
+            _ = harness.AddSource($"/r/datei-{i}.md", $"hash-{i}", $"# Titel {i}");
         }
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(expectedScopes, harness.ScopeFactory.Created);
-    }
-
-    private sealed class ScopeCountingHarness
-    {
-        public FakeFileSystem FileSystem { get; } = new();
-        public FakeMarkdownSourceProvider Source { get; } = new();
-        public FakeMarkdownDocumentRepository DocRepo { get; } = new();
-        public FakeTagRepository TagRepo { get; } = new();
-        public FakeParseFailureRepository FailureRepo { get; } = new();
-        public ParseFailureStatus FailureStatus { get; } = new();
-        public CountingScopeFactory ScopeFactory { get; }
-        public ParseOrchestrator Sut { get; }
-
-        public ScopeCountingHarness(int batchSize)
-        {
-            DocRepo.OnSaveChangesAsync = ct => TagRepo.SaveChangesAsync(ct);
-
-            ServiceCollection services = new();
-            _ = services.AddSingleton<IMarkdownSourceProvider>(Source);
-            _ = services.AddSingleton<IMarkdownDocumentRepository>(DocRepo);
-            _ = services.AddSingleton<ITagRepository>(TagRepo);
-            _ = services.AddSingleton<IParseFailureRepository>(FailureRepo);
-            ServiceProvider provider = services.BuildServiceProvider();
-
-            ScopeFactory = new CountingScopeFactory(provider.GetRequiredService<IServiceScopeFactory>());
-
-            TagNormalizer normalizer = new();
-            MarkdigParser parser = new(
-                new FrontmatterExtractor(),
-                new TagExtractor(new FakeSettingsService()),
-                new WikiLinkExtractor(),
-                normalizer);
-            ParserOptions parserOptions = new()
-            {
-                MaxParallelism = 2,
-                BatchSize = batchSize,
-                PollIntervalSeconds = 1,
-            };
-
-            Sut = new ParseOrchestrator(
-                ScopeFactory,
-                FileSystem,
-                parser,
-                FailureStatus,
-                MEOptions.Create(parserOptions),
-                new FakeTimeProvider(),
-                NullLogger<ParseOrchestrator>.Instance);
-        }
-
-        public void AddSource(string path, string contentHash, string content)
-        {
-            string normalized = path.Replace('/', Path.DirectorySeparatorChar);
-            FileSystem.AddFile(normalized, content);
-            Source.Sources.Add(new MarkdownSourceSnapshot(Guid.NewGuid(), normalized, contentHash));
-        }
+        Assert.Equal(expectedScopes, ((CountingScopeFactory)harness.ScopeFactory).Created);
     }
 
     /// <summary>Zählt, wie oft ein Bereich aufgemacht wurde; mehr braucht die Zusicherung nicht.</summary>

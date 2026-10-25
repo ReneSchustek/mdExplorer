@@ -1,7 +1,8 @@
 namespace MdExplorer.App.Tests;
 
 /// <summary>
-/// Smoke-Tests des App-Projekts: prüft, dass die Assembly geladen werden kann.
+/// Fällt als Erstes um, wenn die App-Assembly sich nicht laden lässt oder nicht mehr
+/// „MdExplorer" heißt.
 /// </summary>
 public sealed class SmokeTests
 {

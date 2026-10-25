@@ -2,6 +2,10 @@ using MdExplorer.Core.Text;
 
 namespace MdExplorer.Core.Tests.Text;
 
+/// <summary>
+/// Der Editor speichert eine Datei mit dem Zeilenende zurück, das er beim Öffnen erkannt hat.
+/// Erkennt er falsch, ändert ein einziges Speichern jede Zeile der Datei.
+/// </summary>
 public sealed class LineEndingDetectorTests
 {
     [Fact]
@@ -33,7 +37,7 @@ public sealed class LineEndingDetectorTests
     }
 
     [Fact]
-    public void Detect_MixedGleichstand_BevorzugtCrlf()
+    public void Detect_MixedTie_PrefersCrlf()
     {
         LineEndingStyle result = LineEndingDetector.Detect("a\r\nb\nc\r");
         Assert.Equal(LineEndingStyle.Crlf, result);

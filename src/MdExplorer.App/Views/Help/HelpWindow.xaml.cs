@@ -1,10 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,7 +10,6 @@ using MdExplorer.App.Services;
 using MdExplorer.App.Services.Help;
 using MdExplorer.App.ViewModels.Help;
 using MdExplorer.Core.Abstractions;
-using MdExplorer.Core.Models;
 using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.Views.Help;
@@ -22,50 +18,51 @@ namespace MdExplorer.App.Views.Help;
 /// Nicht-modales Hilfefenster mit Inhaltsverzeichnis links, Such-Zeile oben
 /// und WebView2-Render-Bereich rechts. Position und Größe werden über
 /// <see cref="HelpWindowGeometryStore"/> in der <c>ui-layout.json</c>
-/// persistiert; das Hilfefenster bleibt ein Singleton pro Anwendungsstart
-/// und nutzt <see cref="Show"/>/<see cref="Window.Activate"/>, wenn es bereits offen ist.
+/// persistiert. Es gibt höchstens eines je Anwendung: Ist es schon offen, holt das
+/// Hauptfenster es nach vorn, statt ein zweites zu erzeugen.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class HelpWindow : Window
 {
-    private const string CssPlaceholder = "__INLINE_CSS__";
-    private const string JsPlaceholder = "__INLINE_JS__";
-    private const string HtmlPlaceholder = "__HELP_HTML__";
-    private const string NoncePlaceholder = "__SCRIPT_NONCE__";
-    private const string ThemePlaceholder = "__THEME__";
-    private const int NonceByteLength = 16;
+    // Wartezeit nach dem letzten Tastenanschlag, bevor die Treffer im Handbuch neu markiert werden.
     private const int SearchDebounceMs = 200;
 
     private readonly IHelpContentService _contentService;
-    private readonly ISettingsService _settingsService;
+    private readonly IEffectiveThemeProvider _themeProvider;
     private readonly HelpWindowGeometryStore _geometryStore;
     private readonly HelpViewModel _viewModel;
+    private readonly IExternalLinkLauncher _linkLauncher;
     private readonly ILogger<HelpWindow> _logger;
     private readonly DispatcherTimer _searchDebounce;
 
-    private HelpContent? _content;
+    private EmbeddedNavigationGuard? _navigationGuard;
     private bool _isWebViewReady;
     private string _pendingSlug = HelpContext.TableOfContents;
     private bool _suppressTocSelectionChanged;
 
     /// <summary>Erzeugt das Fenster mit allen abhängigen Services.</summary>
     public HelpWindow(
+        HelpViewModel viewModel,
         IHelpContentService contentService,
-        ISettingsService settingsService,
+        IEffectiveThemeProvider themeProvider,
         HelpWindowGeometryStore geometryStore,
+        IExternalLinkLauncher linkLauncher,
         ILogger<HelpWindow> logger)
     {
+        ArgumentNullException.ThrowIfNull(viewModel);
         ArgumentNullException.ThrowIfNull(contentService);
-        ArgumentNullException.ThrowIfNull(settingsService);
+        ArgumentNullException.ThrowIfNull(themeProvider);
         ArgumentNullException.ThrowIfNull(geometryStore);
+        ArgumentNullException.ThrowIfNull(linkLauncher);
         ArgumentNullException.ThrowIfNull(logger);
         InitializeComponent();
 
+        _viewModel = viewModel;
         _contentService = contentService;
-        _settingsService = settingsService;
+        _themeProvider = themeProvider;
         _geometryStore = geometryStore;
+        _linkLauncher = linkLauncher;
         _logger = logger;
-        _viewModel = new HelpViewModel();
         DataContext = _viewModel;
         TocList.ItemsSource = _viewModel.Toc;
 
@@ -89,66 +86,26 @@ internal sealed partial class HelpWindow : Window
         }
     }
 
-    /// <summary>HTML-Template mit CSS, JS, Nonce, Theme und Handbuch-HTML füllen.</summary>
-    internal static string BuildHtml(string helpHtml, string theme)
-    {
-        ArgumentNullException.ThrowIfNull(helpHtml);
-        ArgumentException.ThrowIfNullOrWhiteSpace(theme);
-        string htmlTemplate = ReadEmbeddedResource("help.html");
-        string css = ReadEmbeddedResource("help.css");
-        string js = ReadEmbeddedResource("help.js");
-        string nonce = GenerateNonce();
-        // Reihenfolge wie im GraphWindow: erst die vertraünswürdigen Platzhalter,
-        // dann der Markdig-Output, damit der nicht versehentlich Platzhalter ersetzt.
-        return htmlTemplate
-            .Replace(CssPlaceholder, css, StringComparison.Ordinal)
-            .Replace(JsPlaceholder, js, StringComparison.Ordinal)
-            .Replace(NoncePlaceholder, nonce, StringComparison.Ordinal)
-            .Replace(ThemePlaceholder, theme, StringComparison.Ordinal)
-            .Replace(HtmlPlaceholder, helpHtml, StringComparison.Ordinal);
-    }
+    private static int ParseScriptNumber(string? raw) =>
+        int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) ? value : 0;
 
-    private static int ParseInt(string raw)
-    {
-        return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) ? value : 0;
-    }
+    [LoggerMessage(EventId = 1110, Level = LogLevel.Error, Message = "Handbuch ließ sich nicht laden.")]
+    private static partial void LogContentFailed(ILogger logger, Exception exception);
 
-#pragma warning disable S3400 // Stub-Methode: liefert vorerst konstant `false`, behält aber Methoden-Signatur als Erweiterungspunkt für künftige System-Theme-Erkennung.
-    private static bool IsSystemDarkTheme()
-    {
-        // WPF kennt kein zentrales System-Theme-API; im Zweifel der hellere Default,
-        // bis die WinUI-Theme-Erkennung nachgezogen wird.
-        return false;
-    }
-#pragma warning restore S3400
+    [LoggerMessage(EventId = 1111, Level = LogLevel.Warning, Message = "Skriptaufruf im Hilfefenster gescheitert.")]
+    private static partial void LogScriptFailed(ILogger logger, Exception exception);
 
-    private static string GenerateNonce()
-    {
-        Span<byte> buffer = stackalloc byte[NonceByteLength];
-        RandomNumberGenerator.Fill(buffer);
-        return Convert.ToBase64String(buffer);
-    }
-
-    private static string ReadEmbeddedResource(string fileName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
-        Assembly assembly = typeof(HelpWindow).Assembly;
-        string resourceName = "MdExplorer.App.Assets.Help." + fileName;
-        using Stream? stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream is null)
-        {
-            throw new InvalidOperationException($"Eingebettete Hilfe-Ressource fehlt: {resourceName}.");
-        }
-        using StreamReader reader = new(stream, Encoding.UTF8);
-        return reader.ReadToEnd();
-    }
-
-    [LoggerMessage(EventId = 1110, Level = LogLevel.Error, Message = "Hilfefenster konnte nicht initialisiert werden.")]
-    private static partial void LogInitializationFailed(ILogger logger, Exception exception);
-
+    // Nach dem Abstecken eines Bildschirms läge die gemerkte Lage womöglich außerhalb jeder
+    // sichtbaren Fläche; dann öffnet das Fenster mittig über dem Hauptfenster.
     private void ApplyPersistedGeometry()
     {
-        WindowGeometry? geometry = _geometryStore.Load();
+        WindowGeometry? saved = _geometryStore.Load();
+        Rect screen = new(
+            SystemParameters.VirtualScreenLeft,
+            SystemParameters.VirtualScreenTop,
+            SystemParameters.VirtualScreenWidth,
+            SystemParameters.VirtualScreenHeight);
+        WindowGeometry? geometry = saved is null ? null : WindowPlacement.FitOnScreen(saved, screen, MinWidth, MinHeight);
         if (geometry is null)
         {
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -156,25 +113,31 @@ internal sealed partial class HelpWindow : Window
         }
         Left = geometry.Left;
         Top = geometry.Top;
-        Width = Math.Max(MinWidth, geometry.Width);
-        Height = Math.Max(MinHeight, geometry.Height);
+        Width = geometry.Width;
+        Height = geometry.Height;
     }
 
     private async void OnLoadedAsync(object sender, RoutedEventArgs args)
     {
+        if (!await EmbeddedBrowser.TryStartAsync(HelpView, UnavailableHint, _logger).ConfigureAwait(true))
+        {
+            return;
+        }
+        EmbeddedBrowser.Restrict(HelpView.CoreWebView2, allowScripts: true);
+        _navigationGuard = new EmbeddedNavigationGuard(HelpView.CoreWebView2, PreviewNavigationPolicy.IsStringDocument, _linkLauncher, _logger);
+
         try
         {
-            await HelpView.EnsureCoreWebView2Async(
-                await WebView2EnvironmentProvider.GetAsync().ConfigureAwait(true)).ConfigureAwait(true);
-            _content = await _contentService.GetAsync(CancellationToken.None).ConfigureAwait(true);
-            _viewModel.SetToc(_content.Toc);
-            string html = BuildHtml(_content.Html, ResolveTheme());
-            HelpView.NavigateToString(html);
+            HelpContent content = await _contentService.GetAsync(CancellationToken.None).ConfigureAwait(true);
+            _viewModel.SetToc(content.Toc);
             HelpView.CoreWebView2.DOMContentLoaded += OnDomContentLoaded;
+            HelpView.NavigateToString(HelpDocumentBuilder.Build(content.Html, _themeProvider.IsDarkMode));
         }
-        catch (InvalidOperationException ex)
+        catch (Exception exception) when (exception is InvalidOperationException or IOException)
         {
-            LogInitializationFailed(_logger, ex);
+            // Fehlt das eingebettete Handbuch oder lässt es sich nicht lesen, bleibt die Fläche
+            // leer; der Grund steht im Protokoll.
+            LogContentFailed(_logger, exception);
         }
     }
 
@@ -198,53 +161,62 @@ internal sealed partial class HelpWindow : Window
     private async void OnSearchDebounceTick(object? sender, EventArgs args)
     {
         _searchDebounce.Stop();
+        string query = SearchBox.Text ?? string.Empty;
+        string? count = await RunScriptAsync($"window.MdExplorerHelp.highlight({JsonSerializer.Serialize(query)})").ConfigureAwait(true);
+        if (count is not null)
+        {
+            _viewModel.ShowHits(ParseScriptNumber(count), index: 0);
+        }
+    }
+
+    private async void OnNextHit(object sender, RoutedEventArgs args) =>
+        await MoveToHitAsync("window.MdExplorerHelp.next()").ConfigureAwait(true);
+
+    private async void OnPreviousHit(object sender, RoutedEventArgs args) =>
+        await MoveToHitAsync("window.MdExplorerHelp.previous()").ConfigureAwait(true);
+
+    private async Task MoveToHitAsync(string script)
+    {
+        string? index = await RunScriptAsync(script).ConfigureAwait(true);
+        string? count = await RunScriptAsync("window.MdExplorerHelp.hitCount()").ConfigureAwait(true);
+        if (index is not null && count is not null)
+        {
+            _viewModel.ShowHits(ParseScriptNumber(count), ParseScriptNumber(index));
+        }
+    }
+
+    private async Task ScrollToSlugAsync(string slug) =>
+        _ = await RunScriptAsync($"window.MdExplorerHelp.scrollToSlug({JsonSerializer.Serialize(slug)})").ConfigureAwait(true);
+
+    /// <summary>
+    /// Führt ein Skript im Handbuch aus. Liefert <see langword="null"/>, wenn die Fläche nicht
+    /// bereit ist oder der Aufruf scheitert.
+    /// </summary>
+    /// <remarks>
+    /// Die Aufrufer sind Ereignis-Handler. Schließt der Nutzer das Fenster, während ein Aufruf
+    /// läuft, ist die Fläche danach freigegeben; die Ausnahme darf nicht im allgemeinen
+    /// Fehlerdialog landen.
+    /// </remarks>
+    private async Task<string?> RunScriptAsync(string script)
+    {
         if (!_isWebViewReady)
         {
-            return;
+            return null;
         }
-        string query = SearchBox.Text ?? string.Empty;
-        string script = $"window.MdExplorerHelp.highlight({JsonSerializer.Serialize(query)})";
-        string raw = await HelpView.CoreWebView2.ExecuteScriptAsync(script).ConfigureAwait(true);
-        UpdateHitLabel(raw, hitIndex: raw == "0" ? -1 : 0);
-    }
-
-    private async void OnNextHit(object sender, RoutedEventArgs args)
-    {
-        if (!_isWebViewReady) { return; }
-        string indexRaw = await HelpView.CoreWebView2.ExecuteScriptAsync("window.MdExplorerHelp.next()").ConfigureAwait(true);
-        string countRaw = await HelpView.CoreWebView2.ExecuteScriptAsync("window.MdExplorerHelp.hitCount()").ConfigureAwait(true);
-        UpdateHitLabel(countRaw, ParseInt(indexRaw));
-    }
-
-    private async void OnPreviousHit(object sender, RoutedEventArgs args)
-    {
-        if (!_isWebViewReady) { return; }
-        string indexRaw = await HelpView.CoreWebView2.ExecuteScriptAsync("window.MdExplorerHelp.previous()").ConfigureAwait(true);
-        string countRaw = await HelpView.CoreWebView2.ExecuteScriptAsync("window.MdExplorerHelp.hitCount()").ConfigureAwait(true);
-        UpdateHitLabel(countRaw, ParseInt(indexRaw));
-    }
-
-    private void UpdateHitLabel(string countRaw, int hitIndex)
-    {
-        int count = ParseInt(countRaw);
-        if (count <= 0)
+        try
         {
-            HitLabel.Text = "0 / 0";
-            return;
+            return await HelpView.CoreWebView2.ExecuteScriptAsync(script).ConfigureAwait(true);
         }
-        int humanIndex = hitIndex < 0 ? 0 : hitIndex + 1;
-        HitLabel.Text = string.Create(CultureInfo.InvariantCulture, $"{humanIndex} / {count}");
-    }
-
-    private async Task ScrollToSlugAsync(string slug)
-    {
-        string script = $"window.MdExplorerHelp.scrollToSlug({JsonSerializer.Serialize(slug)})";
-        _ = await HelpView.CoreWebView2.ExecuteScriptAsync(script).ConfigureAwait(true);
+        catch (Exception exception) when (exception is InvalidOperationException or ObjectDisposedException or COMException)
+        {
+            LogScriptFailed(_logger, exception);
+            return null;
+        }
     }
 
     private async void OnTocSelectionChanged(object sender, SelectionChangedEventArgs args)
     {
-        if (_suppressTocSelectionChanged || !_isWebViewReady)
+        if (_suppressTocSelectionChanged)
         {
             return;
         }
@@ -256,8 +228,7 @@ internal sealed partial class HelpWindow : Window
 
     private void SelectTocEntry(string slug)
     {
-        HelpTocEntry? match = _viewModel.Toc
-            .FirstOrDefault(entry => string.Equals(entry.Slug, slug, StringComparison.Ordinal));
+        HelpTocEntry? match = _viewModel.FindEntry(slug);
         if (match is null)
         {
             return;
@@ -274,21 +245,12 @@ internal sealed partial class HelpWindow : Window
         }
     }
 
-    private string ResolveTheme()
-    {
-        AppTheme theme = _settingsService.Current.Appearance.Theme;
-        return theme switch
-        {
-            AppTheme.Dark => "dark",
-            AppTheme.Light => "light",
-            _ => IsSystemDarkTheme() ? "dark" : "light",
-        };
-    }
-
     private void OnClosedHandler(object? sender, EventArgs args)
     {
+        _isWebViewReady = false;
         _searchDebounce.Stop();
         _searchDebounce.Tick -= OnSearchDebounceTick;
+        _navigationGuard?.Detach();
         if (HelpView.CoreWebView2 is not null)
         {
             HelpView.CoreWebView2.DOMContentLoaded -= OnDomContentLoaded;

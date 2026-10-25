@@ -8,23 +8,18 @@ using Microsoft.EntityFrameworkCore;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Prüft den Quellenanbieter des Graphen gegen eine echte SQLite.
+/// Der Quellenanbieter des Graphen lädt für einen Knoten nur dessen Nachbarschaft und nicht den
+/// ganzen Bestand; die Dateiliste kommt vollständig und nach Id sortiert.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Der Grund für eine echte Datenbank statt eines Doubles steht in
-/// <see cref="GraphSourceProvider.LoadNeighborhoodDocumentsAsync"/>: Der Vorfilter wird von EF
-/// Core in ein SQL-<c>LIKE</c> übersetzt. Ein Double würde bestätigen, was ich mir dabei
-/// gedacht habe — nicht, was SQLite daraus macht. Genau dazwischen liegt der Fehler, den
-/// dieser Weg verhindern soll.
-/// </para>
-/// <para>
-/// Der Graph lädt nur die Nachbarschaft eines Knotens, nicht den ganzen Bestand; diese
-/// Tests halten fest, dass die Abfrage genau das tut.
-/// </para>
+/// Eine echte SQLite statt einer Attrappe, weil EF Core den Vorfilter in
+/// <see cref="GraphSourceProvider.LoadNeighborhoodDocumentsAsync"/> in ein SQL-<c>LIKE</c>
+/// übersetzt. Eine Attrappe bestätigte nur die Erwartung an diese Übersetzung, nicht das, was
+/// SQLite tatsächlich daraus macht.
 /// </remarks>
 public sealed class GraphSourceProviderTests : IAsyncDisposable
 {
+    private readonly TestIdSequence _ids = new();
     private static readonly DateTime FixedUtc = new(2026, 8, 16, 9, 0, 0, DateTimeKind.Utc);
 
     private readonly SqliteConnection _connection;
@@ -58,25 +53,25 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
     [Fact]
     public async Task LoadNeighborhoodDocumentsAsync_ReturnsOnlyTheNeighborhood()
     {
-        Guid mitte = IdOf(1);
-        Guid zeigtHin = IdOf(2);
-        Guid unbeteiligt = IdOf(3);
+        Guid middle = IdOf(1);
+        Guid linking = IdOf(2);
+        Guid unrelated = IdOf(3);
 
-        await SeedDocumentAsync(mitte, "mitte", ["woanders-hin"]).ConfigureAwait(true);
-        await SeedDocumentAsync(zeigtHin, "zeigt-hin", ["mitte"]).ConfigureAwait(true);
-        await SeedDocumentAsync(unbeteiligt, "unbeteiligt", ["dritter-ort"]).ConfigureAwait(true);
+        await SeedDocumentAsync(middle, "mitte", ["woanders-hin"]).ConfigureAwait(true);
+        await SeedDocumentAsync(linking, "zeigt-hin", ["mitte"]).ConfigureAwait(true);
+        await SeedDocumentAsync(unrelated, "unbeteiligt", ["dritter-ort"]).ConfigureAwait(true);
         for (int i = 4; i <= 40; i++)
         {
             await SeedDocumentAsync(IdOf(i), "eintrag-" + i.ToString(System.Globalization.CultureInfo.InvariantCulture), []).ConfigureAwait(true);
         }
 
         IReadOnlyList<GraphSourceDocument> result =
-            await _sut.LoadNeighborhoodDocumentsAsync(mitte, "mitte", TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await _sut.LoadNeighborhoodDocumentsAsync(middle, "mitte", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, document => document.MarkdownFileId == mitte);
-        Assert.Contains(result, document => document.MarkdownFileId == zeigtHin);
-        Assert.DoesNotContain(result, document => document.MarkdownFileId == unbeteiligt);
+        Assert.Contains(result, document => document.MarkdownFileId == middle);
+        Assert.Contains(result, document => document.MarkdownFileId == linking);
+        Assert.DoesNotContain(result, document => document.MarkdownFileId == unrelated);
     }
 
     /// <remarks>
@@ -86,15 +81,15 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
     [Fact]
     public async Task LoadNeighborhoodDocumentsAsync_AlwaysIncludesTheNodeItself()
     {
-        Guid allein = IdOf(1);
-        await SeedDocumentAsync(allein, "allein", ["irgendwohin"]).ConfigureAwait(true);
+        Guid isolated = IdOf(1);
+        await SeedDocumentAsync(isolated, "allein", ["irgendwohin"]).ConfigureAwait(true);
         await SeedDocumentAsync(IdOf(2), "anderer", ["nicht-allein"]).ConfigureAwait(true);
 
         IReadOnlyList<GraphSourceDocument> result =
-            await _sut.LoadNeighborhoodDocumentsAsync(allein, "allein", TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await _sut.LoadNeighborhoodDocumentsAsync(isolated, "allein", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         GraphSourceDocument single = Assert.Single(result);
-        Assert.Equal(allein, single.MarkdownFileId);
+        Assert.Equal(isolated, single.MarkdownFileId);
         Assert.Contains("irgendwohin", single.OutlinksJson, StringComparison.Ordinal);
     }
 
@@ -105,28 +100,28 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
     /// eine Kante, die im Dokument nicht steht.
     /// </para>
     /// <para>
-    /// Die Slug-Bildung lässt beides nicht durch; hier steht die Gegenprobe, damit es dabei
-    /// bleibt. Und selbst wenn: Der Vorfilter darf zu viel liefern, weil die Auswertung
-    /// danach jeden Treffer gegen die tatsächliche Verweis-Liste hält. Dieser Test hält fest,
-    /// dass genau diese zweite Prüfung nötig ist und nicht wegoptimiert werden darf.
+    /// Die Slug-Bildung lässt beide Zeichen nicht durch. Der Vorfilter darf trotzdem zu viel
+    /// liefern, weil der Aufrufer jeden Treffer gegen die tatsächliche Verweis-Liste hält. Dieser
+    /// Test prüft die andere Grenze des Musters: Die Anführungszeichen um das Ziel verhindern,
+    /// dass <c>a-b</c> auch <c>a-b-und-mehr</c> trifft.
     /// </para>
     /// </remarks>
     [Fact]
-    public async Task LoadNeighborhoodDocumentsAsync_MayOverdeliverButNeverUnderdelivers()
+    public async Task LoadNeighborhoodDocumentsAsync_WithALongerTargetOfTheSamePrefix_DoesNotMatchIt()
     {
-        Guid gesucht = IdOf(1);
-        Guid falscherTreffer = IdOf(2);
+        Guid wanted = IdOf(1);
+        Guid falseMatch = IdOf(2);
 
-        await SeedDocumentAsync(gesucht, "a-b", []).ConfigureAwait(true);
-        await SeedDocumentAsync(falscherTreffer, "sonst", ["a-b-und-mehr"]).ConfigureAwait(true);
+        await SeedDocumentAsync(wanted, "a-b", []).ConfigureAwait(true);
+        await SeedDocumentAsync(falseMatch, "sonst", ["a-b-und-mehr"]).ConfigureAwait(true);
 
         IReadOnlyList<GraphSourceDocument> result =
-            await _sut.LoadNeighborhoodDocumentsAsync(gesucht, "a-b", TestContext.Current.CancellationToken).ConfigureAwait(true);
+            await _sut.LoadNeighborhoodDocumentsAsync(wanted, "a-b", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Das eigene Dokument ist immer dabei; der Nachbar mit dem längeren Ziel nicht,
         // weil die Anführungszeichen im Suchmuster das Ziel begrenzen.
         GraphSourceDocument single = Assert.Single(result);
-        Assert.Equal(gesucht, single.MarkdownFileId);
+        Assert.Equal(wanted, single.MarkdownFileId);
     }
 
     [Fact]
@@ -175,7 +170,7 @@ public sealed class GraphSourceProviderTests : IAsyncDisposable
 
         MarkdownDocument document = new()
         {
-            Id = Guid.NewGuid(),
+            Id = _ids.Next(),
             MarkdownFileId = id,
             SourceContentHash = "hash-" + name,
             FrontmatterJson = "{}",

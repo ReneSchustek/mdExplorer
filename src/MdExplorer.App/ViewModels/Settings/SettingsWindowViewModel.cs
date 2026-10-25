@@ -1,8 +1,8 @@
-using System.Globalization;
 using System.IO;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.App.Localization;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
 using MdExplorer.Core.Settings;
@@ -12,10 +12,11 @@ using Microsoft.Extensions.Logging;
 namespace MdExplorer.App.ViewModels.Settings;
 
 /// <summary>
-/// Orchestriert die drei Tab-ViewModels. Bietet OK/Abbrechen-Commands an und
-/// koordiniert Validierung, Persistenz und das Schließen des Fensters.
+/// Hält die drei Tab-ViewModels zusammen und führt „Anwenden" und „Abbrechen" aus:
+/// erst prüfen, dann speichern, dann das Fenster schließen. Ungültige Eingaben lassen das
+/// Fenster offen, damit nichts verloren geht.
 /// </summary>
-internal sealed partial class SettingsWindowViewModel : ObservableObject
+internal sealed partial class SettingsWindowViewModel : ObservableObject, IDisposable
 {
     private readonly ISettingsService _settingsService;
     private readonly SettingsValidator _validator;
@@ -27,8 +28,8 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf Arbeit, die
-    /// niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// wartete das Schließen auf Arbeit, die niemand mehr braucht. Ohne Wirt, also im Test,
+    /// bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
 
@@ -76,6 +77,19 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
     /// <summary>Tab „Verhalten".</summary>
     public BehaviorTabViewModel Behavior { get; }
 
+    /// <summary>Das Installationsprogramm läuft; die Anwendung soll enden.</summary>
+    public event EventHandler? InstallerStarted
+    {
+        add => Behavior.Update.InstallerStarted += value;
+        remove => Behavior.Update.InstallerStarted -= value;
+    }
+
+    /// <summary>
+    /// Bricht einen noch laufenden Download ab. Sonst liefe er nach dem Schließen ins Leere
+    /// weiter und startete am Ende das Installationsprogramm, ohne dass die Anwendung endet.
+    /// </summary>
+    public void Dispose() => Behavior.Update.Dispose();
+
     /// <summary>Speichert die Settings und schließt das Fenster.</summary>
     public AsyncRelayCommand ApplyAndCloseCommand { get; }
 
@@ -85,10 +99,10 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
     private static string FormatValidationErrors(SettingsValidationResult validation)
     {
         StringBuilder builder = new();
-        _ = builder.AppendLine(CultureInfo.InvariantCulture, $"{validation.Errors.Length} Fehler:");
+        _ = builder.AppendLine(UiText.Format("Settings_Validation_Header", validation.Errors.Length));
         foreach (SettingsValidationError error in validation.Errors)
         {
-            _ = builder.AppendLine(CultureInfo.InvariantCulture, $"• [{error.Field}] {error.Message}");
+            _ = builder.AppendLine(SettingsValidationMessages.Format(error));
         }
         return builder.ToString();
     }
@@ -111,7 +125,7 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
         if (!validation.IsValid)
         {
             string message = FormatValidationErrors(validation);
-            _dialogService.ShowError("Einstellungen ungültig", message);
+            _dialogService.ShowError(UiText.Get("Settings_InvalidDialog_Title"), message);
             return;
         }
 
@@ -124,7 +138,7 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             LogSettingsSaveFailed(_logger, ex);
-            _dialogService.ShowError("Speichern fehlgeschlagen", ex.Message);
+            _dialogService.ShowError(UiText.Get("Settings_SaveFailedDialog_Title"), ex.Message);
         }
     }
 

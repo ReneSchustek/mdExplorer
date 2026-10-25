@@ -54,8 +54,8 @@ namespace MdExplorer.Data.Migrations
         {
             ArgumentNullException.ThrowIfNull(migrationBuilder);
 
-            // Nach Down sind die Trigger überflüssig, denn die ihnen zugrunde liegenden FKs
-            // verschwinden, der Schema-Zustand entspricht wieder dem Pre-AddParserForeignKeys-Stand.
+            // Down stellt den Zustand direkt nach AddParserForeignKeys her, und der hatte die
+            // Trigger durch den Neuaufbau der Tabellen bereits verloren.
             _ = migrationBuilder.Sql(DropDeleteDocumentTriggerSql);
             _ = migrationBuilder.Sql(DropDeleteFileTriggerSql);
         }

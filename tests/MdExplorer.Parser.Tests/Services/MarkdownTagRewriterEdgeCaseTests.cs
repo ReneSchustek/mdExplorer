@@ -3,7 +3,7 @@ using MdExplorer.Parser.Services;
 namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
-/// Prüft die Randfälle des Tag-Umschreibens. Der Umschreiber greift direkt in Dateien des
+/// Randfälle beim Umschreiben von Schlagworten. Der Umschreiber greift direkt in Dateien des
 /// Nutzers ein; jeder Fall, in dem er einen Block falsch erkennt, verändert oder zerstört
 /// fremden Inhalt. Deshalb sind hier vor allem die Formen abgedeckt, die <em>keine</em>
 /// Änderung auslösen dürfen: halbe Frontmatter-Blöcke, leere Einträge und Zeichenfolgen,
@@ -18,9 +18,9 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
     {
         const string Markdown = "---";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal(Markdown, ergebnis, StringComparer.Ordinal);
+        Assert.Equal(Markdown, result, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -29,9 +29,9 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
         // "----" ist eine Trennlinie, kein Frontmatter-Anfang.
         const string Markdown = "----\nText mit #alpha.\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal("----\nText mit #beta.\n", ergebnis, StringComparer.Ordinal);
+        Assert.Equal("----\nText mit #beta.\n", result, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -41,9 +41,9 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
         // erraten, sondern muss den Text als gewöhnlichen Inhalt behandeln.
         const string Markdown = "---\ntags: [alpha]\nText mit #alpha.\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal("---\ntags: [alpha]\nText mit #beta.\n", ergebnis, StringComparer.Ordinal);
+        Assert.Equal("---\ntags: [alpha]\nText mit #beta.\n", result, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -51,9 +51,9 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
     {
         const string Markdown = "---\ntags: [alpha]";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal(Markdown, ergebnis, StringComparer.Ordinal);
+        Assert.Equal(Markdown, result, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -61,9 +61,9 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
     {
         const string Markdown = "---\ntags: [alpha]\n---\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal("---\ntags: [beta]\n---\n", ergebnis, StringComparer.Ordinal);
+        Assert.Equal("---\ntags: [beta]\n---\n", result, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -72,9 +72,9 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
         // YAML erlaubt "..." als Abschluss. Wird der nicht erkannt, bliebe der Block ungeändert.
         const string Markdown = "---\ntags: [alpha]\n...\nText.\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal("---\ntags: [beta]\n...\nText.\n", ergebnis, StringComparer.Ordinal);
+        Assert.Equal("---\ntags: [beta]\n...\nText.\n", result, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -82,21 +82,33 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
     {
         const string Markdown = "---\ntags: [\"alpha\", 'gamma']\n---\nText.\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Contains("beta", ergebnis, StringComparison.Ordinal);
-        Assert.DoesNotContain("alpha", ergebnis, StringComparison.Ordinal);
+        Assert.Contains("beta", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("alpha", result, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Apply_OnAnEmptyEntryInTheTagList_DropsIt()
+    public void Apply_OnAnEmptyEntryInABracketList_LeavesTheListAlone()
     {
-        // Ein doppeltes Komma entsteht leicht beim Bearbeiten von Hand.
+        // Ein doppeltes Komma in eckigen Klammern ist kaputtes YAML; der Index liest dieses
+        // Frontmatter nicht, also ist dort auch kein Schlagwort umzubenennen.
         const string Markdown = "---\ntags: [alpha, , gamma]\n---\nText.\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal("---\ntags: [beta, gamma]\n---\nText.\n", ergebnis, StringComparer.Ordinal);
+        Assert.Equal(Markdown, result, StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public void Apply_OnAnEmptyEntryInACommaList_DropsIt()
+    {
+        // Ohne Klammern ist dieselbe Zeile ein Text, den der Index an den Kommas teilt.
+        const string Markdown = "---\ntags: alpha, , gamma\n---\nText.\n";
+
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
+
+        Assert.Equal("---\ntags: beta, gamma\n---\nText.\n", result, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -104,9 +116,9 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
     {
         const string Markdown = "---\ntags: [gamma, delta]\n---\nText.\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal(Markdown, ergebnis, StringComparer.Ordinal);
+        Assert.Equal(Markdown, result, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -115,40 +127,40 @@ public sealed class MarkdownTagRewriterEdgeCaseTests
         // "#" allein ist eine Überschrift, kein Tag.
         const string Markdown = "# Überschrift\n\nText mit #alpha.\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Equal("# Überschrift\n\nText mit #beta.\n", ergebnis, StringComparer.Ordinal);
+        Assert.Equal("# Überschrift\n\nText mit #beta.\n", result, StringComparer.Ordinal);
     }
 
     [Fact]
     public void Apply_OnAFrontmatterEntryWithoutAUsableName_KeepsIt()
     {
-        // "---" als Tag-Wert ergibt keinen Bezeichner. Der Eintrag muss stehen bleiben,
+        // "..." als Tag-Wert ergibt keinen Bezeichner. Der Eintrag muss stehen bleiben,
         // statt beim Umbenennen still zu verschwinden.
         const string Markdown = "---\ntags:\n  - \"...\"\n  - alpha\n---\nText.\n";
 
-        string ergebnis = _sut.Apply(Markdown, Umbenennen());
+        string result = _sut.Apply(Markdown, RenameAlphaToBeta());
 
-        Assert.Contains("...", ergebnis, StringComparison.Ordinal);
-        Assert.Contains("beta", ergebnis, StringComparison.Ordinal);
+        Assert.Contains("...", result, StringComparison.Ordinal);
+        Assert.Contains("beta", result, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Apply_OnAnEmptyDocument_ReturnsItUnchanged()
     {
-        string ergebnis = _sut.Apply(string.Empty, Umbenennen());
+        string result = _sut.Apply(string.Empty, RenameAlphaToBeta());
 
-        Assert.Equal(string.Empty, ergebnis, StringComparer.Ordinal);
+        Assert.Equal(string.Empty, result, StringComparer.Ordinal);
     }
 
     [Fact]
     public void Apply_WithABlankOperationKey_Throws()
     {
-        Dictionary<string, string?> vorgang = new(StringComparer.Ordinal) { ["   "] = "beta" };
+        Dictionary<string, string?> operations = new(StringComparer.Ordinal) { ["   "] = "beta" };
 
-        _ = Assert.Throws<ArgumentException>(() => _sut.Apply("Text", vorgang));
+        _ = Assert.Throws<ArgumentException>(() => _sut.Apply("Text", operations));
     }
 
-    private static Dictionary<string, string?> Umbenennen() =>
+    private static Dictionary<string, string?> RenameAlphaToBeta() =>
         new(StringComparer.Ordinal) { ["alpha"] = "beta" };
 }

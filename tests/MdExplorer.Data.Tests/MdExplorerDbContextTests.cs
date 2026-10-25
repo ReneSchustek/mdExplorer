@@ -1,22 +1,32 @@
+using System.Data.Common;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Data;
 using MdExplorer.Data.Options;
+using MdExplorer.Data.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace MdExplorer.Data.Tests;
 
+/// <summary>
+/// Die Datenbank entsteht über den echten Dienstaufbau als Datei und trägt danach die Pragmas, auf
+/// die sich Indexer und Oberfläche beim gleichzeitigen Zugriff verlassen. Fehlt der Abfangpunkt in
+/// <c>AddData</c>, liefe die Datei ohne WAL und ohne Wartepuffer und meldete Sperren sofort als Fehler.
+/// </summary>
 public sealed class MdExplorerDbContextTests : IDisposable
 {
+    private readonly string _directory;
     private readonly string _dbPath;
     private readonly ServiceProvider _services;
 
     public MdExplorerDbContextTests()
     {
-        string testRoot = Path.Combine(Path.GetTempPath(), "MdExplorer.Tests.Db", Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(testRoot);
-        _dbPath = Path.Combine(testRoot, "test.db");
+        // Fester Ordner je Testklasse, vorher geleert, damit ein abgebrochener Lauf nichts hinterlässt.
+        _directory = Path.Combine(Path.GetTempPath(), "MdExplorer.Tests.Db", nameof(MdExplorerDbContextTests));
+        DeleteDirectory();
+        _ = Directory.CreateDirectory(_directory);
+        _dbPath = Path.Combine(_directory, "test.db");
 
         ServiceCollection services = new();
         _ = services.AddLogging();
@@ -31,15 +41,7 @@ public sealed class MdExplorerDbContextTests : IDisposable
     {
         _services.Dispose();
         SqliteConnection.ClearAllPools();
-        if (File.Exists(_dbPath))
-        {
-            File.Delete(_dbPath);
-        }
-        string? directory = Path.GetDirectoryName(_dbPath);
-        if (directory is not null && Directory.Exists(directory))
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        DeleteDirectory();
     }
 
     [Fact]
@@ -61,15 +63,30 @@ public sealed class MdExplorerDbContextTests : IDisposable
         using IServiceScope scope = _services.CreateScope();
         MdExplorerDbContext dbContext = scope.ServiceProvider.GetRequiredService<MdExplorerDbContext>();
 
-        string journalMode = await ReadJournalModeAsync(dbContext).ConfigureAwait(true);
-        string synchronous = await ReadSynchronousAsync(dbContext).ConfigureAwait(true);
-        string foreignKeys = await ReadForeignKeysAsync(dbContext).ConfigureAwait(true);
-        string busyTimeout = await ReadBusyTimeoutAsync(dbContext).ConfigureAwait(true);
+        PragmaValues values = await ReadPragmasAsync(dbContext).ConfigureAwait(true);
 
-        Assert.Equal("wal", journalMode, ignoreCase: true);
-        Assert.Equal("1", synchronous);
-        Assert.Equal("1", foreignKeys);
-        Assert.Equal("5000", busyTimeout);
+        Assert.Equal("wal", values.JournalMode, ignoreCase: true);
+        // SQLite meldet die Stufen als Zahlen: synchronous 1 ist NORMAL, temp_store 2 ist MEMORY.
+        Assert.Equal(1L, values.Synchronous);
+        Assert.Equal(2L, values.TempStore);
+        Assert.Equal(1L, values.ForeignKeys);
+    }
+
+    [Fact]
+    public async Task DbContext_AfterMigration_PragmaNumbersMatchTheirConstants()
+    {
+        // Die Zahlen stehen ausgeschrieben in der konstanten Anweisung. Wer nur die Konstante
+        // ändert, änderte sonst nichts an der Datenbank.
+        IDatabaseMigrator migrator = _services.GetRequiredService<IDatabaseMigrator>();
+        await migrator.MigrateAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        using IServiceScope scope = _services.CreateScope();
+        MdExplorerDbContext dbContext = scope.ServiceProvider.GetRequiredService<MdExplorerDbContext>();
+
+        PragmaValues values = await ReadPragmasAsync(dbContext).ConfigureAwait(true);
+
+        Assert.Equal(SqlitePragmaInterceptor.BusyTimeoutMilliseconds, values.BusyTimeout);
+        Assert.Equal(SqlitePragmaInterceptor.PageCacheKibibytes, values.CacheSize);
     }
 
     [Fact]
@@ -83,39 +100,41 @@ public sealed class MdExplorerDbContextTests : IDisposable
         Assert.True(File.Exists(_dbPath));
     }
 
-    private static async Task<string> ReadJournalModeAsync(MdExplorerDbContext dbContext)
+    // Alle Werte in einer Anweisung über die Tabellenfunktionen der Pragmas.
+    private static async Task<PragmaValues> ReadPragmasAsync(MdExplorerDbContext dbContext)
     {
         await dbContext.Database.OpenConnectionAsync().ConfigureAwait(true);
-        using System.Data.Common.DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "PRAGMA journal_mode;";
-        object? value = await command.ExecuteScalarAsync().ConfigureAwait(true);
-        return value?.ToString() ?? string.Empty;
+        using DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
+        command.CommandText = """
+            SELECT (SELECT * FROM pragma_journal_mode), (SELECT * FROM pragma_synchronous),
+                   (SELECT * FROM pragma_temp_store), (SELECT * FROM pragma_foreign_keys),
+                   (SELECT * FROM pragma_busy_timeout), (SELECT * FROM pragma_cache_size);
+            """;
+        using DbDataReader reader = await command.ExecuteReaderAsync().ConfigureAwait(true);
+        Assert.True(await reader.ReadAsync().ConfigureAwait(true));
+        return new PragmaValues(
+            reader.GetString(0),
+            reader.GetInt64(1),
+            reader.GetInt64(2),
+            reader.GetInt64(3),
+            reader.GetInt64(4),
+            reader.GetInt64(5));
     }
 
-    private static async Task<string> ReadSynchronousAsync(MdExplorerDbContext dbContext)
+    private void DeleteDirectory()
     {
-        await dbContext.Database.OpenConnectionAsync().ConfigureAwait(true);
-        using System.Data.Common.DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "PRAGMA synchronous;";
-        object? value = await command.ExecuteScalarAsync().ConfigureAwait(true);
-        return value?.ToString() ?? string.Empty;
+        if (Directory.Exists(_directory))
+        {
+            Directory.Delete(_directory, recursive: true);
+        }
     }
 
-    private static async Task<string> ReadForeignKeysAsync(MdExplorerDbContext dbContext)
-    {
-        await dbContext.Database.OpenConnectionAsync().ConfigureAwait(true);
-        using System.Data.Common.DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "PRAGMA foreign_keys;";
-        object? value = await command.ExecuteScalarAsync().ConfigureAwait(true);
-        return value?.ToString() ?? string.Empty;
-    }
-
-    private static async Task<string> ReadBusyTimeoutAsync(MdExplorerDbContext dbContext)
-    {
-        await dbContext.Database.OpenConnectionAsync().ConfigureAwait(true);
-        using System.Data.Common.DbCommand command = dbContext.Database.GetDbConnection().CreateCommand();
-        command.CommandText = "PRAGMA busy_timeout;";
-        object? value = await command.ExecuteScalarAsync().ConfigureAwait(true);
-        return value?.ToString() ?? string.Empty;
-    }
+    // Die gelesenen Pragma-Werte; SQLite liefert Stufen und Grenzen als Ganzzahlen.
+    private sealed record PragmaValues(
+        string JournalMode,
+        long Synchronous,
+        long TempStore,
+        long ForeignKeys,
+        long BusyTimeout,
+        long CacheSize);
 }

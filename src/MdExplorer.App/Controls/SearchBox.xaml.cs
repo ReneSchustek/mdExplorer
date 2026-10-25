@@ -1,5 +1,6 @@
-using System.Windows;
 using System.Windows.Input;
+using System.Windows;
+using MdExplorer.App.Localization;
 
 namespace MdExplorer.App.Controls;
 
@@ -24,7 +25,7 @@ internal sealed partial class SearchBox
         nameof(Placeholder),
         typeof(string),
         typeof(SearchBox),
-        new PropertyMetadata("Suchen …"));
+        new PropertyMetadata(UiText.Get("SearchBox_Placeholder")));
 
     /// <summary>Erzeugt das Suchfeld.</summary>
     public SearchBox()

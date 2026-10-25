@@ -11,6 +11,9 @@ namespace MdExplorer.Core.Models;
 /// erst durch einen erfolgreichen Parse-Vorgang. Ein Fehlschlag müsste sonst ein leeres
 /// Dokument anlegen, das Suche, Graph und Anzeige mitschleppen. Der Fehlschlag ist ein
 /// eigener Sachverhalt und bekommt deshalb eine eigene Tabelle.
+/// <para>
+/// Öffentliche Setter aus demselben Grund wie bei <see cref="MarkdownFile"/>.
+/// </para>
 /// </remarks>
 public sealed class ParseFailure
 {

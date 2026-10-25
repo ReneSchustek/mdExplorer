@@ -10,13 +10,14 @@ public sealed class GermanStemmerTests
 {
     [Theory]
     [InlineData("auto", "auto")]
-    [InlineData("Autos", "auto")]
-    [InlineData("Autotag", "autotag")] // keine Endung -tag im Regelsatz, bleibt unverändert
+    [InlineData("Autos", "Auto")]
+    [InlineData("Autotag", "Autotag")] // keine Endung -tag im Regelsatz, bleibt unverändert
     [InlineData("laufen", "lauf")]
     [InlineData("läufer", "läuf")]
-    [InlineData("Bedeutung", "bedeut")]
-    [InlineData("Bedeutungen", "bedeut")]
-    [InlineData("Wichtigkeit", "wichtig")]
+    [InlineData("Bedeutung", "Bedeut")]
+    [InlineData("Bedeutungen", "Bedeut")]
+    [InlineData("Wichtigkeit", "Wichtig")]
+    [InlineData("LAUFEN", "LAUF")] // Endung ohne Rücksicht auf die Schreibweise
     [InlineData("freundlich", "freund")]
     [InlineData("schmackhaft", "schmackhaft")] // keine bekannte Endung
     [InlineData("ab", "ab")] // unter MinStemLength

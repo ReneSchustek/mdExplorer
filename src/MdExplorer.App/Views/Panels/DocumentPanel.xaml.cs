@@ -1,18 +1,19 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.App.Localization;
 using MdExplorer.App.Services;
 using MdExplorer.App.ViewModels;
 
 namespace MdExplorer.App.Views.Panels;
 
 /// <summary>
-/// Container-Panel der rechten Spalte. Bettet die <see cref="PreviewPanel"/>-Instanz für den
-/// Read-Modus ein und blendet im Edit-Modus die monospace TextBox des Editors ein. Die
-/// Mode-Logik liegt vollständig im <see cref="DocumentPanelViewModel"/>, der Code-Behind
-/// kümmert sich nur um den View-Aufbau und Tastenkürzel (Ctrl+E / Ctrl+S / Ctrl+F).
+/// Rechte Spalte: im Lesemodus die <see cref="PreviewPanel"/>-Instanz, im Bearbeitungsmodus das
+/// Textfeld des Editors. Wann welcher Modus gilt, entscheidet das
+/// <see cref="DocumentPanelViewModel"/>; hier stehen nur der Aufbau, die Suchleiste des Editors
+/// und die Tastenkürzel Strg+E, Strg+S, Strg+F und F3.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class DocumentPanel : UserControl
@@ -28,7 +29,7 @@ internal sealed partial class DocumentPanel : UserControl
         PreviewHost.Content = _previewPanel;
         DataContextChanged += OnDataContextChanged;
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(ToggleMode, () => ViewModel is not null), Key.E, ModifierKeys.Control));
-        _ = InputBindings.Add(new KeyBinding(new RelayCommand(SaveAndForget, () => ViewModel is not null), Key.S, ModifierKeys.Control));
+        _ = InputBindings.Add(new KeyBinding(new RelayCommand(Save, () => ViewModel is not null), Key.S, ModifierKeys.Control));
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(OpenFind, IsEditMode), Key.F, ModifierKeys.Control));
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(FindNext, IsEditMode), Key.F3, ModifierKeys.None));
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(FindPrevious, IsEditMode), Key.F3, ModifierKeys.Shift));
@@ -44,9 +45,9 @@ internal sealed partial class DocumentPanel : UserControl
 
     private DocumentPanelViewModel? ViewModel => DataContext as DocumentPanelViewModel;
 
-    /// <summary>Öffnet die Find-Bar im Edit-Modus, fokussiert das Eingabefeld und
-    /// übernimmt die aktuelle Selektion als Voreinstellung. Im Read-Modus übernimmt das
-    /// WebView2 die Find-Funktionalität selbst (Default-Browser-Accelerator).</summary>
+    /// <summary>Öffnet im Bearbeitungsmodus die Suchleiste und übernimmt eine markierte Stelle als
+    /// Suchbegriff. Im Lesemodus greift die Bindung nicht, und Strg+F erreicht die Suche des
+    /// Hauptfensters.</summary>
     private void OpenFind()
     {
         if (ViewModel is null || !ViewModel.IsEditMode)
@@ -117,14 +118,15 @@ internal sealed partial class DocumentPanel : UserControl
         }
         if (match is not { } hit)
         {
-            UpdateFindStatus("Kein Treffer");
+            UpdateFindStatus(UiText.Get("Document_Find_NoHit"));
             return;
         }
         EditorTextBox.Select(hit.StartIndex, hit.Length);
-        // Sicherstellen, dass der Treffer ins Sichtfeld scrollt; TextBox.ScrollToLine erwartet eine Zeile.
+        // Select allein rollt nicht. ScrollToLine braucht die Zeilennummer, nicht den Zeichenindex.
         int line = source.AsSpan(0, hit.StartIndex).Count('\n');
         EditorTextBox.ScrollToLine(line);
-        UpdateFindStatus($"Treffer bei {hit.StartIndex}");
+        // Für Menschen ab eins gezählt; ScrollToLine zählt ab null.
+        UpdateFindStatus(UiText.Format("Document_Find_HitAtLine", line + 1));
     }
 
     private void UpdateFindStatus(string? status) => FindStatus.Text = status ?? string.Empty;
@@ -164,5 +166,13 @@ internal sealed partial class DocumentPanel : UserControl
 
     private void ToggleMode() => ViewModel?.ToggleModeCommand.Execute(null);
 
-    private void SaveAndForget() => _ = ViewModel?.SaveAsync(CancellationToken.None);
+    // Über den Befehl der Schaltfläche, nicht SaveAsync direkt: Er lässt keinen zweiten
+    // Speichervorgang zu, solange einer läuft. Mehrfaches Strg+S speicherte sonst parallel.
+    private void Save()
+    {
+        if (ViewModel?.SaveCommand is { } save && save.CanExecute(CancellationToken.None))
+        {
+            save.Execute(CancellationToken.None);
+        }
+    }
 }

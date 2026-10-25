@@ -5,9 +5,9 @@
     im Fließband) und nicht nur dann, wenn jemand an das passende Kommandozeilen-Flag
     denkt.
 
-    Anlass: Am 11.08.2026 blieb der Testprozess einer Suite dreizehn Minuten stehen,
-    ohne Fortschritt und ohne Abbruch. Alle Tests waren durch; beendet hat sich der
-    Prozess trotzdem nicht. Ein Lauf, der nicht endet, ist schlimmer als ein roter:
+    Ein Testprozess kann stehen bleiben, nachdem alle Tests durch sind: ohne Fortschritt,
+    ohne Abbruch, gemessen bis zu dreizehn Minuten. Ein Lauf, der nicht endet, ist
+    schlimmer als ein roter:
     Er bindet die Maschine, bis jemand hinsieht, und beim unbeaufsichtigten Durchlauf
     fehlt genau dieser Jemand.
 -->

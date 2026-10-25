@@ -3,6 +3,7 @@ using MdExplorer.Core.Models;
 using MdExplorer.Data;
 using MdExplorer.Data.Repositories;
 using MdExplorer.TagCloud.Services;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace MdExplorer.TagCloud.Tests.Services;
@@ -17,11 +18,14 @@ namespace MdExplorer.TagCloud.Tests.Services;
 internal sealed class TagStatisticsTestHarness : IAsyncDisposable
 {
     private readonly string _databasePath;
+    private int _nextId;
     private readonly DbContextOptions<MdExplorerDbContext> _contextOptions;
     private readonly MdExplorerDbContext _serviceContext;
 
     public TagStatisticsTestHarness()
     {
+        // Die Datenbank liegt als Datei im Temp-Ordner, und parallel laufende Tests brauchen je eine
+        // eigene. Die Zufalls-GUID steht nur im Dateinamen, nie in den Testdaten.
         _databasePath = Path.Combine(Path.GetTempPath(), $"mdex-tagcloud-{Guid.NewGuid():N}.db");
         DbContextOptionsBuilder<MdExplorerDbContext> builder = new();
         _ = builder.UseSqlite($"Data Source={_databasePath}");
@@ -37,6 +41,9 @@ internal sealed class TagStatisticsTestHarness : IAsyncDisposable
 
     public TagStatisticsService Service { get; }
 
+    /// <summary>Pfad der Testdatenbank im Temp-Ordner.</summary>
+    public string DatabasePath => _databasePath;
+
     public async Task SeedAsync(IReadOnlyList<SeedTag> tags)
     {
         ArgumentNullException.ThrowIfNull(tags);
@@ -47,7 +54,7 @@ internal sealed class TagStatisticsTestHarness : IAsyncDisposable
             {
                 Tag persistedTag = new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = NextId(),
                     Name = tag.Name,
                     Slug = tag.Slug,
                 };
@@ -82,7 +89,7 @@ internal sealed class TagStatisticsTestHarness : IAsyncDisposable
             {
                 tags[tagIndex] = new Tag
                 {
-                    Id = Guid.NewGuid(),
+                    Id = NextId(),
                     Name = $"Tag{tagIndex:D4}",
                     Slug = $"tag-{tagIndex:D4}",
                 };
@@ -109,30 +116,46 @@ internal sealed class TagStatisticsTestHarness : IAsyncDisposable
         }
     }
 
-    private static MarkdownFile CreateMarkdownFile(DateTime lastWriteTimeUtc) => new()
+    private MarkdownFile CreateMarkdownFile(DateTime lastWriteTimeUtc)
     {
-        Id = Guid.NewGuid(),
-        AbsolutePath = $"C:\\notes\\{Guid.NewGuid():N}.md",
-        RelativePath = $"notes/{Guid.NewGuid():N}.md",
-        FileNameWithoutExtension = Guid.NewGuid().ToString("N"),
-        SizeBytes = 1024,
-        LastWriteTimeUtc = lastWriteTimeUtc,
-        ContentHash = Convert.ToHexStringLower(Guid.NewGuid().ToByteArray()),
-        IndexedAtUtc = lastWriteTimeUtc,
-    };
+        Guid id = NextId();
+        string name = id.ToString("N");
+        return new MarkdownFile
+        {
+            Id = id,
+            AbsolutePath = $"C:\\notes\\{name}.md",
+            RelativePath = $"notes/{name}.md",
+            FileNameWithoutExtension = name,
+            SizeBytes = 1024,
+            LastWriteTimeUtc = lastWriteTimeUtc,
+            ContentHash = "hash-" + name,
+            IndexedAtUtc = lastWriteTimeUtc,
+        };
+    }
+
+    // Fortlaufende Kennungen statt Zufall: Ein Lauf ist damit wiederholbar.
+    private Guid NextId() => new(Interlocked.Increment(ref _nextId), 0, 0, new byte[8]);
 
     public async ValueTask DisposeAsync()
     {
         await _serviceContext.DisposeAsync().ConfigureAwait(true);
-        try
+        // Der Verbindungs-Pool hält die Datei auch nach dem Freigeben des Kontexts offen; ohne
+        // das Leeren scheitert das Löschen, und Datenbank samt Journal bleiben liegen.
+        SqliteConnection.ClearAllPools();
+        foreach (string path in (string[])[_databasePath, _databasePath + "-wal", _databasePath + "-shm"])
         {
-            File.Delete(_databasePath);
-        }
-        catch (IOException)
-        {
-            // Temp-Datei wird beim nächsten OS-Cleanup entfernt.
+            try
+            {
+                File.Delete(path);
+            }
+            catch (IOException)
+            {
+                // Hält ein anderer Prozess die Datei, etwa ein Virenscanner, bleibt sie im
+                // Temp-Ordner liegen; der Test soll daran nicht scheitern.
+            }
         }
     }
 }
 
+/// <summary>Ein Schlagwort und für jede Datei, die es trägt, deren Schreibzeitpunkt.</summary>
 internal sealed record SeedTag(string Name, string Slug, params DateTime[] FileLastWriteTimesUtc);

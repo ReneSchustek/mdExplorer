@@ -25,6 +25,9 @@ internal sealed class FakeSettingsService : ISettingsService
     /// <summary>Wenn gesetzt, wirft <see cref="SaveAsync"/> diese Ausnahme.</summary>
     public Exception? SaveException { get; set; }
 
+    /// <summary>Wie oft <see cref="SaveAsync"/> aufgerufen wurde, auch erfolglos.</summary>
+    public int SaveCount { get; private set; }
+
     /// <inheritdoc />
     public Task<AppSettings> LoadAsync(CancellationToken cancellationToken) => Task.FromResult(Current);
 
@@ -32,6 +35,7 @@ internal sealed class FakeSettingsService : ISettingsService
     public Task SaveAsync(AppSettings settings, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        SaveCount++;
         if (SaveException is not null)
         {
             return Task.FromException(SaveException);

@@ -4,8 +4,9 @@ namespace MdExplorer.Core.Models;
 
 /// <summary>
 /// Wurzel-Datensatz für die Settings-Datei <c>settings.json</c> unterhalb
-/// <c>%LOCALAPPDATA%\MdExplorer\</c>. Ist die Datei nicht vorhanden oder
-/// das Schema veraltet, liefert <see cref="Default"/> einen vollständigen Default-Stand.
+/// <c>%LOCALAPPDATA%\MdExplorer\</c>. Fehlt die Datei oder ist sie unlesbar, gilt
+/// <see cref="Default"/>. Eine Datei mit älterer <see cref="SchemaVersion"/> wird beim Laden
+/// auf den aktuellen Stand gehoben; Felder, die sie noch nicht kennt, bekommen ihren Standardwert.
 /// </summary>
 /// <param name="SchemaVersion">Versionsnummer des persistierten Schemas, erlaubt Migrations-Pipeline.</param>
 /// <param name="Indexing">Indexierungsbezogene Einstellungen (Roots + Excludes).</param>
@@ -17,7 +18,10 @@ public sealed record AppSettings(
     AppearanceSettings Appearance,
     BehaviorSettings Behavior)
 {
-    /// <summary>Aktuell unterstützte Schema-Version.</summary>
+    /// <summary>
+    /// Aktuell unterstützte Schema-Version. Sie steigt, sobald ein neues Feld einen Standardwert
+    /// braucht, den die Deserialisierung nicht von selbst liefert (2: Hashtags, 3: Update-Prüfung).
+    /// </summary>
     public const int CurrentSchemaVersion = 3;
 
     /// <summary>
@@ -50,7 +54,8 @@ public sealed record IndexingSettings(
     /// Default-Ausschlussmuster.
     /// </summary>
     /// <remarks>
-    /// Die ersten fünf sind Ordner von Werkzeugen und Versionsverwaltung. <c>vendor</c> hält
+    /// <c>.git</c>, <c>bin</c>, <c>obj</c> und <c>.vs</c> sind Ordner von Versionsverwaltung
+    /// und Werkzeugen. <c>vendor</c> hält
     /// Markdown-Dateien fremder Pakete fern: In einem gewachsenen Bestand lagen dort 3.906
     /// davon, Dokumentation, die niemand hier sucht und die jede Trefferliste überlagert. Es
     /// ist der Ordnername, den PHP, Ruby und Go gleichermaßen verwenden; <c>node_modules</c>
@@ -74,12 +79,33 @@ public sealed record IndexingSettings(
 /// <param name="Theme">Theme-Wahl.</param>
 /// <param name="PreviewFontSize">Schriftgröße der Preview in Pixel.</param>
 /// <param name="ResultsPerPage">Anzahl der angezeigten Suchtreffer.</param>
+/// <remarks>
+/// Die Grenzen stehen als Konstanten hier und an keiner zweiten Stelle. Die Einstellungen kommen
+/// aus einer JSON-Datei, nicht aus dem Optionssystem, das die <c>Range</c>-Angaben auswerten
+/// würde. Geprüft wird deshalb zweimal: vor dem Speichern im <c>SettingsValidator</c> und beim
+/// Laden im <c>JsonSettingsService</c>, der einen Wert außerhalb auf die Vorgabe zurücksetzt.
+/// </remarks>
 public sealed record AppearanceSettings(
     AppTheme Theme,
-    [property: Range(8, 64)] int PreviewFontSize,
-    [property: Range(10, 1000)] int ResultsPerPage)
+    [property: Range(AppearanceSettings.MinPreviewFontSize, AppearanceSettings.MaxPreviewFontSize)] int PreviewFontSize,
+    [property: Range(AppearanceSettings.MinResultsPerPage, AppearanceSettings.MaxResultsPerPage)] int ResultsPerPage)
 {
-    /// <summary>Default-Schriftgröße der Preview in Pixel.</summary>
+    /// <summary>Kleinste Schriftgröße der Vorschau in Pixel; darunter ist Text nicht mehr lesbar.</summary>
+    public const int MinPreviewFontSize = 8;
+
+    /// <summary>Größte Schriftgröße der Vorschau in Pixel; darüber passt kaum ein Wort in die Spalte.</summary>
+    public const int MaxPreviewFontSize = 64;
+
+    /// <summary>Kleinste Trefferzahl je Seite.</summary>
+    public const int MinResultsPerPage = 10;
+
+    /// <summary>Größte Trefferzahl je Seite; die Liste bleibt damit in einem Zug ladbar.</summary>
+    public const int MaxResultsPerPage = 1_000;
+
+    /// <summary>
+    /// Default-Schriftgröße der Preview in Pixel. 16 px ist auch die Grundschrift eines Browsers;
+    /// die Vorschau beginnt damit in der Größe, in der dieselbe Datei anderswo erscheint.
+    /// </summary>
     private const int DefaultPreviewFontSize = 16;
 
     /// <summary>Default-Anzahl der angezeigten Suchtreffer.</summary>
@@ -98,7 +124,11 @@ public sealed record AppearanceSettings(
 /// </param>
 /// <remarks>
 /// <para>
-/// Ab Werk <see langword="false"/>, und das ist eine Zusage, keine Vorsichtsmaßnahme: Die
+/// Die Grenzen werden wie bei <see cref="AppearanceSettings"/> vor dem Speichern und beim Laden
+/// geprüft.
+/// </para>
+/// <para>
+/// <c>LoadRemoteImagesInPreview</c> ist ab Werk <see langword="false"/>, und das ist eine Zusage, keine Vorsichtsmaßnahme: Die
 /// Anwendung arbeitet vollständig ohne Internetverbindung. Ein Bild aus dem Netz in einer
 /// Notiz würde beim Öffnen der Vorschau einen fremden Server aufrufen und ihm damit
 /// verraten, wann welche Notiz angesehen wurde.
@@ -109,15 +139,33 @@ public sealed record AppearanceSettings(
 /// </para>
 /// </remarks>
 public sealed record BehaviorSettings(
-    [property: Range(50, 5_000)] int SearchDebounceMs,
-    [property: Range(0, 3_600)] int IndexerResyncIntervalSeconds,
+    [property: Range(BehaviorSettings.MinSearchDebounceMs, BehaviorSettings.MaxSearchDebounceMs)] int SearchDebounceMs,
+    [property: Range(BehaviorSettings.MinIndexerResyncIntervalSeconds, BehaviorSettings.MaxIndexerResyncIntervalSeconds)] int IndexerResyncIntervalSeconds,
     bool CheckForUpdatesAtStartup = true,
     bool LoadRemoteImagesInPreview = false)
 {
-    /// <summary>Default-Wartezeit nach letztem Tastendruck in Millisekunden.</summary>
+    /// <summary>Kürzeste Wartezeit nach dem letzten Tastendruck in Millisekunden.</summary>
+    public const int MinSearchDebounceMs = 50;
+
+    /// <summary>Längste Wartezeit nach dem letzten Tastendruck; fünf Sekunden fühlen sich schon wie ein Hänger an.</summary>
+    public const int MaxSearchDebounceMs = 5_000;
+
+    /// <summary>Kleinstes Abgleich-Intervall in Sekunden; <c>0</c> schaltet den Abgleich ab.</summary>
+    public const int MinIndexerResyncIntervalSeconds = 0;
+
+    /// <summary>Größtes Abgleich-Intervall in Sekunden, eine Stunde.</summary>
+    public const int MaxIndexerResyncIntervalSeconds = 3_600;
+
+    /// <summary>
+    /// Default-Wartezeit nach letztem Tastendruck in Millisekunden. Sie liegt über dem Abstand
+    /// zweier Anschläge beim zügigen Tippen, die Suche läuft also erst in der Pause nach einem Wort.
+    /// </summary>
     private const int DefaultSearchDebounceMs = 300;
 
-    /// <summary>Default-Intervall für den Indexer-Re-Sync in Sekunden.</summary>
+    /// <summary>
+    /// Default-Intervall für den Indexer-Re-Sync in Sekunden. Der Abgleich holt nach, was der
+    /// Dateiwächter verpasst hat; fünf Minuten begrenzen, wie lange so eine Lücke stehen bleibt.
+    /// </summary>
     private const int DefaultIndexerResyncIntervalSeconds = 300;
 
     /// <summary>300 ms Such-Debounce, 300 s Indexer-Resync, Update-Prüfung aktiv.</summary>

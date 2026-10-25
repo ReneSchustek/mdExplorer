@@ -25,4 +25,12 @@ internal sealed class WpfUiDispatcher : IUiDispatcher
         }
         dispatcher.Invoke(action);
     }
+
+    /// <inheritdoc />
+    public void Post(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        Dispatcher dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+        _ = dispatcher.BeginInvoke(action);
+    }
 }

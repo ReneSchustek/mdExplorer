@@ -5,6 +5,7 @@ using MdExplorer.Data;
 using MdExplorer.Data.Repositories;
 using MdExplorer.Search.Options;
 using MdExplorer.Search.Services;
+using MdExplorer.Search.Tests.Fakes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -14,20 +15,25 @@ using Microsoft.Extensions.Time.Testing;
 namespace MdExplorer.Search.Tests.Integration;
 
 /// <summary>
-/// Test-Harness für die FTS5-Integrationstests. Legt eine echte SQLite-Datei (kein In-Memory) an,
-/// wendet die EF-Migrationen auf den DbContext an, instanziiert die produktive
-/// <see cref="Fts5SearchService"/>- und <see cref="Fts5IndexMaintainer"/>-Pipeline samt
-/// den Data-Implementierungen der Core-Abstraktionen.
+/// Prüfstand für die FTS5-Integrationstests: eine echte SQLite-Datei mit allen Migrationen, darüber
+/// der produktive <see cref="Fts5SearchService"/> und <see cref="Fts5IndexMaintainer"/> samt den
+/// Repositories der Datenschicht. Nur Dateisystem und Uhr sind Attrappen.
 /// </summary>
 internal sealed class SearchTestHarness : IAsyncDisposable
 {
     private static readonly DateTime FixedUtc = new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc);
 
     private readonly string _databasePath;
+    private int _nextId;
     private readonly ServiceProvider _serviceProvider;
+
+    // Fortlaufende Kennungen für Dokumente und Schlagworte; die Dateien bringt der Test selbst mit.
+    private Guid NextId() => new(Interlocked.Increment(ref _nextId), 0, 0, new byte[8]);
 
     public SearchTestHarness()
     {
+        // Die Datenbank liegt als Datei im Temp-Ordner, und parallel laufende Tests brauchen je eine
+        // eigene. Die Zufalls-GUID steht nur im Dateinamen, nie in den Testdaten.
         _databasePath = Path.Combine(Path.GetTempPath(), $"mdex-search-{Guid.NewGuid():N}.db");
         FileSystem = new FakeFileSystem();
         TimeProvider = new FakeTimeProvider(new DateTimeOffset(2026, 6, 8, 12, 0, 0, TimeSpan.Zero));
@@ -36,7 +42,9 @@ internal sealed class SearchTestHarness : IAsyncDisposable
         _ = services.AddLogging();
         _ = services.AddDbContext<MdExplorerDbContext>(options =>
         {
-            _ = options.UseSqlite($"Data Source={_databasePath}");
+            // Ohne Pool schließt jede Verbindung ihre Datei beim Entsorgen. Mit Pool hielte eine
+            // ruhende Verbindung die Datenbank offen, und das Aufräumen am Testende scheiterte.
+            _ = options.UseSqlite($"Data Source={_databasePath};Pooling=False");
         });
         _ = services.AddSingleton<IFileSystem>(FileSystem);
         _ = services.AddSingleton<TimeProvider>(TimeProvider);
@@ -54,6 +62,7 @@ internal sealed class SearchTestHarness : IAsyncDisposable
             sp.GetRequiredService<IFileSystem>(),
             sp.GetRequiredService<IOptions<SearchOptions>>(),
             sp.GetRequiredService<TimeProvider>(),
+            new MdExplorer.Core.Diagnostics.BackgroundServiceStatus(),
             NullLogger<Fts5IndexMaintainer>.Instance));
 
         _serviceProvider = services.BuildServiceProvider();
@@ -62,6 +71,8 @@ internal sealed class SearchTestHarness : IAsyncDisposable
         MdExplorerDbContext dbContext = scope.ServiceProvider.GetRequiredService<MdExplorerDbContext>();
         dbContext.Database.Migrate();
     }
+
+    public string DatabasePath => _databasePath;
 
     public FakeFileSystem FileSystem { get; }
 
@@ -101,7 +112,7 @@ internal sealed class SearchTestHarness : IAsyncDisposable
 
             MarkdownDocument doc = new()
             {
-                Id = Guid.NewGuid(),
+                Id = NextId(),
                 MarkdownFileId = document.MarkdownFileId,
                 SourceContentHash = document.SourceContentHash,
                 FrontmatterJson = document.FrontmatterJson,
@@ -115,7 +126,7 @@ internal sealed class SearchTestHarness : IAsyncDisposable
             {
                 Tag tag = new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = NextId(),
                     Name = tagName,
                     Slug = tagSlug,
                 };
@@ -156,17 +167,11 @@ internal sealed class SearchTestHarness : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _serviceProvider.DisposeAsync().ConfigureAwait(false);
-        if (File.Exists(_databasePath))
-        {
-            try
-            {
-                File.Delete(_databasePath);
-            }
-            catch (IOException)
-            {
-                // Datei wird bei der nächsten Iteration vom Temp-Cleanup entfernt.
-            }
-        }
+
+        // Im WAL-Modus gehören zur Datenbank zwei Begleitdateien; sie gehen mit.
+        File.Delete(_databasePath);
+        File.Delete(_databasePath + "-wal");
+        File.Delete(_databasePath + "-shm");
     }
 
     private static byte[] Compress(string source)
@@ -181,6 +186,7 @@ internal sealed class SearchTestHarness : IAsyncDisposable
     }
 }
 
+/// <summary>Eine Datei samt geparstem Dokument und Schlagworten, wie sie der Prüfstand anlegt.</summary>
 internal sealed record SeedDocument(
     Guid MarkdownFileId,
     string Title,

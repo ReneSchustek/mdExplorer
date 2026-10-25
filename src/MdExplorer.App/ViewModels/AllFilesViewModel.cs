@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.App.Localization;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Text;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,22 +12,16 @@ using Microsoft.Extensions.Logging;
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// ViewModel des "Alle Dateien"-Tabs. Lädt die flache Liste indizierter
-/// Markdown-Dateien inklusive ihrer Tag-Slugs über <see cref="IAllFilesQuery"/> und
-/// filtert sie clientseitig nach Substring-Match in Titel, Pfad und Tags. Sortierung
-/// und Tag-Klick (Filter-Token) sind UI-getrieben.
+/// ViewModel des Registers „Alle Dateien". Lädt die flache Liste indizierter Markdown-Dateien
+/// samt Tag-Slugs einmal über <see cref="IAllFilesQuery"/>; Suche (Teilzeichenkette in Titel,
+/// Pfad und Tags), Ordner-, Tag- und Zeitraumfilter (<see cref="AllFilesFilterSet"/>) sowie die
+/// Sortierung laufen danach im Speicher, ohne neue Abfrage.
 /// </summary>
 internal sealed partial class AllFilesViewModel : ObservableObject
 {
     /// <summary>Ab dieser Zahl sichtbarer Einträge erscheint die Sprungleiste.</summary>
     /// <remarks>Darunter überblickt man die Liste ohne Sprungziel; die Leiste wäre nur Fläche.</remarks>
     private const int JumpBarThreshold = 50;
-
-    /// <summary>Tage, die der Zeitraum „7 Tage" umfasst, einschließlich des laufenden.</summary>
-    private const int SevenDayWindow = 7;
-
-    /// <summary>Tage, die der Zeitraum „30 Tage" umfasst, einschließlich des laufenden.</summary>
-    private const int ThirtyDayWindow = 30;
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<AllFilesViewModel> _logger;
@@ -36,16 +31,15 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// </summary>
     /// <remarks>
     /// Er kommt aus dem Wirt (<c>IHostApplicationLifetime.ApplicationStopping</c>). Ohne ihn
-    /// stand hier <c>CancellationToken.None</c>; dann wartet das Schließen auf eine Abfrage,
-    /// die niemand mehr braucht. Ohne Wirt, also im Test, bleibt er der leere Merker.
+    /// wartete das Schließen auf eine Abfrage, die niemand mehr braucht. Ohne Wirt, also im
+    /// Test, bleibt er der leere Merker.
     /// </remarks>
     private readonly CancellationToken _shutdownToken;
     private readonly TimeProvider _timeProvider;
-    private readonly HashSet<string> _tagFilters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly AllFilesFilterSet _filters;
 
     private AllFilesItemViewModel[] _allItems = [];
-    private string? _folderFilter;
-    private AllFilesPeriod _period = AllFilesPeriod.Any;
+    private bool _refreshRequested;
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -67,10 +61,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     [ObservableProperty]
     private AllFilesItemViewModel? _selectedItem;
 
-    /// <summary>Wird ausgelöst, sobald ein Eintrag ausgewählt wird (mit absolutem Pfad).</summary>
-    public event Action<string>? FileSelected;
-
-    /// <summary>Erzeugt das ViewModel und verdrahtet die Refresh-Aktion.</summary>
+    /// <summary>Erzeugt das ViewModel und verdrahtet die Befehle.</summary>
     public AllFilesViewModel(
         IServiceScopeFactory scopeFactory,
         TimeProvider timeProvider,
@@ -85,24 +76,31 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         _timeProvider = timeProvider;
         _logger = logger;
         _shutdownToken = shutdownToken;
+        _filters = new AllFilesFilterSet(timeProvider);
         Items = [];
         ActiveFilters = [];
         PeriodFilters =
         [
-            new PeriodFilterViewModel(AllFilesPeriod.Any, "Alle") { IsActive = true },
-            new PeriodFilterViewModel(AllFilesPeriod.Today, "Heute"),
-            new PeriodFilterViewModel(AllFilesPeriod.LastSevenDays, "7 Tage"),
-            new PeriodFilterViewModel(AllFilesPeriod.LastThirtyDays, "30 Tage"),
+            new PeriodFilterViewModel(AllFilesPeriod.Any, UiText.Get("AllFiles_Period_Any")) { IsActive = true },
+            new PeriodFilterViewModel(AllFilesPeriod.Today, UiText.Get("AllFiles_Period_Today")),
+            new PeriodFilterViewModel(AllFilesPeriod.LastSevenDays, UiText.Get("AllFiles_Period_SevenDays")),
+            new PeriodFilterViewModel(AllFilesPeriod.LastThirtyDays, UiText.Get("AllFiles_Period_ThirtyDays")),
         ];
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
         JumpToLetterCommand = new RelayCommand<string>(RaiseJumpRequested);
         FilterByFolderCommand = new RelayCommand<string>(FilterByFolder);
-        FilterByTagCommand = new RelayCommand<string>(FilterByTag);
-        SelectPeriodCommand = new RelayCommand<AllFilesPeriod>(SelectPeriod);
-        RemoveFilterCommand = new RelayCommand<ActiveFilterViewModel>(RemoveFilter);
+        FilterByTagCommand = new RelayCommand<string>(tag => ApplyIf(!string.IsNullOrWhiteSpace(tag) && _filters.AddTag(tag)));
+        SelectPeriodCommand = new RelayCommand<AllFilesPeriod>(period => ApplyIf(_filters.SetPeriod(period)));
+        RemoveFilterCommand = new RelayCommand<ActiveFilterViewModel>(filter => ApplyIf(filter is not null && _filters.Remove(filter)));
         ResetSearchAndFiltersCommand = new RelayCommand(ResetSearchAndFilters);
     }
+
+    /// <summary>Wird ausgelöst, sobald ein Eintrag ausgewählt wird (mit absolutem Pfad).</summary>
+    public event Action<string>? FileSelected;
+
+    /// <summary>Wird ausgelöst, wenn zu einer Buchstabengruppe gesprungen werden soll.</summary>
+    public event Action<char>? JumpRequested;
 
     /// <summary>Aktuelle (gefilterte + sortierte) Sicht auf die Datei-Liste.</summary>
     public ObservableCollection<AllFilesItemViewModel> Items { get; }
@@ -147,9 +145,6 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// <summary>Setzt Suche und alle Filter zurück.</summary>
     public RelayCommand ResetSearchAndFiltersCommand { get; }
 
-    /// <summary>Wird ausgelöst, wenn zu einer Buchstabengruppe gesprungen werden soll.</summary>
-    public event Action<char>? JumpRequested;
-
     /// <summary>
     /// Ob die Sprungleiste angezeigt wird.
     /// </summary>
@@ -158,8 +153,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// an einer beliebigen Stelle der Liste. Und erst ab einer Bestandsgröße, ab der man
     /// die Liste nicht mehr überblickt; darunter ist die Leiste nur zusätzliche Fläche.
     /// </remarks>
-    public bool IsJumpBarVisible => SortMode is AllFilesSortMode.Title or AllFilesSortMode.RelativePath
-        && Items.Count >= JumpBarThreshold;
+    public bool IsJumpBarVisible => AllFilesOrdering.IsAlphabetical(SortMode) && Items.Count >= JumpBarThreshold;
 
     /// <summary>Es gibt überhaupt keine Einträge, unabhängig von Suche und Filter.</summary>
     public bool ShowsNothingAtAll => State == AllFilesListState.EmptyStock;
@@ -181,13 +175,41 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     public bool ShowsLoadFailure => State == AllFilesListState.LoadFailed;
 
     /// <summary>Lädt die flache Datei-Liste aus dem Indexer-Store.</summary>
+    /// <remarks>
+    /// Ein Aufruf während eines laufenden Ladens wird vorgemerkt und danach ausgeführt. Er kommt
+    /// etwa nach dem Umbenennen einer Datei; liefe er ins Leere, zeigte die Liste den alten Pfad.
+    /// </remarks>
     public async Task RefreshAsync()
     {
         if (IsBusy)
         {
+            _refreshRequested = true;
             return;
         }
         IsBusy = true;
+        try
+        {
+            do
+            {
+                _refreshRequested = false;
+                await LoadOnceAsync().ConfigureAwait(true);
+            }
+            while (_refreshRequested);
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    [LoggerMessage(EventId = 1300, Level = LogLevel.Information, Message = "Alle-Dateien-Tab geladen — {Count} Einträge.")]
+    private static partial void LogLoaded(ILogger logger, int count);
+
+    [LoggerMessage(EventId = 1301, Level = LogLevel.Warning, Message = "Alle-Dateien-Tab konnte nicht geladen werden.")]
+    private static partial void LogRefreshFailed(ILogger logger, Exception exception);
+
+    private async Task LoadOnceAsync()
+    {
         State = AllFilesListState.Loading;
         try
         {
@@ -197,68 +219,66 @@ internal sealed partial class AllFilesViewModel : ObservableObject
                 IAllFilesQuery query = scope.ServiceProvider.GetRequiredService<IAllFilesQuery>();
                 IReadOnlyList<AllFilesRow> rows = await query.GetAllAsync(_shutdownToken).ConfigureAwait(true);
                 TimeZoneInfo timeZone = _timeProvider.LocalTimeZone;
-                _allItems = rows.Select(row => new AllFilesItemViewModel(row, timeZone)).ToArray();
+                _allItems = [.. rows.Select(row => new AllFilesItemViewModel(row, timeZone))];
                 ApplyViewState();
                 LogLoaded(_logger, _allItems.Length);
             }
         }
-        catch (InvalidOperationException ex)
+        catch (OperationCanceledException)
+        {
+            // Die Anwendung wird beendet; die Liste sieht niemand mehr.
+        }
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             // Der Fehler endet nicht im Log: Die Ansicht sagt es, sonst hält der Nutzer
             // seinen Bestand für leer und sucht am falschen Ende.
-            LogRefreshFailed(_logger, ex);
+            LogRefreshFailed(_logger, exception);
             State = AllFilesListState.LoadFailed;
         }
-        finally
-        {
-            IsBusy = false;
-        }
     }
 
-    private static bool MatchesSearch(AllFilesItemViewModel item, string needle)
-    {
-        if (item.Title.Contains(needle, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-        if (item.RelativePath.Contains(needle, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-        return item.TagSlugs.Any(slug => slug.Contains(needle, StringComparison.OrdinalIgnoreCase));
-    }
+    partial void OnSearchTextChanged(string value) => ApplyViewState();
 
-    [LoggerMessage(EventId = 1300, Level = LogLevel.Information, Message = "Alle-Dateien-Tab geladen — {Count} Einträge.")]
-    private static partial void LogLoaded(ILogger logger, int count);
-
-    [LoggerMessage(EventId = 1301, Level = LogLevel.Warning, Message = "Alle-Dateien-Tab konnte nicht geladen werden.")]
-    private static partial void LogRefreshFailed(ILogger logger, Exception exception);
-
-    partial void OnSearchTextChanged(string value)
-    {
-        ApplyViewState();
-    }
-
-    partial void OnSortModeChanged(AllFilesSortMode value)
-    {
-        ApplyViewState();
-    }
+    partial void OnSortModeChanged(AllFilesSortMode value) => ApplyViewState();
 
     partial void OnSelectedItemChanged(AllFilesItemViewModel? value)
     {
-        if (value is null)
+        if (value is not null)
+        {
+            FileSelected?.Invoke(value.AbsolutePath);
+        }
+    }
+
+    partial void OnStateChanged(AllFilesListState value)
+    {
+        OnPropertyChanged(nameof(ShowsNothingAtAll));
+        OnPropertyChanged(nameof(ShowsNoMatches));
+        OnPropertyChanged(nameof(ShowsLoadFailure));
+    }
+
+    /// <summary>Baut die Sicht neu auf, wenn ein Befehl tatsächlich etwas geändert hat.</summary>
+    private void ApplyIf(bool changed)
+    {
+        if (changed)
+        {
+            ApplyViewState();
+        }
+    }
+
+    private void FilterByFolder(string? folderPath)
+    {
+        if (folderPath is null)
         {
             return;
         }
-        FileSelected?.Invoke(value.AbsolutePath);
+        _filters.SetFolder(folderPath);
+        ApplyViewState();
     }
 
     private void ApplyViewState()
     {
-        bool alphabetical = SortMode is AllFilesSortMode.Title or AllFilesSortMode.RelativePath;
-
-        RebuildItems(SortedMatches(), alphabetical);
-        UpdateJumpLetters(alphabetical);
+        RebuildItems();
+        UpdateJumpLetters();
         UpdateActiveFilters();
 
         // Ein Zustand, aus dem sich alles ableitet, statt mehrerer Merker, die
@@ -273,171 +293,36 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         OnPropertyChanged(nameof(IsJumpBarVisible));
     }
 
-    /// <summary>Die Einträge, die Suche und Filter passieren, in der gewählten Ordnung.</summary>
-    private IEnumerable<AllFilesItemViewModel> SortedMatches()
+    /// <summary>Füllt die sichtbare Liste mit den Einträgen, die Suche und Filter passieren, und beschriftet die Gruppen.</summary>
+    private void RebuildItems()
     {
-        string trimmed = SearchText?.Trim() ?? string.Empty;
-        IEnumerable<AllFilesItemViewModel> filtered = string.IsNullOrEmpty(trimmed)
-            ? _allItems
-            : _allItems.Where(item => MatchesSearch(item, trimmed));
-
-        filtered = filtered.Where(MatchesFilters);
-
-        return SortMode switch
-        {
-            AllFilesSortMode.Title => filtered.OrderBy(item => item.Title, StringComparer.OrdinalIgnoreCase),
-            AllFilesSortMode.RelativePath => filtered.OrderBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase),
-            _ => filtered.OrderByDescending(item => item.LastWriteTimeUtc).ThenBy(item => item.RelativePath, StringComparer.OrdinalIgnoreCase),
-        };
-    }
-
-    /// <summary>Füllt die sichtbare Liste neu und beschriftet dabei die Gruppen.</summary>
-    private void RebuildItems(IEnumerable<AllFilesItemViewModel> sorted, bool alphabetical)
-    {
+        IEnumerable<AllFilesItemViewModel> matches = _allItems.Where(_filters.CreateMatcher(SearchText ?? string.Empty));
         Items.Clear();
-        foreach (AllFilesItemViewModel item in sorted)
+        foreach (AllFilesItemViewModel item in AllFilesOrdering.Sort(matches, SortMode))
         {
-            // Der Buchstabe folgt dem Schlüssel, nach dem sortiert wurde. Nach Datum
-            // sortiert gibt es keinen sinnvollen Buchstaben; dann bleibt die Beschriftung
-            // leer und die Ansicht zeigt keinen Gruppenkopf.
-            item.GroupLabel = alphabetical
-                ? AlphabetIndex.LetterOf(SortKeyOf(item)).ToString(CultureInfo.InvariantCulture)
-                : string.Empty;
+            item.GroupLabel = AllFilesOrdering.GroupLabelOf(item, SortMode);
             Items.Add(item);
         }
-    }
-
-    partial void OnStateChanged(AllFilesListState value)
-    {
-        OnPropertyChanged(nameof(ShowsNothingAtAll));
-        OnPropertyChanged(nameof(ShowsNoMatches));
-        OnPropertyChanged(nameof(ShowsLoadFailure));
-    }
-
-    /// <summary>Ob ein Eintrag alle gesetzten Filter passiert.</summary>
-    private bool MatchesFilters(AllFilesItemViewModel item)
-    {
-        if (_folderFilter is not null
-            && !string.Equals(item.FolderPath, _folderFilter, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        // Mehrere Kennzeichnungen wirken zusammen, nicht nebeneinander: Wer zwei anklickt,
-        // erwartet die Schnittmenge, nicht die Summe.
-        if (!_tagFilters.All(tag => item.TagSlugs.Contains(tag, StringComparer.OrdinalIgnoreCase)))
-        {
-            return false;
-        }
-
-        return _period == AllFilesPeriod.Any || item.LastWriteTimeUtc >= EarliestOf(_period);
-    }
-
-    /// <summary>Der früheste Zeitpunkt, der im gewählten Zeitraum noch mitzählt.</summary>
-    private DateTime EarliestOf(AllFilesPeriod period)
-    {
-        DateTime nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
-
-        // Der laufende Tag zählt mit: „7 Tage" meint heute und die sechs davor, nicht acht.
-        return period switch
-        {
-            AllFilesPeriod.Today => nowUtc.Date,
-            AllFilesPeriod.LastSevenDays => nowUtc.Date.AddDays(-(SevenDayWindow - 1)),
-            AllFilesPeriod.LastThirtyDays => nowUtc.Date.AddDays(-(ThirtyDayWindow - 1)),
-            _ => DateTime.MinValue,
-        };
     }
 
     /// <summary>Stellt die Chip-Leiste der wirkenden Filter neu zusammen.</summary>
     private void UpdateActiveFilters()
     {
         ActiveFilters.Clear();
-
-        if (_folderFilter is not null)
+        foreach (ActiveFilterViewModel chip in _filters.Chips(PeriodFilters))
         {
-            string shown = _folderFilter.Length == 0 ? "(Wurzel)" : _folderFilter;
-            ActiveFilters.Add(new ActiveFilterViewModel(AllFilesFilterKind.Folder, _folderFilter, $"Ordner: {shown}"));
-        }
-
-        foreach (string tag in _tagFilters.Order(StringComparer.OrdinalIgnoreCase))
-        {
-            ActiveFilters.Add(new ActiveFilterViewModel(AllFilesFilterKind.Tag, tag, $"Kennzeichnung: {tag}"));
-        }
-
-        if (_period != AllFilesPeriod.Any)
-        {
-            PeriodFilterViewModel chosen = PeriodFilters.First(filter => filter.Period == _period);
-            ActiveFilters.Add(new ActiveFilterViewModel(AllFilesFilterKind.Period, chosen.Label, $"Geändert: {chosen.Label}"));
+            ActiveFilters.Add(chip);
         }
 
         foreach (PeriodFilterViewModel filter in PeriodFilters)
         {
-            filter.IsActive = filter.Period == _period;
+            filter.IsActive = filter.Period == _filters.Period;
         }
-    }
-
-    private void FilterByFolder(string? folderPath)
-    {
-        if (folderPath is null)
-        {
-            return;
-        }
-
-        _folderFilter = folderPath;
-        ApplyViewState();
-    }
-
-    private void FilterByTag(string? tagSlug)
-    {
-        if (string.IsNullOrWhiteSpace(tagSlug) || !_tagFilters.Add(tagSlug))
-        {
-            return;
-        }
-
-        ApplyViewState();
-    }
-
-    private void SelectPeriod(AllFilesPeriod period)
-    {
-        if (_period == period)
-        {
-            return;
-        }
-
-        _period = period;
-        ApplyViewState();
-    }
-
-    private void RemoveFilter(ActiveFilterViewModel? filter)
-    {
-        if (filter is null)
-        {
-            return;
-        }
-
-        switch (filter.Kind)
-        {
-            case AllFilesFilterKind.Folder:
-                _folderFilter = null;
-                break;
-            case AllFilesFilterKind.Tag:
-                _ = _tagFilters.Remove(filter.Value);
-                break;
-            case AllFilesFilterKind.Period:
-                _period = AllFilesPeriod.Any;
-                break;
-            default:
-                return;
-        }
-
-        ApplyViewState();
     }
 
     private void ResetSearchAndFilters()
     {
-        _folderFilter = null;
-        _tagFilters.Clear();
-        _period = AllFilesPeriod.Any;
+        _filters.Reset();
 
         // Setzt die Ansicht selbst dann neu zusammen, wenn der Suchtext schon leer war,
         // sonst bliebe das Zurücknehmen der Filter ohne Wirkung.
@@ -450,10 +335,6 @@ internal sealed partial class AllFilesViewModel : ObservableObject
         SearchText = string.Empty;
     }
 
-    /// <summary>Der Wert, nach dem in der aktuellen Sortierung geordnet wird.</summary>
-    private string SortKeyOf(AllFilesItemViewModel item) =>
-        SortMode == AllFilesSortMode.RelativePath ? item.RelativePath : item.Title;
-
     /// <summary>
     /// Markiert, welche Buchstaben Einträge haben.
     /// </summary>
@@ -461,11 +342,9 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     /// Buchstaben ohne Einträge werden deaktiviert, nicht entfernt: Eine Leiste, die ihre
     /// Breite je nach Bestand ändert, ist kein verlässlicher Anlaufpunkt.
     /// </remarks>
-    private void UpdateJumpLetters(bool alphabetical)
+    private void UpdateJumpLetters()
     {
-        HashSet<char> occupied = alphabetical
-            ? [.. Items.Select(item => AlphabetIndex.LetterOf(SortKeyOf(item)))]
-            : [];
+        HashSet<char> occupied = AllFilesOrdering.OccupiedLetters(Items, SortMode);
 
         foreach (JumpLetterViewModel letter in JumpLetters)
         {
@@ -475,12 +354,10 @@ internal sealed partial class AllFilesViewModel : ObservableObject
 
     private void RaiseJumpRequested(string? letter)
     {
-        if (string.IsNullOrEmpty(letter))
+        if (!string.IsNullOrEmpty(letter))
         {
-            return;
+            JumpRequested?.Invoke(letter[0]);
         }
-
-        JumpRequested?.Invoke(letter[0]);
     }
 }
 
@@ -569,7 +446,7 @@ internal sealed class ActiveFilterViewModel
     public string Label { get; }
 
     /// <summary>Beschriftung der Entfernen-Schaltfläche, auch für die Sprachausgabe.</summary>
-    public string RemoveHint => $"Filter „{Label}“ entfernen";
+    public string RemoveHint => UiText.Format("AllFiles_Filter_Remove", Label);
 }
 
 /// <summary>Woran ein Filter der Datei-Liste greift.</summary>
@@ -591,7 +468,7 @@ internal enum AllFilesPeriod
     /// <summary>Ohne Einschränkung.</summary>
     Any = 0,
 
-    /// <summary>Seit Mitternacht (UTC) geändert.</summary>
+    /// <summary>Seit Mitternacht der Ortszeit geändert.</summary>
     Today = 1,
 
     /// <summary>In den letzten sieben Tagen geändert.</summary>
@@ -629,7 +506,7 @@ internal sealed class AllFilesItemViewModel
         LastWriteTimeUtc = row.LastWriteTimeUtc;
         LastWriteTime = TimeZoneInfo.ConvertTimeFromUtc(row.LastWriteTimeUtc, timeZone);
         TagSlugs = row.TagSlugs;
-        FolderPath = FolderOf(row.RelativePath);
+        FolderPath = RelativeFolder.Of(row.RelativePath);
     }
 
     /// <summary>Stabiler Schlüssel.</summary>
@@ -663,18 +540,4 @@ internal sealed class AllFilesItemViewModel
 
     /// <summary>Der Ordner relativ zur Wurzel; leer für Dateien, die direkt darin liegen.</summary>
     public string FolderPath { get; }
-
-    /// <summary>
-    /// Trennt den Ordneranteil eines relativen Pfads ab.
-    /// </summary>
-    /// <remarks>
-    /// Beide Trennzeichen zählen: Der Index schreibt je nach Herkunft den einen oder den
-    /// anderen, und ein Filter, der nur eines kennt, greift dann bei der Hälfte nicht.
-    /// </remarks>
-    private static string FolderOf(string relativePath)
-    {
-        int cut = relativePath.LastIndexOfAny(['/', '\\']);
-
-        return cut < 0 ? string.Empty : relativePath[..cut].Replace('\\', '/');
-    }
 }

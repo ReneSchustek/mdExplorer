@@ -1,47 +1,50 @@
-using System.ComponentModel.DataAnnotations;
-using System.Data.Common;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
 using MdExplorer.App.Hosting;
+using MdExplorer.App.Localization;
 using MdExplorer.App.Logging;
 using MdExplorer.App.Services;
 using MdExplorer.App.ViewModels;
 using MdExplorer.App.Views;
 using MdExplorer.Core.Abstractions;
-using MdExplorer.Core.Models;
 using MdExplorer.Core.Startup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Serilog;
 
 namespace MdExplorer.App;
 
 /// <summary>
-/// WPF-Einstiegspunkt. Verwaltet Generic Host, SplashWindow und Hauptfenster.
-/// Klasse ist intern; kein CA1724-Konflikt mit dem Namespace, weil sie nicht öffentlich exportiert wird.
+/// WPF-Einstiegspunkt: startet Protokoll, Generic Host und Datenbank, zeigt erst das Startbild
+/// und dann das Hauptfenster und fängt Ausnahmen ab, die sonst niemand mehr fängt. Läuft schon
+/// eine Instanz des Benutzers, reicht diese ihr die Datei aus der Befehlszeile und endet. Weil die
+/// Klasse intern ist, greift CA1724 (Name gleich Namespace) hier nicht.
 /// </summary>
 [ExcludeFromCodeCoverage]
 internal sealed partial class App : System.Windows.Application
 {
+    // Höchstens so lange für die Hintergrunddienste; danach schließt das Fenster auch dann, wenn
+    // einer noch hängt.
+    private static readonly TimeSpan ServiceStopTimeout = TimeSpan.FromSeconds(5);
+
+    private readonly UnhandledExceptionPolicy _exceptionPolicy = new();
     private IHost? _host;
+    private HostShutdown? _shutdown;
     private SplashWindow? _splashWindow;
     private ILogger<App>? _logger;
+    private FirstInstance? _firstInstance;
 
     /// <inheritdoc />
     protected override async void OnStartup(StartupEventArgs e)
     {
         ArgumentNullException.ThrowIfNull(e);
 
-        CultureInfo german = CultureInfo.GetCultureInfo("de-DE");
-        Thread.CurrentThread.CurrentCulture = german;
-        Thread.CurrentThread.CurrentUICulture = german;
-
+        UseGermanCulture();
         Log.Logger = SerilogConfiguration.BuildLogger();
 
         base.OnStartup(e);
@@ -50,50 +53,47 @@ internal sealed partial class App : System.Windows.Application
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
-        try
+        // Hier steht bewusst kein catch. Eine Ausnahme aus dem Start fällt über async void in den
+        // Dispatcher und kommt in OnDispatcherUnhandledException an, gleich welcher Art sie ist.
+        // Bis MarkStartupCompleted beendet sie dort die Anwendung, statt ein Startbild ohne
+        // Hauptfenster stehen zu lassen.
+        // Der Instanzentscheid steht vor dem Host: Eine zweite Instanz darf weder die Datenbank
+        // öffnen noch Hintergrunddienste starten. Ist diese die erste, steht danach das Feld.
+        if (!await ClaimFirstInstanceAsync(e.Args).ConfigureAwait(true) || _firstInstance is null)
         {
-            await StartHostAndShowMainWindowAsync().ConfigureAwait(true);
+            return;
         }
-        catch (OptionsValidationException exception)
-        {
-            HandleStartupFailure(exception, "Konfiguration ungültig.");
-        }
-        catch (ValidationException exception)
-        {
-            HandleStartupFailure(exception, "Konfigurationsvalidierung fehlgeschlagen.");
-        }
-        catch (InvalidOperationException exception)
-        {
-            HandleStartupFailure(exception, "DI- oder Host-Konfiguration fehlerhaft.");
-        }
-        catch (DbException exception)
-        {
-            HandleStartupFailure(exception, "Datenbankzugriff beim Start fehlgeschlagen.");
-        }
-        catch (IOException exception)
-        {
-            HandleStartupFailure(exception, "Datei- oder Verzeichniszugriff beim Start fehlgeschlagen.");
-        }
-        catch (UnauthorizedAccessException exception)
-        {
-            HandleStartupFailure(exception, "Zugriff auf Anwendungspfad verweigert.");
-        }
+        await StartHostAndShowMainWindowAsync().ConfigureAwait(true);
+        _exceptionPolicy.MarkStartupCompleted();
+        ConnectOpenRequests(_firstInstance);
     }
 
     /// <inheritdoc />
-    protected override async void OnExit(ExitEventArgs e)
+    protected override void OnExit(ExitEventArgs e)
     {
         ArgumentNullException.ThrowIfNull(e);
 
-        if (_host is not null)
-        {
-            await _host.StopAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(true);
-            _host.Dispose();
-            _host = null;
-        }
-
-        await Log.CloseAndFlushAsync().ConfigureAwait(true);
+        // Die Dienste sind hier schon gestoppt, das hat das Hauptfenster vor dem Schließen
+        // abgewartet (HostShutdown). Nach einem gescheiterten Start nicht: Dann gibt Dispose sie
+        // ohne geordnetes Stoppen frei, und der Prozess endet ohnehin.
+        _host?.Dispose();
+        _host = null;
+        _firstInstance?.Dispose();
+        _firstInstance = null;
+        Log.CloseAndFlush();
         base.OnExit(e);
+    }
+
+    // Für alle Threads, nicht nur diesen: Was im Hintergrund formatiert wird (Zahlen und Daten in
+    // Meldungen), soll dieselbe Kultur sehen wie die Oberfläche. Die Anwendung gibt es nur auf
+    // Deutsch.
+    private static void UseGermanCulture()
+    {
+        CultureInfo german = CultureInfo.GetCultureInfo("de-DE");
+        CultureInfo.DefaultThreadCurrentCulture = german;
+        CultureInfo.DefaultThreadCurrentUICulture = german;
+        Thread.CurrentThread.CurrentCulture = german;
+        Thread.CurrentThread.CurrentUICulture = german;
     }
 
     [LoggerMessage(EventId = 100, Level = LogLevel.Error, Message = "Unbehandelte Ausnahme im UI-Thread.")]
@@ -105,130 +105,199 @@ internal sealed partial class App : System.Windows.Application
     [LoggerMessage(EventId = 102, Level = LogLevel.Error, Message = "Unbeobachtete Task-Ausnahme.")]
     private static partial void LogUnobservedTaskException(Microsoft.Extensions.Logging.ILogger logger, Exception exception);
 
+    [LoggerMessage(EventId = 103, Level = LogLevel.Critical, Message = "Anwendung konnte nicht gestartet werden.")]
+    private static partial void LogStartupFailed(Microsoft.Extensions.Logging.ILogger logger, Exception exception);
+
+    // Ein Meldungsfenster ohne Besitzer: In einer Instanz, die sich gleich wieder beendet, gibt es
+    // kein Fenster, und der Dialogdienst des Hosts steht noch nicht.
+    private static void ShowStandaloneError(string title, string message) =>
+        _ = MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Warning);
+
+    /// <summary>
+    /// Wird diese Instanz die erste des Benutzers? Sonst reicht sie die Datei an die laufende weiter
+    /// und beendet sich.
+    /// </summary>
+    /// <returns><see langword="true"/>, wenn diese Instanz weiterstartet.</returns>
+    private async Task<bool> ClaimFirstInstanceAsync(string[] arguments)
+    {
+        InstanceStartup startup = InstanceStartup.FromCommandLine(arguments);
+        _firstInstance = FirstInstance.TryClaim(startup);
+        if (_firstInstance is not null)
+        {
+            return true;
+        }
+
+        if (await FirstInstance.HandOverAsync(startup, ShowStandaloneError).ConfigureAwait(true))
+        {
+            // Ohne Fenster beendet sich WPF nicht von selbst.
+            Shutdown(exitCode: 0);
+            return false;
+        }
+
+        // Beendet sich die laufende Instanz gerade, lauscht sie nicht mehr, und nach ihrem Ende ist
+        // die Sperre frei. Dann übernimmt diese, statt den Doppelklick zu verwerfen.
+        _firstInstance = FirstInstance.TryClaim(startup.WithoutRejectedFile());
+        if (_firstInstance is not null)
+        {
+            return true;
+        }
+
+        ShowStandaloneError(OpenFileMessages.HandOverFailedTitle, OpenFileMessages.HandOverFailed(startup.File.AbsolutePath));
+        Shutdown(exitCode: 1);
+        return false;
+    }
+
+    private void ConnectOpenRequests(FirstInstance firstInstance)
+    {
+        // Beide stehen nach StartHostAndShowMainWindowAsync fest; ohne sie käme der Aufruf nicht hierher.
+        ExternalFileOpener opener = _host!.Services.GetRequiredService<ExternalFileOpener>();
+        ILogger<App> logger = _logger!;
+        // Der Empfänger läuft auf dem Thread des Kanals; geöffnet wird auf dem UI-Thread.
+        firstInstance.Requests.Attach(request => _ = Dispatcher.InvokeAsync(
+            () => ObservedTask.Forget(OpenFromOutsideAsync(firstInstance, opener, request), logger)));
+    }
+
+    private async Task OpenFromOutsideAsync(FirstInstance firstInstance, ExternalFileOpener opener, MarkdownPathCheck request)
+    {
+        // Ohne Kanal endet das Programm gerade; ein noch wartender Auftrag kommt zu spät.
+        if (!firstInstance.IsListening || MainWindow is not { } window)
+        {
+            return;
+        }
+        // Erst nach vorn, dann öffnen: Eine Rückfrage zu ungespeicherten Änderungen soll vor dem
+        // Fenster erscheinen, auf das der Nutzer gerade schaut.
+        WindowActivation.BringToFront(window);
+        await opener.OpenAsync(request).ConfigureAwait(true);
+    }
+
     private async Task StartHostAndShowMainWindowAsync()
     {
-        _host = AppHostBuilder.Build();
-        _logger = _host.Services.GetRequiredService<ILogger<App>>();
+        IHost host = AppHostBuilder.Build();
+        _host = host;
+        _logger = host.Services.GetRequiredService<ILogger<App>>();
+        _shutdown = new HostShutdown(() => host.StopAsync(ServiceStopTimeout), host.Services.GetRequiredService<ILogger<HostShutdown>>());
 
-        _splashWindow = _host.Services.GetRequiredService<SplashWindow>();
-        SplashViewModel splashViewModel = _host.Services.GetRequiredService<SplashViewModel>();
-        _splashWindow.DataContext = splashViewModel;
-        _splashWindow.Show();
+        SplashViewModel splash = ShowSplash(host.Services);
+        CancellationToken stoppingToken = host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
 
-        // Schema-Migration muss VOR _host.StartAsync laufen, weil BackgroundServices
-        // (ParseOrchestrator, Fts5IndexMaintainer) sofort beim Start lesen. Auf
-        // einer frischen Datenbank würden sie sonst auf fehlende Tabellen treffen.
-        splashViewModel.StatusText = "Datenbank wird vorbereitet …";
-        AppInitializer initializer = _host.Services.GetRequiredService<AppInitializer>();
-        CancellationToken stoppingToken = _host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
+        // Die Schema-Migration läuft vor StartAsync, weil die Hintergrunddienste
+        // (ParseOrchestrator, Fts5IndexMaintainer) sofort beim Start lesen. Auf einer frischen
+        // Datenbank träfen sie sonst auf fehlende Tabellen.
+        splash.StatusText = UiText.Get("Startup_Status_PreparingDatabase");
+        AppInitializer initializer = host.Services.GetRequiredService<AppInitializer>();
         await initializer.InitializeAsync(AppInitializer.DefaultMinimumDisplayDuration, stoppingToken).ConfigureAwait(true);
 
-        await _host.StartAsync(stoppingToken).ConfigureAwait(true);
+        await host.StartAsync(stoppingToken).ConfigureAwait(true);
 
-        ApplyThemeAndFollowChanges();
+        new ThemeFollower(
+            this,
+            host.Services.GetRequiredService<ISettingsService>(),
+            host.Services.GetRequiredService<ThemeApplier>(),
+            host.Services.GetRequiredService<PreviewViewModel>(),
+            host.Services.GetRequiredService<IEffectiveThemeProvider>()).Start();
 
-        MainWindow mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        ShowMainWindow(host.Services);
+    }
+
+    private SplashViewModel ShowSplash(IServiceProvider services)
+    {
+        SplashViewModel splash = services.GetRequiredService<SplashViewModel>();
+        _splashWindow = services.GetRequiredService<SplashWindow>();
+        _splashWindow.DataContext = splash;
+        _splashWindow.Show();
+        return splash;
+    }
+
+    private void ShowMainWindow(IServiceProvider services)
+    {
+        MainWindow mainWindow = services.GetRequiredService<MainWindow>();
+        // Nach den Handlern des Fensters selbst: Hält dessen Rückfrage zu ungespeicherten
+        // Änderungen das Schließen an, beginnt das Stoppen gar nicht erst.
+        mainWindow.Closing += OnMainWindowClosing;
         MainWindow = mainWindow;
         mainWindow.Show();
 
-        _splashWindow.Close();
+        _splashWindow?.Close();
         _splashWindow = null;
     }
 
-    /// <summary>
-    /// Setzt die gewählte Farbbelegung und hält sie bei späteren Änderungen nach.
-    /// </summary>
-    /// <remarks>
-    /// Erst nach dem Start des Wirts, weil vorher weder Einstellungen noch Dienste
-    /// bereitstehen. Das Startbild trägt deshalb Markenfarben statt Belegungsfarben;
-    /// es ist zu diesem Zeitpunkt bereits sichtbar.
-    /// </remarks>
-    private void ApplyThemeAndFollowChanges()
+    private void OnMainWindowClosing(object? sender, CancelEventArgs args)
     {
-        ISettingsService settings = _host!.Services.GetRequiredService<ISettingsService>();
-        ThemeApplier applier = _host.Services.GetRequiredService<ThemeApplier>();
-
-        PreviewViewModel preview = _host.Services.GetRequiredService<PreviewViewModel>();
-        IEffectiveThemeProvider effectiveTheme = _host.Services.GetRequiredService<IEffectiveThemeProvider>();
-
-        applier.Apply(Resources.MergedDictionaries);
-
-        // Jedes Fenster, sobald es steht: Die Titelleiste zeichnet Windows, und es fragt
-        // dafür nicht die Anwendung. Ein Klassen-Ereignis erspart, jedes Fenster einzeln
-        // anzufassen, auch die, die es künftig gibt.
-        EventManager.RegisterClassHandler(
-            typeof(Window),
-            FrameworkElement.LoadedEvent,
-            new RoutedEventHandler((sender, _) =>
-            {
-                if (sender is Window fenster)
-                {
-                    WindowTitleBarTheme.Apply(fenster, effectiveTheme.IsDarkMode);
-                }
-            }));
-
-        settings.SettingsChanged += (_, args) =>
+        if (_shutdown is not null && _shutdown.HoldClosing(args))
         {
-            AppTheme previous = args.Previous.Appearance.Theme;
-            AppTheme current = args.Current.Appearance.Theme;
-            if (previous == current)
-            {
-                return;
-            }
-
-            // Der Wechsel muss auf den Oberflächen-Thread: Das Ereignis kommt von dort,
-            // wo gespeichert wurde, und das ist nicht zwingend derselbe Thread. Der
-            // Austausch ist ein Wörterbuch-Tausch und damit kurz genug, um darauf zu warten.
-            Dispatcher.Invoke(() =>
-            {
-                applier.Apply(Resources.MergedDictionaries);
-                // Die Vorschau ist ein fertiges HTML-Dokument und hört auf keinen
-                // Wörterbuch-Tausch. Sie wird ausdrücklich neu aufgebaut.
-                preview.RebuildForTheme();
-                // Ebenso die Titelleisten der bereits offenen Fenster.
-                foreach (Window offen in Windows)
-                {
-                    WindowTitleBarTheme.Apply(offen, effectiveTheme.IsDarkMode);
-                }
-            });
-        };
+            // Ein Close aus dem laufenden Closing heraus lehnt WPF ab; deshalb danach.
+            _ = Dispatcher.InvokeAsync(StopServicesAndCloseAsync);
+        }
     }
 
-    private void HandleStartupFailure(Exception exception, string userFacingHint)
+    private async Task StopServicesAndCloseAsync()
     {
-        ArgumentNullException.ThrowIfNull(exception);
-        ArgumentException.ThrowIfNullOrWhiteSpace(userFacingHint);
-
-        Log.Fatal(exception, "Anwendung konnte nicht gestartet werden: {Hint}", userFacingHint);
-
-        try
+        if (_shutdown is null)
         {
-            _splashWindow?.Close();
+            return;
         }
-        catch (InvalidOperationException)
+        if (_firstInstance is not null)
         {
-            // SplashWindow war noch nicht initialisiert (ignorierbar).
+            await _firstInstance.StopListeningAsync().ConfigureAwait(true);
         }
-
-        _ = MessageBox.Show(
-            $"MdExplorer konnte nicht gestartet werden.\n\n{userFacingHint}\nDetails siehe Log-Verzeichnis.",
-            "Startfehler",
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
-
-        Shutdown(exitCode: 1);
+        await _shutdown.StopAsync().ConfigureAwait(true);
+        MainWindow?.Close();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
+        args.Handled = true;
+
+        UnhandledExceptionAction action = _exceptionPolicy.Decide(args.Exception);
+        if (action == UnhandledExceptionAction.AbortStartup)
+        {
+            AbortStartup(args.Exception);
+            return;
+        }
+
+        LogDispatcherFailure(args.Exception);
+        switch (action)
+        {
+            case UnhandledExceptionAction.ShowDialog:
+                _ = MessageBox.Show(
+                    ErrorMessages.Unhandled(args.Exception, isTerminating: false),
+                    ErrorMessages.UnhandledTitle(isTerminating: false),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                _exceptionPolicy.DialogClosed();
+                break;
+            case UnhandledExceptionAction.AbortStartup:
+            case UnhandledExceptionAction.LogOnly:
+                break;
+        }
+    }
+
+    private void AbortStartup(Exception exception)
+    {
+        // Ist schon der Host gescheitert, gibt es seinen Logger noch nicht.
         if (_logger is not null)
         {
-            LogDispatcherException(_logger, args.Exception);
+            LogStartupFailed(_logger, exception);
         }
-        Log.Error(args.Exception, "Unbehandelte Ausnahme im UI-Thread.");
-        ShowUnhandledExceptionDialog(args.Exception, isTerminating: false);
-        args.Handled = true;
+        else
+        {
+            Log.Fatal(exception, "Anwendung konnte nicht gestartet werden.");
+        }
+
+        // Ausblenden, nicht schließen: WPF hat das Startbild als erstes Fenster zum Hauptfenster
+        // gemacht. Sein Schließen beendete die Anwendung sofort mit Code 0, und der Fehlercode
+        // unten ginge verloren. Shutdown schließt es danach mit.
+        _splashWindow?.Hide();
+        _splashWindow = null;
+
+        _ = MessageBox.Show(
+            ErrorMessages.StartupFailure(exception),
+            UiText.Get("Startup_Failure_Title"),
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
+
+        Shutdown(exitCode: 1);
     }
 
     private void OnAppDomainUnhandledException(object sender, UnhandledExceptionEventArgs args)
@@ -242,37 +311,22 @@ internal sealed partial class App : System.Windows.Application
         {
             LogAppDomainException(_logger, exception, args.IsTerminating);
         }
-        Log.Fatal(exception, "Unbehandelte AppDomain-Ausnahme. Terminierend: {Terminating}.", args.IsTerminating);
+        else
+        {
+            Log.Fatal(exception, "Unbehandelte AppDomain-Ausnahme. Terminierend: {Terminating}.", args.IsTerminating);
+        }
+
         if (args.IsTerminating)
         {
-            ShowUnhandledExceptionDialog(exception, isTerminating: true);
+            // Direkt auf dem Thread, der den Fehler meldet, nicht über den Dispatcher: Ein
+            // blockierter UI-Thread hielte ein synchrones Invoke fest, und der Prozess hinge,
+            // statt zu enden. Ein Meldungsfenster ohne Besitzer darf jeder Thread zeigen.
+            _ = MessageBox.Show(
+                ErrorMessages.Unhandled(exception, isTerminating: true),
+                ErrorMessages.UnhandledTitle(isTerminating: true),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
-    }
-
-    private void ShowUnhandledExceptionDialog(Exception exception, bool isTerminating)
-    {
-        // Dialog soll auf dem UI-Thread laufen; Background-Threads dispatchen synchron.
-        if (Dispatcher is null)
-        {
-            return;
-        }
-        if (!Dispatcher.CheckAccess())
-        {
-            Dispatcher.Invoke(() => ShowUnhandledExceptionDialog(exception, isTerminating));
-            return;
-        }
-
-        string title = isTerminating ? "MdExplorer wird beendet" : "Unerwarteter Fehler";
-        string hint = isTerminating
-            ? "Ein schwerer Fehler hat MdExplorer zum Abbruch gezwungen."
-            : "Die Anwendung hat einen Fehler abgefangen und versucht, weiterzulaufen.";
-        string message =
-            $"{hint}\n\n" +
-            $"Fehler: {exception.GetType().Name}\n" +
-            $"Details: {exception.Message}\n\n" +
-            "Vollständiger Stack-Trace und Kontext stehen im Log-Verzeichnis.";
-
-        _ = MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs args)
@@ -282,7 +336,25 @@ internal sealed partial class App : System.Windows.Application
         {
             LogUnobservedTaskException(_logger, args.Exception);
         }
-        Log.Error(args.Exception, "Unbeobachtete Task-Ausnahme.");
+        else
+        {
+            Log.Error(args.Exception, "Unbeobachtete Task-Ausnahme.");
+        }
         args.SetObserved();
+    }
+
+    private void LogDispatcherFailure(Exception exception)
+    {
+        // Der Host-Logger schreibt über Serilog in dieselben Senken wie der statische Log. Beide
+        // zugleich ergäben jeden Eintrag doppelt; der statische springt nur ein, solange der Host
+        // noch nicht steht.
+        if (_logger is not null)
+        {
+            LogDispatcherException(_logger, exception);
+        }
+        else
+        {
+            Log.Error(exception, "Unbehandelte Ausnahme im UI-Thread.");
+        }
     }
 }

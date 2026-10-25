@@ -38,7 +38,7 @@ public sealed class TriggerDiagnosticsTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            Guid fileId = Guid.NewGuid();
+            Guid fileId = IdOf(1);
             await harness.SeedAsync(new SeedDocument(fileId, "Diag", @"C:\Wurzel\diag.md", "diag.md",
                 "hash", "{}", "Inhalt diagnostisch.", "Inhalt diagnostisch.", []),
                 TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -50,7 +50,7 @@ public sealed class TriggerDiagnosticsTests
             await connection.OpenAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             long before = await CountAsync(connection, fileId).ConfigureAwait(true);
-            await DeleteAsync(connection, DeleteDocumentSql, fileId).ConfigureAwait(true);
+            await DeleteAsync(connection, deleteTheFile: false, fileId).ConfigureAwait(true);
             long betweenRuns = await CountAsync(connection, fileId).ConfigureAwait(true);
 
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -68,7 +68,7 @@ public sealed class TriggerDiagnosticsTests
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
-            Guid fileId = Guid.NewGuid();
+            Guid fileId = IdOf(2);
             await harness.SeedAsync(new SeedDocument(fileId, "DiagFile", @"C:\Wurzel\diagfile.md", "diagfile.md",
                 "hash", "{}", "Inhalt datei-abgleich.", "Inhalt datei-abgleich.", []),
                 TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -80,7 +80,7 @@ public sealed class TriggerDiagnosticsTests
             await connection.OpenAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             long before = await CountAsync(connection, fileId).ConfigureAwait(true);
-            await DeleteAsync(connection, DeleteFileSql, fileId).ConfigureAwait(true);
+            await DeleteAsync(connection, deleteTheFile: true, fileId).ConfigureAwait(true);
 
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
             long after = await CountAsync(connection, fileId).ConfigureAwait(true);
@@ -94,7 +94,7 @@ public sealed class TriggerDiagnosticsTests
     public async Task Database_CarriesNoFtsCleanupTriggers()
     {
         // Der Gegenbeleg zu den beiden Prüfungen oben: Was dort der Abgleich tut, tut kein
-        // Auslöser mehr. Käme einer zurück, wäre die Messung von oben wieder hinfällig.
+        // Auslöser. Käme einer hinzu, kostete jedes Löschen die oben gemessenen 170 ms.
         SearchTestHarness harness = new();
         await using (harness.ConfigureAwait(true))
         {
@@ -113,13 +113,20 @@ public sealed class TriggerDiagnosticsTests
         }
     }
 
-    private static async Task DeleteAsync(SqliteConnection connection, string sql, Guid fileId)
+    private static async Task DeleteAsync(SqliteConnection connection, bool deleteTheFile, Guid fileId)
     {
         using SqliteCommand del = connection.CreateCommand();
-        // CA2100: `sql` ist immer eine der beiden Konstanten oben; der Guid reist als Parameter.
-#pragma warning disable CA2100
-        del.CommandText = sql;
-#pragma warning restore CA2100
+
+        // Zwei Konstanten über if/else statt eines übergebenen Texts: So sieht auch die Analyse,
+        // dass kein zusammengesetztes SQL ausgeführt wird. Die Kennung reist als Parameter.
+        if (deleteTheFile)
+        {
+            del.CommandText = DeleteFileSql;
+        }
+        else
+        {
+            del.CommandText = DeleteDocumentSql;
+        }
         _ = del.Parameters.AddWithValue("$id", fileId.ToString("D").ToUpperInvariant());
         _ = await del.ExecuteNonQueryAsync(TestContext.Current.CancellationToken).ConfigureAwait(false);
     }
@@ -133,4 +140,7 @@ public sealed class TriggerDiagnosticsTests
             .ExecuteScalarAsync(TestContext.Current.CancellationToken)
             .ConfigureAwait(false))!;
     }
+
+    private static Guid IdOf(int index) =>
+        new(index.ToString("D8", System.Globalization.CultureInfo.InvariantCulture) + "-0000-0000-0000-000000000000");
 }

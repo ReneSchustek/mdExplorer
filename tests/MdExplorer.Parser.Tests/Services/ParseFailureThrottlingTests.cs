@@ -1,4 +1,5 @@
 using MdExplorer.Core.Models;
+using MdExplorer.Parser.Tests.Fakes;
 using MdExplorer.Parser.Tests.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +19,7 @@ public sealed class ParseFailureThrottlingTests
 {
     private const string BadContent = "DEEPLY_NESTED_PAYLOAD_FOR_TEST";
 
+    // Die Ereignis-Ids von LogParseFailed und LogParseFailedAgain im ParseOrchestrator.
     private const int ParseFailedEventId = 206;
 
     private const int ParseFailedAgainEventId = 210;
@@ -25,7 +27,7 @@ public sealed class ParseFailureThrottlingTests
     [Fact]
     public async Task RunOnce_OnFirstFailure_RecordsHashAndEngineVersion()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out _);
         Guid badId = harness.AddSource("/r/bad.md", "hash-1", BadContent);
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
@@ -39,24 +41,25 @@ public sealed class ParseFailureThrottlingTests
     [Fact]
     public async Task RunOnce_OnSameHash_DoesNotParseAgain()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out ContentBasedThrowingParser parser);
         _ = harness.AddSource("/r/bad.md", "hash-1", BadContent);
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
-        int callsAfterFirstRun = harness.Parser.ParseCallCount;
+        int callsAfterFirstRun = parser.ParseCallCount;
 
+        // Zehn weitere Durchläufe stehen für fünfzig Sekunden Abfragetakt.
         for (int i = 0; i < 10; i++)
         {
             await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
         }
 
-        Assert.Equal(callsAfterFirstRun, harness.Parser.ParseCallCount);
+        Assert.Equal(callsAfterFirstRun, parser.ParseCallCount);
     }
 
     [Fact]
     public async Task RunOnce_OnSameHash_WritesStackTraceOnlyOnce()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out _);
         _ = harness.AddSource("/r/bad.md", "hash-1", BadContent);
 
         for (int i = 0; i < 10; i++)
@@ -70,22 +73,22 @@ public sealed class ParseFailureThrottlingTests
     [Fact]
     public async Task RunOnce_OnChangedHash_TriesAgain()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out ContentBasedThrowingParser parser);
         Guid badId = harness.AddSource("/r/bad.md", "hash-1", BadContent);
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
-        int callsAfterFirstRun = harness.Parser.ParseCallCount;
+        int callsAfterFirstRun = parser.ParseCallCount;
 
         harness.UpdateSource(badId, "hash-2", "# Jetzt lesbar");
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
-        Assert.True(harness.Parser.ParseCallCount > callsAfterFirstRun);
+        Assert.True(parser.ParseCallCount > callsAfterFirstRun);
         Assert.True(harness.DocRepo.Snapshot.ContainsKey(badId));
     }
 
     [Fact]
     public async Task RunOnce_OnFileParsableAgain_ClearsTheMark()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out _);
         Guid badId = harness.AddSource("/r/bad.md", "hash-1", BadContent);
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
@@ -99,7 +102,7 @@ public sealed class ParseFailureThrottlingTests
     [Fact]
     public async Task RunOnce_OnChangedContentStillUnparsable_WritesStackTraceAgain()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out _);
         Guid badId = harness.AddSource("/r/bad.md", "hash-1", BadContent);
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
@@ -116,13 +119,13 @@ public sealed class ParseFailureThrottlingTests
     [Fact]
     public async Task RunOnce_AfterEngineChange_TriesAgainAndLogsWithoutStackTrace()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out ContentBasedThrowingParser parser);
         _ = harness.AddSource("/r/bad.md", "hash-1", BadContent);
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         // Eine neue Parser-Fassung hebt den Vermerk auf, denn die Datei könnte jetzt parsbar sein.
         // Scheitert sie erneut am selben Inhalt, steht der Stapel längst im Protokoll.
-        harness.Parser.EngineVersion = "test-engine/2";
+        parser.EngineVersion = "test-engine/2";
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(1, CountEntries(harness, ParseFailedEventId));
@@ -134,7 +137,7 @@ public sealed class ParseFailureThrottlingTests
     [Fact]
     public async Task RunOnce_OnUnparsableFiles_ReportsCountToOperationStatus()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out _);
         _ = harness.AddSource("/r/bad.md", "hash-1", BadContent);
         _ = harness.AddSource("/r/good.md", "hash-2", "# Alles gut");
 
@@ -146,7 +149,7 @@ public sealed class ParseFailureThrottlingTests
     [Fact]
     public async Task RunOnce_OnUnchangedFailures_DoesNotCountAgain()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out _);
         _ = harness.AddSource("/r/bad.md", "hash-1", BadContent);
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
         int countCallsAfterFirstRun = harness.FailureRepo.CountCallCount;
@@ -162,7 +165,7 @@ public sealed class ParseFailureThrottlingTests
     [Fact]
     public async Task RunOnce_OnUnparsableFile_KeepsProcessingTheRest()
     {
-        ThrowingParserHarness harness = CreateHarness();
+        using OrchestratorHarness harness = CreateHarness(out _);
         Guid badId = harness.AddSource("/r/bad.md", "hash-1", BadContent);
         Guid goodId = harness.AddSource("/r/good.md", "hash-2", "Body mit #ok.");
 
@@ -173,14 +176,75 @@ public sealed class ParseFailureThrottlingTests
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("ok"));
     }
 
-    private const string ContentBasedThrowingParserVersion = "test-engine/1";
+    [Fact]
+    public async Task RunOnce_OnAnUnreadableFile_WritesTheStackTraceOnlyOnce()
+    {
+        // Eine gesperrte Datei wird bei jedem Takt neu versucht, weil die Sperre jederzeit enden
+        // kann. Der volle Stapel darf trotzdem nur einmal ins Protokoll.
+        using OrchestratorHarness harness = CreateHarness(out _);
+        _ = harness.AddSource("/r/locked.md", "hash-1", "Text");
+        _ = harness.FileSystem.FailOnRead.Add(LockedPath);
 
-    private static ThrowingParserHarness CreateHarness() =>
-        new(BadContent, new ArgumentException("Markdown elements in the input are too deeply nested - depth limit exceeded."));
+        for (int i = 0; i < 10; i++)
+        {
+            await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
+        }
 
-    private static int CountEntries(ThrowingParserHarness harness, int eventId) =>
+        Assert.Equal(1, harness.Logger.Entries.Count(entry => entry.EventId == ReadFailedEventId && entry.Exception is not null));
+    }
+
+    [Fact]
+    public async Task RunOnce_WhenAnUnreadableFileBecomesReadable_ParsesIt()
+    {
+        using OrchestratorHarness harness = CreateHarness(out _);
+        Guid lockedId = harness.AddSource("/r/locked.md", "hash-1", "Text mit #frei.");
+        _ = harness.FileSystem.FailOnRead.Add(LockedPath);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
+
+        _ = harness.FileSystem.FailOnRead.Remove(LockedPath);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(harness.DocRepo.Snapshot.ContainsKey(lockedId));
+    }
+
+    [Fact]
+    public async Task RunOnce_WhenTheFileFailsAgainAfterItWasRead_WritesTheStackTraceAgain()
+    {
+        // Eine neue Sperre nach einem erfolgreichen Lesen ist ein neues Ereignis und gehört mit
+        // vollem Stapel ins Protokoll.
+        using OrchestratorHarness harness = CreateHarness(out _);
+        Guid lockedId = harness.AddSource("/r/locked.md", "hash-1", "Text");
+        _ = harness.FileSystem.FailOnRead.Add(LockedPath);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
+        _ = harness.FileSystem.FailOnRead.Remove(LockedPath);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
+
+        harness.UpdateSource(lockedId, "hash-2", "Neuer Text");
+        _ = harness.FileSystem.FailOnRead.Add(LockedPath);
+        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, harness.Logger.Entries.Count(entry => entry.EventId == ReadFailedEventId && entry.Exception is not null));
+    }
+
+    private const string ContentBasedThrowingParserVersion = ContentBasedThrowingParser.InitialEngineVersion;
+
+    // Die Ereignis-Id von LogReadFailed im ParseOrchestrator.
+    private const int ReadFailedEventId = 205;
+
+    private static readonly string LockedPath = "/r/locked.md".Replace('/', Path.DirectorySeparatorChar);
+
+    private static OrchestratorHarness CreateHarness(out ContentBasedThrowingParser parser)
+    {
+        parser = new ContentBasedThrowingParser(
+            OrchestratorHarness.CreateParser(),
+            BadContent,
+            new ArgumentException("Markdown elements in the input are too deeply nested - depth limit exceeded."));
+        return new OrchestratorHarness(parser);
+    }
+
+    private static int CountEntries(OrchestratorHarness harness, int eventId) =>
         harness.Logger.Entries.Count(entry => entry.EventId == eventId && entry.Level == LogLevel.Warning);
 
-    private static RecordedLogEntry SingleEntry(ThrowingParserHarness harness, int eventId) =>
+    private static RecordedLogEntry SingleEntry(OrchestratorHarness harness, int eventId) =>
         harness.Logger.Entries.Single(entry => entry.EventId == eventId);
 }

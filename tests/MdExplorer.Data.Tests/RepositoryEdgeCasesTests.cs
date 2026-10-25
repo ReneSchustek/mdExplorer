@@ -8,12 +8,13 @@ using Microsoft.EntityFrameworkCore;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Edge-Case-Coverage für die EF-Core-Repositories. Integration-Tests
-/// gegen In-Memory-SQLite; testen leere Inputs, Duplikat-Detection, NULL-Argumente
-/// und ReplaceFileTagsAsync-Sonderfälle.
+/// Die EF-Core-Repositories behandeln Randfälle gegen eine In-Memory-SQLite verlässlich: Leere
+/// Eingaben liefern leere Ergebnisse, <c>null</c> wirft sofort, und doppelte Slugs, Pfade oder
+/// Zuordnungen scheitern laut, statt eine zweite Zeile anzulegen.
 /// </summary>
 public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
 {
+    private readonly TestIdSequence _ids = new();
     private readonly SqliteConnection _connection;
     private readonly MdExplorerDbContext _dbContext;
     private readonly TagRepository _tagRepository;
@@ -43,8 +44,6 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
         await _connection.DisposeAsync().ConfigureAwait(false);
     }
 
-    // ============ Empty / NULL Inputs ============
-
     [Fact]
     public async Task TagRepo_GetBySlugsAsync_OnEmptyCollection_ReturnsEmpty()
     {
@@ -73,7 +72,7 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     public async Task TagRepo_ReplaceFileTagsAsync_OnNullArgument_Throws()
     {
         _ = await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _tagRepository.ReplaceFileTagsAsync(Guid.NewGuid(), null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
+            () => _tagRepository.ReplaceFileTagsAsync(null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
     [Fact]
@@ -93,47 +92,42 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
             () => _documentRepository.GetStaleOrMissingAsync(null!, TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
-    // ============ Duplicate Detection ============
-
     [Fact]
     public async Task TagRepo_AddAsync_OnDuplicateSlug_ThrowsOnSaveChanges()
     {
-        Tag first = new() { Id = Guid.NewGuid(), Name = "Foo", Slug = "foo" };
+        Tag first = new() { Id = _ids.Next(), Name = "Foo", Slug = "foo" };
         await _tagRepository.AddAsync(first, TestContext.Current.CancellationToken).ConfigureAwait(true);
         _ = await _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        Tag duplicate = new() { Id = Guid.NewGuid(), Name = "Foo-2", Slug = "foo" };
+        Tag duplicate = new() { Id = _ids.Next(), Name = "Foo-2", Slug = "foo" };
         await _tagRepository.AddAsync(duplicate, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        DbUpdateException ex = await Assert.ThrowsAsync<DbUpdateException>(
+        DatabaseOperationException ex = await Assert.ThrowsAsync<DatabaseOperationException>(
             () => _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
-        Assert.NotNull(ex.InnerException);
-        _ = Assert.IsType<SqliteException>(ex.InnerException);
+        DbUpdateException update = Assert.IsType<DbUpdateException>(ex.InnerException);
+        _ = Assert.IsType<SqliteException>(update.InnerException);
     }
 
     [Fact]
     public async Task TagRepo_AddAsync_OnSameSlugInSamePending_ThrowsOnSaveChanges()
     {
-        // Repro: zwei Adds mit gleichem Slug im selben SaveChanges-Batch.
-        Tag a = new() { Id = Guid.NewGuid(), Name = "Foo", Slug = "duplicate-pending" };
-        Tag b = new() { Id = Guid.NewGuid(), Name = "Foo-2", Slug = "duplicate-pending" };
+        // Beide Zeilen gehen im selben SaveChanges an die Datenbank; erst der eindeutige Index fängt sie ab.
+        Tag a = new() { Id = _ids.Next(), Name = "Foo", Slug = "duplicate-pending" };
+        Tag b = new() { Id = _ids.Next(), Name = "Foo-2", Slug = "duplicate-pending" };
 
         await _tagRepository.AddAsync(a, TestContext.Current.CancellationToken).ConfigureAwait(true);
         await _tagRepository.AddAsync(b, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = await Assert.ThrowsAsync<DbUpdateException>(
+        _ = await Assert.ThrowsAsync<DatabaseOperationException>(
             () => _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
-
-    // ============ ReplaceFileTagsAsync edge cases ============
 
     [Fact]
     public async Task TagRepo_ReplaceFileTagsAsync_OnEmptyTagIds_RemovesAllExisting()
     {
-        // Vorbereitung: ein File mit zwei Tag-Links.
         Guid fileId = await SeedFileWithTwoTagsAsync().ConfigureAwait(true);
 
-        await _tagRepository.ReplaceFileTagsAsync(fileId, [], TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await ReplaceAsync(fileId, []).ConfigureAwait(true);
         _ = await _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         int remaining = await _dbContext.Set<MarkdownFileTag>()
@@ -142,20 +136,46 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task TagRepo_ReplaceFileTagsAsync_OnDuplicateTagIdsInInput_ThrowsDuringAdd()
+    public async Task TagRepo_ReplaceFileTagsAsync_WithOverlappingTags_KeepsTheSharedLinkAndSwapsTheRest()
     {
-        // Befund: das Repo deduppt nicht. EF-Change-Tracker fängt das Duplikat
-        // im Composite-Key {MarkdownFileId, TagId} bereits beim AddAsync ab. Caller müssen
-        // dedupplizieren oder eine InvalidOperationException erwarten (dokumentiertes Verhalten).
+        // Der häufigste Fall im Betrieb: Eine Datei wird neu geparst, und ein Teil ihrer
+        // Schlagworte bleibt. Wie im Parser läuft das in einem frischen Kontext, der die alten
+        // Zuordnungen nicht kennt.
         Guid fileId = await SeedFileWithTwoTagsAsync().ConfigureAwait(true);
-        Guid singleTagId = await _dbContext.Set<Tag>().Select(t => t.Id).FirstAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Guid beta = await TagIdAsync("beta").ConfigureAwait(true);
+        Tag gamma = new() { Id = _ids.Next(), Name = "Gamma", Slug = "gamma" };
+        _ = _dbContext.Set<Tag>().Add(gamma);
+        _ = await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _dbContext.ChangeTracker.Clear();
 
-        _ = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _tagRepository.ReplaceFileTagsAsync(fileId, [singleTagId, singleTagId], TestContext.Current.CancellationToken))
-            .ConfigureAwait(true);
+        await ReplaceAsync(fileId, [beta, gamma.Id]).ConfigureAwait(true);
+        _ = await _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        List<Guid> linked = await _dbContext.Set<MarkdownFileTag>()
+            .Where(link => link.MarkdownFileId == fileId)
+            .Select(link => link.TagId)
+            .ToListAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.Equal([beta, gamma.Id], linked.Order());
     }
 
-    // ============ MarkdownFileRepository ============
+    [Fact]
+    public async Task TagRepo_ReplaceFileTagsAsync_OnDuplicateTagIdsInInput_LinksTheTagOnce()
+    {
+        // Ein Schlagwort, das in einer Datei zweimal vorkommt, ist eine Zuordnung. Der Schlüssel
+        // {MarkdownFileId, TagId} ließe eine zweite ohnehin nicht zu.
+        Guid fileId = await SeedFileWithTwoTagsAsync().ConfigureAwait(true);
+        Guid alpha = await TagIdAsync("alpha").ConfigureAwait(true);
+        _dbContext.ChangeTracker.Clear();
+
+        await ReplaceAsync(fileId, [alpha, alpha]).ConfigureAwait(true);
+        _ = await _tagRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Guid linked = await _dbContext.Set<MarkdownFileTag>()
+            .Where(link => link.MarkdownFileId == fileId)
+            .Select(link => link.TagId)
+            .SingleAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Assert.Equal(alpha, linked);
+    }
 
     [Fact]
     public async Task FileRepo_GetByAbsolutePathAsync_OnNonExistentPath_ReturnsNull()
@@ -177,19 +197,23 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
         MarkdownFile dup = NewFile(@"C:\notes\a.md");
         await _fileRepository.AddAsync(dup, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-        _ = await Assert.ThrowsAsync<DbUpdateException>(
+        _ = await Assert.ThrowsAsync<DatabaseOperationException>(
             () => _fileRepository.SaveChangesAsync(TestContext.Current.CancellationToken)).ConfigureAwait(true);
     }
 
-    // ============ Helfer ============
+    private Task<Guid> TagIdAsync(string slug) =>
+        _dbContext.Set<Tag>().Where(tag => tag.Slug == slug).Select(tag => tag.Id).SingleAsync(TestContext.Current.CancellationToken);
+
+    private Task ReplaceAsync(Guid fileId, IReadOnlyCollection<Guid> tagIds) =>
+        _tagRepository.ReplaceFileTagsAsync(new Dictionary<Guid, IReadOnlyCollection<Guid>> { [fileId] = tagIds }, TestContext.Current.CancellationToken);
 
     private async Task<Guid> SeedFileWithTwoTagsAsync()
     {
         MarkdownFile file = NewFile(@"C:\seed\file.md");
         _ = _dbContext.Set<MarkdownFile>().Add(file);
 
-        Tag tag1 = new() { Id = Guid.NewGuid(), Name = "Alpha", Slug = "alpha" };
-        Tag tag2 = new() { Id = Guid.NewGuid(), Name = "Beta", Slug = "beta" };
+        Tag tag1 = new() { Id = _ids.Next(), Name = "Alpha", Slug = "alpha" };
+        Tag tag2 = new() { Id = _ids.Next(), Name = "Beta", Slug = "beta" };
         _ = _dbContext.Set<Tag>().Add(tag1);
         _ = _dbContext.Set<Tag>().Add(tag2);
         _ = _dbContext.Set<MarkdownFileTag>().Add(new MarkdownFileTag { MarkdownFileId = file.Id, TagId = tag1.Id });
@@ -198,9 +222,9 @@ public sealed class RepositoryEdgeCasesTests : IAsyncDisposable
         return file.Id;
     }
 
-    private static MarkdownFile NewFile(string absolutePath) => new()
+    private MarkdownFile NewFile(string absolutePath) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = _ids.Next(),
         AbsolutePath = absolutePath,
         RelativePath = System.IO.Path.GetFileName(absolutePath),
         FileNameWithoutExtension = System.IO.Path.GetFileNameWithoutExtension(absolutePath),

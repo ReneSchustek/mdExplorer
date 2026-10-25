@@ -4,7 +4,7 @@ using MdExplorer.Search.Services;
 namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
-/// Prüft die Randfälle der Eingabe-Übersetzung. Der Übersetzer muss auch halbfertige
+/// Randfälle beim Übersetzen der Sucheingabe. Der Übersetzer muss auch halbfertige
 /// Eingaben verkraften, denn der Nutzer tippt, und nach jedem Zeichen läuft eine Suche.
 /// Eine Eingabe wie <c>tag:</c> oder ein offenes Anführungszeichen ist deshalb der
 /// Normalfall und darf keine ungültige FTS5-Anfrage erzeugen.
@@ -69,8 +69,8 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     public void Build_WithASpaceAfterTheTagPrefix_TreatsTheNextWordAsAPlainTerm()
     {
         // Der Wert muss direkt am Doppelpunkt hängen. Steht ein Leerzeichen dazwischen,
-        // gilt der Rest als gewöhnlicher Suchbegriff; das ist bewusst so, weil sonst ein
-        // versehentliches Leerzeichen die Trefferliste unbemerkt auf einen Tag einengen würde.
+        // gilt der Rest als gewöhnlicher Suchbegriff. Sonst engte ein versehentliches
+        // Leerzeichen die Trefferliste unbemerkt auf ein Schlagwort ein.
         SearchQueryBuilder sut = new();
 
         Fts5QueryPlan plan = sut.Build("tag: projekt");
@@ -136,7 +136,8 @@ public sealed class SearchQueryBuilderEdgeCaseTests
 
         Fts5QueryPlan plan = sut.Build("\"er sagte \"\"halt\"\"\"");
 
-        Assert.Contains("halt", plan.MatchExpression, StringComparison.Ordinal);
+        // FTS5 schreibt ein Anführungszeichen in einer Phrase verdoppelt; es bleibt genau eines.
+        Assert.Equal("\"er sagte \"\"halt\"\"\"", plan.MatchExpression, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -159,19 +160,19 @@ public sealed class SearchQueryBuilderEdgeCaseTests
 
         Fts5QueryPlan plan = sut.Build("e-mail");
 
-        Assert.DoesNotContain("NOT", plan.MatchExpression, StringComparison.Ordinal);
+        Assert.Equal("\"e mail\"", plan.MatchExpression, StringComparer.Ordinal);
     }
+
     /// <remarks>
     /// <para>
-    /// <c>tag:"zwei woerter"</c> — die Wortgruppe muss als **ein** Wert beim Schlagwort
+    /// Eine Wortgruppe in Anführungszeichen hinter <c>tag:</c> muss als ein Wert beim Schlagwort
     /// ankommen. Käme sie als zwei Dinge an (eine Einschränkung auf <c>zwei</c> und, davon
     /// unabhängig, das zweite Wort irgendwo im Text), enthielte die Trefferliste
     /// Dateien, die mit dem gesuchten Schlagwort nichts zu tun haben.
     /// </para>
     /// <para>
-    /// Dass die Leerstelle dabei wegfällt, ist gewollt und kein zweiter Fehler: Ein Schlagwort
-    /// ist ein Slug und enthält keine. Der Wert ist danach ohne Treffer, aber die Anfrage
-    /// fragt das, was dasteht, und nicht zwei Dinge auf einmal.
+    /// Die Leerstelle bleibt dabei erhalten: Der Index zerlegt den Schlagwort-Namen an
+    /// Leerzeichen und Bindestrichen, die Phrase trifft ihn also in beiden Schreibweisen.
     /// </para>
     /// </remarks>
     [Fact]
@@ -179,9 +180,9 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     {
         SearchQueryBuilder sut = new();
 
-        Fts5QueryPlan plan = sut.Build("tag:\"zwei woerter\"");
+        Fts5QueryPlan plan = sut.Build("tag:\"zwei teile\"");
 
-        Assert.Equal("Tags:\"zweiwoerter\"", plan.MatchExpression, StringComparer.Ordinal);
+        Assert.Equal("Tags:\"zwei teile\"", plan.MatchExpression, StringComparer.Ordinal);
     }
 
     /// <remarks>
@@ -198,18 +199,61 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     }
 
     /// <remarks>
-    /// Die Verneinung am Anfang: Ohne vorangehenden Begriff darf kein führendes Leerzeichen
-    /// entstehen, und die Anfrage muss trotzdem gültig sein.
+    /// Die Verneinung allein: FTS5 kennt <c>NOT</c> nur zwischen zwei Ausdrücken, ein
+    /// <c>NOT "bericht"</c> wiese es als Syntaxfehler ab. Ohne einen Begriff, von dem
+    /// ausgeschlossen wird, entsteht deshalb keine Anfrage.
     /// </remarks>
     [Fact]
-    public void Build_WithANegationAsTheOnlyInput_StillProducesAValidQuery()
+    public void Build_WithANegationAsTheOnlyInput_ProducesNoQuery()
     {
         SearchQueryBuilder sut = new();
 
         Fts5QueryPlan plan = sut.Build("-bericht");
 
-        Assert.StartsWith("NOT ", plan.MatchExpression, StringComparison.Ordinal);
-        Assert.DoesNotContain("  ", plan.MatchExpression, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, plan.MatchExpression, StringComparer.Ordinal);
+    }
+
+    /// <remarks>
+    /// Die Verneinung vor dem Begriff, von dem ausgeschlossen wird: Sie wandert hinter ihn.
+    /// </remarks>
+    [Fact]
+    public void Build_WithANegationBeforeTheTerm_PutsTheExclusionBehindIt()
+    {
+        SearchQueryBuilder sut = new();
+
+        Fts5QueryPlan plan = sut.Build("-entwurf bericht");
+
+        Assert.Equal("\"bericht\" NOT \"entwurf\"", plan.MatchExpression, StringComparer.Ordinal);
+    }
+
+    /// <remarks>
+    /// <c>NOT</c> bindet in FTS5 stärker als <c>OR</c>. Ohne Klammer schlösse der Begriff nur
+    /// den letzten Zweig aus.
+    /// </remarks>
+    [Fact]
+    public void Build_WithAnExclusionBehindAnAlternative_ExcludesFromTheWholeAlternative()
+    {
+        SearchQueryBuilder sut = new();
+
+        Fts5QueryPlan plan = sut.Build("bericht OR notiz -entwurf");
+
+        Assert.Equal("(\"bericht\" OR \"notiz\") NOT \"entwurf\"", plan.MatchExpression, StringComparer.Ordinal);
+    }
+
+    /// <remarks>
+    /// Ein Operator am Ende entsteht beim Tippen, bevor der nächste Begriff da ist.
+    /// </remarks>
+    [Theory]
+    [InlineData("bericht OR")]
+    [InlineData("bericht AND")]
+    [InlineData("bericht NOT")]
+    public void Build_WithAnOperatorAtTheEnd_DropsIt(string input)
+    {
+        SearchQueryBuilder sut = new();
+
+        Fts5QueryPlan plan = sut.Build(input);
+
+        Assert.Equal("\"bericht\"", plan.MatchExpression, StringComparer.Ordinal);
     }
 
     /// <remarks>
@@ -220,11 +264,11 @@ public sealed class SearchQueryBuilderEdgeCaseTests
     [InlineData(",,,bericht")]
     [InlineData("...bericht")]
     [InlineData(";;bericht")]
-    public void Build_WithLeadingSeparators_FindsTheWordBehindThem(string eingabe)
+    public void Build_WithLeadingSeparators_FindsTheWordBehindThem(string input)
     {
         SearchQueryBuilder sut = new();
 
-        Fts5QueryPlan plan = sut.Build(eingabe);
+        Fts5QueryPlan plan = sut.Build(input);
 
         Assert.Contains("bericht", plan.MatchExpression, StringComparison.Ordinal);
     }
@@ -241,5 +285,33 @@ public sealed class SearchQueryBuilderEdgeCaseTests
         Fts5QueryPlan plan = sut.Build("tag:\"\"");
 
         Assert.DoesNotContain("Tags", plan.MatchExpression, StringComparison.Ordinal);
+    }
+
+    /// <remarks>
+    /// Ein versehentlich eingefügter Text darf keinen MATCH-Ausdruck mit tausenden Begriffen
+    /// erzeugen; die Suche läuft nach jedem Tastendruck erneut.
+    /// </remarks>
+    [Fact]
+    public void Build_WithAPastedPage_KeepsAtMostThirtyTwoTerms()
+    {
+        SearchQueryBuilder sut = new();
+        string pasted = string.Join(' ', Enumerable.Range(0, 5_000).Select(index => $"wort{index}"));
+
+        Fts5QueryPlan plan = sut.Build(pasted);
+
+        int terms = plan.MatchExpression.Split(" AND ", StringSplitOptions.None).Length;
+        Assert.Equal(32, terms);
+    }
+
+    [Fact]
+    public void Build_WithAnOverlongPhrase_CutsItTo256Characters()
+    {
+        SearchQueryBuilder sut = new();
+        string phrase = new('a', 900);
+
+        Fts5QueryPlan plan = sut.Build($"\"{phrase}\"");
+
+        // 256 Zeichen plus die beiden Anführungszeichen der FTS5-Phrase.
+        Assert.Equal(258, plan.MatchExpression.Length);
     }
 }

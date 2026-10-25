@@ -16,8 +16,8 @@ public interface ISearchIndexStorage
 
     /// <summary>
     /// Wendet die übergebenen Lösch- und Insert-/Update-Operationen in einer einzigen Transaktion an.
-    /// Aufrufer übergeben die Anzahl der zu löschenden Dateien (z. B. Waisen) und die neu zu
-    /// indexierenden Einträge.
+    /// Aufrufer übergeben die Ids der zu löschenden Dateien (etwa verwaiste Einträge) und die neu
+    /// zu indexierenden Einträge. Ein Eintrag, dessen Datei schon im Index steht, ersetzt den alten.
     /// </summary>
     Task ApplyChangesAsync(
         IReadOnlyCollection<Guid> deletes,
@@ -58,7 +58,7 @@ public sealed record SearchIndexEntry(
 
 /// <summary>FTS5-Suchanfrage mit Pfad-Filter, Pagination und Gewichten.</summary>
 /// <param name="MatchExpression">FTS5-MATCH-Ausdruck (vom <c>SearchQueryBuilder</c> aufbereitet).</param>
-/// <param name="PathLikePattern">Optionaler LIKE-Pfadfilter (z. B. <c>"notes/%"</c>) oder <see langword="null"/>.</param>
+/// <param name="PathLikePattern">Optionaler LIKE-Pfadfilter (z. B. <c>"notes%"</c>) mit Backslash als Escape-Zeichen für <c>%</c> und <c>_</c>, oder <see langword="null"/>.</param>
 /// <param name="Take">Maximale Trefferzahl.</param>
 /// <param name="Skip">Anzahl zu überspringender Treffer (Pagination).</param>
 /// <param name="TitleWeight">bm25-Gewicht der Titelspalte.</param>
@@ -81,7 +81,7 @@ public sealed record SearchIndexQuery(
 /// <param name="MarkdownFileId">Identität des Dokuments.</param>
 /// <param name="Path">Pfad-Spalte (relativ).</param>
 /// <param name="Title">Titel-Spalte.</param>
-/// <param name="Snippet">Vom FTS5-Snippet erzeugter Auszug mit <c>&lt;mark&gt;</c>-Markern.</param>
+/// <param name="Snippet">Vom FTS5-Snippet erzeugter Auszug, Trefferstellen zwischen den <see cref="SnippetMarkers"/>.</param>
 /// <param name="Score">bm25-Score; kleiner = relevanter.</param>
 public sealed record SearchIndexHit(
     Guid MarkdownFileId,

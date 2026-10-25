@@ -8,9 +8,13 @@ using Microsoft.EntityFrameworkCore;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Stellt sicher, dass ein 2.000-File-Batch in
-/// <see cref="MarkdownDocumentRepository.GetStaleOrMissingAsync"/>
-/// kein SQLite-Parameter-Limit auslöst.
+/// Große Id- und Slug-Mengen gehen in Portionen an SQLite, damit eine IN-Liste die Grenze für
+/// gebundene Parameter nicht reißt und die Abfrage mit „too many SQL variables" abbricht.
+/// <para>
+/// Die Verbindung läuft mit der alten Grenze von 999 Parametern (<see cref="SqliteParameterLimit"/>);
+/// die 2.000 Ids liegen darüber. Ein fehlendes Portionieren fällt damit hier auf und nicht erst
+/// beim Nutzer mit einer anders übersetzten SQLite.
+/// </para>
 /// </summary>
 public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
 {
@@ -23,6 +27,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
     {
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
+        SqliteParameterLimit.Restrict(_connection);
 
         DbContextOptions<MdExplorerDbContext> options = new DbContextOptionsBuilder<MdExplorerDbContext>()
             .UseSqlite(_connection)
@@ -45,13 +50,10 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
     public async Task GetStaleOrMissingAsync_OnTwoThousandIds_DoesNotExceedSqliteParameterLimit()
     {
         const int BatchSize = 2_000;
-        Dictionary<Guid, string> hashes = new(BatchSize);
-        for (int i = 0; i < BatchSize; i++)
-        {
-            hashes[Guid.NewGuid()] = $"hash-{i}";
-        }
+        Dictionary<Guid, string> hashes = SqliteParameterLimit.DistinctIds(BatchSize)
+            .ToDictionary(id => id, id => $"hash-{id}");
 
-        // Sollte ohne SqliteException "too many SQL variables" zurückkommen; alle Ids fehlen in der leeren DB.
+        // Alle Ids fehlen in der leeren DB und gelten deshalb als zu parsen.
         IReadOnlyList<Guid> result = await _documentRepository
             .GetStaleOrMissingAsync(hashes, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
@@ -63,13 +65,8 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
     public async Task GetByMarkdownFileIdsAsync_OnTwoThousandIds_DoesNotExceedSqliteParameterLimit()
     {
         const int BatchSize = 2_000;
-        List<Guid> ids = new(BatchSize);
-        for (int i = 0; i < BatchSize; i++)
-        {
-            ids.Add(Guid.NewGuid());
-        }
+        List<Guid> ids = SqliteParameterLimit.DistinctIds(BatchSize);
 
-        // Alle Ids fehlen in der leeren DB: darf ohne SqliteException "too many SQL variables" zurückkommen.
         IReadOnlyDictionary<Guid, MarkdownDocument> result = await _documentRepository
             .GetByMarkdownFileIdsAsync(ids, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
@@ -80,33 +77,7 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
     [Fact]
     public async Task GetByMarkdownFileIdsAsync_ReturnsTrackedEntities_ThatPersistUpdates()
     {
-        Guid fileId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-        MarkdownFile parent = new()
-        {
-            Id = fileId,
-            AbsolutePath = @"C:\V\doc.md",
-            RelativePath = "doc.md",
-            FileNameWithoutExtension = "doc",
-            SizeBytes = 0,
-            LastWriteTimeUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
-            ContentHash = "file-hash",
-            IndexedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
-        };
-        _ = await _dbContext.Set<MarkdownFile>().AddAsync(parent, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-
-        MarkdownDocument seed = new()
-        {
-            Id = Guid.NewGuid(),
-            MarkdownFileId = fileId,
-            SourceContentHash = "alt",
-            FrontmatterJson = "{}",
-            OutlinksJson = "[]",
-            ParsedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
-        };
-        seed.SetRenderedHtmlGz([1, 2, 3]);
-        await _documentRepository.AddAsync(seed, TestContext.Current.CancellationToken).ConfigureAwait(true);
-        _ = await _documentRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        Guid fileId = await SeedDocumentAsync().ConfigureAwait(true);
 
         IReadOnlyDictionary<Guid, MarkdownDocument> loaded = await _documentRepository
             .GetByMarkdownFileIdsAsync([fileId], TestContext.Current.CancellationToken)
@@ -125,6 +96,22 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
     }
 
     [Fact]
+    public async Task GetByMarkdownFileIdAsync_LoadsWithoutTracking()
+    {
+        // Der einzige Leser ist die Vorschau. Verfolgt angelegt, hielte der Kontext eine Kopie des
+        // ganzen gepackten HTML als Vergleichsstand, ohne dass je etwas zurückgeschrieben wird.
+        Guid fileId = await SeedDocumentAsync().ConfigureAwait(true);
+        _dbContext.ChangeTracker.Clear();
+
+        MarkdownDocument? loaded = await _documentRepository
+            .GetByMarkdownFileIdAsync(fileId, TestContext.Current.CancellationToken)
+            .ConfigureAwait(true);
+
+        Assert.NotNull(loaded);
+        Assert.Empty(_dbContext.ChangeTracker.Entries());
+    }
+
+    [Fact]
     public async Task GetBySlugsAsync_OnTwoThousandSlugs_DoesNotExceedSqliteParameterLimit()
     {
         const int BatchSize = 2_000;
@@ -139,5 +126,37 @@ public sealed class MarkdownDocumentRepositoryBatchTests : IAsyncDisposable
             .ConfigureAwait(true);
 
         Assert.Empty(result);
+    }
+
+    private async Task<Guid> SeedDocumentAsync()
+    {
+        Guid fileId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        MarkdownFile parent = new()
+        {
+            Id = fileId,
+            AbsolutePath = @"C:\V\doc.md",
+            RelativePath = "doc.md",
+            FileNameWithoutExtension = "doc",
+            SizeBytes = 0,
+            LastWriteTimeUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+            ContentHash = "file-hash",
+            IndexedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+        };
+        _ = await _dbContext.Set<MarkdownFile>().AddAsync(parent, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        MarkdownDocument seed = new()
+        {
+            Id = Guid.Parse("55555555-5555-5555-5555-555555555555"),
+            MarkdownFileId = fileId,
+            SourceContentHash = "alt",
+            FrontmatterJson = "{}",
+            OutlinksJson = "[]",
+            ParsedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
+        };
+        seed.SetRenderedHtmlGz([1, 2, 3]);
+        await _documentRepository.AddAsync(seed, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _documentRepository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        return fileId;
     }
 }

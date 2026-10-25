@@ -12,12 +12,18 @@ using MEOptions = Microsoft.Extensions.Options.Options;
 
 namespace MdExplorer.Parser.Tests.Services;
 
+/// <summary>
+/// Der Orchestrator parst nur neue oder geänderte Dateien, legt Schlagworte je Slug einmal an,
+/// lädt vorhandene Dokumente gesammelt und lässt sich von einer einzelnen unlesbaren oder
+/// unparsbaren Datei nicht aufhalten. Bräche er an einer Datei ab, bliebe der ganze übrige
+/// Bestand ungeparst.
+/// </summary>
 public sealed class ParseOrchestratorTests
 {
     [Fact]
     public async Task RunOnce_OnMissingDocument_PersistsNewEntry()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         Guid fileId = harness.AddSource("/r/foo.md", "abchash", "# Titel\n\nBody mit #foo.");
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
@@ -30,7 +36,7 @@ public sealed class ParseOrchestratorTests
     [Fact]
     public async Task RunOnce_OnUnchangedHash_DoesNotReParse()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         _ = harness.AddSource("/r/foo.md", "h1", "Body #foo");
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
@@ -44,7 +50,7 @@ public sealed class ParseOrchestratorTests
     [Fact]
     public async Task RunOnce_OnChangedHash_UpdatesExistingDocument()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         Guid fileId = harness.AddSource("/r/foo.md", "h1", "Body #foo");
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
@@ -59,7 +65,7 @@ public sealed class ParseOrchestratorTests
     [Fact]
     public async Task RunOnce_OnReadFailure_SkipsFileWithoutCrash()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         Guid bad = harness.AddSource("/r/bad.md", "h1", "ignored");
         Guid good = harness.AddSource("/r/good.md", "h1", "Body #good");
         _ = harness.FileSystem.FailOnRead.Add("/r/bad.md".Replace('/', Path.DirectorySeparatorChar));
@@ -73,7 +79,7 @@ public sealed class ParseOrchestratorTests
     [Fact]
     public async Task RunOnce_OnFrontmatterTagsAndBodyTags_CreatesAllSlugs()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         Guid fileId = harness.AddSource("/r/f.md", "h1", """
             ---
             tags: [Alpha, Beta]
@@ -92,7 +98,7 @@ public sealed class ParseOrchestratorTests
     [Fact]
     public async Task RunOnce_ReusesExistingTags_DoesNotDuplicate()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         _ = harness.AddSource("/r/a.md", "h1", "#shared");
         _ = harness.AddSource("/r/b.md", "h1", "#shared");
 
@@ -102,17 +108,24 @@ public sealed class ParseOrchestratorTests
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("shared"));
     }
 
-    // Markdig wirft bei zu tief verschachtelten Eingaben (Depth-Limit).
-    // Wir testen die Resilienz des Orchestrators gegen ein einzelnes File, das beim Parser
-    // ArgumentException wirft (z. B. depth-limit-exceeded aus Markdig). Ohne Catch
-    // killt das den Parser-Service nach dem ersten schlechten File.
-    [Fact]
-    public async Task RunOnce_OnParserThrowingArgumentException_SkipsFileAndContinuesWithRest()
+    // Was der Parser an einer Datei nicht verkraftet, kostet nur diese Datei. Markdig wirft bei zu
+    // tief verschachtelten Eingaben eine ArgumentException; für Eingaben, die niemand vorhersieht,
+    // steht eine FormatException. Ohne Abfangen je Datei beendete die erste solche Datei den
+    // ganzen Durchlauf, und der Wächter legte danach den Dienst still.
+    [Theory]
+    [InlineData("argument")]
+    [InlineData("invalid-operation")]
+    [InlineData("format")]
+    public async Task RunOnce_OnAParserFailure_SkipsTheFileAndContinuesWithTheRest(string kind)
     {
-        const string BadContent = "DEEPLY_NESTED_PAYLOAD_FOR_TEST";
-        ThrowingParserHarness harness = new(
-            failingContent: BadContent,
-            failure: new ArgumentException("Markdown elements in the input are too deeply nested - depth limit exceeded."));
+        const string BadContent = "PAYLOAD_THE_PARSER_REJECTS";
+        Exception failure = kind switch
+        {
+            "argument" => new ArgumentException("depth limit exceeded"),
+            "invalid-operation" => new InvalidOperationException("kaputter Zustand"),
+            _ => new FormatException("unerwartet"),
+        };
+        using OrchestratorHarness harness = new(new ContentBasedThrowingParser(OrchestratorHarness.CreateParser(), BadContent, failure));
         Guid badId = harness.AddSource("/r/bad.md", "h1", BadContent);
         Guid goodId = harness.AddSource("/r/good.md", "h1", "Body #ok.");
 
@@ -121,38 +134,20 @@ public sealed class ParseOrchestratorTests
         Assert.False(harness.DocRepo.Snapshot.ContainsKey(badId));
         Assert.True(harness.DocRepo.Snapshot.ContainsKey(goodId));
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("ok"));
+        Assert.True(harness.FailureRepo.Snapshot.ContainsKey(badId));
     }
 
-    [Fact]
-    public async Task RunOnce_OnParserThrowingInvalidOperationException_SkipsFileAndContinuesWithRest()
-    {
-        const string BadContent = "INVALID_FRONTMATTER_PAYLOAD";
-        ThrowingParserHarness harness = new(
-            failingContent: BadContent,
-            failure: new InvalidOperationException("Yaml-Frontmatter ist kaputt."));
-        Guid badId = harness.AddSource("/r/bad.md", "h1", BadContent);
-        Guid goodId = harness.AddSource("/r/good.md", "h1", "Body #ok2.");
-
-        await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
-
-        Assert.False(harness.DocRepo.Snapshot.ContainsKey(badId));
-        Assert.True(harness.DocRepo.Snapshot.ContainsKey(goodId));
-        Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("ok2"));
-    }
-
-    // Defense-in-Depth: wenn eine ArgumentException über den ParseOneAsync-
-    // Catch hinaus durchreicht (z. B. aus einer Sub-Pipeline oder einem anderen Throwing-
-    // Service), darf TryRunOnceAsync sie schlucken und der Periodic-Loop weiterlaufen.
+    // Zweite Linie: Kommt eine ArgumentException außerhalb des Parsens einer Datei auf, hier beim
+    // Aufzählen der Quellen, fängt TryRunOnceAsync sie ab, und der nächste Takt läuft normal.
     [Fact]
     public async Task TryRunOnce_OnUnexpectedArgumentException_LogsAndContinues()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         harness.Source.ThrowOnNextEnumeration = new ArgumentException("simulated depth-limit-bubble");
 
-        // Darf NICHT werfen; TryRunOnceAsync fasert das in den Defense-in-Depth-Catches ab.
         await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken);
 
-        // Zweiter Tick läuft normal weiter.
+        // Der nächste Takt läuft normal.
         _ = harness.AddSource("/r/good.md", "h1", "#weiter");
         await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken);
 
@@ -162,7 +157,7 @@ public sealed class ParseOrchestratorTests
     [Fact]
     public async Task TryRunOnce_OnUnexpectedInvalidOperationException_LogsAndContinues()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         harness.Source.ThrowOnNextEnumeration = new InvalidOperationException("simulated parser state");
 
         await harness.Sut.TryRunOnceAsync(TestContext.Current.CancellationToken);
@@ -173,13 +168,12 @@ public sealed class ParseOrchestratorTests
         Assert.True(harness.TagRepo.TagsBySlug.ContainsKey("weiter"));
     }
 
-    // Zwei Dateien mit demselben neuen Schlagwort im selben Stapel.
-    // Ohne Batch-Cache würde tagRepo.AddAsync(Tag{Slug="shared"}) zweimal aufgerufen (pro Datei)
-    // und SaveChanges einen UNIQUE constraint failed: Tags.Slug werfen.
+    // Zwei Dateien mit demselben neuen Schlagwort im selben Stapel. Legte jede Datei es selbst an,
+    // scheiterte SaveChanges mit "UNIQUE constraint failed: Tags.Slug".
     [Fact]
     public async Task ProcessBatch_OnTwoFilesSharingNewTag_DoesNotThrowUniqueConstraint()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         Guid a = harness.AddSource("/r/a.md", "h1", "Body mit #shared.");
         Guid b = harness.AddSource("/r/b.md", "h1", "Anderes Body mit #shared!");
 
@@ -192,12 +186,12 @@ public sealed class ParseOrchestratorTests
         Assert.Equal(linkA, linkB);
     }
 
-    // ProcessBatchAsync lädt die existierenden Dokumente einmal gesammelt. Ein
-    // GetByMarkdownFileIdAsync-Point-Lookup je Datei wäre ein N+1, der Zähler muss 0 bleiben.
+    // ProcessBatchAsync lädt die vorhandenen Dokumente einmal gesammelt. Eine Abfrage je Datei über
+    // GetByMarkdownFileIdAsync wäre ein N+1; der Zähler muss bei 0 bleiben.
     [Fact]
     public async Task ProcessBatch_LoadsExistingDocumentsInSingleBatch_WithoutPerFilePointLookup()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         _ = harness.AddSource("/r/a.md", "h1", "Body #a");
         _ = harness.AddSource("/r/b.md", "h1", "Body #b");
         _ = harness.AddSource("/r/c.md", "h1", "Body #c");
@@ -209,12 +203,12 @@ public sealed class ParseOrchestratorTests
         Assert.Equal(3, harness.DocRepo.Snapshot.Count);
     }
 
-    // Der Batch-Load muss auch den Update-Pfad speisen: ein bereits vorhandenes Dokument
-    // wird über den gesammelten Lookup gefunden und aktualisiert, nicht dupliziert.
+    // Das gesammelte Laden speist auch das Ändern: Ein vorhandenes Dokument wird dort gefunden und
+    // aktualisiert statt doppelt angelegt.
     [Fact]
     public async Task ProcessBatch_OnExistingDocument_UpdatesViaBatchLoadedEntry()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         Guid fileId = harness.AddSource("/r/foo.md", "h1", "Body #foo");
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
 
@@ -229,7 +223,7 @@ public sealed class ParseOrchestratorTests
     [Fact]
     public async Task RunOnce_StoresGzippedHtmlBlob()
     {
-        TestHarness harness = new();
+        using OrchestratorHarness harness = new();
         Guid fileId = harness.AddSource("/r/f.md", "h1", "# Titel\n\nText.");
 
         await harness.Sut.RunOnceAsync(TestContext.Current.CancellationToken);
@@ -237,70 +231,5 @@ public sealed class ParseOrchestratorTests
         ReadOnlyMemory<byte> blob = harness.DocRepo.Snapshot[fileId].RenderedHtmlGz;
         string html = GzipHelper.Decompress(blob);
         Assert.Contains("<h1", html, StringComparison.Ordinal);
-    }
-
-    private sealed class TestHarness
-    {
-        public FakeFileSystem FileSystem { get; } = new();
-        public FakeMarkdownSourceProvider Source { get; } = new();
-        public FakeMarkdownDocumentRepository DocRepo { get; } = new();
-        public FakeTagRepository TagRepo { get; } = new();
-        public FakeParseFailureRepository FailureRepo { get; } = new();
-        public ParseFailureStatus FailureStatus { get; } = new();
-        public ParseOrchestrator Sut { get; }
-
-        public TestHarness()
-        {
-            DocRepo.OnSaveChangesAsync = ct => TagRepo.SaveChangesAsync(ct);
-
-            ServiceCollection services = new();
-            _ = services.AddSingleton<IMarkdownSourceProvider>(Source);
-            _ = services.AddSingleton<IMarkdownDocumentRepository>(DocRepo);
-            _ = services.AddSingleton<ITagRepository>(TagRepo);
-            _ = services.AddSingleton<IParseFailureRepository>(FailureRepo);
-            ServiceProvider provider = services.BuildServiceProvider();
-
-            TagNormalizer normalizer = new();
-            MarkdigParser parser = new(
-                new FrontmatterExtractor(),
-                new TagExtractor(new FakeSettingsService()),
-                new WikiLinkExtractor(),
-                normalizer);
-            ParserOptions parserOptions = new() { MaxParallelism = 2, BatchSize = 100, PollIntervalSeconds = 1 };
-            FakeTimeProvider timeProvider = new();
-
-            Sut = new ParseOrchestrator(
-                provider.GetRequiredService<IServiceScopeFactory>(),
-                FileSystem,
-                parser,
-                FailureStatus,
-                MEOptions.Create(parserOptions),
-                timeProvider,
-                NullLogger<ParseOrchestrator>.Instance);
-        }
-
-        public Guid AddSource(string path, string contentHash, string content)
-        {
-            Guid id = Guid.NewGuid();
-            string normalized = path.Replace('/', Path.DirectorySeparatorChar);
-            FileSystem.AddFile(normalized, content);
-            Source.Sources.Add(new MarkdownSourceSnapshot(id, normalized, contentHash));
-            return id;
-        }
-
-        public void UpdateSource(Guid fileId, string newHash, string newContent)
-        {
-            for (int i = 0; i < Source.Sources.Count; i++)
-            {
-                MarkdownSourceSnapshot existing = Source.Sources[i];
-                if (existing.Id == fileId)
-                {
-                    FileSystem.AddFile(existing.AbsolutePath, newContent);
-                    Source.Sources[i] = existing with { ContentHash = newHash };
-                    return;
-                }
-            }
-            throw new InvalidOperationException($"Source with id {fileId} not found.");
-        }
     }
 }

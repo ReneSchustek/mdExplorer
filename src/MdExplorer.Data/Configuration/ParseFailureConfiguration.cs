@@ -17,10 +17,16 @@ public sealed class ParseFailureConfiguration : IEntityTypeConfiguration<ParseFa
     /// <summary>Maximale Länge des SHA-256-Quell-Hashes als Hex-String.</summary>
     private const int ContentHashMaxLength = 64;
 
-    /// <summary>Maximale Länge der Parser-Fassungskennung.</summary>
+    /// <summary>
+    /// Maximale Länge der Parser-Fassungskennung. Die Kennung setzt sich aus zwei kurzen
+    /// Versionsangaben zusammen (<c>markdig/…;parser/…</c>) und bleibt weit darunter.
+    /// </summary>
     private const int EngineVersionMaxLength = 128;
 
-    /// <summary>Maximale Länge des gespeicherten Fehlschlag-Grundes.</summary>
+    /// <summary>
+    /// Maximale Länge des gespeicherten Fehlschlag-Grundes. Der Parse-Orchestrator kappt den
+    /// Grund auf dieselben 512 Zeichen; SQLite selbst setzt die Länge einer TEXT-Spalte nicht durch.
+    /// </summary>
     private const int FailureReasonMaxLength = 512;
 
     /// <inheritdoc />

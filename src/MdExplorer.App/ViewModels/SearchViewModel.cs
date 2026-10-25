@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using MdExplorer.App.Services;
+using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Messaging;
+using MdExplorer.Core.Models;
 using MdExplorer.Search.Abstractions;
 using MdExplorer.Search.Models;
 using MdExplorer.TagCloud.Messaging;
@@ -37,31 +39,32 @@ internal enum SearchListState
 }
 
 /// <summary>
-/// ViewModel der mittleren Spalte. Debouncing der Eingabe, asynchrone Suche und
-/// Pflege der Trefferliste. Concurrency wird über einen verworfenen <see cref="CancellationTokenSource"/>
-/// realisiert: jede neue Eingabe bricht die laufende Abfrage ab. Der Zugriff auf den Scoped
-/// <see cref="ISearchService"/> erfolgt pro Suchlauf über einen eigenen DI-Scope, damit das
-/// Singleton-ViewModel kein Captive-DbContext-Antipattern erzeugt.
+/// ViewModel des Registers Suche: stellt die Anfrage aus Eingabe, Modus, Ordner und Seitengröße
+/// zusammen und pflegt die Trefferliste.
 /// </summary>
+/// <remarks>
+/// Die Anfrage wird beim Tippen auf dem UI-Thread zusammengestellt. Entprellen, Abbrechen und das
+/// Zustellen nur der jüngsten Antwort übernimmt <see cref="DebouncedSearchRunner"/>.
+/// </remarks>
 internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
-    IRecipient<TagClickedMessage>
+    IRecipient<TagClickedMessage>,
+    IRecipient<SettingsChangedMessage>
 {
-    /// <summary>Standard-Debounce-Zeit für Tipp-Eingaben.</summary>
-    public static readonly TimeSpan DefaultDebounce = TimeSpan.FromMilliseconds(200);
-
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly TimeProvider _timeProvider;
-    private readonly TimeSpan _debounce;
-    private readonly ILogger<SearchViewModel> _logger;
     private readonly IMessenger _messenger;
+    private readonly DebouncedSearchRunner _runner;
     private readonly Lock _gate = new();
-    // Object-Lock (kein System.Threading.Lock!), denn EnableCollectionSynchronization erfordert
-    // einen kompatiblen Monitor-Lock für das WPF-Binding (Memory: wpf_collection_sync_lock).
-    private readonly object _resultsGate = new();
-
-    private CancellationTokenSource? _currentRunCts;
-    private ITimer? _debounceTimer;
     private bool _disposed;
+
+    /// <summary>
+    /// Wartezeit nach dem letzten Tastenanschlag, bevor gesucht wird. Ohne sie liefe für jedes
+    /// getippte Zeichen eine eigene Abfrage an, die die nächste gleich wieder abbricht. Der Wert
+    /// kommt aus den Einstellungen und ändert sich mit ihnen; gelesen und geschrieben wird er
+    /// unter <see cref="_gate"/>, wie <see cref="_resultsPerPage"/>.
+    /// </summary>
+    private TimeSpan _debounce;
+
+    /// <summary>Wie viele Treffer eine Anfrage holt, aus der Einstellung „Treffer pro Seite“.</summary>
+    private int _resultsPerPage;
 
     [ObservableProperty]
     private string _queryText = string.Empty;
@@ -80,37 +83,34 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     private SimilarityMode _similarity = SimilarityMode.None;
 
     // Standard: globale Suche über alle Roots. Erst wenn der Nutzer den Scope aktiviert,
-    // wird die Trefferliste auf den im Ordnerbaum gewählten Pfad (PathPrefixFilter) beschnitten.
+    // beschränkt die Anfrage sich auf den im Ordnerbaum gewählten Pfad (PathPrefixFilter).
     [ObservableProperty]
     private bool _scopeToSelectedFolder;
 
-    /// <summary>Standard-Konstruktor: nutzt <see cref="DefaultDebounce"/>.</summary>
-    public SearchViewModel(IServiceScopeFactory scopeFactory, TimeProvider timeProvider, IMessenger messenger, ILogger<SearchViewModel> logger)
-        : this(scopeFactory, timeProvider, messenger, logger, DefaultDebounce)
-    {
-    }
+    /// <summary>Der im Ordnerbaum gewählte Ordner, relativ zur Wurzel; gilt nur bei eingeschalteter Beschränkung.</summary>
+    [ObservableProperty]
+    private string? _pathPrefixFilter;
 
-    /// <summary>Konstruktor mit anpassbarem Debounce, für Tests.</summary>
-    internal SearchViewModel(IServiceScopeFactory scopeFactory, TimeProvider timeProvider, IMessenger messenger, ILogger<SearchViewModel> logger, TimeSpan debounce)
+    /// <summary>Erzeugt das ViewModel mit Wartezeit und Seitengröße aus den Einstellungen.</summary>
+    public SearchViewModel(
+        IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider,
+        IMessenger messenger,
+        ISettingsService settings,
+        IUiDispatcher dispatcher,
+        ILogger<SearchViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(messenger);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(dispatcher);
         ArgumentNullException.ThrowIfNull(logger);
-        ArgumentOutOfRangeException.ThrowIfLessThan(debounce, TimeSpan.Zero);
 
-        _scopeFactory = scopeFactory;
-        _timeProvider = timeProvider;
         _messenger = messenger;
-        _logger = logger;
-        _debounce = debounce;
+        _runner = new DebouncedSearchRunner(scopeFactory, timeProvider, dispatcher, logger, ApplyResults, () => State = SearchListState.Failed);
+        TakeSettings(settings.Current);
         Results = [];
-        // Cross-Thread-Schreiben in Results: der Debounce-Timer feuert auf ThreadPool, das
-        // anschließende ApplyResults muss aber an die UI-bound ListBox kommen. Ohne diese
-        // Registrierung fliegt eine NotSupportedException ("CollectionView aus Nicht-Dispatcher-
-        // Thread"), die aus dem RunSearchAsync-Catch herausfällt (NotSupportedException ist
-        // keine InvalidOperationException) und die Trefferliste leer bleiben lässt.
-        BindingOperations.EnableCollectionSynchronization(Results, _resultsGate);
         ClearSearchCommand = new RelayCommand(Clear);
         _messenger.RegisterAll(this);
     }
@@ -137,9 +137,9 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
 
     /// <summary>Die Suche selbst ist gescheitert.</summary>
     /// <remarks>
-    /// Bis hierher endete ein Fehlschlag still im Protokoll, und auf dem Schirm stand
-    /// „nichts gefunden", dieselbe Aussage wie bei einer Anfrage ohne Treffer, obwohl
-    /// niemand gesucht hat.
+    /// Ohne eigenen Zustand endete ein Fehlschlag still im Protokoll, und auf dem Schirm
+    /// stünde „nichts gefunden", dieselbe Aussage wie bei einer Anfrage ohne Treffer, obwohl
+    /// die Suche gar nicht gelaufen ist.
     /// </remarks>
     public bool ShowsSearchFailure => State == SearchListState.Failed;
 
@@ -152,14 +152,8 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
     /// </remarks>
     public bool IsSearching => State == SearchListState.Searching;
 
-    /// <summary>Optionaler Pfad-Prefix-Filter, der vom <see cref="FolderTreeViewModel"/> gespeist wird.</summary>
-    public string? PathPrefixFilter { get; set; }
-
-    /// <summary>Sortierte Trefferliste (UI-Binding-Ziel).</summary>
+    /// <summary>Sortierte Trefferliste (UI-Binding-Ziel); geschrieben wird nur auf dem UI-Thread.</summary>
     public ObservableCollection<SearchResultItemViewModel> Results { get; }
-
-    /// <summary>Wird gefeuert, wenn der Such-Lauf abgeschlossen ist (für Tests).</summary>
-    public event EventHandler? SearchCompleted;
 
     /// <summary>Löscht die Eingabe und die Trefferliste.</summary>
     public void Clear()
@@ -175,16 +169,13 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
             return;
         }
         _disposed = true;
+        _runner.Dispose();
         _messenger.UnregisterAll(this);
-        DisposeTimer();
-        CancelInFlight();
     }
 
     /// <summary>
     /// Empfänger von Tag-Klick-Events aus der Tag-Cloud. Setzt den Such-Filter
-    /// gemäß <see cref="TagFilterMode"/>: <see cref="TagFilterMode.Replace"/> ersetzt die Anfrage
-    /// durch <c>tag:slug</c>, <see cref="TagFilterMode.Add"/> hängt sie an, <see cref="TagFilterMode.Exclude"/>
-    /// hängt <c>-tag:slug</c> an. Doppelte Tokens werden idempotent vermieden.
+    /// gemäß <see cref="TagFilterMode"/>, siehe <see cref="SearchQueryText.WithTag"/>.
     /// </summary>
     public void Receive(TagClickedMessage message)
     {
@@ -193,98 +184,46 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
         {
             return;
         }
-        string token = $"tag:{message.Slug}";
-        string excludeToken = $"-tag:{message.Slug}";
-        QueryText = message.Mode switch
-        {
-            TagFilterMode.Replace => token,
-            TagFilterMode.Exclude => AppendUnique(QueryText, excludeToken),
-            TagFilterMode.Add => AppendUnique(QueryText, token),
-            _ => token,
-        };
+        QueryText = SearchQueryText.WithTag(QueryText, message.Slug, message.Mode);
     }
 
-    private static string AppendUnique(string existing, string token)
+    /// <summary>
+    /// Übernimmt Wartezeit und Seitengröße aus dem Einstellungsdialog. Sie gelten ab der nächsten
+    /// Eingabe; ein bereits laufender Zeitgeber endet mit der Zeit, mit der er angelegt wurde.
+    /// </summary>
+    public void Receive(SettingsChangedMessage message)
     {
-        if (string.IsNullOrWhiteSpace(existing))
-        {
-            return token;
-        }
-        string trimmed = existing.Trim();
-        string[] parts = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Any(part => string.Equals(part, token, StringComparison.Ordinal)))
-        {
-            return trimmed;
-        }
-        return trimmed + " " + token;
+        ArgumentNullException.ThrowIfNull(message);
+        TakeSettings(message.Current);
     }
 
-    private static bool MatchesPathFilter(SearchResult result, string? prefix)
+    private void TakeSettings(AppSettings settings)
     {
-        if (string.IsNullOrEmpty(prefix))
-        {
-            return true;
-        }
-        return result.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [LoggerMessage(EventId = 300, Level = LogLevel.Error, Message = "Suche fehlgeschlagen für Eingabe {QueryText}.")]
-    private static partial void LogSearchFailure(ILogger logger, Exception exception, string queryText);
-
-    partial void OnQueryTextChanged(string value)
-    {
-        ScheduleDebouncedSearch(value);
-    }
-
-    partial void OnModeChanged(SearchMode value)
-    {
-        if (!string.IsNullOrWhiteSpace(QueryText))
-        {
-            ScheduleDebouncedSearch(QueryText);
-        }
-    }
-
-    partial void OnSimilarityChanged(SimilarityMode value)
-    {
-        if (!string.IsNullOrWhiteSpace(QueryText))
-        {
-            ScheduleDebouncedSearch(QueryText);
-        }
-    }
-
-    partial void OnScopeToSelectedFolderChanged(bool value)
-    {
-        if (!string.IsNullOrWhiteSpace(QueryText))
-        {
-            ScheduleDebouncedSearch(QueryText);
-        }
-    }
-
-    private void ScheduleDebouncedSearch(string queryText)
-    {
-        bool isBlank = string.IsNullOrWhiteSpace(queryText);
-
+        TimeSpan debounce = TimeSpan.FromMilliseconds(settings.Behavior.SearchDebounceMs);
+        ArgumentOutOfRangeException.ThrowIfLessThan(debounce, TimeSpan.Zero);
         lock (_gate)
         {
-            DisposeTimer();
-            CancelInFlight();
-            if (isBlank)
-            {
-                lock (_resultsGate)
-                {
-                    Results.Clear();
-                }
-            }
-            else
-            {
-                _debounceTimer = _timeProvider.CreateTimer(OnDebounceElapsed, queryText, _debounce, Timeout.InfiniteTimeSpan);
-            }
+            _debounce = debounce;
+            _resultsPerPage = settings.Appearance.ResultsPerPage;
         }
+    }
 
-        // Bewusst außerhalb der Sperre: Ein Empfänger von PropertyChanged darf zurückrufen,
-        // ohne dass daraus ein Verklemmen wird. Und bis die Antwort da ist, wird über die
-        // neue Eingabe nichts behauptet. Die vorige Antwort galt der vorigen Anfrage.
-        State = isBlank ? SearchListState.Idle : SearchListState.Searching;
+    partial void OnQueryTextChanged(string value) => ScheduleDebouncedSearch(value);
+
+    partial void OnModeChanged(SearchMode value) => RepeatSearch();
+
+    partial void OnSimilarityChanged(SimilarityMode value) => RepeatSearch();
+
+    partial void OnScopeToSelectedFolderChanged(bool value) => RepeatSearch();
+
+    // Ein anderer Ordner ändert die Anfrage nur, wenn die Beschränkung gilt; sonst bliebe nach
+    // dem Wechsel die Trefferliste des vorigen Ordners stehen.
+    partial void OnPathPrefixFilterChanged(string? value)
+    {
+        if (ScopeToSelectedFolder)
+        {
+            RepeatSearch();
+        }
     }
 
     partial void OnStateChanged(SearchListState value)
@@ -295,109 +234,61 @@ internal sealed partial class SearchViewModel : ObservableObject, IDisposable,
         OnPropertyChanged(nameof(IsSearching));
     }
 
-    private void OnDebounceElapsed(object? state)
+    private void RepeatSearch()
     {
-        if (state is not string queryText)
+        if (!string.IsNullOrWhiteSpace(QueryText))
         {
-            return;
+            ScheduleDebouncedSearch(QueryText);
         }
-        CancellationTokenSource cts;
+    }
+
+    private void ScheduleDebouncedSearch(string queryText)
+    {
+        bool isBlank = string.IsNullOrWhiteSpace(queryText);
+        if (isBlank)
+        {
+            _runner.Cancel();
+            Results.Clear();
+        }
+        else
+        {
+            (SearchQuery query, TimeSpan debounce) = BuildQuery(queryText);
+            _runner.Schedule(query, debounce);
+        }
+
+        // Bewusst außerhalb der Sperre: Ein Empfänger von PropertyChanged darf zurückrufen,
+        // ohne dass daraus ein Verklemmen wird. Und bis die Antwort da ist, wird über die
+        // neue Eingabe nichts behauptet. Die vorige Antwort galt der vorigen Anfrage.
+        State = isBlank ? SearchListState.Idle : SearchListState.Searching;
+    }
+
+    /// <summary>Stellt die Anfrage zusammen, solange alle Eingaben auf dem UI-Thread stehen.</summary>
+    /// <remarks>
+    /// Die Ordnerbeschränkung geht als <c>path:</c>-Filter in die Abfrage. Hinterher im Speicher
+    /// gefiltert, blieben nur die Treffer, die zufällig unter den global besten lagen.
+    /// </remarks>
+    private (SearchQuery Query, TimeSpan Debounce) BuildQuery(string queryText)
+    {
+        string text = ScopeToSelectedFolder && !string.IsNullOrWhiteSpace(PathPrefixFilter)
+            ? queryText + " " + SearchQueryText.PathFilter(PathPrefixFilter)
+            : queryText;
+
         lock (_gate)
         {
-            if (_disposed)
-            {
-                return;
-            }
-            _currentRunCts = new CancellationTokenSource();
-            cts = _currentRunCts;
-        }
-        _ = RunSearchAsync(queryText, cts.Token);
-    }
-
-    private async Task RunSearchAsync(string queryText, CancellationToken cancellationToken)
-    {
-        try
-        {
-            SearchQuery query = new(queryText, Mode: Mode, Similarity: Similarity);
-            IReadOnlyList<SearchResult> results = await ExecuteSearchInScopeAsync(query, cancellationToken).ConfigureAwait(true);
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-            ApplyResults(results);
-        }
-        catch (OperationCanceledException)
-        {
-            // Suchlauf wurde durch neue Eingabe verdrängt, kein Fehler.
-        }
-        catch (InvalidOperationException exception)
-        {
-            LogSearchFailure(_logger, exception, queryText);
-            State = SearchListState.Failed;
-        }
-        finally
-        {
-            SearchCompleted?.Invoke(this, EventArgs.Empty);
-        }
-    }
-
-    private async Task<IReadOnlyList<SearchResult>> ExecuteSearchInScopeAsync(SearchQuery query, CancellationToken cancellationToken)
-    {
-        AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
-        await using (scope.ConfigureAwait(true))
-        {
-            ISearchService searchService = scope.ServiceProvider.GetRequiredService<ISearchService>();
-            return await searchService.SearchAsync(query, cancellationToken).ConfigureAwait(true);
+            return (new SearchQuery(text, Take: _resultsPerPage, Mode: Mode, Similarity: Similarity), _debounce);
         }
     }
 
     private void ApplyResults(IReadOnlyList<SearchResult> incoming)
     {
-        // Nur scopen, wenn der Nutzer es aktiv eingeschaltet hat, sonst bleibt die Suche global.
-        string? prefix = ScopeToSelectedFolder ? PathPrefixFilter : null;
-        // Lock-Pflicht: EnableCollectionSynchronization erwartet, dass jeder Schreiber den
-        // gleichen Monitor-Lock hält, sonst kann WPF beim Reverse-Read (Dispatcher-Thread)
-        // einen inkonsistenten Mittelzustand sehen.
-        lock (_resultsGate)
+        Results.Clear();
+        foreach (SearchResult result in incoming)
         {
-            Results.Clear();
-            foreach (SearchResult result in incoming)
-            {
-                if (!MatchesPathFilter(result, prefix))
-                {
-                    continue;
-                }
-                Results.Add(new SearchResultItemViewModel(result));
-            }
+            Results.Add(new SearchResultItemViewModel(result));
         }
 
         // Ab hier steht eine Antwort zur aktuellen Eingabe. Erst jetzt darf der Leerzustand
         // „nichts gefunden" sagen.
         State = Results.Count == 0 ? SearchListState.NoMatches : SearchListState.Results;
-    }
-
-    private void DisposeTimer()
-    {
-        _debounceTimer?.Dispose();
-        _debounceTimer = null;
-    }
-
-    private void CancelInFlight()
-    {
-        CancellationTokenSource? cts = _currentRunCts;
-        _currentRunCts = null;
-        if (cts is null)
-        {
-            return;
-        }
-        try
-        {
-            cts.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-            // CTS war bereits beim Run-Ende disposed (kein Fehler).
-        }
-        cts.Dispose();
     }
 }

@@ -1,10 +1,11 @@
 using System.Collections.ObjectModel;
 using System.Data.Common;
-using System.Globalization;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.Parser.Services;
 using MdExplorer.TagCloud.Abstractions;
+using MdExplorer.TagCloud.Localization;
 using MdExplorer.TagCloud.Models;
 using Microsoft.Extensions.Logging;
 
@@ -12,11 +13,13 @@ namespace MdExplorer.TagCloud.ViewModels;
 
 /// <summary>
 /// ViewModel des Tag-Management-Fensters. Listet alle Tags mit Anzahl betroffener Dateien
-/// und stellt projektweite Rename / Merge / Delete-Operationen bereit. Operationen verbergen
-/// einen Bestätigungsdialog über den injizierten <see cref="ITagManagementDialogService"/>.
+/// und stellt projektweite Rename / Merge / Delete-Operationen bereit. Vor jeder Operation fragt
+/// es über den injizierten <see cref="ITagManagementDialogService"/> nach und zeigt dabei die Vorschau.
 /// </summary>
 public sealed partial class TagManagementViewModel : ObservableObject
 {
+    // Seltenere Schlagworte jenseits dieser Grenze erscheinen in der Liste nicht und lassen sich
+    // hier nicht bearbeiten. Der Wert ist gesetzt, nicht gemessen.
     private const int TopTagsLimit = 1_000;
 
     private readonly ITagStatisticsService _statisticsService;
@@ -35,6 +38,9 @@ public sealed partial class TagManagementViewModel : ObservableObject
     private string? _statusMessage;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RenameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MergeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteCommand))]
     private bool _isBusy;
 
     /// <summary>Erzeugt das ViewModel und bindet die Pflichtabhängigkeiten.</summary>
@@ -68,9 +74,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
         try
         {
             int loaded = await ReloadItemsAsync(cancellationToken).ConfigureAwait(true);
-            StatusMessage = string.Create(
-                CultureInfo.CurrentCulture,
-                $"{loaded} Tag(s) geladen.");
+            StatusMessage = UiText.Format("TagManagement_Status_Loaded", loaded);
         }
         catch (OperationCanceledException)
         {
@@ -78,9 +82,9 @@ public sealed partial class TagManagementViewModel : ObservableObject
         }
         catch (DbException exception)
         {
-            // SQLite-Spitze: Status setzen, Liste auf Vorstand lassen.
+            // Eine SQLite-Spitze: Die Liste bleibt auf dem vorigen Stand, der Status sagt es.
             LogRefreshFailed(_logger, exception);
-            StatusMessage = "Tag-Liste konnte nicht geladen werden — siehe Log.";
+            StatusMessage = UiText.Get("TagManagement_Status_LoadFailed");
         }
         finally
         {
@@ -92,7 +96,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanOperateOnSelection))]
     public Task RenameAsync(CancellationToken cancellationToken) =>
         ExecuteWriteOperationAsync(
-            "Tag umbenennen",
+            UiText.Get("TagManagement_Operation_Rename"),
             (slug, ct) => _managementService.RenameAsync(slug, NewTagName, ct),
             cancellationToken);
 
@@ -100,7 +104,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanOperateOnSelection))]
     public Task MergeAsync(CancellationToken cancellationToken) =>
         ExecuteWriteOperationAsync(
-            "Tags zusammenführen",
+            UiText.Get("TagManagement_Operation_Merge"),
             (slug, ct) => _managementService.MergeAsync(slug, NewTagName, ct),
             cancellationToken);
 
@@ -108,38 +112,38 @@ public sealed partial class TagManagementViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanOperateOnSelectionWithoutTarget))]
     public async Task DeleteAsync(CancellationToken cancellationToken)
     {
-        if (SelectedItem is null)
+        string deleteTitle = UiText.Get("TagManagement_Operation_Delete");
+        if (SelectedItem is null || await TryGetPreviewAsync(deleteTitle, SelectedItem.Slug, cancellationToken).ConfigureAwait(true) is not { } preview)
         {
             return;
         }
-        TagPreview preview = await _managementService
-            .GetPreviewAsync(SelectedItem.Slug, cancellationToken).ConfigureAwait(true);
-        string question = BuildConfirmText("löschen", SelectedItem.Slug, null, preview);
-        if (!_dialogService.Confirm("Tag löschen", question))
+        string question = BuildConfirmText(deleteTitle, SelectedItem.Slug, null, preview);
+        if (!_dialogService.Confirm(deleteTitle, question))
         {
             return;
         }
         await RunWriteAsync(
-            "Tag löschen",
+            deleteTitle,
             ct => _managementService.DeleteAsync(SelectedItem.Slug, ct),
             cancellationToken).ConfigureAwait(true);
     }
 
+    private static bool IsValidTagName(string name) => HashtagPattern.IsValidName(name.Trim());
+
     private static string BuildConfirmText(string title, string slug, string? targetName, TagPreview preview)
     {
         string head = targetName is null
-            ? string.Create(CultureInfo.CurrentCulture, $"{title}: '#{slug}'")
-            : string.Create(CultureInfo.CurrentCulture, $"{title}: '#{slug}' -> '#{targetName.TrimStart('#')}'");
+            ? UiText.Format("TagManagement_Confirm_Head", title, slug)
+            : UiText.Format("TagManagement_Confirm_HeadWithTarget", title, slug, targetName.TrimStart('#'));
         if (preview.FileCount == 0)
         {
-            return string.Create(CultureInfo.CurrentCulture, $"{head}\n\nKeine Dateien betroffen.");
+            return head + "\n\n" + UiText.Get("TagManagement_Confirm_NoFiles");
         }
         string sampleBlock = preview.SamplePaths.Count == 0
             ? string.Empty
             : "\n - " + string.Join("\n - ", preview.SamplePaths);
-        return string.Create(
-            CultureInfo.CurrentCulture,
-            $"{head}\n\n{preview.FileCount} Datei(en) betroffen.{sampleBlock}\n\nFortfahren?");
+        return head + "\n\n" + UiText.Format("TagManagement_Confirm_FileCount", preview.FileCount)
+            + sampleBlock + "\n\n" + UiText.Get("TagManagement_Confirm_Proceed");
     }
 
     [LoggerMessage(EventId = 1100, Level = LogLevel.Information, Message = "{Operation} (Slug={Slug}): {Affected}/{Attempted} Dateien, {ErrorCount} Fehler.")]
@@ -148,8 +152,8 @@ public sealed partial class TagManagementViewModel : ObservableObject
     [LoggerMessage(EventId = 1101, Level = LogLevel.Warning, Message = "Tag-Liste konnte nicht geladen werden — Datenbank-Spitze.")]
     private static partial void LogRefreshFailed(ILogger logger, Exception exception);
 
-    // Reload als reiner Helfer ohne Status-Message. RunWriteAsync nutzt ihn,
-    // damit das Op-Feedback nicht vom Refresh-Status überschrieben wird.
+    // Lädt neu, ohne die Statuszeile anzufassen. RunWriteAsync braucht das, damit die Meldung
+    // zur Operation nicht von der Lade-Meldung überschrieben wird.
     private async Task<int> ReloadItemsAsync(CancellationToken cancellationToken)
     {
         IReadOnlyList<TagStatistic> stats = await _statisticsService
@@ -176,10 +180,14 @@ public sealed partial class TagManagementViewModel : ObservableObject
     {
         RenameCommand.NotifyCanExecuteChanged();
         MergeCommand.NotifyCanExecuteChanged();
+        if (!string.IsNullOrWhiteSpace(value) && !IsValidTagName(value))
+        {
+            StatusMessage = UiText.Format("TagManagement_Status_InvalidName", value.Trim());
+        }
     }
 
     private bool CanOperateOnSelection() =>
-        !IsBusy && SelectedItem is not null && !string.IsNullOrWhiteSpace(NewTagName);
+        !IsBusy && SelectedItem is not null && !string.IsNullOrWhiteSpace(NewTagName) && IsValidTagName(NewTagName);
 
     private bool CanOperateOnSelectionWithoutTarget() =>
         !IsBusy && SelectedItem is not null;
@@ -189,18 +197,45 @@ public sealed partial class TagManagementViewModel : ObservableObject
         Func<string, CancellationToken, Task<TagRewriteResult>> operation,
         CancellationToken cancellationToken)
     {
-        if (SelectedItem is null)
+        if (SelectedItem is null || await TryGetPreviewAsync(title, SelectedItem.Slug, cancellationToken).ConfigureAwait(true) is not { } preview)
         {
             return;
         }
-        TagPreview preview = await _managementService
-            .GetPreviewAsync(SelectedItem.Slug, cancellationToken).ConfigureAwait(true);
         string question = BuildConfirmText(title, SelectedItem.Slug, NewTagName, preview);
         if (!_dialogService.Confirm(title, question))
         {
             return;
         }
         await RunWriteAsync(title, ct => operation(SelectedItem.Slug, ct), cancellationToken).ConfigureAwait(true);
+    }
+
+    // Scheitert nur das Neuladen nach einer Operation, bleibt die Meldung zur Operation stehen.
+    private async Task TryReloadItemsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _ = await ReloadItemsAsync(cancellationToken).ConfigureAwait(true);
+        }
+        catch (DbException reloadException)
+        {
+            LogRefreshFailed(_logger, reloadException);
+        }
+    }
+
+    // Die Vorschau liest die Datenbank; eine Spitze dort endet als Meldung, nicht als Ausnahme
+    // aus dem Befehl.
+    private async Task<TagPreview?> TryGetPreviewAsync(string title, string slug, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _managementService.GetPreviewAsync(slug, cancellationToken).ConfigureAwait(true);
+        }
+        catch (DbException exception)
+        {
+            LogRefreshFailed(_logger, exception);
+            StatusMessage = UiText.Format("TagManagement_Status_Failed", title);
+            return null;
+        }
     }
 
     private async Task RunWriteAsync(
@@ -214,18 +249,9 @@ public sealed partial class TagManagementViewModel : ObservableObject
             TagRewriteResult result = await action(cancellationToken).ConfigureAwait(true);
             LogOperationCompleted(_logger, title, result.Slug, result.FilesAffected, result.FilesAttempted, result.Errors.Count);
             NewTagName = string.Empty;
-            try
-            {
-                _ = await ReloadItemsAsync(cancellationToken).ConfigureAwait(true);
-            }
-            catch (DbException reloadException)
-            {
-                // Reload-Fehler darf das Op-Feedback nicht verschlucken, nur loggen.
-                LogRefreshFailed(_logger, reloadException);
-            }
-            StatusMessage = string.Create(
-                CultureInfo.CurrentCulture,
-                $"{title}: {result.FilesAffected} von {result.FilesAttempted} Datei(en) geändert. Fehler: {result.Errors.Count}.");
+            await TryReloadItemsAsync(cancellationToken).ConfigureAwait(true);
+            StatusMessage = UiText.Format(
+                "TagManagement_Status_Completed", title, result.FilesAffected, result.FilesAttempted, result.Errors.Count);
         }
         catch (OperationCanceledException)
         {
@@ -233,11 +259,9 @@ public sealed partial class TagManagementViewModel : ObservableObject
         }
         catch (DbException exception)
         {
-            // SQLite-Spitze beim Preview-Lookup oder Schreibvorgang.
+            // Datenbank-Spitze beim Lesen der betroffenen Dateien.
             LogRefreshFailed(_logger, exception);
-            StatusMessage = string.Create(
-                CultureInfo.CurrentCulture,
-                $"{title} fehlgeschlagen — siehe Log.");
+            StatusMessage = UiText.Format("TagManagement_Status_Failed", title);
         }
         finally
         {

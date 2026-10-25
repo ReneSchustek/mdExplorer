@@ -3,9 +3,9 @@ using System;
 namespace MdExplorer.App.Services;
 
 /// <summary>
-/// Reine Find-Algorithmen für den Editor-Textbox (Ctrl+F). Stateless, damit der
-/// Code unter Test stehen kann ohne WPF-Abhängigkeit. Die UI bleibt im Code-Behind und
-/// übernimmt nur das Lesen/Schreiben von <c>SelectionStart</c> / <c>SelectionLength</c>.
+/// Suche im Textfeld des Editors (Strg+F), ohne Zustand und ohne WPF, damit sie sich ohne
+/// Oberfläche prüfen lässt. Das Code-Behind liest und setzt nur <c>SelectionStart</c> und
+/// <c>SelectionLength</c>.
 /// </summary>
 internal static class EditorFindHelper
 {
@@ -43,8 +43,8 @@ internal static class EditorFindHelper
             return null;
         }
         StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-        // LastIndexOf erwartet einen Start-Index vom Ende her; wir suchen "vor" endIndex,
-        // also bis endIndex - 1 inklusive. Wenn endIndex <= 0, direkt Wrap-Around.
+        // LastIndexOf zählt vom Startindex rückwärts. Gesucht wird vor endIndex, also ab
+        // endIndex - 1. Steht die Einfügemarke am Anfang, geht es gleich am Textende weiter.
         int boundary = Math.Min(endIndex, text.Length);
         int hit = boundary > 0 ? text.LastIndexOf(query, boundary - 1, boundary, comparison) : -1;
         if (hit < 0 && boundary < text.Length)

@@ -5,9 +5,16 @@ using Serilog.Parsing;
 
 namespace MdExplorer.App.Tests.Logging;
 
-/// <summary>Tests für den Ring-Buffer-Sink.</summary>
+/// <summary>
+/// Der Protokollspeicher für Protokollfenster und Betriebsanzeige ist begrenzt und verwirft die
+/// ältesten Einträge. Verwürfe er die neuesten, fehlte nach einer Fehlerserie ausgerechnet der
+/// letzte Fehler.
+/// </summary>
 public sealed class MemorySinkTests
 {
+    // Der Zeitpunkt wird nicht zugesichert; fest, damit kein Test von der Wanduhr abhängt.
+    private static readonly DateTimeOffset FixedTimestamp = new(2026, 10, 25, 9, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void Emit_OnSingleEvent_AppendsToSnapshot()
     {
@@ -69,7 +76,7 @@ public sealed class MemorySinkTests
         }
         properties.Add(new LogEventProperty("SourceContext", new ScalarValue(sourceContext)));
         return new LogEvent(
-            DateTimeOffset.UtcNow,
+            FixedTimestamp,
             level,
             exception: null,
             parsed,

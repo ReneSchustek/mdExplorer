@@ -1,0 +1,46 @@
+<Project>
+  <!--
+    Fassungen aller NuGet-Pakete an einer Stelle. Die Projektdateien nennen nur noch den
+    Paketnamen; ein Paket, das mehrere Projekte nutzen, kann so nicht in verschiedenen
+    Fassungen auseinanderlaufen.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.1" />
+    <PackageVersion Include="Markdig" Version="1.3.2" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Debug" Version="3.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.32.0.713" />
+    <!-- Über der Fassung, die Microsoft.Data.Sqlite nachzieht (2.1er-Reihe); in 2.1.11 stand
+         GHSA-2m69-gcr7-jv3q (Schweregrad High). Beim Anheben von Microsoft.Data.Sqlite
+         prüfen, ob der Eintrag noch nötig ist. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
+    <PackageVersion Include="StyleCop.Analyzers" Version="1.1.118" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.v3" Version="3.1.0" />
+    <PackageVersion Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+</Project>

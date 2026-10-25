@@ -1,5 +1,6 @@
 using System.Data.Common;
 using CommunityToolkit.Mvvm.Messaging;
+using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Hosting;
 using MdExplorer.TagCloud.Abstractions;
 using MdExplorer.TagCloud.Messaging;
@@ -25,6 +26,7 @@ public sealed partial class TagCloudRefreshService : BackgroundService
     private readonly IMessenger _messenger;
     private readonly TimeProvider _timeProvider;
     private readonly TagCloudOptions _options;
+    private readonly IBackgroundServiceStatus _serviceStatus;
     private readonly ILogger<TagCloudRefreshService> _logger;
     private int? _lastSignature;
 
@@ -34,6 +36,7 @@ public sealed partial class TagCloudRefreshService : BackgroundService
         IMessenger messenger,
         TimeProvider timeProvider,
         IOptions<TagCloudOptions> options,
+        IBackgroundServiceStatus serviceStatus,
         ILogger<TagCloudRefreshService> logger)
     {
         ArgumentNullException.ThrowIfNull(scopeFactory);
@@ -46,10 +49,12 @@ public sealed partial class TagCloudRefreshService : BackgroundService
         _messenger = messenger;
         _timeProvider = timeProvider;
         _options = options.Value;
+        ArgumentNullException.ThrowIfNull(serviceStatus);
+        _serviceStatus = serviceStatus;
         _logger = logger;
     }
 
-    /// <summary>Lädt einen Snapshot und published nur bei Signatur-Wechsel.</summary>
+    /// <summary>Lädt einen Snapshot und veröffentlicht ihn nur bei Signatur-Wechsel.</summary>
     internal async Task PublishIfChangedAsync(CancellationToken cancellationToken)
     {
         IReadOnlyList<TagStatistic> snapshot;
@@ -57,23 +62,10 @@ public sealed partial class TagCloudRefreshService : BackgroundService
         {
             snapshot = await LoadSnapshotAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (InvalidOperationException exception)
+        catch (Exception exception) when (exception is DbException or InvalidOperationException or ArgumentException)
         {
-            LogRefreshFailure(_logger, exception);
-            return;
-        }
-        catch (ArgumentException exception)
-        {
-            // Ein korrupter Tag-Wert (z. B. ein leerer Slug aus migrierten Altdaten)
-            // wirft ArgumentException im Tag-Statistics-Pfad: Refresh überspringen, nächster Tick
-            // versucht es erneut.
-            LogRefreshFailure(_logger, exception);
-            return;
-        }
-        catch (DbException exception)
-        {
-            // SQLite-Spitze nach Retry-Budget; Service läuft weiter,
-            // nächster Periodic-Tick versucht es erneut.
+            // Eine Datenbank-Spitze nach ausgeschöpften Wiederholungen oder ein unerwarteter Wert
+            // aus der Abfrage kostet nur diesen Durchlauf; der nächste Takt versucht es erneut.
             LogRefreshFailure(_logger, exception);
             return;
         }
@@ -101,18 +93,21 @@ public sealed partial class TagCloudRefreshService : BackgroundService
                 await PublishIfChangedAsync(stoppingToken).ConfigureAwait(false);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
             // Host-Shutdown, kein Fehler.
         }
-        catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex))
+        catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex, stoppingToken))
         {
-            // Letzte Schicht. Fängt unerwartete Exceptions ab, damit der Host
-            // den Service ordentlich beendet statt unhandled-Crash.
+            // Was bis hierher durchschlägt, beendet den Dienst geordnet, statt den Prozess
+            // mit einer unbehandelten Ausnahme abzureißen.
             LogWatchdogTriggered(_logger, ex);
+            _serviceStatus.ReportStopped(BackgroundServiceKind.TagCloud);
         }
     }
 
+    // Ein Hash statt eines Vergleichs der ganzen Liste. Eine Kollision unterdrückte schlimmstenfalls
+    // eine Aktualisierung, bis sich die Statistik das nächste Mal ändert.
     private static int ComputeSignature(IReadOnlyList<TagStatistic> snapshot)
     {
         HashCode hash = default;
@@ -141,6 +136,7 @@ public sealed partial class TagCloudRefreshService : BackgroundService
         await using (scope.ConfigureAwait(false))
         {
             ITagStatisticsService service = scope.ServiceProvider.GetRequiredService<ITagStatisticsService>();
+            // Geladen wird immer die längere Liste; die Nachricht trägt sie ungekürzt zum ViewModel.
             int topN = Math.Max(_options.TopN, _options.LongTailTopN);
             return await service.GetTopTagsAsync(topN, cancellationToken).ConfigureAwait(false);
         }

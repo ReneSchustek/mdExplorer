@@ -1,11 +1,12 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using MdExplorer.App.Services;
+using MdExplorer.App.Tests.Fakes;
 
 namespace MdExplorer.App.Tests.Services;
 
 /// <summary>
-/// Tests für den <see cref="ThemeApplier"/>.
+/// Beim Wechsel des Erscheinungsbilds wird die Farbbelegung an ihrer Stelle ausgetauscht.
 /// </summary>
 /// <remarks>
 /// Geprüft werden Auswahl und Austausch, nicht das Auflösen der Ressourcenadressen;
@@ -15,6 +16,7 @@ namespace MdExplorer.App.Tests.Services;
 /// </remarks>
 public sealed class ThemeApplierTests
 {
+    // Derselbe Schlüssel, an dem der ThemeApplier eine geladene Belegung erkennt.
     private const string PaletteMarkerKey = "AppBackgroundBrush";
 
     [Theory]
@@ -23,19 +25,20 @@ public sealed class ThemeApplierTests
     public void Apply_ChoosesPaletteFromEffectiveTheme(bool isDarkMode, string expectedFile)
     {
         RecordingLoader loader = new();
-        ThemeApplier sut = new(new FakeEffectiveThemeProvider(isDarkMode), loader.Load);
+        ThemeApplier sut = new(new FakeThemeProvider(isDarkMode), loader.Load);
         Collection<ResourceDictionary> dictionaries = [];
 
         sut.Apply(dictionaries);
 
-        Assert.EndsWith(expectedFile, loader.LastUri!.OriginalString, StringComparison.Ordinal);
+        Assert.NotNull(loader.LastUri);
+        Assert.EndsWith(expectedFile, loader.LastUri.OriginalString, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Apply_OnEmptyDictionaries_AddsPalette()
     {
         RecordingLoader loader = new();
-        ThemeApplier sut = new(new FakeEffectiveThemeProvider(isDarkMode: false), loader.Load);
+        ThemeApplier sut = new(new FakeThemeProvider(isDarkMode: false), loader.Load);
         Collection<ResourceDictionary> dictionaries = [];
 
         sut.Apply(dictionaries);
@@ -47,7 +50,7 @@ public sealed class ThemeApplierTests
     public void Apply_OnRepeatedCalls_ReplacesInsteadOfAppending()
     {
         RecordingLoader loader = new();
-        ThemeApplier sut = new(new FakeEffectiveThemeProvider(isDarkMode: false), loader.Load);
+        ThemeApplier sut = new(new FakeThemeProvider(isDarkMode: false), loader.Load);
         Collection<ResourceDictionary> dictionaries = [];
 
         sut.Apply(dictionaries);
@@ -58,10 +61,10 @@ public sealed class ThemeApplierTests
     }
 
     [Fact]
-    public void Apply_KeepsPositionOfPaletteAmongOtherDictionaries()
+    public void Apply_AmongOtherDictionaries_KeepsThePositionOfThePalette()
     {
         RecordingLoader loader = new();
-        ThemeApplier sut = new(new FakeEffectiveThemeProvider(isDarkMode: true), loader.Load);
+        ThemeApplier sut = new(new FakeThemeProvider(isDarkMode: true), loader.Load);
         ResourceDictionary tokens = new() { { "SpacingS", 8d } };
         ResourceDictionary later = new() { { "SomethingElse", "x" } };
         Collection<ResourceDictionary> dictionaries = [tokens, PaletteStandIn("vorher"), later];
@@ -77,7 +80,7 @@ public sealed class ThemeApplierTests
     [Fact]
     public void Apply_OnNullDictionaries_Throws()
     {
-        ThemeApplier sut = new(new FakeEffectiveThemeProvider(isDarkMode: false), new RecordingLoader().Load);
+        ThemeApplier sut = new(new FakeThemeProvider(isDarkMode: false), new RecordingLoader().Load);
 
         _ = Assert.Throws<ArgumentNullException>(() => sut.Apply(null!));
     }
@@ -92,7 +95,7 @@ public sealed class ThemeApplierTests
     public void Constructor_OnMissingLoader_Throws()
     {
         _ = Assert.Throws<ArgumentNullException>(
-            () => new ThemeApplier(new FakeEffectiveThemeProvider(isDarkMode: false), null!));
+            () => new ThemeApplier(new FakeThemeProvider(isDarkMode: false), null!));
     }
 
     /// <summary>
@@ -112,10 +115,5 @@ public sealed class ThemeApplierTests
             LastUri = uri;
             return PaletteStandIn("neu");
         }
-    }
-
-    private sealed class FakeEffectiveThemeProvider(bool isDarkMode) : IEffectiveThemeProvider
-    {
-        public bool IsDarkMode { get; } = isDarkMode;
     }
 }

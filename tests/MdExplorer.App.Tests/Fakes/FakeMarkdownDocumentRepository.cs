@@ -3,7 +3,10 @@ using MdExplorer.Core.Models;
 
 namespace MdExplorer.App.Tests.Fakes;
 
-/// <summary>In-Memory-Repo für Preview-Tests.</summary>
+/// <summary>
+/// Geparste Dokumente im Speicher, je Datei eines. Schreibende Aufrufe bleiben ohne Wirkung;
+/// die Tests legen ihren Bestand über <see cref="Put"/> an.
+/// </summary>
 internal sealed class FakeMarkdownDocumentRepository : IMarkdownDocumentRepository
 {
     private readonly Dictionary<Guid, MarkdownDocument> _byFileId = [];

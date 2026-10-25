@@ -42,6 +42,10 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
         _timeProvider = timeProvider;
         _logger = logger;
         _debounce = TimeSpan.FromMilliseconds(options.Value.DebounceMs);
+
+        // Unbegrenzt, weil die Entprellung je Pfad schon zusammenfasst: Ein Speichersturm auf eine
+        // Datei landet als ein Eintrag im Kanal. Schreiber sind die Timer-Rückrufe, gelesen wird nur
+        // vom Indexer.
         _channel = Channel.CreateUnbounded<FileSystemEvent>(new UnboundedChannelOptions
         {
             SingleReader = true,
@@ -62,19 +66,12 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
             throw new InvalidOperationException("FileWatcherCoordinator wurde bereits gestartet.");
         }
 
-        foreach (string root in roots)
+        _started = true;
+        foreach (string root in roots.Where(root => !string.IsNullOrWhiteSpace(root)))
         {
-            if (string.IsNullOrWhiteSpace(root))
-            {
-                continue;
-            }
-            IFileWatcher watcher = _factory.Create(root);
-            watcher.EventOccurred += OnRawEvent;
-            watcher.Start();
-            _watchers.Add(watcher);
+            StartWatcher(root);
         }
 
-        _started = true;
         LogStarted(_logger, _watchers.Count, _debounce.TotalMilliseconds);
     }
 
@@ -94,6 +91,7 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
         }
         _watchers.Clear();
 
+        // Was beim Anhalten noch in der Entprellung steckt, wird verworfen und nicht mehr gemeldet.
         PendingEvent[] outstanding;
         lock (_gate)
         {
@@ -129,6 +127,40 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
     [LoggerMessage(EventId = 51, Level = LogLevel.Information, Message = "FileWatcher gestoppt.")]
     private static partial void LogStopped(ILogger logger);
 
+    [LoggerMessage(EventId = 52, Level = LogLevel.Warning,
+        Message = "FileWatcher für {Root} ließ sich nicht starten; Änderungen dort holt der Abgleich nach.")]
+    private static partial void LogWatcherStartFailed(ILogger logger, Exception exception, string root);
+
+    private static bool IsStructural(FileSystemEventKind kind) =>
+        kind is FileSystemEventKind.DirectoryRenamed
+            or FileSystemEventKind.DirectoryDeleted
+            or FileSystemEventKind.ResyncRequested
+            or FileSystemEventKind.IgnoreFileChanged;
+
+    private static bool IsSecondRenameOntoTheSameTarget(FileSystemEvent pending, FileSystemEvent incoming) =>
+        pending.Kind == FileSystemEventKind.Renamed
+            && incoming.Kind == FileSystemEventKind.Renamed
+            && !string.Equals(pending.OldPath, incoming.OldPath, StringComparison.OrdinalIgnoreCase);
+
+    // Ein Netzlaufwerk, das gerade fehlt, oder ein Ordner ohne Leserecht kostet nur die eigene
+    // Wurzel. Der kaputte Watcher wird sofort freigegeben, damit er keinen Griff offen hält.
+    private void StartWatcher(string root)
+    {
+        IFileWatcher watcher = _factory.Create(root);
+        try
+        {
+            watcher.EventOccurred += OnRawEvent;
+            watcher.Start();
+            _watchers.Add(watcher);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        {
+            watcher.EventOccurred -= OnRawEvent;
+            watcher.Dispose();
+            LogWatcherStartFailed(_logger, exception, root);
+        }
+    }
+
     private void OnRawEvent(object? sender, WatcherEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
@@ -141,9 +173,36 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
                 return;
             }
 
+            // Ordnerereignisse, Pufferüberlauf und eine geänderte .mdignore betreffen viele Dateien
+            // auf einmal. Sie gehen ohne Wartezeit weiter, damit spätere Dateiereignisse im neuen
+            // Ordner nicht vor ihnen beim Indexer ankommen.
+            if (IsStructural(rawEvent.Kind))
+            {
+                _ = _channel.Writer.TryWrite(rawEvent);
+                return;
+            }
+
+            rawEvent = FoldRenameChain(rawEvent);
+
+            // Jedes weitere Ereignis am selben Pfad startet die Wartezeit neu, und das letzte gewinnt:
+            // Angelegt und gleich wieder gelöscht kommt nur als Löschung beim Indexer an.
+            // Ausnahme ist eine Umbenennung. Nur sie trägt den alten Pfad; ginge sie in einem
+            // folgenden Changed auf, legte der Indexer die neue Datei an und der alte Eintrag
+            // bliebe als Waise stehen. Inhaltsänderung und spätere Löschung erkennt der
+            // Rename-Zweig des Indexers selbst.
             if (_pending.TryGetValue(rawEvent.Path, out PendingEvent? existing))
             {
-                existing.Latest = rawEvent;
+                if (IsSecondRenameOntoTheSameTarget(existing.Latest, rawEvent))
+                {
+                    // Ginge die erste Umbenennung in der zweiten auf, verlöre sie ihren alten Pfad,
+                    // und dessen Eintrag bliebe als Waise stehen. Sie geht deshalb sofort hinaus.
+                    _ = _channel.Writer.TryWrite(existing.Latest);
+                    existing.Latest = rawEvent;
+                }
+                else if (existing.Latest.Kind != FileSystemEventKind.Renamed || rawEvent.Kind == FileSystemEventKind.Renamed)
+                {
+                    existing.Latest = rawEvent;
+                }
                 _ = existing.Timer.Change(_debounce, Timeout.InfiniteTimeSpan);
                 return;
             }
@@ -182,6 +241,27 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
         _ = _channel.Writer.TryWrite(toFlush.Latest);
     }
 
+    // a → b → c innerhalb der Entprellung wird zu a → c. Kämen beide Umbenennungen getrennt an,
+    // könnte b → c vor a → b verarbeitet werden; der Eintrag von a ginge verloren und c bekäme
+    // eine neue Id. Aufgerufen unter _gate.
+    private FileSystemEvent FoldRenameChain(FileSystemEvent rawEvent)
+    {
+        if (rawEvent.Kind != FileSystemEventKind.Renamed
+            || rawEvent.OldPath is null
+            || !_pending.TryGetValue(rawEvent.OldPath, out PendingEvent? previous)
+            || previous.Latest.Kind != FileSystemEventKind.Renamed)
+        {
+            return rawEvent;
+        }
+
+        _ = _pending.Remove(rawEvent.OldPath);
+        previous.Timer.Dispose();
+        return rawEvent with { OldPath = previous.Latest.OldPath };
+    }
+
+    /// <summary>
+    /// Ein Pfad in der Entprellung: das zuletzt gemeldete Ereignis und der Timer, der es freigibt.
+    /// </summary>
     private sealed class PendingEvent(FileSystemEvent latest, ITimer timer)
     {
         public FileSystemEvent Latest { get; set; } = latest;

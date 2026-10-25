@@ -3,7 +3,9 @@ using MdExplorer.Core.Text;
 namespace MdExplorer.Core.Tests.Text;
 
 /// <summary>
-/// Tests für <see cref="AlphabetIndex"/>.
+/// Jeder Eintrag landet unter seinem Anfangsbuchstaben, Umlaute und Akzente unter dem
+/// Grundbuchstaben. Sonst springt die Buchstabenleiste ins Leere oder sammelt deutsche
+/// Wörter unter „Sonstiges".
 /// </summary>
 public sealed class AlphabetIndexTests
 {
@@ -65,11 +67,11 @@ public sealed class AlphabetIndexTests
 
     /// <remarks>
     /// Die Leiste ändert ihre Breite nie: Sie führt immer alle Buchstaben, auch die ohne
-    /// Einträge. Eine Leiste, die je nach Bestand anders aussieht, ist kein verlässlicher
-    /// Anlaufpunkt; deshalb hält dieser Test die feste Länge fest.
+    /// Einträge, weil sie nicht aus dem Bestand gebildet wird. Die Länge hält der Test darüber
+    /// fest, dieser hier, dass vor dem Sammelbuchstaben nur A bis Z stehen.
     /// </remarks>
     [Fact]
-    public void Letters_AreStableRegardlessOfContent()
+    public void Letters_BeforeTheCollector_AreOnlyAToZ()
     {
         Assert.All(
             AlphabetIndex.Letters.Take(AlphabetIndex.Letters.Count - 1),

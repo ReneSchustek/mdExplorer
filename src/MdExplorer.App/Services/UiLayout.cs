@@ -5,9 +5,8 @@ namespace MdExplorer.App.Services;
 /// Position und Größe des Hilfefensters. Werden in <see cref="UiSettingsStore"/>
 /// im <c>%LOCALAPPDATA%</c>-Ordner serialisiert und beim Start zurückgeladen.
 /// </summary>
-/// <param name="FolderColumnWidth">Breite der Folder-Tree-Spalte in Pixel.</param>
-/// <param name="ResultColumnWidth">Breite der Trefferlisten-Spalte in Pixel.</param>
-/// <param name="PreviewColumnWidth">Breite der Vorschau-Spalte in Pixel.</param>
+/// <param name="FolderColumnWidth">Breite der Folder-Tree-Spalte in geräteunabhängigen Einheiten.</param>
+/// <param name="PreviewColumnWidth">Breite der Vorschau-Spalte in geräteunabhängigen Einheiten.</param>
 /// <param name="HelpWindow">Geometrie des Hilfefensters; <see langword="null"/>, solange
 /// das Fenster noch nie geöffnet wurde; dann gilt die Default-Geometrie.</param>
 /// <param name="IsTagCloudVisible">Ob das Tag-Cloud-Panel sichtbar ist. Default sichtbar.</param>
@@ -16,24 +15,24 @@ namespace MdExplorer.App.Services;
 /// oder leer = kein Filter. Persistierung erlaubt Wiederkehr in die zuletzt fokussierte Sicht.</param>
 internal sealed record UiLayout(
     double FolderColumnWidth,
-    double ResultColumnWidth,
     double PreviewColumnWidth,
     WindowGeometry? HelpWindow = null,
     bool IsTagCloudVisible = true,
     int LeftTabIndex = 0,
     string? GraphPathPrefix = null)
 {
+    // Die Ordnerspalte bekommt ein Viertel der Startbreite des Hauptfensters von 1280. Die
+    // Vorschau ist die einzige Sternspalte und füllt den Rest; ihr Wert wirkt nur als Gewicht.
     private const double DefaultFolderColumnWidth = 320;
-    private const double DefaultResultColumnWidth = 448;
     private const double DefaultPreviewColumnWidth = 512;
 
-    /// <summary>Voreingestellte Werte (entsprechen den Anteilen 25 / 35 / 40 % bei 1280 px).</summary>
-    public static UiLayout Default { get; } = new(DefaultFolderColumnWidth, DefaultResultColumnWidth, DefaultPreviewColumnWidth, HelpWindow: null, IsTagCloudVisible: true, LeftTabIndex: 0, GraphPathPrefix: null);
+    /// <summary>Voreinstellung, solange noch kein Layout gespeichert ist.</summary>
+    public static UiLayout Default { get; } = new(DefaultFolderColumnWidth, DefaultPreviewColumnWidth, HelpWindow: null, IsTagCloudVisible: true, LeftTabIndex: 0, GraphPathPrefix: null);
 }
 
-/// <summary>Geometrie eines persistierten Fensters in Bildschirm-Pixeln.</summary>
-/// <param name="Left">Linke Kante in Pixel.</param>
-/// <param name="Top">Obere Kante in Pixel.</param>
-/// <param name="Width">Breite in Pixel.</param>
-/// <param name="Height">Höhe in Pixel.</param>
+/// <summary>Geometrie eines persistierten Fensters in geräteunabhängigen Einheiten (1/96 Zoll), wie WPF sie führt.</summary>
+/// <param name="Left">Linke Kante.</param>
+/// <param name="Top">Obere Kante.</param>
+/// <param name="Width">Breite.</param>
+/// <param name="Height">Höhe.</param>
 internal sealed record WindowGeometry(double Left, double Top, double Width, double Height);

@@ -1,22 +1,17 @@
-using MdExplorer.App.Services;
-
-using System.Diagnostics.CodeAnalysis;
-
 namespace MdExplorer.App.Services.Help;
 
 /// <summary>
-/// Lese-/Schreib-Fassade über <see cref="UiSettingsStore"/> für die
+/// Lese-/Schreib-Fassade über den <see cref="IUiLayoutStore"/> für die
 /// persistierte Hilfe-Fenster-Geometrie. Kapselt das Lesen/Schreiben des
 /// <see cref="UiLayout.HelpWindow"/>-Teilfelds, ohne dass der Aufrufer
 /// die anderen Layout-Werte kennen muss.
 /// </summary>
-[ExcludeFromCodeCoverage]
 internal sealed class HelpWindowGeometryStore
 {
-    private readonly UiSettingsStore _backingStore;
+    private readonly IUiLayoutStore _backingStore;
 
-    /// <summary>Erzeugt den Store mit dem zentralen <see cref="UiSettingsStore"/>.</summary>
-    public HelpWindowGeometryStore(UiSettingsStore backingStore)
+    /// <summary>Erzeugt den Store über dem zentralen Layout-Speicher.</summary>
+    public HelpWindowGeometryStore(IUiLayoutStore backingStore)
     {
         ArgumentNullException.ThrowIfNull(backingStore);
         _backingStore = backingStore;

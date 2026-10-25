@@ -2,7 +2,11 @@ using MdExplorer.Update.Models;
 
 namespace MdExplorer.Update.Tests.Models;
 
-/// <summary>Tabellentests für das Parsen und die Präzedenz von <see cref="SemanticVersion"/>.</summary>
+/// <summary>
+/// <see cref="SemanticVersion"/> liest Etiketten wie <c>v1.2.3-rc1+build.7</c> und ordnet sie nach den
+/// Regeln von SemVer 2.0. Eine falsche Ordnung meldete eine Vorabfassung als neuer als die fertige
+/// Fassung oder verschwiege ein echtes Update.
+/// </summary>
 public sealed class SemanticVersionTests
 {
     [Theory]

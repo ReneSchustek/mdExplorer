@@ -1,19 +1,18 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using MdExplorer.Core.Models;
 using MdExplorer.Core.Settings;
 
 namespace MdExplorer.Core.Tests.Settings;
 
+/// <summary>
+/// Der Verlauf der Einstellungen hält je Änderung Pfad, alten und neuen Wert fest. Meldete der
+/// Vergleich unveränderte Werte mit oder verlöre er die Stelle in einer Liste, wäre im Verlauf
+/// nicht zu erkennen, was sich geändert hat.
+/// </summary>
 public sealed class SettingsDiffTests
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = false,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter() },
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
+    // Dieselbe Schreibweise wie Datei und Verlauf; eine eigene Kopie liefe auseinander.
+    private static readonly JsonSerializerOptions Options = SettingsJson.Options;
 
     [Fact]
     public void Compute_OnIdenticalSnapshots_ReturnsEmpty()

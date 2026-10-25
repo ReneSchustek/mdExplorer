@@ -1,5 +1,6 @@
 using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels.Settings;
+using MdExplorer.Update.Abstractions;
 using MdExplorer.Update.Models;
 
 namespace MdExplorer.App.Tests.ViewModels.Settings;
@@ -30,7 +31,9 @@ public sealed class UpdateSectionViewModelTests
     [Fact]
     public async Task CheckCommand_WithInstallableUpdate_EnablesInstallation()
     {
-        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        // 64 Zeichen haben die Form einer SHA-256-Prüfsumme in Hex; der Wert selbst wird hier
+        // nicht nachgerechnet, das Herunterladen ist nachgebildet.
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64), new byte[] { 0x30 });
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         using UpdateSectionViewModel sut = Build(checker, out _);
 
@@ -43,8 +46,8 @@ public sealed class UpdateSectionViewModelTests
     [Fact]
     public async Task CheckCommand_WithoutChecksum_DoesNotOfferInstallation()
     {
-        // Genau der Fall, den die Prüfsumme absichert: Es gibt eine neuere Fassung, aber
-        // keinen Beleg für die Datei. Dann bleibt nur der Weg über die Release-Seite.
+        // Es gibt eine neuere Fassung, aber keinen Beleg für die Datei. Dann bleibt nur der
+        // Weg über die Release-Seite.
         UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, null);
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         using UpdateSectionViewModel sut = Build(checker, out _);
@@ -70,7 +73,7 @@ public sealed class UpdateSectionViewModelTests
     [Fact]
     public async Task InstallCommand_AfterSuccessfulVerification_StartsInstaller()
     {
-        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64), new byte[] { 0x30 });
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
         using UpdateSectionViewModel sut = new(checker, installer);
@@ -87,7 +90,7 @@ public sealed class UpdateSectionViewModelTests
     [Fact]
     public async Task InstallCommand_OnChecksumMismatch_StartsNothing()
     {
-        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64), new byte[] { 0x30 });
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Failed(UpdateDownloadStatus.ChecksumMismatch));
         using UpdateSectionViewModel sut = new(checker, installer);
@@ -115,12 +118,50 @@ public sealed class UpdateSectionViewModelTests
     }
 
     [Fact]
-    public async Task Dispose_WhileDialogCloses_StartsNoInstaller()
+    public async Task Dispose_WhileTheDownloadRuns_StartsNoInstaller()
     {
-        // Wird der Dialog während des Downloads geschlossen, darf das
-        // Installationsprogramm nicht mehr anlaufen: Die Anwendung würde dann nicht
-        // beendet und könnte ihre eigenen Dateien nicht ersetzen.
-        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        // Wird der Dialog während des Downloads geschlossen, darf das Installationsprogramm
+        // nicht mehr anlaufen: Die Anwendung würde dann nicht beendet und könnte ihre eigenen
+        // Dateien nicht ersetzen.
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64), new byte[] { 0x30 });
+        FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
+        WaitingUpdateInstaller installer = new();
+        UpdateSectionViewModel sut = new(checker, installer);
+        bool started = false;
+        sut.InstallerStarted += (_, _) => started = true;
+        await sut.CheckCommand.ExecuteAsync(null);
+
+        Task install = sut.InstallCommand.ExecuteAsync(null);
+        await installer.DownloadStarted.Task.ConfigureAwait(true);
+        sut.Dispose();
+        await install.ConfigureAwait(true);
+
+        Assert.False(installer.StartCalled);
+        Assert.False(started);
+        Assert.False(sut.IsBusy);
+    }
+
+    [Fact]
+    public async Task Dispose_WhileTheCheckRuns_EndsTheCheckQuietly()
+    {
+        // Der Dialog lässt sich während der Prüfung schließen. Der Abbruch lief früher aus dem
+        // Befehl heraus und landete als unbehandelte Ausnahme beim Aufrufer.
+        WaitingUpdateChecker checker = new();
+        UpdateSectionViewModel sut = new(checker, new FakeUpdateInstaller(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe")));
+
+        Task check = sut.CheckCommand.ExecuteAsync(null);
+        await checker.CheckStarted.Task.ConfigureAwait(true);
+        sut.Dispose();
+        await check.ConfigureAwait(true);
+
+        Assert.False(sut.IsBusy);
+        Assert.False(sut.IsInstallAvailable);
+    }
+
+    [Fact]
+    public async Task Dispose_BeforeInstalling_StartsNoInstaller()
+    {
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64), new byte[] { 0x30 });
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
         UpdateSectionViewModel sut = new(checker, installer);
@@ -150,15 +191,10 @@ public sealed class UpdateSectionViewModelTests
         Assert.Equal(0, checker.CallCount);
     }
 
-    private static UpdateSectionViewModel Build(FakeUpdateChecker checker, out FakeUpdateInstaller installer)
-    {
-        installer = new FakeUpdateInstaller(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
-        return new UpdateSectionViewModel(checker, installer);
-    }
     /// <remarks>
-    /// Der wichtigste Satz des ganzen Bereichs: Wenn die Quelle nicht erreichbar war, weiß die
-    /// Anwendung **nicht**, ob eine neuere Fassung existiert, und muss das sagen. Ein „Sie
-    /// sind aktuell" wäre an dieser Stelle eine Behauptung, die niemand geprüft hat.
+    /// War die Quelle nicht erreichbar, weiß die Anwendung nicht, ob eine neuere Fassung
+    /// existiert, und muss das sagen. Ein „Sie sind aktuell" wäre an dieser Stelle eine
+    /// Behauptung, die niemand geprüft hat.
     /// </remarks>
     [Fact]
     public async Task CheckCommand_WhenTheSourceIsUnreachable_SaysItDoesNotKnow()
@@ -174,16 +210,18 @@ public sealed class UpdateSectionViewModelTests
     }
 
     /// <remarks>
-    /// Jede Fehlermeldung des Herunterladens sagt, **was** passiert ist und was mit der Datei
+    /// Jede Fehlermeldung des Herunterladens sagt, was passiert ist und was mit der Datei
     /// geschehen ist. „Fehlgeschlagen" allein lässt offen, ob etwas Halbes auf der Platte liegt.
     /// </remarks>
     [Theory]
     [InlineData(UpdateDownloadStatus.DownloadFailed, "fehlgeschlagen")]
     [InlineData(UpdateDownloadStatus.NoChecksumPublished, "keine Prüfsumme")]
     [InlineData(UpdateDownloadStatus.StorageFailed, "nicht ablegen")]
-    public async Task InstallCommand_OnAFailedDownload_SaysWhatHappened(UpdateDownloadStatus status, string erwartet)
+    [InlineData(UpdateDownloadStatus.NoSignaturePublished, "keine Signatur")]
+    [InlineData(UpdateDownloadStatus.SignatureInvalid, "nicht vom Herausgeber")]
+    public async Task InstallCommand_OnAFailedDownload_SaysWhatHappened(UpdateDownloadStatus status, string expected)
     {
-        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64), new byte[] { 0x30 });
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
         FakeUpdateInstaller installer = new(UpdateDownloadResult.Failed(status));
         using UpdateSectionViewModel sut = new(checker, installer);
@@ -195,7 +233,7 @@ public sealed class UpdateSectionViewModelTests
 
         Assert.False(started);
         Assert.Null(installer.StartedPath);
-        Assert.Contains(erwartet, sut.StatusText, StringComparison.Ordinal);
+        Assert.Contains(expected, sut.StatusText, StringComparison.Ordinal);
     }
 
     /// <remarks>
@@ -206,10 +244,10 @@ public sealed class UpdateSectionViewModelTests
     [Fact]
     public async Task InstallCommand_WhenTheInstallerWillNotStart_NamesTheVerifiedFile()
     {
-        const string Pfad = @"C:\tmp\setup.exe";
-        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64));
+        const string FilePath = @"C:\tmp\setup.exe";
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64), new byte[] { 0x30 });
         FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
-        FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(Pfad), startSucceeds: false);
+        FakeUpdateInstaller installer = new(UpdateDownloadResult.Verified(FilePath), startSucceeds: false);
         using UpdateSectionViewModel sut = new(checker, installer);
         bool started = false;
         sut.InstallerStarted += (_, _) => started = true;
@@ -218,6 +256,57 @@ public sealed class UpdateSectionViewModelTests
         await sut.InstallCommand.ExecuteAsync(null);
 
         Assert.False(started);
-        Assert.Contains(Pfad, sut.StatusText, StringComparison.Ordinal);
+        Assert.Contains(FilePath, sut.StatusText, StringComparison.Ordinal);
+    }
+
+    /// <summary>Endet erst mit dem Abbruch, ohne Zeitgeber und ohne Wanduhr.</summary>
+    private static async Task UntilCancelledAsync(CancellationToken cancellationToken)
+    {
+        TaskCompletionSource cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using CancellationTokenRegistration registration = cancellationToken.Register(() => cancelled.TrySetCanceled(cancellationToken));
+        await cancelled.Task.ConfigureAwait(false);
+    }
+
+    private static UpdateSectionViewModel Build(FakeUpdateChecker checker, out FakeUpdateInstaller installer)
+    {
+        installer = new FakeUpdateInstaller(UpdateDownloadResult.Verified(@"C:\tmp\setup.exe"));
+        return new UpdateSectionViewModel(checker, installer);
+    }
+
+    /// <summary>Eine Prüfung, die erst mit dem Abbruch endet.</summary>
+    private sealed class WaitingUpdateChecker : IUpdateChecker
+    {
+        public TaskCompletionSource CheckStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<UpdateCheckResult> CheckForUpdateAsync(CancellationToken cancellationToken) =>
+            CheckForUpdateAsync(force: false, cancellationToken);
+
+        public async Task<UpdateCheckResult> CheckForUpdateAsync(bool force, CancellationToken cancellationToken)
+        {
+            CheckStarted.SetResult();
+            await UntilCancelledAsync(cancellationToken).ConfigureAwait(false);
+            return UpdateCheckResult.UpToDate(Current, Current);
+        }
+    }
+
+    /// <summary>Ein Download, der erst mit dem Abbruch endet, so wie die echte Umsetzung.</summary>
+    private sealed class WaitingUpdateInstaller : IUpdateInstaller
+    {
+        public TaskCompletionSource DownloadStarted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool StartCalled { get; private set; }
+
+        public async Task<UpdateDownloadResult> DownloadAndVerifyAsync(UpdateAsset asset, IProgress<int>? progress, CancellationToken cancellationToken)
+        {
+            DownloadStarted.SetResult();
+            await UntilCancelledAsync(cancellationToken).ConfigureAwait(false);
+            return UpdateDownloadResult.Verified(@"C:\tmp\setup.exe");
+        }
+
+        public bool StartInstaller(string installerPath)
+        {
+            StartCalled = true;
+            return true;
+        }
     }
 }

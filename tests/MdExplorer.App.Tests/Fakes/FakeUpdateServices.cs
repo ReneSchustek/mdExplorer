@@ -17,6 +17,14 @@ internal sealed class FakeUpdateChecker : IUpdateChecker
     /// <summary>Wert des <c>force</c>-Parameters beim letzten Aufruf.</summary>
     public bool LastForce { get; private set; }
 
+    /// <summary>Der Fehler, mit dem die Prüfung scheitert; <see langword="null"/>, wenn sie gelingen soll.</summary>
+    public Exception? Failure { get; set; }
+
+    /// <summary>Wird beim ersten Aufruf erfüllt; ein Test im Hintergrund wartet darauf statt auf die Uhr.</summary>
+    public Task Called => _called.Task;
+
+    private readonly TaskCompletionSource _called = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     /// <inheritdoc />
     public Task<UpdateCheckResult> CheckForUpdateAsync(CancellationToken cancellationToken) =>
         CheckForUpdateAsync(force: false, cancellationToken);
@@ -26,7 +34,8 @@ internal sealed class FakeUpdateChecker : IUpdateChecker
     {
         CallCount++;
         LastForce = force;
-        return Task.FromResult(_result);
+        _ = _called.TrySetResult();
+        return Failure is not null ? Task.FromException<UpdateCheckResult>(Failure) : Task.FromResult(_result);
     }
 }
 

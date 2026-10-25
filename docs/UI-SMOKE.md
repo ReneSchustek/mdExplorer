@@ -23,28 +23,29 @@ stabilisiert haben und der WebView2-Wait-Pattern lösbar ist.
 
 1. Letzte Änderungen committen oder stashen.
 2. Build: `dotnet build -c Release MdExplorer.slnx`.
-3. App starten: `dotnet run --project MdExplorer.App -c Release` _oder_ aus dem Publish-Output.
+3. App starten: `dotnet run --project src/MdExplorer.App -c Release` _oder_ aus dem Publish-Output.
 4. Test-Workspace mit mindestens fünf Markdown-Dateien und drei `[[WikiLinks]]` bereithalten.
-5. Lauf-Bericht-Vorlage in `reports/ui-smoke-<YYYY-MM-DD>.md` anlegen
-   (Vorlage am Ende dieses Dokuments).
+5. Lauf-Bericht nach der Vorlage am Ende dieses Dokuments anlegen.
 
 ## Pflicht-Checkliste
 
 | # | Szenario | Schritte | Erwartung | Acceptance |
 |---|---|---|---|---|
-| 1 | **Cold-Start** | App-Prozess starten | Splash erscheint kurz, danach Hauptfenster mit `FolderTreePanel`. Mindestens ein Workspace-Root sichtbar. Status-Leiste zeigt "Indizierte Dateien" und "Letzter Indexer-Lauf". | PASS / FAIL / N.A. |
+| 1 | **Cold-Start** | App-Prozess starten | Splash erscheint kurz, danach Hauptfenster mit `FolderTreePanel`. Mindestens ein Workspace-Root sichtbar. Status-Leiste zeigt "Indizierte Dateien" und "Noch keine Indexer-Meldung" bzw. "Letzte Indexer-Meldung". | PASS / FAIL / N.A. |
 | 2 | **Suche** | Tab "Suche" anklicken, Wort eingeben, das in mind. einer Datei vorkommt | `ListBox` zeigt Treffer mit Titel, Pfad, Highlight-Snippet. Klick navigiert zur Datei; `DocumentPanel` zeigt sie an. | PASS / FAIL / N.A. |
-| 3 | **Ctrl+F im Dokument** | Dokument im Read-Modus öffnen, `Strg+F` drücken | `FindBar` im `DocumentPanel` wird sichtbar, `FindInput` hat Fokus. Wort eingeben → Treffer wird im Preview markiert und gescrollt. `Esc` schließt die FindBar. | PASS / FAIL / N.A. |
+| 3 | **Strg+F im Dokument** | Dokument öffnen, mit `Strg+E` in den Bearbeiten-Modus wechseln, `Strg+F` drücken | `FindBar` im `DocumentPanel` wird sichtbar, `FindInput` hat Fokus. Wort eingeben → Treffer wird im Editor markiert und gescrollt, `F3` springt weiter. `Esc` schließt die FindBar. Im Lese-Modus springt `Strg+F` stattdessen ins Suchfeld des Reiters „Suche". | PASS / FAIL / N.A. |
 | 4 | **Tab-Layout-Persistenz** | Tab "Alle Dateien" auswählen, App über Schließen-Button beenden, neu starten | Beim Neustart ist Tab "Alle Dateien" aktiv (gleicher `LeftTabIndex`). Spaltenbreiten `FolderColumn` / `PreviewColumn` sind wiederhergestellt. | PASS / FAIL / N.A. |
 | 5 | **Tag-Cloud-Toggle** | `Strg+T` drücken (zweimal: an + aus). App schließen+neustarten | Tag-Cloud-Panel ein-/ausblenden funktioniert sofort, ohne Layout-Sprung. Letzter Zustand bleibt nach Neustart erhalten (Menü "Ansicht → Tag-Cloud" zeigt korrekte Checkbox). | PASS / FAIL / N.A. |
 | 6 | **Graph-Fenster** | Menü "Ansicht → Graph…" öffnen. Pfad-Prefix eintragen (z.B. `notes/`). "Neu laden" drücken. App schließen+neustarten, Graph wieder öffnen | Status-Leiste zeigt `Knoten: X von Y` und `Kanten: A von B`. Nach Prefix-Eingabe + Refresh reduziert sich `X` (gefiltert) gegenüber `Y` (Original). Nach Neustart ist `PathPrefix`-Wert noch im Eingabefeld vorbelegt. | PASS / FAIL / N.A. |
 | 7 | **WebView2-CSP** | Graph-Fenster offen halten. Devtools per Rechtsklick → "Inspect" öffnen | `Console`-Tab zeigt keine CSP-Verstöße ("Refused to execute inline script …"). Im `Network` / `Sources` ist `'unsafe-inline'` nicht gesetzt; statt dessen Nonce auf `<script>`-Tag. | PASS / FAIL / N.A. |
-| 8 | **Indexer-Status** | Direkt nach Cold-Start die Status-Leiste beobachten (1–2 min) | "Indizierte Dateien" steigt sichtbar an, während der Indexer läuft. "Letzter Indexer-Lauf" wechselt von `—` auf einen Zeitstempel `YYYY-MM-DD HH:mm UTC`. Health-Indikator (Ampel links) bleibt grün oder wechselt nur zu gelb/rot, wenn Logs einen Grund nennen. | PASS / FAIL / N.A. |
+| 8 | **Indexer-Status** | Direkt nach Cold-Start die Status-Leiste beobachten (1–2 min) | "Indizierte Dateien" steigt sichtbar an, während der Indexer läuft. "Noch keine Indexer-Meldung" wechselt auf "Letzte Indexer-Meldung: TT.MM.JJJJ HH:mm" in Ortszeit. Health-Indikator (Ampel links) bleibt grün oder wechselt nur zu gelb/rot, wenn Logs einen Grund nennen. | PASS / FAIL / N.A. |
 
 ## Lauf-Berichte
 
-- Lauf-Berichte werden unter `reports/ui-smoke-<YYYY-MM-DD>.md` abgelegt.
-- Bei jedem **Release-Tag** ist mindestens ein grüner Lauf-Bericht Pflicht.
+- Lauf-Berichte gehören zu den Release-Unterlagen und werden nicht ins Repository eingecheckt;
+  das Repository enthält nur Code, Tests und Dokumentation.
+- Bei jedem **Release-Tag** ist mindestens ein grüner Lauf-Bericht Pflicht, abgelegt vor dem Setzen
+  des Tags.
 - Roter Lauf (FAIL) blockiert das Release. Der Befund wird festgehalten und behoben, bevor erneut gespielt wird.
 - Bei `N.A.` (Szenario nicht anwendbar, z.B. weil Feature deaktiviert) ist eine kurze Begründung im
   Bericht zu nennen.
@@ -63,7 +64,7 @@ stabilisiert haben und der WebView2-Wait-Pattern lösbar ist.
 |---|---|---|---|
 | 1 | Cold-Start | PASS / FAIL / N.A. | … |
 | 2 | Suche | PASS / FAIL / N.A. | … |
-| 3 | Ctrl+F | PASS / FAIL / N.A. | … |
+| 3 | Strg+F im Dokument | PASS / FAIL / N.A. | … |
 | 4 | Tab-Layout-Persistenz | PASS / FAIL / N.A. | … |
 | 5 | Tag-Cloud-Toggle | PASS / FAIL / N.A. | … |
 | 6 | Graph-Fenster | PASS / FAIL / N.A. | … |

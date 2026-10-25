@@ -8,7 +8,12 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace MdExplorer.Update.Tests.Services;
 
-/// <summary>Tests für <see cref="GitHubUpdateChecker"/>: Vergleich, Throttle und Fehlertoleranz.</summary>
+/// <summary>
+/// <see cref="GitHubUpdateChecker"/> meldet ein Update nur bei einer neueren Fassung, fragt GitHub
+/// höchstens einmal im Prüfintervall und behandelt Netz-, Server- und Formatfehler als gescheiterte
+/// Prüfung, ohne den Zeitpunkt zu speichern. Sonst gälte eine gescheiterte Prüfung einen Tag lang
+/// als erledigt.
+/// </summary>
 public sealed class GitHubUpdateCheckerTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 26, 12, 0, 0, TimeSpan.Zero);
@@ -58,6 +63,7 @@ public sealed class GitHubUpdateCheckerTests
     {
         using StubHttpMessageHandler handler = StubHttpMessageHandler.WithJson("""{"tag_name":"v9.9.9"}""");
         using HttpClient client = new(handler, disposeHandler: false) { BaseAddress = ApiBase };
+        // Vor einer Stunde geprüft; das Intervall der Voreinstellung sind 24 Stunden.
         FakeUpdateCheckJournal journal = new(Now.AddHours(-1));
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(0, 9, 0), journal);
 
@@ -73,6 +79,7 @@ public sealed class GitHubUpdateCheckerTests
     {
         using StubHttpMessageHandler handler = StubHttpMessageHandler.WithJson("""{"tag_name":"v2.0.0","html_url":"https://example.test/r"}""");
         using HttpClient client = new(handler, disposeHandler: false) { BaseAddress = ApiBase };
+        // Eine Stunde über dem Intervall von 24 Stunden.
         FakeUpdateCheckJournal journal = new(Now.AddHours(-25));
         GitHubUpdateChecker checker = CreateChecker(client, new SemanticVersion(1, 0, 0), journal);
 

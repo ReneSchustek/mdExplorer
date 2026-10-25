@@ -3,8 +3,8 @@ using MdExplorer.Indexer.Models;
 namespace MdExplorer.Indexer.Abstractions;
 
 /// <summary>
-/// Abstrakter Datei-System-Watcher. Wird vom <c>FileWatcherCoordinator</c>
-/// genutzt, um <see cref="FileSystemWatcher"/> aus der Konkretion herauszuhalten und Tests deterministisch zu halten.
+/// Quelle roher Dateisystem-Ereignisse für den <c>FileWatcherCoordinator</c>. Die Schnittstelle hält
+/// <see cref="FileSystemWatcher"/> aus dem Koordinator heraus, damit Tests Ereignisse gezielt einspeisen können.
 /// </summary>
 public interface IFileWatcher : IDisposable
 {

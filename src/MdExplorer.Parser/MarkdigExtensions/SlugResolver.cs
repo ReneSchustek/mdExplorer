@@ -8,11 +8,11 @@ namespace MdExplorer.Parser.MarkdigExtensions;
 /// Der Rückgabewert ist der eigentliche Punkt dieser Signatur. Ein <c>Func&lt;string, string&gt;</c>,
 /// das im Zweifel eine Ausnahme wirft, bräche bei einem Verweis wie <c>[[…]]</c> (drei Punkte
 /// als Auslassungszeichen) den Renderer ab, und weil der Renderer das ganze Dokument schreibt,
-/// fiele die **ganze Datei** aus dem Index. Ein Satzzeichen kostete ein Dokument.
+/// fiele die ganze Datei aus dem Index. Ein Satzzeichen kostete ein Dokument.
 /// </para>
 /// <para>
-/// Ein Zielname kommt aus fremdem Text. Dass er unbrauchbar ist, ist deshalb kein Fehler,
-/// sondern ein Ergebnis und gehört in den Rückgabewert, nicht in eine Ausnahme.
+/// Ein Zielname kommt aus fremdem Text. Dass er unbrauchbar ist, gehört deshalb als Ergebnis
+/// in den Rückgabewert und nicht in eine Ausnahme.
 /// </para>
 /// </remarks>
 /// <param name="raw">Der Roh-Zielname, wie er im Dokument steht.</param>

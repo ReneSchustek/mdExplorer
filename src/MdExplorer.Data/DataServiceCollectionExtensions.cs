@@ -27,31 +27,7 @@ public static class DataServiceCollectionExtensions
 
         _ = services.AddSingleton<SqlitePragmaInterceptor>();
 
-        _ = services.AddDbContext<MdExplorerDbContext>((serviceProvider, optionsBuilder) =>
-        {
-            DatabaseOptions databaseOptions = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
-            SqlitePragmaInterceptor pragmaInterceptor = serviceProvider.GetRequiredService<SqlitePragmaInterceptor>();
-
-            // Cache-Modus bewusst auf Default/Private, denn Shared-Cache erzeugt
-            // SQLITE_LOCKED_SHAREDCACHE (Extended-Code 262) sobald zwei Scopes
-            // parallel auf dieselben Tabellen zugreifen. WAL plus busy_timeout
-            // (im Pragma-Interceptor) löst Reader/Writer-Parallelität sauber.
-            SqliteConnectionStringBuilder connectionStringBuilder = new()
-            {
-                DataSource = databaseOptions.DatabasePath,
-                Pooling = true,
-            };
-            _ = optionsBuilder
-                .UseSqlite(
-                    connectionStringBuilder.ToString(),
-                    sqlite =>
-                    {
-                        _ = sqlite.CommandTimeout(databaseOptions.CommandTimeoutSeconds);
-                        _ = sqlite.ExecutionStrategy(
-                            deps => new SqliteRetryingExecutionStrategy(deps));
-                    })
-                .AddInterceptors(pragmaInterceptor);
-        });
+        _ = services.AddDbContext<MdExplorerDbContext>(ConfigureSqlite);
 
         _ = services.AddSingleton<IDatabaseMigrator, DatabaseMigrator>();
         _ = services.AddScoped<IMarkdownFileRepository, MarkdownFileRepository>();
@@ -67,5 +43,31 @@ public static class DataServiceCollectionExtensions
         _ = services.AddScoped<IAllFilesQuery, AllFilesQuery>();
 
         return services;
+    }
+
+    private static void ConfigureSqlite(IServiceProvider serviceProvider, DbContextOptionsBuilder optionsBuilder)
+    {
+        DatabaseOptions databaseOptions = serviceProvider.GetRequiredService<IOptions<DatabaseOptions>>().Value;
+        SqlitePragmaInterceptor pragmaInterceptor = serviceProvider.GetRequiredService<SqlitePragmaInterceptor>();
+
+        // Cache-Modus bewusst auf Default/Private, denn Shared-Cache erzeugt
+        // SQLITE_LOCKED_SHAREDCACHE (Extended-Code 262) sobald zwei Scopes
+        // parallel auf dieselben Tabellen zugreifen. WAL plus busy_timeout
+        // (im Pragma-Interceptor) löst Reader/Writer-Parallelität sauber.
+        SqliteConnectionStringBuilder connectionStringBuilder = new()
+        {
+            DataSource = databaseOptions.DatabasePath,
+            Pooling = true,
+        };
+        _ = optionsBuilder
+            .UseSqlite(
+                connectionStringBuilder.ToString(),
+                sqlite =>
+                {
+                    _ = sqlite.CommandTimeout(databaseOptions.CommandTimeoutSeconds);
+                    _ = sqlite.ExecutionStrategy(
+                        deps => new SqliteRetryingExecutionStrategy(deps));
+                })
+            .AddInterceptors(pragmaInterceptor);
     }
 }

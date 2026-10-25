@@ -7,17 +7,15 @@ using MdExplorer.Parser.Tests.Helpers;
 namespace MdExplorer.Parser.Tests.Services;
 
 /// <summary>
-/// Edge-Case-Tests für den <see cref="MarkdigParser"/>. Decken die
-/// pathologischen Eingaben ab, an denen das Renderer-Limit von Markdig greift,
-/// und sichern die Resilienz gegen ungewöhnliche
-/// Eingaben ab: leerer Input, Whitespace-only, BOM, sehr lange Zeilen,
-/// Surrogate-Pairs, Null-Byte, kaputtes YAML.
+/// Der <see cref="MarkdigParser"/> übersteht ungewöhnliche Eingaben: nur Leerraum, BOM, sehr lange
+/// Zeilen, Zeichen außerhalb der Grundebene, ein Null-Byte, kaputtes YAML, gemischte Zeilenenden
+/// und WikiLinks ohne brauchbares Ziel. Jede Ausnahme hier kostet eine ganze Datei im Index.
 /// </summary>
 public sealed class MarkdigParserEdgeCasesTests
 {
     /// <summary>
     /// Obergrenze für den Hänger-Nachweis in
-    /// <see cref="Parse_OnHugeInput_CompletesWithoutStalling"/>. Bewusst weit über der
+    /// <see cref="Parse_OnHugeInput_CompletesWithoutStalling"/>. Weit über der
     /// reinen Rechenzeit: Sie soll einen Stillstand von einer belegten Maschine trennen,
     /// nicht die Geschwindigkeit des Parsers festschreiben.
     /// </summary>
@@ -66,7 +64,7 @@ public sealed class MarkdigParserEdgeCasesTests
 
         ParseResult result = _sut.Parse(longLine);
 
-        // Wichtig: kein Throw. Inhalt landet im gerenderten HTML.
+        // Der Inhalt landet ungekürzt im gerenderten HTML.
         string html = GzipHelper.Decompress(result.RenderedHtmlGz);
         Assert.Contains("aaaaa", html, StringComparison.Ordinal);
     }
@@ -74,7 +72,8 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnSurrogatePairs_PreservesUnicodeContent()
     {
-        // Emoji + CJK + Mathematischer Operator (alle als Surrogate-Pair encoded in UTF-16).
+        // Emoji (in UTF-16 je ein Surrogatpaar), chinesische Schriftzeichen und mathematische
+        // Operatoren aus der Grundebene.
         const string Markdown = "# Test 🚀 用户 ∀x∃y\n\nText mit #emoji-🎉 Tag.";
 
         ParseResult result = _sut.Parse(Markdown);
@@ -88,13 +87,15 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnNullByteInBody_DoesNotCrash()
     {
-        // C0-Control NUL, pathologisch, sollte aber den Parser nicht killen.
+        // Das Steuerzeichen NUL kommt in Textdateien kaum vor, darf den Parser aber nicht aufhalten.
         string withNul = "# Titel\n\nText mit \0 in der Mitte.";
 
         ParseResult result = _sut.Parse(withNul);
 
-        // Inhalt landet entweder mit oder ohne NUL im HTML. Wichtig ist nur, dass kein Throw kommt.
-        Assert.NotNull(result.RenderedHtmlGz.ToArray());
+        // Ob das NUL im HTML erhalten bleibt, ist offen; der Text um das Zeichen herum muss ankommen.
+        string html = GzipHelper.Decompress(result.RenderedHtmlGz);
+        Assert.Contains("Text mit", html, StringComparison.Ordinal);
+        Assert.Contains("in der Mitte.", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -109,12 +110,10 @@ public sealed class MarkdigParserEdgeCasesTests
             # Body bleibt parsebar.
             """;
 
-        // Erwartung: KEIN Throw aus der Parse-Methode selbst. Wenn der
-        // FrontmatterExtractor das YAML schluckt, bleibt Frontmatter leer; rendert er einen
-        // Teil, ist das Verhalten dokumentiert. Wichtig: Parser darf nicht sterben.
+        // Kaputtes YAML kostet nur das Frontmatter: Es wird ganz verworfen, der Rumpf gerendert.
         ParseResult result = _sut.Parse(Markdown);
 
-        Assert.NotNull(result);
+        Assert.Empty(result.Frontmatter);
         string html = GzipHelper.Decompress(result.RenderedHtmlGz);
         Assert.Contains("Body bleibt parsebar", html, StringComparison.Ordinal);
     }
@@ -123,7 +122,7 @@ public sealed class MarkdigParserEdgeCasesTests
     [Trait("Category", "Performance")]
     public void Parse_OnHugeInput_CompletesWithoutStalling()
     {
-        // 5 MB Markdown via wiederholten Header.
+        // 100.000 Überschriften, rund 1,5 Millionen Zeichen.
         StringBuilder builder = new(5 * 1024 * 1024);
         for (int i = 0; i < 100_000; i++)
         {
@@ -139,7 +138,7 @@ public sealed class MarkdigParserEdgeCasesTests
         // sich gerade dieselben Kerne teilen. Ein knappes Budget prüft deshalb nicht
         // den Parser, sondern die Auslastung der Maschine, und fällt genau dann um,
         // wenn ohnehin alles läuft. Zugesichert wird hier darum das, was unabhängig
-        // von der Last gilt: Der Parser kommt bei 5 MB zum Ende und liefert ein
+        // von der Last gilt: Der Parser kommt bei dieser Größe zum Ende und liefert ein
         // vollständiges Ergebnis, statt in einem quadratischen Pfad stehen zu bleiben.
         Assert.NotNull(result);
         Assert.False(result.RenderedHtmlGz.IsEmpty);
@@ -152,8 +151,8 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnRepeatedEmphasisMarkers_DoesNotCrash()
     {
-        // 200 abwechselnde Emphasis-Marker; Markdig wählt seine eigenen
-        // Pairing-Heuristiken, soll aber nicht crashen.
+        // 200 offene Hervorhebungszeichen ohne Gegenstück. Wie Markdig sie paart, ist seine
+        // Sache; scheitern darf er daran nicht.
         StringBuilder builder = new(800);
         for (int i = 0; i < 200; i++)
         {
@@ -168,12 +167,9 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnDeeplyNestedDelimiters_EitherThrowsArgumentExceptionOrSucceeds()
     {
-        // 1500 verschachtelte `[`-`]`-Paare. Markdigs Renderer hat ein Depth-Limit;
-        // dieser Test dokumentiert das Verhalten:
-        //   - Entweder rendert Markdig sauber durch (kleinere Tiefe).
-        //   - Oder es wirft ArgumentException("depth limit exceeded"); dann fangen
-        //     wir das in ParseOrchestrator.
-        // Beide Pfade sind akzeptabel; wichtig ist, dass keine andere Exception kommt.
+        // 1.500 verschachtelte Klammerpaare. Der Markdig-Renderer hat eine Verschachtelungsgrenze:
+        // Er rendert entweder durch oder wirft eine ArgumentException mit "depth limit exceeded",
+        // die der ParseOrchestrator je Datei abfängt. Eine andere Ausnahme fängt er dort nicht.
         StringBuilder builder = new(3000);
         for (int i = 0; i < 1500; i++)
         {
@@ -188,7 +184,8 @@ public sealed class MarkdigParserEdgeCasesTests
 
         try
         {
-            _ = _sut.Parse(deep);
+            ParseResult result = _sut.Parse(deep);
+            Assert.Contains("text", GzipHelper.Decompress(result.RenderedHtmlGz), StringComparison.Ordinal);
         }
         catch (ArgumentException ex)
         {
@@ -199,8 +196,8 @@ public sealed class MarkdigParserEdgeCasesTests
     [Fact]
     public void Parse_OnInputWithMixedLineEndings_NormalizesAndParses()
     {
-        // \r, \r\n, \n in einem Dokument: Markdig akzeptiert das, wir wollen sicherstellen,
-        // dass die Tag-Extraktion alle Tags findet.
+        // \r, \r\n, \n in einem Dokument: Markdig nimmt alle drei als Zeilenende,
+        // und die Schlagwort-Suche darf keines davon übersehen.
         const string Markdown = "Header\r\n\r\n#tag1 erste Zeile.\rText\n#tag2 dritte Zeile.";
 
         ParseResult result = _sut.Parse(Markdown);
@@ -225,13 +222,14 @@ public sealed class MarkdigParserEdgeCasesTests
         string html = GzipHelper.Decompress(result.RenderedHtmlGz);
         Assert.Contains("Body folgt", html, StringComparison.Ordinal);
     }
+
     /// <summary>
     /// Ein Verweis, dessen Ziel keinen Slug hergibt, darf das Dokument nicht kosten.
     /// </summary>
     /// <remarks>
     /// In einer Datei steht <c>[[…]]</c>, drei Punkte als Auslassungszeichen, ein Satzzeichen.
-    /// Verlangte der Renderer dafür einen Slug und bekäme eine Ausnahme, verwürfe der Wächter
-    /// **die ganze Datei**. Sie fehlte im Index, ohne dass jemand sie vermisst.
+    /// Verlangte der Renderer dafür einen Slug und bekäme eine Ausnahme, verwürfe der
+    /// Orchestrator die ganze Datei. Sie fehlte im Index, ohne dass jemand sie vermisst.
     /// Der Verweis führt nirgendwohin; das ist richtig. Der Text bleibt lesbar: das ist der Punkt.
     /// </remarks>
     [Theory]

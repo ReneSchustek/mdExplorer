@@ -13,8 +13,18 @@ public interface ITagRepository
     /// <summary>Fügt einen neuen Tag hinzu.</summary>
     Task AddAsync(Tag tag, CancellationToken cancellationToken);
 
-    /// <summary>Ersetzt sämtliche Tag-Verknüpfungen einer Markdown-Datei durch die übergebene Liste.</summary>
-    Task ReplaceFileTagsAsync(Guid markdownFileId, IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken);
+    /// <summary>
+    /// Ersetzt die Schlagwort-Zuordnungen mehrerer Dateien durch die übergebenen Listen.
+    /// </summary>
+    /// <remarks>
+    /// Für einen ganzen Stapel auf einmal, damit die bestehenden Zuordnungen mit einer Abfrage je
+    /// Portion geladen werden und nicht mit einer je Datei. Doppelte Schlagworte in einer Liste
+    /// zählen einmal; eine leere Liste entfernt alle Zuordnungen der Datei.
+    /// </remarks>
+    /// <param name="tagIdsByFile">Je Datei-Kennung die gewünschten Schlagwort-Kennungen.</param>
+    /// <param name="cancellationToken">Abbruch.</param>
+    /// <returns>Eine Aufgabe, die endet, wenn die Änderungen vorgemerkt sind.</returns>
+    Task ReplaceFileTagsAsync(IReadOnlyDictionary<Guid, IReadOnlyCollection<Guid>> tagIdsByFile, CancellationToken cancellationToken);
 
     /// <summary>
     /// Entfernt Schlagworte, an denen keine Datei mehr hängt.

@@ -1,16 +1,14 @@
-# gitleaks-Konfiguration für .NET-Projekte (Vorlage).
+# gitleaks-Konfiguration für MdExplorer.
 # Dokumentation: https://github.com/gitleaks/gitleaks/blob/master/README.md#configuration
 #
-# Strategie: gitleaks-Defaults erweitern, projekt-spezifische Pfade ausschließen,
-# zusätzliche Regeln je Projekt ergänzen (DPAPI-Blob, OAuth-Token, plattformspezifische Tokens).
-# Bei der Übernahme in ein konkretes Projekt: Datei nach `.gitleaks.toml` umbenennen
-# und projektspezifische Regeln/Allowlists ergänzen.
+# Die eingebauten Regeln von gitleaks gelten weiter; dazu kommt eine Regel für
+# DPAPI-Blobs, und Build-Ausgaben sowie Binärdateien bleiben ungeprüft.
 
 [extend]
 useDefault = true
 
-# ── Zusätzliche projektbezogene Regeln ──────────────────────────────────────
-
+# Ein DPAPI-Blob ist eine lange Base64-Folge. Gemeldet wird sie ab 200 Zeichen hinter
+# einem Bezeichner wie "dpapi_blob" oder "cipher_bytes".
 [[rules]]
 id = "dpapi-blob"
 description = "Hardcodiertes DPAPI-Cipher-Blob (Base64 mit langem Präfix-Tag)"
@@ -18,8 +16,7 @@ regex = '''(?i)(dpapi[_\-\s]?blob|cipher[_\-\s]?bytes)['"\s:=]+([A-Za-z0-9+/=]{2
 secretGroup = 2
 tags = ["secret", "dpapi"]
 
-# ── Globale Allowlist ───────────────────────────────────────────────────────
-
+# Globale Ausnahmen: Pfade und Dateien, die gitleaks überspringt.
 [allowlist]
 description = "Pfade und Dateien, die nicht gescannt werden"
 paths = [
@@ -40,20 +37,19 @@ paths = [
     '''(?i).*\.pdb$''',
     '''(?i).*\.dll$''',
 
-    # Gitleaks selbst (großes Binary, eigene README mit Beispieltreffern)
+    # Das gitleaks-Programm selbst, falls es lokal unter tools/ liegt
     '''(?i)(^|/)tools/gitleaks''',
-    '''(?i)(^|/)tools/README\.md$''',
     '''(?i)(^|/)tools/LICENSE$''',
 ]
 
 # Stopwords für die generischen Default-Regeln, um Test-Daten und kommentierte
-# Beispiele aus Fakes/Stubs herauszufiltern.
+# Beispiele aus Fakes/Stubs herauszufiltern. „test“ steht bewusst nicht darin: Es verschluckte
+# jeden echten Schlüssel, der es im Namen trägt, etwa einen Testschlüssel eines Zahlungsdienstes.
 stopwords = [
     "fake",
     "stub",
     "placeholder",
     "example",
     "sample",
-    "test",
     "dummy",
 ]

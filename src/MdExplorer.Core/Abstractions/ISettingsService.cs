@@ -27,7 +27,8 @@ public interface ISettingsService
 
     /// <summary>
     /// Persistiert die Settings als JSON. Aktualisiert <see cref="Current"/> und
-    /// löst <see cref="SettingsChanged"/> aus, wenn der Stand sich von vorher unterscheidet.
+    /// löst <see cref="SettingsChanged"/> nur aus, wenn sich der neue Stand inhaltlich vom
+    /// zuletzt gültigen unterscheidet. Neue Listen-Instanzen mit gleichem Inhalt zählen nicht.
     /// </summary>
     Task SaveAsync(AppSettings settings, CancellationToken cancellationToken);
 }

@@ -4,7 +4,9 @@ namespace MdExplorer.Parser.Abstractions;
 
 /// <summary>
 /// Wandelt Markdown-Quelltext in ein vollständiges <see cref="ParseResult"/> um.
-/// Implementierung muss XSS-sicher sein (HTML im Quelltext wird verworfen).
+/// Das gelieferte HTML darf nichts Ausführbares enthalten: HTML im Quelltext wird maskiert,
+/// Verweise führen nur auf relative Ziele, <c>http</c>, <c>https</c>, <c>mailto</c> und
+/// <c>mdexplorer</c>, Ereignis- und Stilattribute fallen weg.
 /// </summary>
 public interface IMarkdownParser
 {

@@ -5,10 +5,16 @@ using MdExplorer.Graph.Models;
 using MdExplorer.Graph.Options;
 using MdExplorer.Graph.Services;
 using MdExplorer.Parser.Services;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.Graph.Tests.Services;
 
+/// <summary>
+/// Der Schnappschuss des Graphen zieht Kanten nur zwischen existierenden, verschiedenen Dateien,
+/// zählt eingehende Verweise richtig und wendet Knoten-Obergrenze, Pfad-Ausschluss und
+/// Pfad-Filter an. Kaputtes JSON oder ein Name ohne Slug darf den Aufbau nicht abbrechen.
+/// </summary>
 public sealed class GraphServiceTests
 {
     private static readonly Guid IndexId = Guid.Parse("11111111-1111-1111-1111-111111111111");
@@ -82,17 +88,33 @@ public sealed class GraphServiceTests
     }
 
     [Fact]
-    public async Task BuildSnapshotAsync_OnInvalidJson_DoesNotThrow()
+    public async Task BuildSnapshotAsync_OnACancelledToken_Throws()
+    {
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
+            [new GraphSourceFile(IndexId, "Index", "Index.md")],
+            [new GraphSourceDocument(IndexId, "[]")]));
+        GraphService sut = Build(provider);
+        using CancellationTokenSource cancelled = new();
+        await cancelled.CancelAsync().ConfigureAwait(true);
+
+        _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => sut.BuildSnapshotAsync(GraphFilter.None, cancelled.Token)).ConfigureAwait(true);
+    }
+
+    [Fact]
+    public async Task BuildSnapshotAsync_OnInvalidJson_LogsAWarningAndDrawsNoEdge()
     {
         FakeGraphSourceProvider provider = new(new GraphSourceData(
             [new GraphSourceFile(IndexId, "Index", "Index.md")],
             [new GraphSourceDocument(IndexId, "{ broken json")]));
-        GraphService sut = Build(provider);
+        RecordingLogger<GraphService> logger = new();
+        GraphService sut = new(provider, new TagNormalizer(), Microsoft.Extensions.Options.Options.Create(new GraphOptions { IncludeIsolatedNodes = true }), logger);
 
         GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Empty(snapshot.Edges);
         _ = Assert.Single(snapshot.Nodes);
+        Assert.Contains((LogLevel.Warning, 1102), logger.Entries);
     }
 
     [Fact]
@@ -198,22 +220,22 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_WithPathPrefix_KeepsOnlyMatchingFiles()
     {
-        Guid notizId = new("77777777-7777-7777-7777-777777777777");
+        Guid noteId = new("77777777-7777-7777-7777-777777777777");
         FakeGraphSourceProvider provider = new(new GraphSourceData(
             [
                 new GraphSourceFile(IndexId, "Index", "Index.md"),
-                new GraphSourceFile(notizId, "Notiz", "notizen/Notiz.md"),
+                new GraphSourceFile(noteId, "Notiz", "notizen/Notiz.md"),
             ],
             [
                 new GraphSourceDocument(IndexId, """["notiz"]"""),
-                new GraphSourceDocument(notizId, """[]"""),
+                new GraphSourceDocument(noteId, """[]"""),
             ]));
         GraphService sut = Build(provider, new GraphOptions { IncludeIsolatedNodes = true });
 
         GraphSnapshot snapshot = await sut.BuildSnapshotAsync(new GraphFilter("notizen/"), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         _ = Assert.Single(snapshot.Nodes);
-        Assert.Equal(notizId, snapshot.Nodes[0].Id);
+        Assert.Equal(noteId, snapshot.Nodes[0].Id);
         Assert.Empty(snapshot.Edges);
         Assert.Equal(2, snapshot.OriginalNodeCount);
         Assert.Equal(1, snapshot.OriginalEdgeCount);
@@ -222,9 +244,8 @@ public sealed class GraphServiceTests
     [Fact]
     public async Task BuildSnapshotAsync_OnNonSluggableFileNameAndLinkTarget_DoesNotThrow()
     {
-        // Regression: Ein Dateiname bzw. WikiLink-Ziel aus reinen Sonderzeichen
-        // ("#.md", unter Windows gültig, [[+]]) darf keine ArgumentException aus
-        // TagNormalizer.ToSlug auslösen, sonst stürzt der gesamte Graph-Build ab.
+        // Ein Dateiname oder WikiLink-Ziel aus reinen Sonderzeichen ("#.md" ist unter Windows
+        // gültig, ebenso [[+]]) ergibt keinen Slug. Wirft das, bricht der ganze Graph-Aufbau ab.
         Guid symbolId = new("88888888-8888-8888-8888-888888888888");
         FakeGraphSourceProvider provider = new(new GraphSourceData(
             [
@@ -246,6 +267,47 @@ public sealed class GraphServiceTests
 
     private static void AssertContains(string json, string fragment) =>
         Assert.Contains(fragment, json, StringComparison.Ordinal);
+
+    [Fact]
+    public async Task BuildSnapshotAsync_WithTwoFilesOfTheSameName_LinksTheOneTheNavigationOpens()
+    {
+        // Die Navigation nimmt unter gleichnamigen Dateien die erste nach relativem Pfad. Der
+        // Graph muss dieselbe wählen, sonst zeigt die Kante auf eine andere Datei als der Klick.
+        Guid laterPathId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        Guid earlierPathId = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
+            [
+                new GraphSourceFile(IndexId, "Index", "Index.md"),
+                new GraphSourceFile(laterPathId, "Notiz", "z/Notiz.md"),
+                new GraphSourceFile(earlierPathId, "Notiz", "a/Notiz.md"),
+            ],
+            [new GraphSourceDocument(IndexId, """["notiz"]""")]));
+        GraphService sut = Build(provider);
+
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        GraphEdge edge = Assert.Single(snapshot.Edges);
+        Assert.Equal(earlierPathId, edge.TargetId);
+    }
+
+    [Fact]
+    public async Task BuildSnapshotAsync_WithTwoSpellingsOfTheSameTarget_DrawsOneEdge()
+    {
+        // Zwei Schreibweisen ergeben denselben Slug und damit dasselbe Ziel. Eine zweite Kante
+        // zählte das Ziel doppelt in den Eingangsgrad.
+        FakeGraphSourceProvider provider = new(new GraphSourceData(
+            [
+                new GraphSourceFile(IndexId, "Index", "Index.md"),
+                new GraphSourceFile(AlphaId, "Projekt X", "Projekt X.md"),
+            ],
+            [new GraphSourceDocument(IndexId, """["Projekt X","projekt x"]""")]));
+        GraphService sut = Build(provider);
+
+        GraphSnapshot snapshot = await sut.BuildSnapshotAsync(GraphFilter.None, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        _ = Assert.Single(snapshot.Edges);
+        Assert.Equal(1, snapshot.Nodes.Single(node => node.Id == AlphaId).IncomingLinkCount);
+    }
 
     private static GraphService Build(IGraphSourceProvider provider) =>
         Build(provider, new GraphOptions { IncludeIsolatedNodes = true });

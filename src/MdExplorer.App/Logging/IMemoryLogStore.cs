@@ -19,4 +19,13 @@ internal interface IMemoryLogStore
 
     /// <summary>Liefert eine Momentaufnahme aller gehaltenen Einträge in Eingangsreihenfolge.</summary>
     IReadOnlyList<LogEntry> Snapshot();
+
+    /// <summary>Liefert die jüngsten <paramref name="count"/> Einträge in Eingangsreihenfolge.</summary>
+    /// <param name="count">Höchstzahl der Einträge.</param>
+    /// <returns>Höchstens <paramref name="count"/> Einträge, der jüngste zuletzt.</returns>
+    IReadOnlyList<LogEntry> Recent(int count)
+    {
+        IReadOnlyList<LogEntry> all = Snapshot();
+        return [.. all.Skip(Math.Max(0, all.Count - count))];
+    }
 }

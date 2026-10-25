@@ -9,15 +9,16 @@ using Microsoft.Extensions.DependencyInjection;
 namespace MdExplorer.Data.Tests;
 
 /// <summary>
-/// Regressionstest für die WAL-/busy_timeout-Konfiguration des SQLite-Pragma-Interceptors.
-/// Vor dem Fix führte <c>SqliteCacheMode.Shared</c> in Kombination mit fehlendem
-/// <c>busy_timeout</c> zu sofortigem <c>SQLITE_LOCKED</c> (Code 6),
-/// wenn parallel ein Schreib- und ein Lese-Scope auf denselben Tabellen
-/// arbeiteten, exakt der vom User berichtete Klick-auf-Datei-Crash
-/// während des Initial-Scans.
+/// Ein Schreib- und ein Lese-Scope arbeiten gleichzeitig auf derselben Datenbankdatei, so wie der
+/// Erst-Scan und ein Klick auf eine Datei in der Oberfläche. Mit <c>SqliteCacheMode.Shared</c> und
+/// ohne <c>busy_timeout</c> scheitert der Leser sofort mit <c>SQLITE_LOCKED</c> (Code 6), und die
+/// Datei lässt sich während des Scans nicht öffnen.
 /// </summary>
 public sealed class SqliteConcurrentAccessTests : IDisposable
 {
+    private readonly TestIdSequence _ids = new();
+    // 12 Portionen zu je 25 Dateien und 200 Lesezugriffe überlappen sicher; mit der fehlerhaften
+    // Verbindungskonfiguration scheitert der Lauf mit diesen Mengen zuverlässig.
     private const int WriterIterations = 12;
     private const int FilesPerWriterIteration = 25;
     private const int ReaderIterations = 200;
@@ -29,7 +30,13 @@ public sealed class SqliteConcurrentAccessTests : IDisposable
 
     public SqliteConcurrentAccessTests()
     {
-        string testRoot = Path.Combine(Path.GetTempPath(), "MdExplorer.Tests.Concurrency", Guid.NewGuid().ToString("N"));
+        // Fester Ordner je Testklasse statt einer Zufallskennung; vorher geleert, damit ein
+        // abgebrochener Lauf nichts hinterlässt, das diesen verfälscht.
+        string testRoot = Path.Combine(Path.GetTempPath(), "MdExplorer.Tests.Concurrency", nameof(SqliteConcurrentAccessTests));
+        if (Directory.Exists(testRoot))
+        {
+            Directory.Delete(testRoot, recursive: true);
+        }
         _ = Directory.CreateDirectory(testRoot);
         _dbPath = Path.Combine(testRoot, "concurrent.db");
 
@@ -55,7 +62,8 @@ public sealed class SqliteConcurrentAccessTests : IDisposable
             }
             catch (IOException)
             {
-                // WAL-Begleitdateien können kurz nach Schließen noch gehalten werden; Temp-Cleanup räumt auf.
+                // WAL-Begleitdateien können kurz nach dem Schließen noch gesperrt sein. Dann bleibt
+                // das Verzeichnis im Temp-Ordner liegen; der Test soll daran nicht scheitern.
             }
         }
     }
@@ -77,7 +85,7 @@ public sealed class SqliteConcurrentAccessTests : IDisposable
 
     private async Task<Guid> SeedReadTargetAsync()
     {
-        Guid id = Guid.NewGuid();
+        Guid id = _ids.Next();
         using IServiceScope scope = _services.CreateScope();
         IMarkdownFileRepository repository = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
         await repository.AddAsync(BuildFile(id, @"C:\Wurzel\seed.md", "seed-hash"), TestContext.Current.CancellationToken).ConfigureAwait(true);
@@ -87,8 +95,9 @@ public sealed class SqliteConcurrentAccessTests : IDisposable
 
     private async Task SimulateProgressiveScanAsync(CancellationToken cancellationToken)
     {
-        // Mimik des Initial-Scans aus MarkdownIndexer: pro Batch ein frischer Scope/DbContext,
-        // SaveChangesAsync danach. Genau dieses Muster löste vor dem Fix den Shared-Cache-Lock aus.
+        // Wie der Erst-Scan im MarkdownIndexer: je Portion ein frischer Scope samt DbContext und
+        // danach SaveChangesAsync. Jede Portion öffnet damit eine eigene Verbindung, die mit dem
+        // Leser um die Sperre konkurriert.
         for (int batch = 0; batch < WriterIterations; batch++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -101,7 +110,7 @@ public sealed class SqliteConcurrentAccessTests : IDisposable
                     string path = string.Create(
                         System.Globalization.CultureInfo.InvariantCulture,
                         $@"C:\Wurzel\batch{batch:D3}\file{item:D3}.md");
-                    MarkdownFile entity = BuildFile(Guid.NewGuid(), path, "hash-" + batch + "-" + item);
+                    MarkdownFile entity = BuildFile(_ids.Next(), path, "hash-" + batch + "-" + item);
                     await repository.AddAsync(entity, cancellationToken).ConfigureAwait(false);
                 }
                 _ = await repository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -1,11 +1,16 @@
+using MdExplorer.App.Localization;
 using MdExplorer.App.ViewModels;
 using MdExplorer.Core.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 
 namespace MdExplorer.App.Tests.ViewModels;
 
-/// <summary>Tests für das ViewModel des "Alle Dateien"-Tabs.</summary>
+/// <summary>
+/// Der Tab „Alle Dateien" zeigt die neuesten Dateien zuerst, mit Ortszeit statt UTC, filtert
+/// über Titel, Pfad und Schlagwort und meldet bei Auswahl den absoluten Pfad.
+/// </summary>
 public sealed class AllFilesViewModelTests
 {
     private static readonly Guid FileAId = new("11111111-1111-1111-1111-111111111111");
@@ -21,7 +26,7 @@ public sealed class AllFilesViewModelTests
             new AllFilesRow(FileBId, "Beta", "Beta.md", @"C:\notes\Beta.md", NewerUtc, ["projekt", "wichtig"]),
         ]);
         using ServiceProvider provider = BuildProvider(query);
-        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), new FakeTimeProvider(new DateTimeOffset(NewerUtc)), NullLogger<AllFilesViewModel>.Instance);
 
         await sut.RefreshAsync().ConfigureAwait(true);
 
@@ -60,7 +65,7 @@ public sealed class AllFilesViewModelTests
             new AllFilesRow(FileBId, "Beta", "Beta.md", @"C:\notes\Beta.md", NewerUtc, ["wichtig"]),
         ]);
         using ServiceProvider provider = BuildProvider(query);
-        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), new FakeTimeProvider(new DateTimeOffset(NewerUtc)), NullLogger<AllFilesViewModel>.Instance);
         await sut.RefreshAsync().ConfigureAwait(true);
 
         sut.SearchText = "alpha";
@@ -87,7 +92,7 @@ public sealed class AllFilesViewModelTests
             new AllFilesRow(FileBId, "Alpha", "a/alpha.md", @"C:\notes\a\alpha.md", NewerUtc, []),
         ]);
         using ServiceProvider provider = BuildProvider(query);
-        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), new FakeTimeProvider(new DateTimeOffset(NewerUtc)), NullLogger<AllFilesViewModel>.Instance);
         await sut.RefreshAsync().ConfigureAwait(true);
 
         sut.SortMode = AllFilesSortMode.Title;
@@ -104,7 +109,7 @@ public sealed class AllFilesViewModelTests
             new AllFilesRow(FileAId, "Alpha", "Alpha.md", @"C:\notes\Alpha.md", OlderUtc, []),
         ]);
         using ServiceProvider provider = BuildProvider(query);
-        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), new FakeTimeProvider(new DateTimeOffset(NewerUtc)), NullLogger<AllFilesViewModel>.Instance);
         await sut.RefreshAsync().ConfigureAwait(true);
 
         string? raised = null;
@@ -112,6 +117,42 @@ public sealed class AllFilesViewModelTests
         sut.SelectedItem = sut.Items[0];
 
         Assert.Equal(@"C:\notes\Alpha.md", raised);
+    }
+
+    [Fact]
+    public void PeriodLabels_ComeFromTheResources()
+    {
+        using ServiceProvider provider = BuildProvider(new FakeAllFilesQuery([]));
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), new FakeTimeProvider(new DateTimeOffset(NewerUtc)), NullLogger<AllFilesViewModel>.Instance);
+
+        Assert.Equal(
+            [UiText.Get("AllFiles_Period_Any"), UiText.Get("AllFiles_Period_Today"), UiText.Get("AllFiles_Period_SevenDays"), UiText.Get("AllFiles_Period_ThirtyDays")],
+            sut.PeriodFilters.Select(filter => filter.Label));
+    }
+
+    [Fact]
+    public async Task FilterChips_TakeTheirLabelsFromTheResources()
+    {
+        FakeAllFilesQuery query = new([
+            new AllFilesRow(FileAId, "Alpha", "Alpha.md", @"C:\notes\Alpha.md", NewerUtc, ["projekt"]),
+        ]);
+        using ServiceProvider provider = BuildProvider(query);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), new FakeTimeProvider(new DateTimeOffset(NewerUtc)), NullLogger<AllFilesViewModel>.Instance);
+        await sut.RefreshAsync().ConfigureAwait(true);
+
+        sut.FilterByFolderCommand.Execute(string.Empty);
+        sut.FilterByTagCommand.Execute("projekt");
+        sut.SelectPeriodCommand.Execute(AllFilesPeriod.Today);
+
+        string today = UiText.Get("AllFiles_Period_Today");
+        Assert.Equal(
+            [
+                UiText.Format("AllFiles_Filter_Folder", UiText.Get("AllFiles_Filter_RootFolder")),
+                UiText.Format("AllFiles_Filter_Tag", "projekt"),
+                UiText.Format("AllFiles_Filter_Period", today),
+            ],
+            sut.ActiveFilters.Select(chip => chip.Label));
+        Assert.Equal(UiText.Format("AllFiles_Filter_Remove", sut.ActiveFilters[1].Label), sut.ActiveFilters[1].RemoveHint);
     }
 
     private static ServiceProvider BuildProvider(IAllFilesQuery query)
@@ -127,6 +168,7 @@ public sealed class AllFilesViewModelTests
         public override TimeZoneInfo LocalTimeZone => zone;
     }
 
+    /// <summary>Liefert die vorgegebenen Zeilen unverändert, in ihrer Reihenfolge.</summary>
     private sealed class FakeAllFilesQuery(IReadOnlyList<AllFilesRow> rows) : IAllFilesQuery
     {
         public Task<IReadOnlyList<AllFilesRow>> GetAllAsync(CancellationToken cancellationToken) =>

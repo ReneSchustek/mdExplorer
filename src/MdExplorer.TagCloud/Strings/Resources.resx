@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Action_Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="Action_Reload" xml:space="preserve">
+    <value>Neu laden</value>
+  </data>
+  <data name="TagCloud_Close" xml:space="preserve">
+    <value>Tag-Cloud ausblenden (Strg+T)</value>
+  </data>
+  <data name="TagCloud_Count_ToolTip" xml:space="preserve">
+    <value>{0} Treffer</value>
+  </data>
+  <data name="TagCloud_Header" xml:space="preserve">
+    <value>Tag-Cloud</value>
+  </data>
+  <data name="TagCloud_Header_ToolTip" xml:space="preserve">
+    <value>Klick: nur dieses Schlagwort · Strg+Klick: hinzufügen · Alt+Klick: ausschließen · Menütaste: alle drei zur Auswahl</value>
+  </data>
+  <data name="TagCloud_Menu_Add" xml:space="preserve">
+    <value>Zum Filter _hinzufügen</value>
+  </data>
+  <data name="TagCloud_Menu_Exclude" xml:space="preserve">
+    <value>_Ausschließen</value>
+  </data>
+  <data name="TagCloud_Menu_Replace" xml:space="preserve">
+    <value>_Nur dieses Schlagwort</value>
+  </data>
+  <data name="TagCloud_More" xml:space="preserve">
+    <value>Mehr</value>
+  </data>
+  <data name="TagCloud_More_ToolTip" xml:space="preserve">
+    <value>Long-Tail anzeigen</value>
+  </data>
+  <data name="TagCloud_Sort_Alphabetical" xml:space="preserve">
+    <value>Alphabetisch</value>
+  </data>
+  <data name="TagCloud_Sort_Frequency" xml:space="preserve">
+    <value>Häufigkeit</value>
+  </data>
+  <data name="TagCloud_Sort_Label" xml:space="preserve">
+    <value>Sortierung der Tag-Cloud</value>
+  </data>
+  <data name="TagCloud_Sort_RecentlyUsed" xml:space="preserve">
+    <value>Zuletzt verwendet</value>
+  </data>
+  <data name="TagManagement_Action_Heading" xml:space="preserve">
+    <value>Aktion</value>
+  </data>
+  <data name="TagManagement_Column_Files" xml:space="preserve">
+    <value>Dateien</value>
+  </data>
+  <data name="TagManagement_Column_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="TagManagement_Column_Slug" xml:space="preserve">
+    <value>Slug</value>
+  </data>
+  <data name="TagManagement_Confirm_FileCount" xml:space="preserve">
+    <value>{0} Datei(en) betroffen.</value>
+  </data>
+  <data name="TagManagement_Confirm_Head" xml:space="preserve">
+    <value>{0}: '#{1}'</value>
+  </data>
+  <data name="TagManagement_Confirm_HeadWithTarget" xml:space="preserve">
+    <value>{0}: '#{1}' -&gt; '#{2}'</value>
+  </data>
+  <data name="TagManagement_Confirm_NoFiles" xml:space="preserve">
+    <value>Keine Dateien betroffen.</value>
+  </data>
+  <data name="TagManagement_Confirm_Proceed" xml:space="preserve">
+    <value>Fortfahren?</value>
+  </data>
+  <data name="TagManagement_Delete" xml:space="preserve">
+    <value>_Löschen</value>
+  </data>
+  <data name="TagManagement_Heading" xml:space="preserve">
+    <value>Projektweite Tag-Verwaltung</value>
+  </data>
+  <data name="TagManagement_Hint" xml:space="preserve">
+    <value>Wählen Sie einen Tag aus, tragen Sie den Ziel-Namen ein (ohne führendes '#') und wählen Sie 'Umbenennen' oder 'Zusammenführen'. Zusammenführen ist Umbenennen auf ein Schlagwort, das es schon gibt. 'Löschen' arbeitet ohne Ziel-Namen und entfernt das Schlagwort samt Wort aus dem Text, nicht nur die Raute.</value>
+  </data>
+  <data name="TagManagement_List_Heading" xml:space="preserve">
+    <value>_Tag-Liste</value>
+  </data>
+  <data name="TagManagement_Merge" xml:space="preserve">
+    <value>_Zusammenführen</value>
+  </data>
+  <data name="TagManagement_NewName" xml:space="preserve">
+    <value>_Neuer Name (Ziel)</value>
+  </data>
+  <data name="TagManagement_Operation_Delete" xml:space="preserve">
+    <value>Tag löschen</value>
+  </data>
+  <data name="TagManagement_Operation_Merge" xml:space="preserve">
+    <value>Tags zusammenführen</value>
+  </data>
+  <data name="TagManagement_Operation_Rename" xml:space="preserve">
+    <value>Tag umbenennen</value>
+  </data>
+  <data name="TagManagement_Rename" xml:space="preserve">
+    <value>_Umbenennen</value>
+  </data>
+  <data name="TagManagement_Selected" xml:space="preserve">
+    <value>_Ausgewählter Tag</value>
+  </data>
+  <data name="TagManagement_Status_Completed" xml:space="preserve">
+    <value>{0}: {1} von {2} Datei(en) geändert. Fehler: {3}.</value>
+  </data>
+  <data name="TagManagement_Status_Failed" xml:space="preserve">
+    <value>{0} fehlgeschlagen — siehe Log.</value>
+  </data>
+  <data name="TagManagement_Status_InvalidName" xml:space="preserve">
+    <value>„{0}“ ist kein gültiger Schlagwort-Name. Er beginnt mit einem Buchstaben und enthält nur Buchstaben, Ziffern, Bindestrich und Unterstrich.</value>
+  </data>
+  <data name="TagManagement_Status_LoadFailed" xml:space="preserve">
+    <value>Tag-Liste konnte nicht geladen werden — siehe Log.</value>
+  </data>
+  <data name="TagManagement_Status_Loaded" xml:space="preserve">
+    <value>{0} Tag(s) geladen.</value>
+  </data>
+  <data name="TagManagement_Title" xml:space="preserve">
+    <value>Tag-Verwaltung</value>
+  </data>
+</root>

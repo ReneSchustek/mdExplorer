@@ -15,13 +15,13 @@ namespace MdExplorer.Graph.Tests.Services;
 /// </summary>
 /// <remarks>
 /// Der Weg über die Nachbarschaft tauscht Umfang gegen Umfang, nicht Logik gegen Logik: Die
-/// Auflösung von Name auf Datei ist dieselbe Funktion. Genau das muss belegt sein, sonst
+/// Auflösung von Name auf Datei ist dieselbe Funktion. Das muss belegt sein, sonst
 /// tauscht man ein Leistungsproblem gegen zwei Auflösungen, die auseinanderlaufen.
 /// </remarks>
 public sealed class GraphServiceNeighborhoodTests
 {
     [Fact]
-    public async Task RelationsMatchWhatTheFullSnapshotWouldSay()
+    public async Task GetRelationsAsync_OnACorpus_MatchesTheFullSnapshot()
     {
         GraphSourceData data = Corpus(120);
 
@@ -46,7 +46,7 @@ public sealed class GraphServiceNeighborhoodTests
     /// still beim vollen Bestand, sobald jemand die Bequemlichkeit sucht.
     /// </remarks>
     [Fact]
-    public async Task RelationsNeverAskForTheFullSnapshot()
+    public async Task GetRelationsAsync_OnACorpus_NeverLoadsTheFullSnapshot()
     {
         GraphSourceData data = Corpus(120);
         FakeGraphSourceProvider provider = new(data);
@@ -63,7 +63,7 @@ public sealed class GraphServiceNeighborhoodTests
     /// „nur die Nachbarschaft" eine Behauptung.
     /// </remarks>
     [Fact]
-    public async Task OnlyAHandfulOfLinkListsAreRead()
+    public async Task GetRelationsAsync_OnACorpus_ReadsOnlyAHandfulOfLinkLists()
     {
         GraphSourceData data = Corpus(120);
         FakeGraphSourceProvider provider = new(data);
@@ -78,41 +78,43 @@ public sealed class GraphServiceNeighborhoodTests
     }
 
     /// <remarks>
-    /// Der Vorfilter ist eine Textsuche und liefert zu viel: Ein Dokument, das
-    /// <c>„notiz-7-anhang"</c> nennt, enthält die Zeichenfolge <c>„notiz-7"</c> nicht, wohl
-    /// aber eines, das <c>„notiz-70"</c>… deshalb sucht der Filter mit Anführungszeichen.
-    /// Was trotzdem durchrutscht, muss beim Auswerten verschwinden.
+    /// Der Vorfilter ist eine Textsuche. Ohne Anführungszeichen träfe die Suche nach
+    /// <c>notiz-7</c> auch <c>notiz-70</c> und <c>notiz-7-anhang</c>; deshalb sucht er mit
+    /// Anführungszeichen. Was trotzdem durchrutscht, muss beim Auswerten verschwinden.
     /// </remarks>
     [Fact]
-    public async Task APrefilterHitThatIsNoLinkDoesNotBecomeAnEdge()
+    public async Task GetRelationsAsync_WithAPrefilterHitThatIsNoLink_DrawsNoEdge()
     {
-        Guid ziel = Guid.Parse("11111111-1111-1111-1111-111111111111");
-        Guid fremd = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        Guid target = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        Guid other = Guid.Parse("22222222-2222-2222-2222-222222222222");
         GraphSourceData data = new(
             [
-                new GraphSourceFile(ziel, "Notiz", "Notiz.md"),
-                new GraphSourceFile(fremd, "Fremd", "Fremd.md"),
+                new GraphSourceFile(target, "Notiz", "Notiz.md"),
+                new GraphSourceFile(other, "Fremd", "Fremd.md"),
             ],
             [
-                new GraphSourceDocument(ziel, """[]"""),
-                // Der Slug steht im Text der Liste, ist aber kein Eintrag des Arrays.
-                new GraphSourceDocument(fremd, """["etwas-anderes"]"""),
+                new GraphSourceDocument(target, """[]"""),
+                // Der Name steht in Anführungszeichen im Text und trifft damit den Vorfilter, ist
+                // aber kein Element der Verweisliste.
+                new GraphSourceDocument(other, """{"notiz":"kein Verweis"}"""),
             ]);
+        FakeGraphSourceProvider provider = new(data);
 
-        DocumentRelations relations = await Build(data)
-            .GetRelationsAsync(ziel, TestContext.Current.CancellationToken)
+        DocumentRelations relations = await Build(provider)
+            .GetRelationsAsync(target, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
+        Assert.Equal(2, provider.LastNeighborhoodSize);
         Assert.Empty(relations.Incoming);
     }
 
     [Fact]
-    public async Task AnUnknownDocumentYieldsNothing()
+    public async Task GetRelationsAsync_ForAnUnknownDocument_ReturnsNothing()
     {
         GraphSourceData data = Corpus(5);
 
         DocumentRelations relations = await Build(data)
-            .GetRelationsAsync(Guid.NewGuid(), TestContext.Current.CancellationToken)
+            .GetRelationsAsync(Guid.Parse("99999999-9999-9999-9999-999999999999"), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         Assert.Empty(relations.Outgoing);

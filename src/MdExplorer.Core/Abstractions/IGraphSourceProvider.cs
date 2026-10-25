@@ -8,8 +8,8 @@ namespace MdExplorer.Core.Abstractions;
 public interface IGraphSourceProvider
 {
     /// <summary>
-    /// Lädt alle für den Graphen benötigten Rohdaten in einem Roundtrip.
-    /// Reihenfolge ist deterministisch über <see cref="GraphSourceFile.Id"/>.
+    /// Lädt alle für den Graphen benötigten Rohdaten in zwei Abfragen, Dateien und Dokumente.
+    /// Beide Listen sind nach Datei-Id sortiert, die Reihenfolge ist also bei jedem Aufruf dieselbe.
     /// </summary>
     Task<GraphSourceData> LoadAsync(CancellationToken cancellationToken);
 

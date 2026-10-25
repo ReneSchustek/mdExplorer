@@ -5,6 +5,12 @@ using AppSettings = MdExplorer.Core.Models.AppSettings;
 
 namespace MdExplorer.Parser.Tests.Services;
 
+/// <summary>
+/// Der Extractor findet Hashtags im Fließtext, auch in Listen, Zitaten und Hervorhebungen, aber
+/// nicht in Code, Codeblöcken oder dem Frontmatter, und schweigt, wenn die Einstellung das
+/// automatische Erkennen abschaltet. Ein Treffer im Code füllte die Wolke mit Bezeichnern aus
+/// Beispielen.
+/// </summary>
 public sealed class TagExtractorTests
 {
     private readonly FakeSettingsService _settings = new();
@@ -131,6 +137,25 @@ public sealed class TagExtractorTests
         IReadOnlyList<string> result = _sut.ExtractFromText("Body mit #foo und #bar.");
 
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ExtractFromText_OnAHashInTheFrontmatter_CountsLikeTheIndex()
+    {
+        // Der Editor zeigt die Schlagworte an, die der Index speichern wird. Zählte er eine Raute
+        // aus dem Frontmatter mit, stünde dort ein Schlagwort, das keine Suche findet.
+        const string Markdown = """
+            ---
+            title: Planung #imkopf
+            ---
+            Body mit #imtext.
+            """;
+
+        IReadOnlyList<string> fromEditor = _sut.ExtractFromText(Markdown);
+        IReadOnlyList<string> fromIndex = _sut.ExtractFromAst(TestPipelineFactory.Parse(Markdown));
+
+        Assert.Equal("imtext", Assert.Single(fromEditor));
+        Assert.Equal(fromIndex, fromEditor);
     }
 
     [Fact]

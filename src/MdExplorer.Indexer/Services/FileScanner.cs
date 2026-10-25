@@ -10,8 +10,8 @@ namespace MdExplorer.Indexer.Services;
 /// Rein iterativer Markdown-Scanner, vollständig über <see cref="IFileSystem"/> entkoppelt.
 /// Delegiert die Ausschluss-Logik an einen <see cref="IExclusionFilter"/>, der Settings und
 /// <c>.mdignore</c>-Hierarchie kombiniert. Steigt verzeichnisweise per BFS ab und überspringt
-/// Symlinks / NTFS-Junctions (Reparse-Points) gemäß <see cref="IndexerOptions.FollowSymlinks"/>.
-/// Das verhindert Endlosschleifen und Mehrfach-Indizierung.
+/// verknüpfte Ordner und Dateien (Symlinks, NTFS-Junctions) gemäß <see cref="IndexerOptions.FollowSymlinks"/>.
+/// Das verhindert Endlosschleifen, Mehrfach-Indizierung und Inhalte von außerhalb der Wurzel.
 /// </summary>
 public sealed partial class FileScanner : IFileScanner
 {
@@ -41,7 +41,7 @@ public sealed partial class FileScanner : IFileScanner
     }
 
     /// <inheritdoc />
-    public IEnumerable<string> EnumerateMarkdownFiles(string rootAbsolutePath, CancellationToken cancellationToken)
+    public IEnumerable<FileEntry> EnumerateMarkdownFiles(string rootAbsolutePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootAbsolutePath);
 
@@ -53,6 +53,13 @@ public sealed partial class FileScanner : IFileScanner
         return EnumerateInternal(rootAbsolutePath, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public bool IsExcluded(string absoluteFilePath, string rootAbsolutePath) =>
+        _exclusionFilter.IsExcluded(absoluteFilePath, rootAbsolutePath);
+
+    /// <inheritdoc />
+    public void InvalidateExclusions() => _exclusionFilter.Invalidate();
+
     [LoggerMessage(EventId = 200, Level = LogLevel.Information,
         Message = "Symlink/Junction übersprungen: {Path} → {Target}.")]
     private static partial void LogSymlinkSkipped(ILogger logger, string path, string target);
@@ -61,7 +68,11 @@ public sealed partial class FileScanner : IFileScanner
         Message = "Symlink-Zyklus erkannt — nicht erneut betreten: {Path} → {Target}.")]
     private static partial void LogSymlinkCycle(ILogger logger, string path, string target);
 
-    private IEnumerable<string> EnumerateInternal(string root, CancellationToken cancellationToken)
+    [LoggerMessage(EventId = 202, Level = LogLevel.Debug,
+        Message = "Datei-Verknüpfung übersprungen: {Path} → {Target}.")]
+    private static partial void LogFileLinkSkipped(ILogger logger, string path, string target);
+
+    private IEnumerable<FileEntry> EnumerateInternal(string root, CancellationToken cancellationToken)
     {
         HashSet<string> visitedCanonical = new(StringComparer.OrdinalIgnoreCase);
         _ = visitedCanonical.Add(_fileSystem.GetDirectoryFinalPath(root));
@@ -73,25 +84,42 @@ public sealed partial class FileScanner : IFileScanner
             cancellationToken.ThrowIfCancellationRequested();
             string current = pending.Dequeue();
 
-            foreach (string path in EnumerateMarkdownFilesIn(current, root, cancellationToken))
+            foreach (FileEntry entry in EnumerateMarkdownFilesIn(current, root, cancellationToken))
             {
-                yield return path;
+                yield return entry;
             }
 
             EnqueueDescendableSubdirectories(current, visitedCanonical, pending, cancellationToken);
         }
     }
 
-    private IEnumerable<string> EnumerateMarkdownFilesIn(string directory, string root, CancellationToken cancellationToken)
+    private IEnumerable<FileEntry> EnumerateMarkdownFilesIn(string directory, string root, CancellationToken cancellationToken)
     {
-        foreach (string path in _fileSystem.EnumerateFiles(directory, MarkdownSearchPattern, recursive: false))
+        foreach (FileEntry entry in _fileSystem.EnumerateFileEntries(directory, MarkdownSearchPattern))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!_exclusionFilter.IsExcluded(path, root))
+            if (!_exclusionFilter.IsExcluded(entry.Path, root) && !IsSkippedFileLink(entry))
             {
-                yield return path;
+                yield return entry;
             }
         }
+    }
+
+    // Übersprungen wird nur eine Datei, die auf ein anderes Ziel zeigt. Ein Reparse-Point ohne
+    // eigenes Ziel bleibt drin: OneDrive legt so jede Datei ab, auch die vor Ort liegenden.
+    private bool IsSkippedFileLink(FileEntry entry)
+    {
+        if (_options.FollowSymlinks || !entry.IsReparsePoint)
+        {
+            return false;
+        }
+        string target = _fileSystem.GetDirectoryFinalPath(entry.Path);
+        if (string.Equals(target, entry.Path, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        LogFileLinkSkipped(_logger, entry.Path, target);
+        return true;
     }
 
     private void EnqueueDescendableSubdirectories(
@@ -120,6 +148,8 @@ public sealed partial class FileScanner : IFileScanner
             return false;
         }
 
+        // Auch gewöhnliche Ordner landen in der Menge: Zeigt eine Verknüpfung später auf einen
+        // von ihnen, wird er als schon besucht erkannt und nicht doppelt indiziert.
         if (!visitedCanonical.Add(canonical))
         {
             if (isReparsePoint)

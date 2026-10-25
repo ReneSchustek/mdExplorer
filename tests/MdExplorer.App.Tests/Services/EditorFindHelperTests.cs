@@ -2,7 +2,10 @@ using MdExplorer.App.Services;
 
 namespace MdExplorer.App.Tests.Services;
 
-/// <summary>Tests des reinen Find-Algorithmus für den Editor (Ctrl+F).</summary>
+/// <summary>
+/// Die Suche im Editor (Strg+F) springt von der Einfügemarke zum nächsten oder vorigen Treffer und läuft
+/// am Textende wieder vorn an. Ein Versatz um ein Zeichen markierte das falsche Wort.
+/// </summary>
 public sealed class EditorFindHelperTests
 {
     [Fact]
@@ -13,7 +16,7 @@ public sealed class EditorFindHelperTests
         EditorFindHelper.FindMatch? match = EditorFindHelper.FindNext(text, "ipsum", startIndex: 0);
 
         Assert.True(match.HasValue);
-        Assert.Equal(6, match!.Value.StartIndex);
+        Assert.Equal(6, match.Value.StartIndex);
         Assert.Equal(5, match.Value.Length);
     }
 
@@ -25,7 +28,7 @@ public sealed class EditorFindHelperTests
         EditorFindHelper.FindMatch? match = EditorFindHelper.FindNext(text, "ipsum", startIndex: 11);
 
         Assert.True(match.HasValue);
-        Assert.Equal(34, match!.Value.StartIndex);
+        Assert.Equal(34, match.Value.StartIndex);
     }
 
     [Fact]
@@ -36,7 +39,7 @@ public sealed class EditorFindHelperTests
         EditorFindHelper.FindMatch? match = EditorFindHelper.FindNext(text, "ipsum", startIndex: text.Length);
 
         Assert.True(match.HasValue);
-        Assert.Equal(6, match!.Value.StartIndex);
+        Assert.Equal(6, match.Value.StartIndex);
     }
 
     [Fact]
@@ -74,7 +77,7 @@ public sealed class EditorFindHelperTests
 
         Assert.True(match.HasValue);
         // Der Treffer bei Index 6 ist der einzige strikt VOR endIndex=30 (zweiter beginnt bei 34).
-        Assert.Equal(6, match!.Value.StartIndex);
+        Assert.Equal(6, match.Value.StartIndex);
     }
 
     [Fact]
@@ -85,7 +88,7 @@ public sealed class EditorFindHelperTests
         EditorFindHelper.FindMatch? match = EditorFindHelper.FindPrevious(text, "ipsum", endIndex: 0);
 
         Assert.True(match.HasValue);
-        Assert.Equal(34, match!.Value.StartIndex);
+        Assert.Equal(34, match.Value.StartIndex);
     }
 
     [Fact]

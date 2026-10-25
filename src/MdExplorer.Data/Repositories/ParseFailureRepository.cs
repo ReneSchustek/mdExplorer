@@ -7,12 +7,6 @@ namespace MdExplorer.Data.Repositories;
 /// <summary>EF-Core-gestützte Implementierung von <see cref="IParseFailureRepository"/>.</summary>
 public sealed class ParseFailureRepository(MdExplorerDbContext dbContext) : IParseFailureRepository
 {
-    /// <summary>
-    /// Maximalgröße für SQLite-IN-Listen, dieselbe defensive Schwelle wie im
-    /// <see cref="MarkdownDocumentRepository"/>.
-    /// </summary>
-    private const int SqliteInListBatchSize = 500;
-
     private readonly MdExplorerDbContext _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
 
     /// <inheritdoc />
@@ -28,9 +22,10 @@ public sealed class ParseFailureRepository(MdExplorerDbContext dbContext) : IPar
 
         Guid[] ids = [.. markdownFileIds];
         Dictionary<Guid, ParseFailure> result = new(ids.Length);
-        // Getrackt (kein AsNoTracking), denn RecordAsync mutiert einen bereits geladenen Vermerk,
-        // statt ihn erneut abzufragen; ein Detached-Ergebnis würde diese Änderung verlieren.
-        foreach (Guid[] chunk in ids.Chunk(SqliteInListBatchSize))
+        // Getrackt geladen. RecordAsync und RemoveAsync fragen die Vermerke selbst noch einmal ab
+        // und bekommen im selben Kontext über die Identitätsauflösung genau diese Instanzen
+        // zurück; ein zweites Objekt für dieselbe Zeile entsteht so nicht.
+        foreach (Guid[] chunk in ids.Chunk(SqliteInList.BatchSize))
         {
             List<ParseFailure> chunkResult = await _dbContext.Set<ParseFailure>()
                 .Where(failure => chunk.Contains(failure.MarkdownFileId))
@@ -75,7 +70,7 @@ public sealed class ParseFailureRepository(MdExplorerDbContext dbContext) : IPar
         }
 
         Guid[] ids = [.. markdownFileIds];
-        foreach (Guid[] chunk in ids.Chunk(SqliteInListBatchSize))
+        foreach (Guid[] chunk in ids.Chunk(SqliteInList.BatchSize))
         {
             List<ParseFailure> chunkResult = await _dbContext.Set<ParseFailure>()
                 .Where(failure => chunk.Contains(failure.MarkdownFileId))

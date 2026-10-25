@@ -11,18 +11,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.11" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
-    <!-- Ausdrücklich gesetzt: Microsoft.Data.Sqlite 10.0.9 zieht sonst
-         SQLitePCLRaw.lib.e_sqlite3 2.1.11 nach, die GHSA-2m69-gcr7-jv3q trägt
-         (Schweregrad High). Das Bündel 3.0.3 bringt eine unbelastete Fassung mit.
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <!-- Ausdrücklich gesetzt: Microsoft.Data.Sqlite zieht noch die 2.1er-Reihe von
+         SQLitePCLRaw nach (bei 10.0.11: 2.1.12); in 2.1.11 stand GHSA-2m69-gcr7-jv3q
+         (Schweregrad High). Die 3er-Reihe bringt eine unbelastete SQLite-Fassung mit.
          Beim Anheben von Microsoft.Data.Sqlite prüfen, ob der Eintrag noch nötig ist. -->
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
   </ItemGroup>
 
   <ItemGroup>

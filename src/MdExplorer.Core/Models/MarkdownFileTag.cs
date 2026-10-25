@@ -3,6 +3,9 @@ namespace MdExplorer.Core.Models;
 /// <summary>
 /// Join-Entität für die n:m-Beziehung zwischen <see cref="MarkdownFile"/> und <see cref="Tag"/>.
 /// </summary>
+/// <remarks>
+/// Öffentliche Setter aus demselben Grund wie bei <see cref="MarkdownFile"/>.
+/// </remarks>
 public sealed class MarkdownFileTag
 {
     /// <summary>Fremdschlüssel auf <see cref="MarkdownFile.Id"/>, Teil des zusammengesetzten Primärschlüssels.</summary>

@@ -3,6 +3,10 @@ using MdExplorer.Indexer.Tests.Fakes;
 
 namespace MdExplorer.Indexer.Tests.Services;
 
+/// <summary>
+/// Der Inhalts-Hash ist SHA-256 in kleinen Hex-Ziffern. Weicht er davon ab, passt er nicht mehr zu
+/// den gespeicherten Hashes, und jeder Abgleich hielte alle Dateien für geändert.
+/// </summary>
 public sealed class HashCalculatorTests
 {
     private static readonly DateTime FixedWrite = new(2026, 6, 7, 12, 0, 0, DateTimeKind.Utc);
@@ -19,6 +23,7 @@ public sealed class HashCalculatorTests
         string hashB = await sut.ComputeAsync(@"C:\b.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Equal(hashA, hashB);
+        // 32 Byte SHA-256 als Hex-Text.
         Assert.Equal(64, hashA.Length);
     }
 
@@ -45,6 +50,7 @@ public sealed class HashCalculatorTests
 
         string hash = await sut.ComputeAsync(@"C:\test.md", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
+        // Der Prüfwert aus FIPS 180-2 für "abc".
         Assert.Equal("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", hash);
     }
 

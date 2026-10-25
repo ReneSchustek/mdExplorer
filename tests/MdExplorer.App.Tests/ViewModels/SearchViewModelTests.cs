@@ -1,123 +1,188 @@
 using CommunityToolkit.Mvvm.Messaging;
+using System.IO;
 using MdExplorer.App.Tests.Fakes;
-using MdExplorer.App.ViewModels;
-using MdExplorer.Search.Abstractions;
+using MdExplorer.Core.Messaging;
 using MdExplorer.Search.Models;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels;
 
 /// <summary>
-/// Tests für die Debounce- und Concurrency-Logik des <see cref="SearchViewModel"/>.
-/// Verwenden <see cref="FakeTimeProvider"/> (eigene Implementierung), damit die Asserts
-/// deterministisch sind und keine echte Wartezeit nötig ist.
+/// Schnelles Tippen löst genau eine Suche mit dem letzten Text aus, die Treffer erscheinen in der
+/// Reihenfolge des Suchdienstes, und Seitengröße und Ordnerbeschränkung gehen in die Anfrage ein,
+/// statt hinterher im Speicher zu filtern.
 /// </summary>
 public sealed class SearchViewModelTests
 {
-    private static readonly TimeSpan TestDebounce = TimeSpan.FromMilliseconds(50);
+    private static readonly Guid FirstId = new("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid SecondId = new("22222222-2222-2222-2222-222222222222");
 
     [Fact]
-    public async Task OnTextChanged_DebouncesQuery_FiresOnceForRapidInputs()
+    public void RapidInput_SearchesOnceWithTheLastText()
     {
-        FakeSearchService searchService = new();
-        searchService.SetNextResults([]);
+        using SearchTestHarness harness = new();
 
-        using ServiceProvider provider = BuildProvider(searchService);
-        using SearchViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, new StrongReferenceMessenger(), NullLogger<SearchViewModel>.Instance, TestDebounce);
-        TaskCompletionSource completion = new();
-        vm.SearchCompleted += (_, _) => completion.TrySetResult();
+        harness.ViewModel.QueryText = "f";
+        harness.ViewModel.QueryText = "fo";
+        harness.ViewModel.QueryText = "foo";
+        harness.Elapse();
 
-        vm.QueryText = "f";
-        vm.QueryText = "fo";
-        vm.QueryText = "foo";
-
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
-
-        Assert.Equal(1, searchService.CallCount);
-        Assert.Equal("foo", searchService.ReceivedQueries[0].Text);
+        Assert.Equal(1, harness.Recording.CallCount);
+        Assert.Equal("foo", harness.Recording.ReceivedQueries[0].Text);
     }
 
     [Fact]
-    public async Task OnSearchResult_PopulatesItemsInOrder()
+    public void BeforeTheWaitTimeHasPassed_NothingIsSearched()
     {
-        Guid first = Guid.NewGuid();
-        Guid second = Guid.NewGuid();
-        FakeSearchService searchService = new();
-        searchService.SetNextResults(
+        using SearchTestHarness harness = new();
+
+        harness.ViewModel.QueryText = "foo";
+        harness.Clock.Advance(SearchTestHarness.Debounce - TimeSpan.FromMilliseconds(1));
+
+        Assert.Equal(0, harness.Recording.CallCount);
+    }
+
+    [Fact]
+    public void Results_AppearInTheOrderOfTheSearchService()
+    {
+        using SearchTestHarness harness = new();
+        harness.Recording.SetNextResults(
         [
-            new SearchResult(first, "A.md", "A", 1.0, "snippet A", []),
-            new SearchResult(second, "B.md", "B", 2.0, "snippet B", []),
+            new SearchResult(FirstId, "A.md", "A", 1.0, "snippet A"),
+            new SearchResult(SecondId, "B.md", "B", 2.0, "snippet B"),
         ]);
 
-        using ServiceProvider provider = BuildProvider(searchService);
-        using SearchViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, new StrongReferenceMessenger(), NullLogger<SearchViewModel>.Instance, TestDebounce);
-        TaskCompletionSource completion = new();
-        vm.SearchCompleted += (_, _) => completion.TrySetResult();
+        harness.Type("foo");
 
-        vm.QueryText = "foo";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
-
-        Assert.Equal(2, vm.Results.Count);
-        Assert.Equal(first, vm.Results[0].MarkdownFileId);
-        Assert.Equal(second, vm.Results[1].MarkdownFileId);
+        Assert.Equal(2, harness.ViewModel.Results.Count);
+        Assert.Equal(FirstId, harness.ViewModel.Results[0].MarkdownFileId);
+        Assert.Equal(SecondId, harness.ViewModel.Results[1].MarkdownFileId);
     }
 
     [Fact]
-    public async Task OnPathPrefixFilter_FiltersResults_WhenScopeEnabled()
+    public void TheQuery_AsksForAsManyHitsAsTheSettingsShow()
     {
-        Guid included = Guid.NewGuid();
-        Guid excluded = Guid.NewGuid();
-        FakeSearchService searchService = new();
-        searchService.SetNextResults(
-        [
-            new SearchResult(included, "projekte/a.md", "A", 1.0, "x", []),
-            new SearchResult(excluded, "anderes/b.md", "B", 1.0, "x", []),
-        ]);
+        // Ohne Angabe lieferte der Dienst seine Vorgabe von 20 Treffern; die Einstellung
+        // „Treffer pro Seite“ hatte keine Wirkung.
+        using SearchTestHarness harness = new();
 
-        using ServiceProvider provider = BuildProvider(searchService);
-        using SearchViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, new StrongReferenceMessenger(), NullLogger<SearchViewModel>.Instance, TestDebounce);
-        vm.PathPrefixFilter = "projekte/";
-        vm.ScopeToSelectedFolder = true;
-        TaskCompletionSource completion = new();
-        vm.SearchCompleted += (_, _) => completion.TrySetResult();
+        harness.Type("foo");
 
-        vm.QueryText = "foo";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
-
-        _ = Assert.Single(vm.Results);
-        Assert.Equal(included, vm.Results[0].MarkdownFileId);
+        Assert.Equal(SearchTestHarness.ResultsPerPage, harness.Recording.ReceivedQueries[0].Take);
     }
 
     [Fact]
-    public async Task OnPathPrefixFilter_Ignored_WhenScopeDisabled()
+    public void AChangedPageSize_AppliesToTheNextQuery()
     {
-        // Default-Verhalten: ohne aktiven Scope wird der Pfad-Prefix ignoriert und global gesucht.
-        Guid first = Guid.NewGuid();
-        Guid second = Guid.NewGuid();
-        FakeSearchService searchService = new();
-        searchService.SetNextResults(
-        [
-            new SearchResult(first, "projekte/a.md", "A", 1.0, "x", []),
-            new SearchResult(second, "anderes/b.md", "B", 1.0, "x", []),
-        ]);
+        using SearchTestHarness harness = new();
+        _ = harness.Messenger.Send(new SettingsChangedMessage(
+            SearchTestHarness.Settings(SearchTestHarness.Debounce, SearchTestHarness.ResultsPerPage),
+            SearchTestHarness.Settings(SearchTestHarness.Debounce, 200)));
 
-        using ServiceProvider provider = BuildProvider(searchService);
-        using SearchViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, new StrongReferenceMessenger(), NullLogger<SearchViewModel>.Instance, TestDebounce);
-        vm.PathPrefixFilter = "projekte/";
-        TaskCompletionSource completion = new();
-        vm.SearchCompleted += (_, _) => completion.TrySetResult();
+        harness.Type("foo");
 
-        vm.QueryText = "foo";
-        await completion.Task.WaitAsync(TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken).ConfigureAwait(true);
-
-        Assert.Equal(2, vm.Results.Count);
+        Assert.Equal(200, harness.Recording.ReceivedQueries[0].Take);
     }
 
-    private static ServiceProvider BuildProvider(FakeSearchService searchService)
+    [Fact]
+    public void WithTheFolderScopeOn_TheFolderIsPartOfTheQuery()
     {
-        ServiceCollection services = new();
-        _ = services.AddScoped<ISearchService>(_ => searchService);
-        return services.BuildServiceProvider(validateScopes: true);
+        // Gefiltert wurde früher erst nach der Antwort, unter den global besten Treffern. Ein
+        // Ordner, dessen Treffer weiter hinten lagen, meldete dann „keine Treffer“.
+        using SearchTestHarness harness = new();
+        harness.ViewModel.PathPrefixFilter = "projekte" + Path.DirectorySeparatorChar;
+        harness.ViewModel.ScopeToSelectedFolder = true;
+
+        harness.Type("foo");
+
+        string expectedFilter = "path:\"projekte" + Path.DirectorySeparatorChar + "\"";
+        Assert.Equal("foo " + expectedFilter, harness.Recording.ReceivedQueries[^1].Text);
+        Assert.Equal("foo", harness.ViewModel.QueryText);
+    }
+
+    [Fact]
+    public void WithTheFolderScopeOff_TheSearchStaysGlobal()
+    {
+        using SearchTestHarness harness = new();
+        harness.ViewModel.PathPrefixFilter = "projekte" + Path.DirectorySeparatorChar;
+
+        harness.Type("foo");
+
+        Assert.Equal("foo", harness.Recording.ReceivedQueries[0].Text);
+    }
+
+    [Fact]
+    public void ChoosingAnotherFolder_WithTheScopeOn_SearchesAgain()
+    {
+        using SearchTestHarness harness = new();
+        harness.ViewModel.ScopeToSelectedFolder = true;
+        harness.ViewModel.PathPrefixFilter = "alt" + Path.DirectorySeparatorChar;
+        harness.Type("foo");
+        int before = harness.Recording.CallCount;
+
+        harness.ViewModel.PathPrefixFilter = "neu" + Path.DirectorySeparatorChar;
+        harness.Elapse();
+
+        Assert.Equal(before + 1, harness.Recording.CallCount);
+        Assert.Contains("neu", harness.Recording.ReceivedQueries[^1].Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ChoosingAnotherFolder_WithTheScopeOff_DoesNotSearch()
+    {
+        using SearchTestHarness harness = new();
+        harness.Type("foo");
+        int before = harness.Recording.CallCount;
+
+        harness.ViewModel.PathPrefixFilter = "neu" + Path.DirectorySeparatorChar;
+        harness.Elapse();
+
+        Assert.Equal(before, harness.Recording.CallCount);
+    }
+
+    [Fact]
+    public void AnAnswerArrivingAfterTheFieldWasCleared_IsDropped()
+    {
+        // Die Antwort stellt sich am UI-Thread an. Leert der Nutzer das Feld, bevor sie dran
+        // ist, gehört sie zu einer Anfrage, die es nicht mehr gibt.
+        QueuedUiDispatcher dispatcher = new();
+        FakeSearchService service = new();
+        service.SetNextResults([new SearchResult(FirstId, "A.md", "A", 1.0, "x")]);
+        using SearchTestHarness harness = new(service, dispatcher);
+
+        harness.Type("foo");
+        harness.ViewModel.Clear();
+        dispatcher.RunPending();
+
+        Assert.Empty(harness.ViewModel.Results);
+        Assert.True(harness.ViewModel.ShowsNothingSearchedYet);
+    }
+
+    [Fact]
+    public void AnAnswerToAnOlderQuery_DoesNotReplaceTheNewerOne()
+    {
+        QueuedUiDispatcher dispatcher = new();
+        FakeSearchService service = new();
+        using SearchTestHarness harness = new(service, dispatcher);
+
+        service.SetNextResults([new SearchResult(FirstId, "A.md", "A", 1.0, "x")]);
+        harness.Type("alt");
+        service.SetNextResults([new SearchResult(SecondId, "B.md", "B", 1.0, "x")]);
+        harness.Type("neu");
+        dispatcher.RunPending();
+
+        _ = Assert.Single(harness.ViewModel.Results);
+        Assert.Equal(SecondId, harness.ViewModel.Results[0].MarkdownFileId);
+    }
+
+    [Fact]
+    public void AfterDispose_APendingTimerSearchesNothing()
+    {
+        SearchTestHarness harness = new();
+        harness.ViewModel.QueryText = "foo";
+
+        harness.Dispose();
+        harness.Elapse();
+
+        Assert.Equal(0, harness.Recording.CallCount);
     }
 }

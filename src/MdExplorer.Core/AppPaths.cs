@@ -1,8 +1,14 @@
 namespace MdExplorer.Core;
 
 /// <summary>
-/// Zentrale, plattformabhängige Pfade der Anwendung.
+/// Zentrale Pfade der Anwendung unter <c>%LOCALAPPDATA%\MdExplorer\</c>.
 /// </summary>
+/// <remarks>
+/// <see cref="Default"/> rechnet nur und legt nichts an; das tut einmal der Start
+/// (<see cref="AppPathLayout.EnsureDirectories"/> im <c>AppInitializer</c>). Statisch bleibt der
+/// Zugang, weil Protokoll und Datenbankpfad schon gebraucht werden, bevor die Abhängigkeits-
+/// verwaltung steht. Wer testen will, nimmt <see cref="AppPathLayout"/> mit eigener Wurzel.
+/// </remarks>
 public static class AppPaths
 {
     /// <summary>Name des Anwendungsverzeichnisses unter <c>%LOCALAPPDATA%</c>.</summary>
@@ -26,58 +32,7 @@ public static class AppPaths
     /// <summary>Dateiname der Settings-Diff-Audit-Datei (JSON-Lines, ein Eintrag pro Save).</summary>
     public const string SettingsAuditLogFileName = "settings-audit.log";
 
-    /// <summary>
-    /// Wurzelverzeichnis aller Benutzerdaten: <c>%LOCALAPPDATA%\MdExplorer\</c>.
-    /// Wird beim ersten Aufruf erzeugt, falls nicht vorhanden.
-    /// </summary>
-    public static string GetApplicationDataDirectory()
-    {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string applicationDataDirectory = Path.Combine(localAppData, ApplicationFolderName);
-        _ = Directory.CreateDirectory(applicationDataDirectory);
-        return applicationDataDirectory;
-    }
-
-    /// <summary>Vollständiger Pfad zur primären SQLite-Datenbank.</summary>
-    public static string GetDatabasePath() =>
-        Path.Combine(GetApplicationDataDirectory(), DatabaseFileName);
-
-    /// <summary>
-    /// Vollständiger Pfad zum Log-Verzeichnis. Wird beim ersten Aufruf erzeugt.
-    /// </summary>
-    public static string GetLogsDirectory()
-    {
-        string logsDirectory = Path.Combine(GetApplicationDataDirectory(), LogsFolderName);
-        _ = Directory.CreateDirectory(logsDirectory);
-        return logsDirectory;
-    }
-
-    /// <summary>Vollständiger Pfad zur Settings-Datei.</summary>
-    public static string GetSettingsPath() =>
-        Path.Combine(GetApplicationDataDirectory(), SettingsFileName);
-
-    /// <summary>
-    /// Verzeichnis für persistierte Settings-Snapshots. Wird beim ersten Aufruf erzeugt.
-    /// Snapshot-Pattern: <c>settings.&lt;UTC-yyyyMMddTHHmmssFFF&gt;.json</c>.
-    /// </summary>
-    public static string GetSettingsHistoryDirectory()
-    {
-        string historyDirectory = Path.Combine(GetApplicationDataDirectory(), SettingsHistoryFolderName);
-        _ = Directory.CreateDirectory(historyDirectory);
-        return historyDirectory;
-    }
-
-    /// <summary>Vollständiger Pfad der Settings-Diff-Audit-Datei.</summary>
-    public static string GetSettingsAuditLogPath() =>
-        Path.Combine(GetApplicationDataDirectory(), SettingsAuditLogFileName);
-
-    /// <summary>
-    /// Verzeichnis für die Benutzerdaten der eingebetteten Browser-Ansichten.
-    /// </summary>
-    /// <remarks>
-    /// Ohne ausdrückliche Angabe schreibt die Browser-Komponente neben die Programmdatei,
-    /// nach einer Installation also dorthin, wo ein Benutzer keine Rechte hat.
-    /// </remarks>
-    public static string GetWebView2DataDirectory() =>
-        Path.Combine(GetApplicationDataDirectory(), WebView2FolderName);
+    /// <summary>Die Pfade unter dem Anwendungsverzeichnis dieses Benutzers.</summary>
+    public static AppPathLayout Default { get; } = new(
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ApplicationFolderName));
 }

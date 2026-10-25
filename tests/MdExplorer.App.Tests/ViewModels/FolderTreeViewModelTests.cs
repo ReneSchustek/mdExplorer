@@ -1,344 +1,247 @@
 using System.IO;
 using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.ViewModels;
-using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels;
 
-/// <summary>Tests für die Folder-Tree-Logik (Lazy-Expand, Selected-Prefix).</summary>
+/// <summary>
+/// Der Ordnerbaum zeigt nur vorhandene Wurzeln, lädt Unterordner und Markdown-Dateien erst
+/// beim Aufklappen und gibt der Suche einen Pfadfilter relativ zur Wurzel. Pausierte Ordner
+/// stehen in den Einstellungen und vererben ihren Ausschluss an die Kinder.
+/// </summary>
+/// <remarks>
+/// Der Baum liest über <c>IFileSystem</c>; die Tests bauen den Bestand im Speicher auf und
+/// legen keine Datei auf der Platte an.
+/// </remarks>
 public sealed class FolderTreeViewModelTests
 {
+    private const string Root = @"C:\notizen";
+
     [Fact]
     public void Roots_BuiltFromSettings_OnlyExistingDirectories()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(tempRoot);
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            FakeSettingsService settings = new(BuildSettings(tempRoot, Path.Combine(tempRoot, "does-not-exist-x")));
+        FakeFileSystem fs = FileSystemWith(Root);
 
-            using FolderTreeViewModel vm = new(settings, fs);
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(Root, @"C:\gibt-es-nicht"));
 
-            _ = Assert.Single(vm.Roots);
-            Assert.Equal(tempRoot, vm.Roots[0].AbsolutePath);
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        Assert.Equal(Root, Assert.Single(vm.Roots).AbsolutePath);
     }
 
     [Fact]
-    public void OnExpand_LoadsRealChildren_ReplacingSentinel()
+    public async Task OnExpand_LoadsChildrenThroughTheFileSystem_ReplacingThePlaceholder()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(Path.Combine(tempRoot, "Sub1"));
-        _ = Directory.CreateDirectory(Path.Combine(tempRoot, "Sub2"));
-        _ = Directory.CreateDirectory(Path.Combine(tempRoot, ".git"));
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            FakeSettingsService settings = new(BuildSettings(tempRoot));
+        FakeFileSystem fs = FileSystemWith(Root, Root + @"\Sub1", Root + @"\Sub2", Root + @"\.git");
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(Root));
+        TreeNodeViewModel root = vm.Roots[0];
+        _ = Assert.Single(root.Children);
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            TreeNodeViewModel root = vm.Roots[0];
+        await root.LoadChildrenAsync().ConfigureAwait(true);
 
-            _ = Assert.Single(root.Children);
-            root.IsExpanded = true;
+        Assert.Equal(["Sub1", "Sub2"], root.Children.Select(child => child.DisplayName));
+    }
 
-            Assert.Equal(2, root.Children.Count);
-            Assert.DoesNotContain(root.Children, child => string.Equals(child.DisplayName, ".git", StringComparison.Ordinal));
-            Assert.Contains(root.Children, child => string.Equals(child.DisplayName, "Sub1", StringComparison.Ordinal));
-            Assert.Contains(root.Children, child => string.Equals(child.DisplayName, "Sub2", StringComparison.Ordinal));
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+    [Fact]
+    public async Task Expanding_StartsTheSameLoadThatCanBeAwaited()
+    {
+        FakeFileSystem fs = FileSystemWith(Root, Root + @"\Sub1");
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(Root));
+        TreeNodeViewModel root = vm.Roots[0];
+
+        root.IsExpanded = true;
+        await root.LoadChildrenAsync().ConfigureAwait(true);
+
+        Assert.Equal("Sub1", Assert.Single(root.Children).DisplayName);
+    }
+
+    [Fact]
+    public async Task Expanding_ReadsTheDirectoryOffTheCallingThread()
+    {
+        // Das Aufklappen kommt aus dem Setter von IsExpanded, also vom UI-Thread. Eine
+        // Netzfreigabe, die nicht antwortet, hielte sonst die ganze Oberfläche an.
+        using ManualResetEventSlim gate = new(initialState: false);
+        FakeFileSystem fs = FileSystemWith(Root, Root + @"\Sub1");
+        fs.EnumerationGate = gate;
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(Root));
+
+        Task load = vm.Roots[0].LoadChildrenAsync();
+        bool returnedWhileReading = !load.IsCompleted;
+        gate.Set();
+        await load.ConfigureAwait(true);
+
+        Assert.True(returnedWhileReading);
+        _ = Assert.Single(vm.Roots[0].Children);
+    }
+
+    [Fact]
+    public void EveryFolder_HasItsOwnPlaceholder()
+    {
+        // Ein geteilter Platzhalter trüge Auswahl und Aufklappzustand von einem Baum in den
+        // anderen.
+        FakeFileSystem fs = FileSystemWith(@"C:\a", @"C:\b");
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(@"C:\a", @"C:\b"));
+
+        Assert.NotSame(vm.Roots[0].Children[0], vm.Roots[1].Children[0]);
     }
 
     [Fact]
     public void OnRootSelected_ClearsPathPrefix_ForGlobalSearch()
     {
-        // Die Wurzel zu selektieren darf die Suche NICHT einschränken: der Index speichert
-        // Pfade relativ zur Wurzel, ein absoluter Wurzel-Prefix würde via StartsWith nie
-        // greifen und die Trefferliste leer lassen. Deshalb ist der Filter hier null.
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(tempRoot);
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            FakeSettingsService settings = new(BuildSettings(tempRoot));
+        // Die Wurzel auszuwählen schränkt die Suche nicht ein. Der Index speichert Pfade
+        // relativ zur Wurzel; ein absoluter Wurzelpfad als Präfix griffe nie und ließe die
+        // Trefferliste leer. Deshalb ist der Filter hier null.
+        FakeFileSystem fs = FileSystemWith(Root);
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(Root));
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            vm.SelectedNode = vm.Roots[0];
+        vm.SelectedNode = vm.Roots[0];
 
-            Assert.Null(vm.SelectedPathPrefix);
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        Assert.Null(vm.SelectedPathPrefix);
     }
 
     [Fact]
-    public void OnSubfolderSelected_SetsRelativePathPrefix()
+    public async Task OnSubfolderSelected_SetsRelativePathPrefix()
     {
         // Ein Unterordner schränkt die Suche ein; der Filter muss relativ zur Wurzel sein
         // (mit Separator-Endung), damit er gegen die relativen Index-Pfade matcht.
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(Path.Combine(tempRoot, "Sub1"));
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            FakeSettingsService settings = new(BuildSettings(tempRoot));
+        FakeFileSystem fs = FileSystemWith(Root, Root + @"\Sub1");
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(Root));
+        TreeNodeViewModel root = vm.Roots[0];
+        await root.LoadChildrenAsync().ConfigureAwait(true);
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            TreeNodeViewModel root = vm.Roots[0];
-            root.IsExpanded = true;
-            TreeNodeViewModel sub = Assert.Single(
-                root.Children,
-                child => string.Equals(child.DisplayName, "Sub1", StringComparison.Ordinal));
+        vm.SelectedNode = Assert.Single(root.Children);
 
-            vm.SelectedNode = sub;
-
-            Assert.Equal("Sub1" + Path.DirectorySeparatorChar, vm.SelectedPathPrefix);
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        Assert.Equal("Sub1" + Path.DirectorySeparatorChar, vm.SelectedPathPrefix);
     }
 
     [Fact]
-    public void OnExpand_AlsoListsMarkdownFiles_AsLeafNodes()
+    public async Task OnExpand_AlsoListsMarkdownFiles_AsLeafNodes()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(tempRoot);
-        _ = Directory.CreateDirectory(Path.Combine(tempRoot, "Sub1"));
-        File.WriteAllText(Path.Combine(tempRoot, "alpha.md"), "# Alpha");
-        File.WriteAllText(Path.Combine(tempRoot, "beta.md"), "# Beta");
-        File.WriteAllText(Path.Combine(tempRoot, "ignored.txt"), "Nicht .md");
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            FakeSettingsService settings = new(BuildSettings(tempRoot));
+        FakeFileSystem fs = FileSystemWith(Root, Root + @"\Sub1");
+        fs.Files[Root + @"\alpha.md"] = [];
+        fs.Files[Root + @"\beta.md"] = [];
+        fs.Files[Root + @"\ignored.txt"] = [];
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(Root));
+        TreeNodeViewModel root = vm.Roots[0];
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            TreeNodeViewModel root = vm.Roots[0];
-            root.IsExpanded = true;
+        await root.LoadChildrenAsync().ConfigureAwait(true);
 
-            Assert.Contains(root.Children, child => child.IsMarkdownFile && string.Equals(child.DisplayName, "alpha.md", StringComparison.Ordinal));
-            Assert.Contains(root.Children, child => child.IsMarkdownFile && string.Equals(child.DisplayName, "beta.md", StringComparison.Ordinal));
-            Assert.Contains(root.Children, child => !child.IsMarkdownFile && string.Equals(child.DisplayName, "Sub1", StringComparison.Ordinal));
-            Assert.DoesNotContain(root.Children, child => string.Equals(child.DisplayName, "ignored.txt", StringComparison.Ordinal));
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        Assert.Equal(["Sub1", "alpha.md", "beta.md"], root.Children.Select(child => child.DisplayName));
+        Assert.Equal([false, true, true], root.Children.Select(child => child.IsMarkdownFile));
     }
 
     [Fact]
     public async Task PauseIndexing_OnFolderNode_AppendsAbsolutePathToSettings()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(tempRoot);
-        _ = Directory.CreateDirectory(Path.Combine(tempRoot, "PauseMe"));
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            FakeSettingsService settings = new(BuildSettings(tempRoot));
+        FakeFileSystem fs = FileSystemWith(Root, Root + @"\PauseMe");
+        FakeSettingsService settings = new(BuildSettings(Root));
+        using FolderTreeViewModel vm = Create(fs, settings);
+        TreeNodeViewModel root = vm.Roots[0];
+        await root.LoadChildrenAsync().ConfigureAwait(true);
+        TreeNodeViewModel pauseTarget = Assert.Single(root.Children);
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            TreeNodeViewModel root = vm.Roots[0];
-            root.IsExpanded = true;
-            TreeNodeViewModel pauseTarget = Assert.Single(root.Children, c => string.Equals(c.DisplayName, "PauseMe", StringComparison.Ordinal));
+        await vm.PauseIndexingCommand.ExecuteAsync(pauseTarget).ConfigureAwait(true);
 
-            await vm.PauseIndexingCommand.ExecuteAsync(pauseTarget).ConfigureAwait(true);
-
-            string expectedPath = Path.Combine(tempRoot, "PauseMe");
-            _ = Assert.Single(settings.Current.Indexing.UiExcludedFolders, p => string.Equals(p, expectedPath, StringComparison.OrdinalIgnoreCase));
-            Assert.True(pauseTarget.IsExcluded);
-            Assert.True(pauseTarget.IsDirectlyExcluded);
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        _ = Assert.Single(settings.Current.Indexing.UiExcludedFolders, p => string.Equals(p, Root + @"\PauseMe", StringComparison.OrdinalIgnoreCase));
+        Assert.True(pauseTarget.IsExcluded);
+        Assert.True(pauseTarget.IsDirectlyExcluded);
     }
 
     [Fact]
     public async Task ResumeIndexing_OnPreviouslyPausedNode_RemovesPathFromSettings()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(tempRoot);
-        string pausedFolder = Path.Combine(tempRoot, "ResumeMe");
-        _ = Directory.CreateDirectory(pausedFolder);
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            AppSettings initial = new(
-                AppSettings.CurrentSchemaVersion,
-                new IndexingSettings([tempRoot], IndexingSettings.DefaultExclusionPatterns, [pausedFolder], true),
-                AppearanceSettings.Default,
-                BehaviorSettings.Default);
-            FakeSettingsService settings = new(initial);
+        const string paused = Root + @"\ResumeMe";
+        FakeFileSystem fs = FileSystemWith(Root, paused);
+        FakeSettingsService settings = new(BuildSettings([Root], [paused]));
+        using FolderTreeViewModel vm = Create(fs, settings);
+        TreeNodeViewModel root = vm.Roots[0];
+        await root.LoadChildrenAsync().ConfigureAwait(true);
+        TreeNodeViewModel resumeTarget = Assert.Single(root.Children);
+        Assert.True(resumeTarget.IsDirectlyExcluded);
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            TreeNodeViewModel root = vm.Roots[0];
-            root.IsExpanded = true;
-            TreeNodeViewModel resumeTarget = Assert.Single(root.Children, c => string.Equals(c.DisplayName, "ResumeMe", StringComparison.Ordinal));
-            Assert.True(resumeTarget.IsDirectlyExcluded);
+        await vm.ResumeIndexingCommand.ExecuteAsync(resumeTarget).ConfigureAwait(true);
 
-            await vm.ResumeIndexingCommand.ExecuteAsync(resumeTarget).ConfigureAwait(true);
-
-            Assert.Empty(settings.Current.Indexing.UiExcludedFolders);
-            Assert.False(resumeTarget.IsExcluded);
-            Assert.False(resumeTarget.IsDirectlyExcluded);
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        Assert.Empty(settings.Current.Indexing.UiExcludedFolders);
+        Assert.False(resumeTarget.IsExcluded);
+        Assert.False(resumeTarget.IsDirectlyExcluded);
     }
 
     [Fact]
     public async Task PauseIndexing_OnAlreadyExcludedNode_DoesNotDuplicateEntry()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(tempRoot);
-        string pausedFolder = Path.Combine(tempRoot, "Already");
-        _ = Directory.CreateDirectory(pausedFolder);
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            AppSettings initial = new(
-                AppSettings.CurrentSchemaVersion,
-                new IndexingSettings([tempRoot], IndexingSettings.DefaultExclusionPatterns, [pausedFolder], true),
-                AppearanceSettings.Default,
-                BehaviorSettings.Default);
-            FakeSettingsService settings = new(initial);
+        const string paused = Root + @"\Already";
+        FakeFileSystem fs = FileSystemWith(Root, paused);
+        FakeSettingsService settings = new(BuildSettings([Root], [paused]));
+        using FolderTreeViewModel vm = Create(fs, settings);
+        TreeNodeViewModel root = vm.Roots[0];
+        await root.LoadChildrenAsync().ConfigureAwait(true);
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            TreeNodeViewModel root = vm.Roots[0];
-            root.IsExpanded = true;
-            TreeNodeViewModel paused = Assert.Single(root.Children, c => string.Equals(c.DisplayName, "Already", StringComparison.Ordinal));
+        await vm.PauseIndexingCommand.ExecuteAsync(Assert.Single(root.Children)).ConfigureAwait(true);
 
-            await vm.PauseIndexingCommand.ExecuteAsync(paused).ConfigureAwait(true);
-
-            _ = Assert.Single(settings.Current.Indexing.UiExcludedFolders);
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        _ = Assert.Single(settings.Current.Indexing.UiExcludedFolders);
     }
 
     [Fact]
-    public void IsExcluded_PropagatesToChildren_OnInitialBuild()
+    public async Task IsExcluded_PropagatesToChildren_OnInitialBuild()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(tempRoot);
-        string parentFolder = Path.Combine(tempRoot, "Parent");
-        _ = Directory.CreateDirectory(parentFolder);
-        _ = Directory.CreateDirectory(Path.Combine(parentFolder, "Child"));
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            _ = fs.Directories.Add(parentFolder);
-            AppSettings initial = new(
-                AppSettings.CurrentSchemaVersion,
-                new IndexingSettings([tempRoot], IndexingSettings.DefaultExclusionPatterns, [parentFolder], true),
-                AppearanceSettings.Default,
-                BehaviorSettings.Default);
-            FakeSettingsService settings = new(initial);
+        const string parentFolder = Root + @"\Parent";
+        FakeFileSystem fs = FileSystemWith(Root, parentFolder, parentFolder + @"\Child");
+        using FolderTreeViewModel vm = Create(fs, BuildSettings([Root], [parentFolder]));
+        TreeNodeViewModel root = vm.Roots[0];
+        await root.LoadChildrenAsync().ConfigureAwait(true);
+        TreeNodeViewModel parent = Assert.Single(root.Children);
+        Assert.True(parent.IsExcluded);
+        Assert.True(parent.IsDirectlyExcluded);
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            TreeNodeViewModel root = vm.Roots[0];
-            root.IsExpanded = true;
-            TreeNodeViewModel parent = Assert.Single(root.Children, c => string.Equals(c.DisplayName, "Parent", StringComparison.Ordinal));
-            Assert.True(parent.IsExcluded);
-            Assert.True(parent.IsDirectlyExcluded);
+        await parent.LoadChildrenAsync().ConfigureAwait(true);
+        TreeNodeViewModel child = Assert.Single(parent.Children);
 
-            parent.IsExpanded = true;
-            TreeNodeViewModel child = Assert.Single(parent.Children, c => string.Equals(c.DisplayName, "Child", StringComparison.Ordinal));
-
-            // Kind erbt IsExcluded vom Eltern, ist aber selbst nicht direkt in der Settings-Liste.
-            Assert.True(child.IsExcluded);
-            Assert.False(child.IsDirectlyExcluded);
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        // Kind erbt IsExcluded vom Eltern, ist aber selbst nicht direkt in der Settings-Liste.
+        Assert.True(child.IsExcluded);
+        Assert.False(child.IsDirectlyExcluded);
     }
 
     [Fact]
-    public void OnFileSelected_FiresFileSelectedEventWithAbsolutePath()
+    public async Task OnFileSelected_FiresFileSelectedEventWithAbsolutePath()
     {
-        string tempRoot = Path.Combine(Path.GetTempPath(), "mdexp-tests-" + Guid.NewGuid().ToString("N"));
-        _ = Directory.CreateDirectory(tempRoot);
-        string filePath = Path.Combine(tempRoot, "doc.md");
-        File.WriteAllText(filePath, "# Doc");
-        try
-        {
-            FakeFileSystem fs = new();
-            _ = fs.Directories.Add(tempRoot);
-            FakeSettingsService settings = new(BuildSettings(tempRoot));
+        const string filePath = Root + @"\doc.md";
+        FakeFileSystem fs = FileSystemWith(Root);
+        fs.Files[filePath] = [];
+        using FolderTreeViewModel vm = Create(fs, BuildSettings(Root));
+        TreeNodeViewModel root = vm.Roots[0];
+        await root.LoadChildrenAsync().ConfigureAwait(true);
+        string? raised = null;
+        vm.FileSelected += path => raised = path;
 
-            using FolderTreeViewModel vm = new(settings, fs);
-            TreeNodeViewModel root = vm.Roots[0];
-            root.IsExpanded = true;
-            TreeNodeViewModel fileNode = Assert.Single(root.Children, child => child.IsMarkdownFile);
+        vm.SelectedNode = Assert.Single(root.Children);
 
-            string? raised = null;
-            vm.FileSelected += path => raised = path;
-            vm.SelectedNode = fileNode;
-
-            Assert.Equal(filePath, raised);
-            // Datei liegt direkt unter der Wurzel → Eltern-Verzeichnis ist die Wurzel selbst
-            // → kein Scoping, globale Suche (null).
-            Assert.Null(vm.SelectedPathPrefix);
-        }
-        finally
-        {
-            Directory.Delete(tempRoot, recursive: true);
-        }
+        Assert.Equal(filePath, raised);
+        // Die Datei liegt direkt unter der Wurzel. Ihr Ordner ist damit die Wurzel selbst,
+        // und die Suche bleibt global.
+        Assert.Null(vm.SelectedPathPrefix);
     }
 
-    private static AppSettings BuildSettings(params string[] roots) => new(
+    internal static FakeFileSystem FileSystemWith(params string[] directories)
+    {
+        FakeFileSystem fs = new();
+        foreach (string directory in directories)
+        {
+            _ = fs.Directories.Add(directory);
+        }
+        return fs;
+    }
+
+    internal static AppSettings BuildSettings(params string[] roots) => BuildSettings(roots, []);
+
+    internal static AppSettings BuildSettings(IReadOnlyList<string> roots, IReadOnlyList<string> excluded) => new(
         AppSettings.CurrentSchemaVersion,
-        new IndexingSettings(roots, IndexingSettings.DefaultExclusionPatterns, [], true),
+        new IndexingSettings(roots, IndexingSettings.DefaultExclusionPatterns, excluded, true),
         AppearanceSettings.Default,
         BehaviorSettings.Default);
 
-    private sealed class FakeSettingsService(AppSettings initial) : ISettingsService
-    {
-        public AppSettings Current { get; private set; } = initial ?? throw new ArgumentNullException(nameof(initial));
+    private static FolderTreeViewModel Create(FakeFileSystem fs, AppSettings settings) =>
+        Create(fs, new FakeSettingsService(settings));
 
-        public event EventHandler<SettingsChangedEventArgs>? SettingsChanged;
-
-        public Task<AppSettings> LoadAsync(CancellationToken cancellationToken) => Task.FromResult(Current);
-
-        public Task SaveAsync(AppSettings settings, CancellationToken cancellationToken)
-        {
-            ArgumentNullException.ThrowIfNull(settings);
-            AppSettings previous = Current;
-            Current = settings;
-            SettingsChanged?.Invoke(this, new SettingsChangedEventArgs(previous, settings));
-            return Task.CompletedTask;
-        }
-    }
+    private static FolderTreeViewModel Create(FakeFileSystem fs, FakeSettingsService settings) =>
+        new(settings, fs, new FakeDialogService(), NullLogger<FolderTreeViewModel>.Instance);
 }

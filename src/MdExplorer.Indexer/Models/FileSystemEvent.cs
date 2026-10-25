@@ -14,6 +14,24 @@ public enum FileSystemEventKind
 
     /// <summary>Eine vorhandene Datei wurde gelöscht.</summary>
     Deleted,
+
+    /// <summary>
+    /// Ein Ordner wurde umbenannt oder verschoben; <see cref="FileSystemEvent.OldPath"/> ist der alte
+    /// Ordner. Für die Dateien darin meldet der Watcher nichts.
+    /// </summary>
+    DirectoryRenamed,
+
+    /// <summary>Ein Ordner wurde gelöscht, samt allen Dateien darin.</summary>
+    DirectoryDeleted,
+
+    /// <summary>
+    /// Die Wurzel muss vollständig abgeglichen werden: Der Puffer des Watchers ist übergelaufen, oder
+    /// ein Ordner ist neu hinzugekommen, dessen Dateien der Watcher nicht einzeln meldet.
+    /// </summary>
+    ResyncRequested,
+
+    /// <summary>Eine <c>.mdignore</c> wurde angelegt, geändert oder entfernt.</summary>
+    IgnoreFileChanged,
 }
 
 /// <summary>
@@ -21,8 +39,8 @@ public enum FileSystemEventKind
 /// und <c>MarkdownIndexer</c> über einen <see cref="System.Threading.Channels.Channel{T}"/> fließt.
 /// </summary>
 /// <param name="Kind">Ereignisart.</param>
-/// <param name="Path">Aktueller Pfad der Datei.</param>
-/// <param name="OldPath">Bei <see cref="FileSystemEventKind.Renamed"/> der vorherige Pfad, sonst <see langword="null"/>.</param>
+/// <param name="Path">Aktueller Pfad der Datei oder des Ordners.</param>
+/// <param name="OldPath">Bei <see cref="FileSystemEventKind.Renamed"/> und <see cref="FileSystemEventKind.DirectoryRenamed"/> der vorherige Pfad, sonst <see langword="null"/>.</param>
 /// <param name="Root">Index-Wurzel, unter der das Ereignis aufgetreten ist.</param>
 public sealed record FileSystemEvent(FileSystemEventKind Kind, string Path, string? OldPath, string Root);
 

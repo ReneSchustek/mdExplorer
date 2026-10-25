@@ -4,20 +4,27 @@ using MdExplorer.TagCloud.Models;
 namespace MdExplorer.TagCloud.ViewModels;
 
 /// <summary>
-/// Darstellungs-Adapter für einen einzelnen Tag in der Cloud. Immutable nach Konstruktion;
-/// die Größe wird vom Konverter im XAML berechnet, sodass das Item nur Roh-Daten trägt.
+/// Darstellungs-Adapter für einen einzelnen Tag in der Cloud. Unveränderlich nach der Konstruktion.
 /// </summary>
+/// <remarks>
+/// Die Schriftgröße rechnet die Wolke einmal je Snapshot aus. Je Schlagwort eine Mehrfachbindung
+/// mit vier Vorfahren-Suchen kostete bei tausend Schlagworten bei jedem Neuaufbau spürbar.
+/// </remarks>
 public sealed partial class TagItemViewModel : ObservableObject
 {
     /// <summary>Erstellt das ViewModel aus einer Statistik-Zeile.</summary>
-    public TagItemViewModel(TagStatistic statistic)
+    public TagItemViewModel(TagStatistic statistic, double fontSize)
     {
         ArgumentNullException.ThrowIfNull(statistic);
+        FontSize = fontSize;
         Name = statistic.Name;
         Slug = statistic.Slug;
         Count = statistic.Count;
         LastUsedUtc = statistic.LastUsedUtc;
     }
+
+    /// <summary>Schriftgröße in DIP, aus der Häufigkeit im Verhältnis zur ganzen Wolke.</summary>
+    public double FontSize { get; }
 
     /// <summary>Original-Tag-Name (Anzeige).</summary>
     public string Name { get; }

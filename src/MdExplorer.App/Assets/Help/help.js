@@ -1,3 +1,5 @@
+// Suche im Handbuch: markiert Treffer im Text und springt zwischen ihnen. Das Hilfefenster
+// ruft die Funktionen unter window.MdExplorerHelp über ExecuteScriptAsync auf.
 (function () {
     'use strict';
 
@@ -30,6 +32,8 @@
                 var parent = node.parentNode;
                 while (parent && parent !== root) {
                     var tag = parent.nodeName;
+                    // Skripte und Stile sind kein Lesetext; Code und vorformatierter Text
+                    // bleiben ebenfalls unmarkiert.
                     if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'CODE' || tag === 'PRE') {
                         return NodeFilter.FILTER_REJECT;
                     }
@@ -51,45 +55,54 @@
         currentHits = [];
         currentIndex = -1;
         var trimmed = (query || '').trim();
+        // Erst ab zwei Zeichen: Ein einzelner Buchstabe träfe fast jedes Wort des Handbuchs.
         if (trimmed.length < 2) {
             return 0;
         }
         var pattern = new RegExp(escapeRegex(trimmed), 'gi');
         var textNodes = collectTextNodes(root);
         for (var i = 0; i < textNodes.length; i++) {
-            var node = textNodes[i];
-            var text = node.nodeValue;
-            pattern.lastIndex = 0;
-            var match;
-            var lastIndex = 0;
-            var fragment = document.createDocumentFragment();
-            var hadMatch = false;
-            while ((match = pattern.exec(text)) !== null) {
-                hadMatch = true;
-                if (match.index > lastIndex) {
-                    fragment.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
-                }
-                var mark = document.createElement('mark');
-                mark.className = 'help-hit';
-                mark.textContent = match[0];
-                fragment.appendChild(mark);
-                currentHits.push(mark);
-                lastIndex = pattern.lastIndex;
-                if (match.index === pattern.lastIndex) {
-                    pattern.lastIndex++;
-                }
-            }
-            if (hadMatch) {
-                if (lastIndex < text.length) {
-                    fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
-                }
-                node.parentNode.replaceChild(fragment, node);
-            }
+            markMatches(textNodes[i], pattern);
         }
         if (currentHits.length > 0) {
             focusHit(0);
         }
         return currentHits.length;
+    }
+
+    // Ersetzt einen Textknoten durch Text und <mark>-Elemente für jeden Treffer darin.
+    function markMatches(node, pattern) {
+        var text = node.nodeValue;
+        pattern.lastIndex = 0;
+        var match;
+        var lastIndex = 0;
+        var fragment = document.createDocumentFragment();
+        var hadMatch = false;
+        while ((match = pattern.exec(text)) !== null) {
+            hadMatch = true;
+            appendText(fragment, text.substring(lastIndex, match.index));
+            var mark = document.createElement('mark');
+            mark.className = 'help-hit';
+            mark.textContent = match[0];
+            fragment.appendChild(mark);
+            currentHits.push(mark);
+            lastIndex = pattern.lastIndex;
+            // Ein leerer Treffer bewegte den Zeiger nicht; ohne den Schritt liefe die Schleife ewig.
+            if (match.index === pattern.lastIndex) {
+                pattern.lastIndex++;
+            }
+        }
+        if (!hadMatch) {
+            return;
+        }
+        appendText(fragment, text.substring(lastIndex));
+        node.parentNode.replaceChild(fragment, node);
+    }
+
+    function appendText(fragment, text) {
+        if (text.length > 0) {
+            fragment.appendChild(document.createTextNode(text));
+        }
     }
 
     function focusHit(index) {

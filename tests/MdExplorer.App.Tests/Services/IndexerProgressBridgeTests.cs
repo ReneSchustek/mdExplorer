@@ -1,3 +1,4 @@
+using MdExplorer.App.Tests.Fakes;
 using MdExplorer.App.Services;
 using MdExplorer.App.ViewModels;
 using MdExplorer.Core.Abstractions;
@@ -10,7 +11,7 @@ namespace MdExplorer.App.Tests.Services;
 /// <summary>
 /// Sichert die Brücke zwischen <see cref="IIndexer.InitialScanProgress"/> und
 /// <see cref="AllFilesViewModel.RefreshAsync"/> ab: Subscription-Lifecycle,
-/// Dispatcher-Marshalling, Fehler-Toleranz und IsBusy-Guard.
+/// Dispatcher-Marshalling, Fehler-Toleranz und ein frischer Endstand.
 /// </summary>
 public sealed class IndexerProgressBridgeTests
 {
@@ -18,8 +19,13 @@ public sealed class IndexerProgressBridgeTests
     private static readonly Guid FileId = new("11111111-1111-1111-1111-111111111111");
     private static readonly DateTime FixedUtc = new(2026, 6, 11, 12, 0, 0, DateTimeKind.Utc);
 
+    /// <remarks>
+    /// Das Ereignis kommt vom Thread des Indexers. Ein synchrones <c>Invoke</c> hielte ihn an,
+    /// bis die Oberfläche fertig ist, und beim Beenden wartet der UI-Thread auf den Indexer.
+    /// Die Brücke stellt den Auftrag deshalb nur an.
+    /// </remarks>
     [Fact]
-    public async Task OnProgressAfterStart_InvokesAllFilesRefreshOnDispatcher()
+    public async Task InitialScanProgress_AfterStart_PostsTheRefreshWithoutBlockingTheIndexer()
     {
         FakeAllFilesQuery query = new();
         AllFilesViewModel allFiles = NewAllFiles(query);
@@ -28,15 +34,16 @@ public sealed class IndexerProgressBridgeTests
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
         await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 5, isCompleted: false));
-        await WaitForIdleAsync(allFiles).ConfigureAwait(true);
+        indexer.RaiseProgress(Root, processedCount: 5, isCompleted: false);
+        await IdleAsync(allFiles).ConfigureAwait(true);
 
-        Assert.Equal(1, dispatcher.InvokeCount);
+        Assert.Equal(1, dispatcher.PostCount);
+        Assert.Equal(0, dispatcher.InvokeCount);
         Assert.Equal(1, query.CallCount);
     }
 
     [Fact]
-    public async Task AfterStopAsync_FurtherEventsDoNotTriggerRefresh()
+    public async Task InitialScanProgress_AfterStopAsync_TriggersNoRefresh()
     {
         FakeAllFilesQuery query = new();
         AllFilesViewModel allFiles = NewAllFiles(query);
@@ -46,14 +53,14 @@ public sealed class IndexerProgressBridgeTests
 
         await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         await sut.StopAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 5, isCompleted: false));
+        indexer.RaiseProgress(Root, processedCount: 5, isCompleted: false);
 
-        Assert.Equal(0, dispatcher.InvokeCount);
+        Assert.Equal(0, dispatcher.PostCount);
         Assert.Equal(0, query.CallCount);
     }
 
     [Fact]
-    public async Task Dispose_UnsubscribesFromIndexerEvent()
+    public async Task Dispose_AfterStart_UnsubscribesFromTheIndexerEvent()
     {
         FakeAllFilesQuery query = new();
         AllFilesViewModel allFiles = NewAllFiles(query);
@@ -63,27 +70,34 @@ public sealed class IndexerProgressBridgeTests
 
         await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         sut.Dispose();
-        indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 5, isCompleted: false));
+        indexer.RaiseProgress(Root, processedCount: 5, isCompleted: false);
 
         Assert.Equal(0, query.CallCount);
     }
 
     [Fact]
-    public async Task Dispose_IsIdempotent_DoesNotThrow()
+    public async Task Dispose_CalledTwice_StaysUnsubscribedWithoutError()
     {
         FakeAllFilesQuery query = new();
         AllFilesViewModel allFiles = NewAllFiles(query);
         FakeIndexer indexer = new();
         ImmediateUiDispatcher dispatcher = new();
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
-
         await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        sut.Dispose();
-        sut.Dispose();
+
+        Exception? failure = Record.Exception(() =>
+        {
+            sut.Dispose();
+            sut.Dispose();
+        });
+        indexer.RaiseProgress(Root, processedCount: 5, isCompleted: false);
+
+        Assert.Null(failure);
+        Assert.Equal(0, query.CallCount);
     }
 
     [Fact]
-    public async Task WhenRefreshThrows_BridgeSwallowsAndRemainsSubscribed()
+    public async Task InitialScanProgress_WhenRefreshThrows_SwallowsAndRemainsSubscribed()
     {
         FakeAllFilesQuery query = new() { ThrowOnNextCall = new InvalidCastException("kaputt") };
         AllFilesViewModel allFiles = NewAllFiles(query);
@@ -92,40 +106,46 @@ public sealed class IndexerProgressBridgeTests
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
         await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 1, isCompleted: false));
-        await WaitForIdleAsync(allFiles).ConfigureAwait(true);
+        indexer.RaiseProgress(Root, processedCount: 1, isCompleted: false);
+        await IdleAsync(allFiles).ConfigureAwait(true);
 
         Assert.Equal(1, query.CallCount);
         Assert.False(allFiles.IsBusy);
 
         // Zweites Event muss trotz vorherigem Fehler durchgehen; Bridge bleibt subscribed.
-        indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 2, isCompleted: false));
-        await WaitForIdleAsync(allFiles).ConfigureAwait(true);
+        indexer.RaiseProgress(Root, processedCount: 2, isCompleted: false);
+        await IdleAsync(allFiles).ConfigureAwait(true);
 
         Assert.Equal(2, query.CallCount);
     }
 
+    /// <remarks>
+    /// Kommt die letzte Meldung des Durchlaufs, während die Liste noch lädt, darf sie nicht
+    /// verloren gehen: Sonst bliebe die Liste auf einem Zwischenstand stehen, bis irgendetwas
+    /// anderes sie neu lädt. Aus mehreren Meldungen während eines Ladens wird ein Nachladen.
+    /// </remarks>
     [Fact]
-    public async Task TwoEventsInQuickSuccession_OnlyTriggerSingleRefresh_DueToIsBusyGuard()
+    public async Task InitialScanProgress_DuringARefresh_EndsWithOneMoreRefreshForTheFinalState()
     {
-        FakeAllFilesQuery query = new() { Gate = new TaskCompletionSource<bool>() };
+        TaskCompletionSource<bool> gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeAllFilesQuery query = new() { Gate = gate };
         AllFilesViewModel allFiles = NewAllFiles(query);
         FakeIndexer indexer = new();
         ImmediateUiDispatcher dispatcher = new();
         using IndexerProgressBridge sut = NewBridge(indexer, allFiles, dispatcher);
 
         await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 1, isCompleted: false));
-        // Erster Refresh hängt am Gate → IsBusy=true; zweites Event muss durchfallen.
+        indexer.RaiseProgress(Root, processedCount: 1, isCompleted: false);
         Assert.True(allFiles.IsBusy);
+
+        indexer.RaiseProgress(Root, processedCount: 2, isCompleted: false);
+        indexer.RaiseProgress(Root, processedCount: 3, isCompleted: true);
         Assert.Equal(1, query.CallCount);
 
-        indexer.Raise(new IndexerScanProgressEventArgs(Root, processedCount: 2, isCompleted: false));
-        Assert.Equal(1, query.CallCount);
+        gate.SetResult(true);
+        await IdleAsync(allFiles).ConfigureAwait(true);
 
-        query.Gate.SetResult(true);
-        await WaitForIdleAsync(allFiles).ConfigureAwait(true);
-
+        Assert.Equal(2, query.CallCount);
         Assert.False(allFiles.IsBusy);
     }
 
@@ -142,39 +162,33 @@ public sealed class IndexerProgressBridgeTests
         return new AllFilesViewModel(provider.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System, NullLogger<AllFilesViewModel>.Instance);
     }
 
-    private static async Task WaitForIdleAsync(AllFilesViewModel allFiles)
+    /// <summary>Wartet, bis die Liste nicht mehr lädt; das Signal kommt von der Liste selbst.</summary>
+    /// <remarks>
+    /// Die Brücke startet das Laden, ohne darauf zu warten. Statt in einer Schleife nachzusehen,
+    /// hört der Test auf die Änderung von <see cref="AllFilesViewModel.IsBusy"/>. Die fünf
+    /// Sekunden sind nur der Notausstieg, falls das Signal nie kommt.
+    /// </remarks>
+    private static Task IdleAsync(AllFilesViewModel allFiles)
     {
-        // Bridge feuert RefreshAsync fire-and-forget; abwarten bis IsBusy zurückfällt.
-        TimeSpan timeout = TimeSpan.FromSeconds(2);
-        DateTime deadline = DateTime.UtcNow + timeout;
-        while (allFiles.IsBusy && DateTime.UtcNow < deadline)
+        TaskCompletionSource idle = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        allFiles.PropertyChanged += (_, args) =>
         {
-            await Task.Delay(5).ConfigureAwait(true);
-        }
-    }
-
-    private sealed class FakeIndexer : IIndexer
-    {
-        public event EventHandler<IndexerScanProgressEventArgs>? InitialScanProgress;
-
-        public Task RunInitialScanAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-        public void Raise(IndexerScanProgressEventArgs args) =>
-            InitialScanProgress?.Invoke(this, args);
-    }
-
-    private sealed class ImmediateUiDispatcher : IUiDispatcher
-    {
-        public int InvokeCount { get; private set; }
-
-        public void Invoke(Action action)
+            if (args.PropertyName == nameof(AllFilesViewModel.IsBusy) && !allFiles.IsBusy)
+            {
+                _ = idle.TrySetResult();
+            }
+        };
+        if (!allFiles.IsBusy)
         {
-            ArgumentNullException.ThrowIfNull(action);
-            InvokeCount++;
-            action();
+            _ = idle.TrySetResult();
         }
+        return idle.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
     }
 
+    /// <summary>
+    /// Liefert eine Zeile; kann beim ersten Abruf an einem Tor warten, um ein laufendes Laden
+    /// festzuhalten, oder einmal scheitern.
+    /// </summary>
     private sealed class FakeAllFilesQuery : IAllFilesQuery
     {
         public int CallCount { get; private set; }
@@ -186,9 +200,11 @@ public sealed class IndexerProgressBridgeTests
         public async Task<IReadOnlyList<AllFilesRow>> GetAllAsync(CancellationToken cancellationToken)
         {
             CallCount++;
-            if (Gate is not null)
+            TaskCompletionSource<bool>? gate = Gate;
+            Gate = null;
+            if (gate is not null)
             {
-                _ = await Gate.Task.ConfigureAwait(false);
+                _ = await gate.Task.ConfigureAwait(false);
             }
             if (ThrowOnNextCall is { } pending)
             {

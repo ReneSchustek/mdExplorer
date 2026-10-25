@@ -21,7 +21,7 @@ public sealed class DefaultExclusionPatternTests
     [InlineData("bin/Debug/notiz.md")]
     [InlineData("obj/Release/notiz.md")]
     [InlineData(".vs/notiz.md")]
-    public void ForeignContentIsExcluded(string relativePath)
+    public void DefaultExclusionPatterns_OnForeignContent_Match(string relativePath)
     {
         Assert.True(Matcher().Match(relativePath).HasMatches, relativePath + " sollte ausgeschlossen sein.");
     }
@@ -36,13 +36,13 @@ public sealed class DefaultExclusionPatternTests
     [InlineData("vendor-notizen/projekt.md")]
     [InlineData("meine-bin-sammlung/projekt.md")]
     [InlineData("dokumentation/vendor.md")]
-    public void OwnNotesStayIncluded(string relativePath)
+    public void DefaultExclusionPatterns_OnOwnNotes_DoNotMatch(string relativePath)
     {
         Assert.False(Matcher().Match(relativePath).HasMatches, relativePath + " sollte im Index bleiben.");
     }
 
     [Fact]
-    public void EveryPatternIsUsable()
+    public void DefaultExclusionPatterns_EachPattern_CoversWholeFoldersAtAnyDepth()
     {
         foreach (string pattern in IndexingSettings.DefaultExclusionPatterns)
         {

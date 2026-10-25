@@ -12,7 +12,11 @@ namespace MdExplorer.Parser.MarkdigExtensions;
 /// </summary>
 public sealed class WikiLinkInlineParser : InlineParser
 {
-    /// <summary>Maximale Länge des Inhalts zwischen <c>[[</c> und <c>]]</c> in Zeichen.</summary>
+    /// <summary>
+    /// Maximale Länge des Inhalts zwischen <c>[[</c> und <c>]]</c> in Zeichen. Ohne Grenze liefe die Suche
+    /// nach <c>]]</c> bei jedem offenen <c>[[</c> bis ans Zeilenende. Ein Zielname ist ein Dateiname, unter
+    /// Windows höchstens 255 Zeichen; 512 lässt daneben Platz für einen Anzeigetext.
+    /// </summary>
     public const int MaxContentLength = 512;
 
     /// <summary>Länge der schließenden <c>]]</c>-Markierung in Zeichen.</summary>
@@ -28,6 +32,8 @@ public sealed class WikiLinkInlineParser : InlineParser
     public override bool Match(InlineProcessor processor, ref StringSlice slice)
     {
         ArgumentNullException.ThrowIfNull(processor);
+        // Das erste "[" ist das Öffnungszeichen, mit dem Markdig hier ankommt; erst ein zweites macht
+        // einen WikiLink daraus.
         if (slice.PeekChar() != '[')
         {
             return false;

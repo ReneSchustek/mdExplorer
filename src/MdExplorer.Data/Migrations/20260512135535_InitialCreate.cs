@@ -10,15 +10,14 @@ namespace MdExplorer.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Initial-Snapshot: alle Tabellen werden über EnsureCreated()/Model erzeugt.
-            // Diese Migration ist Platzhalter, damit Folge-Migrationen einen Bezugspunkt haben.
+            // Leere Ausgangsmigration: Die Tabellen legen die Folge-Migrationen an, beginnend mit
+            // AddMarkdownFile. Diese hier gibt ihnen nur einen Bezugspunkt.
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Initial-Snapshot besitzt kein Rollback-Skript; Schema wird durch Löschen der
-            // SQLite-Datei zurückgenommen.
+            // Up legt nichts an, also gibt es nichts zurückzunehmen.
         }
     }
 }

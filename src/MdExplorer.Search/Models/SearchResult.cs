@@ -1,3 +1,4 @@
+using MdExplorer.Core.Abstractions;
 namespace MdExplorer.Search.Models;
 
 /// <summary>
@@ -8,12 +9,14 @@ namespace MdExplorer.Search.Models;
 /// <param name="Path">Pfad-Wert der Datei (entspricht <c>MarkdownFile.RelativePath</c>).</param>
 /// <param name="Title">Titel-Wert (entspricht <c>MarkdownFile.FileNameWithoutExtension</c>).</param>
 /// <param name="Score">BM25-Score; kleinere Werte bedeuten relevantere Treffer.</param>
-/// <param name="Snippet">HTML-Snippet mit <c>&lt;mark&gt;</c>-Markern um die Trefferstellen.</param>
-/// <param name="Highlights">Positionen der Highlights innerhalb von <paramref name="Snippet"/>.</param>
+/// <param name="Snippet">
+/// Textausschnitt; die Trefferstellen stehen zwischen den <see cref="SnippetMarkers"/>. Der
+/// Dokumenttext ist nicht maskiert und gehört deshalb nie als HTML in eine Webansicht, sondern
+/// wird als Text dargestellt.
+/// </param>
 public sealed record SearchResult(
     Guid MarkdownFileId,
     string Path,
     string Title,
     double Score,
-    string Snippet,
-    IReadOnlyList<SearchHighlight> Highlights);
+    string Snippet);

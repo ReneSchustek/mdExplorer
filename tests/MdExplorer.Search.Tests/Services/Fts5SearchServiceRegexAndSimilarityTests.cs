@@ -3,15 +3,16 @@ using MdExplorer.Search.Abstractions;
 using MdExplorer.Search.Models;
 using MdExplorer.Search.Options;
 using MdExplorer.Search.Services;
+using MdExplorer.Search.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace MdExplorer.Search.Tests.Services;
 
 /// <summary>
-/// Hammertests gegen den <see cref="Fts5SearchService"/>-Dispatch: stellen sicher,
-/// dass der RegEx-Postfilter und die Similarity-Builder-Pfade
-/// tatsächlich aktivieren, unabhängig vom konkreten SQLite-FTS5-Backend.
+/// Der <see cref="Fts5SearchService"/> leitet Suchen im RegEx-Modus durch den Nachfilter über den
+/// Fließtext und Ähnlichkeitssuchen durch den passenden Builder, unabhängig von SQLite. Eine falsche
+/// Weiche lieferte im RegEx-Modus jeden Vorfilter-Treffer, ob das Muster passt oder nicht.
 /// </summary>
 public sealed class Fts5SearchServiceRegexAndSimilarityTests
 {
@@ -28,7 +29,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
+            .SearchAsync(new SearchQuery("\\bAPI\\d+Main", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         SearchResult single = Assert.Single(results);
@@ -52,7 +53,23 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
     }
 
     [Fact]
-    public async Task SearchAsync_RegexMode_OnInvalidPattern_LogsAndReturnsEmpty()
+    public async Task SearchAsync_RegexMode_WithoutAGuaranteedWordStart_IsRejectedWithoutQuerying()
+    {
+        // "ment" kann mitten im Wort stehen; ein Vorfilter darüber verschwiege "Dokument".
+        FakeSearchIndexStorage storage = new();
+        storage.AddHit(IdAlpha, "alpha.md", "Alpha", "Dokument");
+        Fts5SearchService sut = NewService(storage);
+
+        IReadOnlyList<SearchResult> results = await sut
+            .SearchAsync(new SearchQuery("ment", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
+            .ConfigureAwait(true);
+
+        Assert.Empty(results);
+        Assert.Empty(storage.QueryCalls);
+    }
+
+    [Fact]
+    public async Task SearchAsync_RegexMode_OnInvalidPattern_ReturnsEmpty()
     {
         FakeSearchIndexStorage storage = new();
         Fts5SearchService sut = NewService(storage);
@@ -76,7 +93,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
             .SearchAsync(new SearchQuery("laufen", Similarity: SimilarityMode.Stemmed), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
-        // Service hat die Stemming-Variante an die Storage gereicht.
+        // Beim Speicher kommt der Ausdruck über den Wortstamm an.
         _ = Assert.Single(storage.QueryCalls);
         Assert.Equal("\"lauf\"*", storage.QueryCalls[0].MatchExpression);
         _ = Assert.Single(results);
@@ -93,7 +110,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex, Take: 1), TestContext.Current.CancellationToken)
+            .SearchAsync(new SearchQuery("\\bAPI\\d+Main", Mode: SearchMode.Regex, Take: 1), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         _ = Assert.Single(results);
@@ -108,11 +125,33 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex, Skip: 1, Take: 5), TestContext.Current.CancellationToken)
+            .SearchAsync(new SearchQuery("\\bAPI\\d+Main", Mode: SearchMode.Regex, Skip: 1, Take: 5), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         SearchResult single = Assert.Single(results);
         Assert.Equal(IdBeta, single.MarkdownFileId);
+    }
+
+    [Fact]
+    public async Task SearchAsync_RegexMode_OnALaterPage_FetchesEnoughCandidates()
+    {
+        // Jedes zweite Dokument passt zum Muster. Für die dritte Seite zu fünf Treffern müssen
+        // die Kandidaten auch die zehn übersprungenen Treffer abdecken; reichte der Vorfilter nur
+        // für eine Seite, käme die Seite leer zurück, obwohl es genug Treffer gibt.
+        FakeSearchIndexStorage storage = new();
+        for (int index = 0; index < 60; index++)
+        {
+            string body = index % 2 == 0 ? "Text mit API123Main." : "Text ohne Treffer, nur API.";
+            storage.AddHit(new Guid(index + 1, 0, 0, new byte[8]), $"datei-{index:D2}.md", $"Datei {index:D2}", body);
+        }
+        Fts5SearchService sut = NewService(storage);
+
+        IReadOnlyList<SearchResult> results = await sut
+            .SearchAsync(new SearchQuery("\\bAPI\\d+Main", Mode: SearchMode.Regex, Skip: 10, Take: 5), TestContext.Current.CancellationToken)
+            .ConfigureAwait(true);
+
+        Assert.Equal(5, results.Count);
+        Assert.Equal("datei-20.md", results[0].Path, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -126,7 +165,7 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
         Fts5SearchService sut = NewService(storage);
 
         IReadOnlyList<SearchResult> results = await sut
-            .SearchAsync(new SearchQuery("API\\d+Main", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
+            .SearchAsync(new SearchQuery("\\bAPI\\d+Main", Mode: SearchMode.Regex), TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
 
         SearchResult single = Assert.Single(results);
@@ -159,60 +198,13 @@ public sealed class Fts5SearchServiceRegexAndSimilarityTests
             builder,
             similarity,
             wrappedOptions,
+            TimeProvider.System,
             NullLogger<Fts5SearchService>.Instance);
     }
 
+    /// <summary>Synonymquelle ohne Einträge.</summary>
     private sealed class EmptySynonymProvider : ISynonymProvider
     {
-        public IReadOnlyList<string> GetSynonyms(string lemma) => [];
-    }
-
-    private sealed class FakeSearchIndexStorage : ISearchIndexStorage
-    {
-        private readonly Dictionary<Guid, (string Path, string Title, string Body)> _docs = new();
-
-        public List<SearchIndexQuery> QueryCalls { get; } = [];
-
-        public List<IReadOnlyCollection<Guid>> LoadBodiesCalls { get; } = [];
-
-        public void AddHit(Guid id, string path, string title, string body)
-        {
-            _docs[id] = (path, title, body);
-        }
-
-        public Task<IReadOnlyDictionary<Guid, string>> LoadIndexedHashesAsync(CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
-
-        public Task ApplyChangesAsync(
-            IReadOnlyCollection<Guid> deletes,
-            IReadOnlyCollection<SearchIndexEntry> upserts,
-            CancellationToken cancellationToken) => throw new NotSupportedException();
-
-        public Task<IReadOnlyList<SearchIndexHit>> QueryAsync(SearchIndexQuery query, CancellationToken cancellationToken)
-        {
-            QueryCalls.Add(query);
-            List<SearchIndexHit> hits = [];
-            foreach (KeyValuePair<Guid, (string Path, string Title, string Body)> entry in _docs)
-            {
-                hits.Add(new SearchIndexHit(entry.Key, entry.Value.Path, entry.Value.Title, string.Empty, 0.0));
-            }
-            return Task.FromResult<IReadOnlyList<SearchIndexHit>>(hits);
-        }
-
-        public Task<IReadOnlyDictionary<Guid, string>> LoadBodiesAsync(
-            IReadOnlyCollection<Guid> markdownFileIds,
-            CancellationToken cancellationToken)
-        {
-            LoadBodiesCalls.Add(markdownFileIds);
-            Dictionary<Guid, string> bodies = new();
-            foreach (Guid id in markdownFileIds)
-            {
-                if (_docs.TryGetValue(id, out (string Path, string Title, string Body) doc))
-                {
-                    bodies[id] = doc.Body;
-                }
-            }
-            return Task.FromResult<IReadOnlyDictionary<Guid, string>>(bodies);
-        }
+        public IReadOnlyList<string> GetSynonyms(string stem) => [];
     }
 }

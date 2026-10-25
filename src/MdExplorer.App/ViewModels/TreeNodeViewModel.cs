@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Indexer.Abstractions;
@@ -7,29 +8,21 @@ using MdExplorer.Indexer.Abstractions;
 namespace MdExplorer.App.ViewModels;
 
 /// <summary>
-/// Knoten im TreeView. Repräsentiert entweder ein Verzeichnis (mit Lazy-Loading der Children
-/// per Sentinel-Pattern) oder eine Markdown-Datei (Blattknoten, klickbar, öffnet die Preview).
-/// Datei-Knoten werden erst beim Aufklappen des Eltern-Verzeichnisses materialisiert, weil
-/// der Verzeichnis-Lazy-Load das einzige Trigger-Event für Datei-Enumeration ist.
+/// Knoten im Ordnerbaum: ein Verzeichnis oder eine Markdown-Datei als Blatt, die beim Anklicken
+/// die Vorschau öffnet. Die Kinder eines Verzeichnisses, Ordner wie Dateien, werden erst beim
+/// ersten Aufklappen gelesen. Bis dahin steht ein Platzhalterkind darin, sonst zeigte der Baum
+/// kein Aufklappzeichen.
 /// </summary>
 internal sealed partial class TreeNodeViewModel : ObservableObject
 {
     private const string MarkdownSearchPattern = "*.md";
-
-    private static readonly TreeNodeViewModel _sentinel = new();
-    private static readonly EnumerationOptions _enumerationOptions = new()
-    {
-        IgnoreInaccessible = true,
-        RecurseSubdirectories = false,
-        ReturnSpecialDirectories = false,
-    };
 
     private readonly IFileSystem? _fileSystem;
     private readonly IExclusionFilter? _exclusionFilter;
     private readonly string? _rootAbsolutePath;
     private readonly IReadOnlySet<string> _exclusions;
     private readonly Func<string, bool>? _isUiExcluded;
-    private bool _isLoaded;
+    private Task? _childrenLoad;
 
     [ObservableProperty]
     private bool _isExpanded;
@@ -53,7 +46,7 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDirectlyExcluded;
 
-    /// <summary>Erzeugt einen Verzeichnisknoten mit Sentinel-Child für Lazy-Loading.</summary>
+    /// <summary>Erzeugt einen Verzeichnisknoten mit Platzhalterkind für das verzögerte Laden.</summary>
     public TreeNodeViewModel(
         string absolutePath,
         string displayName,
@@ -80,7 +73,9 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
         _isUiExcluded = isUiExcluded;
         IsDirectlyExcluded = isUiExcluded?.Invoke(absolutePath) ?? false;
         IsExcluded = parentIsExcluded || IsDirectlyExcluded;
-        Children = [_sentinel];
+        // Jeder Ordner hat seinen eigenen Platzhalter: Ein geteilter trüge Auswahl und
+        // Aufklappzustand von einem Baum in den anderen.
+        Children = [new TreeNodeViewModel()];
     }
 
     /// <summary>Erzeugt einen Datei-Blattknoten (kein Lazy-Load, keine Kinder).</summary>
@@ -94,9 +89,10 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
         IsMarkdownFile = true;
         _exclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         Children = [];
-        _isLoaded = true;
+        _childrenLoad = Task.CompletedTask;
     }
 
+    /// <summary>Das Platzhalterkind eines noch nicht aufgeklappten Verzeichnisses.</summary>
     private TreeNodeViewModel()
     {
         AbsolutePath = string.Empty;
@@ -104,6 +100,7 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
         IsMarkdownFile = false;
         _exclusions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         Children = [];
+        _childrenLoad = Task.CompletedTask;
     }
 
     /// <summary>Absoluter Pfad des Verzeichnisses oder der Datei.</summary>
@@ -115,100 +112,102 @@ internal sealed partial class TreeNodeViewModel : ObservableObject
     /// <summary><see langword="true"/>, wenn der Knoten eine Markdown-Datei repräsentiert.</summary>
     public bool IsMarkdownFile { get; }
 
-    /// <summary>Sichtbare Kinder. Verzeichnis: initial Sentinel, nach Expand reale Einträge. Datei: leer.</summary>
+    /// <summary>Sichtbare Kinder. Verzeichnis: zuerst der Platzhalter, nach dem Aufklappen die echten Einträge. Datei: leer.</summary>
     public ObservableCollection<TreeNodeViewModel> Children { get; }
+
+    /// <summary>
+    /// Liest die Kinder beim ersten Aufruf; jeder weitere Aufruf liefert denselben Vorgang.
+    /// </summary>
+    /// <remarks>
+    /// Das Verzeichnis wird im Hintergrund gelesen, die Kinder setzt der Aufrufer-Kontext ein, in
+    /// der Anwendung also der UI-Thread. Eine Netzfreigabe, die nicht antwortet, hält damit nicht
+    /// die Oberfläche an. Ein Verzeichnis, das sich nicht lesen lässt, zeigt keine Kinder.
+    /// </remarks>
+    /// <returns>Der Ladevorgang.</returns>
+    public Task LoadChildrenAsync() => _childrenLoad ??= LoadChildrenCoreAsync();
 
     partial void OnIsExpandedChanged(bool value)
     {
-        if (!value || _isLoaded || _fileSystem is null)
+        if (value)
         {
-            return;
-        }
-        _isLoaded = true;
-        Children.Clear();
-        foreach (TreeNodeViewModel child in EnumerateChildDirectories())
-        {
-            Children.Add(child);
-        }
-        foreach (TreeNodeViewModel child in EnumerateChildMarkdownFiles())
-        {
-            Children.Add(child);
+            _ = LoadChildrenAsync();
         }
     }
 
-    private IEnumerable<TreeNodeViewModel> EnumerateChildDirectories()
+    private async Task LoadChildrenCoreAsync()
     {
-        if (_fileSystem is null || !_fileSystem.DirectoryExists(AbsolutePath))
+        // Nur Verzeichnisknoten haben ein Dateisystem; Blätter und Platzhalter laden nie.
+        if (_fileSystem is not { } fileSystem)
         {
-            yield break;
-        }
-        IEnumerable<string> directories;
-        try
-        {
-            directories = Directory.EnumerateDirectories(AbsolutePath, "*", _enumerationOptions);
-        }
-        catch (DirectoryNotFoundException)
-        {
-            yield break;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            yield break;
+            return;
         }
 
-        foreach (string directory in directories.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase))
+        ChildListing listing = await Task.Run(() => ReadChildren(fileSystem)).ConfigureAwait(true);
+
+        Children.Clear();
+        foreach (string directory in listing.Directories)
         {
-            string name = Path.GetFileName(directory);
-            if (string.IsNullOrEmpty(name) || _exclusions.Contains(name))
-            {
-                continue;
-            }
-            yield return new TreeNodeViewModel(
+            Children.Add(new TreeNodeViewModel(
                 directory,
-                name,
-                _fileSystem,
+                Path.GetFileName(directory),
+                fileSystem,
                 _exclusions,
                 _exclusionFilter,
                 _rootAbsolutePath,
                 _isUiExcluded,
-                parentIsExcluded: IsExcluded);
+                parentIsExcluded: IsExcluded));
+        }
+        foreach (string file in listing.Files)
+        {
+            Children.Add(new TreeNodeViewModel(file, Path.GetFileName(file)));
         }
     }
 
-    private IEnumerable<TreeNodeViewModel> EnumerateChildMarkdownFiles()
+    // Läuft im Hintergrund und fasst nur das Dateisystem an, keine Eigenschaft, an der die Oberfläche hängt.
+    private ChildListing ReadChildren(IFileSystem fileSystem)
     {
-        if (_fileSystem is null || !_fileSystem.DirectoryExists(AbsolutePath))
+        if (!fileSystem.DirectoryExists(AbsolutePath))
         {
-            yield break;
+            return ChildListing.Empty;
         }
-        IEnumerable<string> files;
         try
         {
-            files = Directory.EnumerateFiles(AbsolutePath, MarkdownSearchPattern, _enumerationOptions);
+            return new ChildListing(VisibleDirectories(fileSystem), VisibleMarkdownFiles(fileSystem));
         }
-        catch (DirectoryNotFoundException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            yield break;
+            // „Gerät nicht bereit“, getrenntes Netzlaufwerk, verweigerter Zugriff: Der Ordner
+            // bleibt leer, statt dass das Aufklappen eine Ausnahme wirft.
+            return ChildListing.Empty;
         }
-        catch (UnauthorizedAccessException)
-        {
-            yield break;
-        }
+    }
 
-        foreach (string file in files.OrderBy(static path => path, StringComparer.OrdinalIgnoreCase))
-        {
-            string name = Path.GetFileName(file);
-            if (string.IsNullOrEmpty(name))
-            {
-                continue;
-            }
-            if (_exclusionFilter is not null
-                && _rootAbsolutePath is not null
-                && _exclusionFilter.IsExcluded(file, _rootAbsolutePath))
-            {
-                continue;
-            }
-            yield return new TreeNodeViewModel(file, name);
-        }
+    // Verzeichnisse fallen nur über die Namensliste heraus. Die Glob-Muster greifen bei den
+    // Dateien darunter; ein von Hand pausierter Ordner bleibt sichtbar, nur ausgegraut.
+    private string[] VisibleDirectories(IFileSystem fileSystem) =>
+    [
+        .. fileSystem.EnumerateDirectories(AbsolutePath)
+            .Where(directory => Path.GetFileName(directory) is { Length: > 0 } name && !_exclusions.Contains(name))
+            .Order(StringComparer.OrdinalIgnoreCase),
+    ];
+
+    private string[] VisibleMarkdownFiles(IFileSystem fileSystem) =>
+    [
+        .. fileSystem.EnumerateFiles(AbsolutePath, MarkdownSearchPattern, recursive: false)
+            .Where(file => Path.GetFileName(file).Length > 0 && !IsExcludedFile(file))
+            .Order(StringComparer.OrdinalIgnoreCase),
+    ];
+
+    private bool IsExcludedFile(string file) =>
+        _exclusionFilter is not null
+        && _rootAbsolutePath is not null
+        && _exclusionFilter.IsExcluded(file, _rootAbsolutePath);
+
+    /// <summary>Was das Lesen eines Verzeichnisses ergeben hat.</summary>
+    /// <param name="Directories">Die sichtbaren Unterverzeichnisse, sortiert.</param>
+    /// <param name="Files">Die sichtbaren Markdown-Dateien, sortiert.</param>
+    private sealed record ChildListing(IReadOnlyList<string> Directories, IReadOnlyList<string> Files)
+    {
+        public static ChildListing Empty { get; } = new([], []);
     }
 }

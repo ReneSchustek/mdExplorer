@@ -3,7 +3,10 @@ using MdExplorer.Core.Abstractions;
 
 namespace MdExplorer.App.Tests.Fakes;
 
-/// <summary>Minimaler Fake: deckt nur die Aufrufe ab, die der Folder-Tree benötigt.</summary>
+/// <summary>
+/// Dateisystem im Speicher für Ordnerbaum, Editor und Dateivorgänge. Aufzählen liefert nichts;
+/// asynchrones Lesen, Schreiben, Verschieben und Löschen lassen sich gezielt scheitern lassen.
+/// </summary>
 internal sealed class FakeFileSystem : IFileSystem
 {
     public HashSet<string> Directories { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -16,9 +19,31 @@ internal sealed class FakeFileSystem : IFileSystem
 
     public void EnsureDirectoryExists(string path) => _ = Directories.Add(path);
 
-    public IEnumerable<string> EnumerateFiles(string directory, string searchPattern, bool recursive) => [];
+    /// <summary>Der Fehler, den das Aufzählen meldet; <see langword="null"/>, wenn es gelingen soll.</summary>
+    public Exception? FailOnEnumerate { get; set; }
 
-    public IEnumerable<string> EnumerateDirectories(string directory) => [];
+    /// <summary>Hält jedes Aufzählen an, bis der Test das Signal setzt; <see langword="null"/> lässt es durch.</summary>
+    /// <remarks>
+    /// Wartet höchstens fünf Sekunden, damit ein Aufrufer, der fälschlich auf dem eigenen Thread
+    /// liest, den Testlauf nicht für immer anhält, sondern an der Zusicherung scheitert.
+    /// </remarks>
+    public ManualResetEventSlim? EnumerationGate { get; set; }
+
+    /// <summary>Liefert die Dateien aus <see cref="Files"/>, die im Verzeichnis liegen und zur Endung des Musters passen.</summary>
+    public IEnumerable<string> EnumerateFiles(string directory, string searchPattern, bool recursive)
+    {
+        RecordEnumeration();
+        string extension = searchPattern.StartsWith("*.", StringComparison.Ordinal) ? searchPattern[1..] : string.Empty;
+        return [.. Files.Keys.Where(path => IsInside(path, directory, recursive)
+            && path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))];
+    }
+
+    /// <summary>Liefert die direkten Unterverzeichnisse aus <see cref="Directories"/>.</summary>
+    public IEnumerable<string> EnumerateDirectories(string directory)
+    {
+        RecordEnumeration();
+        return [.. Directories.Where(path => IsInside(path, directory, recursive: false))];
+    }
 
     public bool IsReparsePoint(string path) => false;
 
@@ -37,8 +62,14 @@ internal sealed class FakeFileSystem : IFileSystem
             ? Task.FromException<byte[]>(FailOnRead)
             : Task.FromResult(Files.TryGetValue(path, out byte[]? bytes) ? bytes : Array.Empty<byte>());
 
-    public byte[] ReadAllBytes(string path) =>
-        Files.TryGetValue(path, out byte[]? bytes) ? bytes : Array.Empty<byte>();
+    public byte[] ReadAllBytes(string path)
+    {
+        if (FailOnRead is not null)
+        {
+            throw FailOnRead;
+        }
+        return Files.TryGetValue(path, out byte[]? bytes) ? bytes : Array.Empty<byte>();
+    }
 
     public Stream OpenRead(string path) => Stream.Null;
 
@@ -65,6 +96,20 @@ internal sealed class FakeFileSystem : IFileSystem
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Wie <see cref="WriteAllBytesAtomicAsync"/>; das Geschriebene ist danach auch lesbar, damit
+    /// ein Speichern und Laden über denselben Fake geht.
+    /// </summary>
+    public void WriteAllBytesAtomic(string path, ReadOnlySpan<byte> content)
+    {
+        if (FailOnWrite is not null)
+        {
+            throw FailOnWrite;
+        }
+        WrittenFiles[path] = content.ToArray();
+        Files[path] = content.ToArray();
+    }
+
     /// <summary>Wenn gesetzt, wirft <see cref="MoveFile"/> diese Ausnahme.</summary>
     public Exception? FailOnMove { get; set; }
 
@@ -78,7 +123,9 @@ internal sealed class FakeFileSystem : IFileSystem
         {
             throw FailOnMove;
         }
-        if (Files.ContainsKey(destinationPath))
+        // Wie unter Windows: Dieselbe Datei in anderer Schreibweise ist kein belegtes Ziel.
+        bool sameFile = string.Equals(sourcePath, destinationPath, StringComparison.OrdinalIgnoreCase);
+        if (!sameFile && Files.ContainsKey(destinationPath))
         {
             throw new IOException($"Ziel existiert bereits: {destinationPath}");
         }
@@ -86,8 +133,10 @@ internal sealed class FakeFileSystem : IFileSystem
         {
             throw new FileNotFoundException("Quelle fehlt", sourcePath);
         }
-        Files[destinationPath] = content;
+        // Erst entfernen, dann eintragen: Bei gleicher Datei in neuer Schreibweise behielte das
+        // Wörterbuch sonst den alten Schlüssel, und das Entfernen danach nähme die Datei mit.
         _ = Files.Remove(sourcePath);
+        Files[destinationPath] = content;
     }
 
     /// <summary>Der Fehler, den das Löschen meldet; <see langword="null"/>, wenn es gelingen soll.</summary>
@@ -107,5 +156,24 @@ internal sealed class FakeFileSystem : IFileSystem
 
         DeletedFiles.Add(path);
         _ = Files.Remove(path);
+    }
+
+    private static bool IsInside(string path, string directory, bool recursive)
+    {
+        string folder = directory.TrimEnd(Path.DirectorySeparatorChar);
+        if (recursive)
+        {
+            return path.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+        return string.Equals(Path.GetDirectoryName(path), folder, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void RecordEnumeration()
+    {
+        _ = EnumerationGate?.Wait(TimeSpan.FromSeconds(5));
+        if (FailOnEnumerate is not null)
+        {
+            throw FailOnEnumerate;
+        }
     }
 }

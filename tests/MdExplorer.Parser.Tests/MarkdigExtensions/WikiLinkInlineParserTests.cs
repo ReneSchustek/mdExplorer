@@ -4,7 +4,11 @@ using MdExplorer.Parser.Tests.Helpers;
 
 namespace MdExplorer.Parser.Tests.MarkdigExtensions;
 
-/// <summary>Direkte Unit-Tests des <see cref="WikiLinkInlineParser"/>.</summary>
+/// <summary>
+/// Der <see cref="WikiLinkInlineParser"/> erkennt nur vollständige <c>[[Ziel]]</c> und
+/// <c>[[Ziel|Anzeige]]</c> und lehnt leere, überlange, mehrzeilige oder verschachtelte Inhalte ab.
+/// Griffe er zu weit, verschluckte er gewöhnlichen Text bis zur nächsten schließenden Klammer.
+/// </summary>
 public sealed class WikiLinkInlineParserTests
 {
     [Fact]

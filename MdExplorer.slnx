@@ -12,6 +12,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MdExplorer.App.Tests/MdExplorer.App.Tests.csproj" />
+    <Project Path="tests/MdExplorer.Benchmarks/MdExplorer.Benchmarks.csproj" />
     <Project Path="tests/MdExplorer.Core.Tests/MdExplorer.Core.Tests.csproj" />
     <Project Path="tests/MdExplorer.Data.Tests/MdExplorer.Data.Tests.csproj" />
     <Project Path="tests/MdExplorer.Graph.Tests/MdExplorer.Graph.Tests.csproj" />

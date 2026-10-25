@@ -7,8 +7,13 @@ namespace MdExplorer.App.Services;
 /// Reine Funktionen zur CRUD-Pflege von Hashtag-Tokens (<c>#tag</c>) in einem
 /// Markdown-Dokument. Insertion-Strategie: ein verwalteter HTML-Kommentar-Block
 /// <c>&lt;!-- mdexplorer-tags: #a #b --&gt;</c> am Dateiende. Roh-Text bleibt
-/// ansonsten unangetastet (Roundtrip-fähig).
+/// ansonsten unangetastet (Roundtrip-fähig), auch seine Zeilenenden.
 /// </summary>
+/// <remarks>
+/// Ein neuer Name muss <see cref="HashtagPattern.IsValidName"/> erfüllen. Mit Leerzeichen zerrisse
+/// er im Text den Hashtag, mit <c>&gt;</c> oder <c>--&gt;</c> endete der verwaltete Kommentar zu
+/// früh, und sein Rest stünde sichtbar in der Vorschau.
+/// </remarks>
 internal static partial class TagDocumentEditor
 {
     /// <summary>Prefix-Marker des verwalteten Tag-Blocks.</summary>
@@ -18,21 +23,18 @@ internal static partial class TagDocumentEditor
     public const string ManagedBlockSuffix = "-->";
 
     /// <summary>
-    /// Fügt <paramref name="tagName"/> dem Dokument hinzu, sofern noch nicht vorhanden.
-    /// Liefert den unveränderten Text, wenn der Tag bereits irgendwo im Body steht
-    /// (Vermeidung von Duplikaten im verwalteten Block).
+    /// Fügt <paramref name="tagName"/> in den verwalteten Block ein und legt ihn bei Bedarf an.
+    /// Steht der Tag schon in <paramref name="currentTags"/> (Groß-/Kleinschreibung egal),
+    /// bleibt der Text unverändert.
     /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="tagName"/> ist kein gültiger Schlagwort-Name.</exception>
     public static string Add(string text, string tagName, IReadOnlyList<string> currentTags)
     {
         ArgumentNullException.ThrowIfNull(text);
         ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
         ArgumentNullException.ThrowIfNull(currentTags);
 
-        string sanitized = tagName.TrimStart('#').Trim();
-        if (sanitized.Length == 0)
-        {
-            return text;
-        }
+        string sanitized = ValidName(tagName, nameof(tagName));
         if (ContainsTagOrdinalIgnoreCase(currentTags, sanitized))
         {
             return text;
@@ -47,8 +49,11 @@ internal static partial class TagDocumentEditor
             return string.Concat(text.AsSpan(0, block.Index), replacement, text.AsSpan(block.Index + block.Length));
         }
 
-        string separator = text.Length == 0 || text.EndsWith('\n') ? string.Empty : "\n\n";
-        return $"{text}{separator}{ManagedBlockPrefix} #{sanitized} {ManagedBlockSuffix}\n";
+        // Das Zeilenende der Datei gilt auch für den Block; ein bloßes LF in einer CRLF-Datei
+        // ergäbe gemischte Zeilenenden.
+        string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        string separator = text.Length == 0 || text.EndsWith('\n') ? string.Empty : newline + newline;
+        return $"{text}{separator}{ManagedBlockPrefix} #{sanitized} {ManagedBlockSuffix}{newline}";
     }
 
     /// <summary>
@@ -73,6 +78,7 @@ internal static partial class TagDocumentEditor
     /// <summary>
     /// Ersetzt alle <c>#oldName</c>-Vorkommen durch <c>#newName</c>.
     /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="newName"/> ist kein gültiger Schlagwort-Name.</exception>
     public static string Rename(string text, string oldName, string newName)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -80,8 +86,8 @@ internal static partial class TagDocumentEditor
         ArgumentException.ThrowIfNullOrWhiteSpace(newName);
 
         string sanitizedOld = oldName.TrimStart('#').Trim();
-        string sanitizedNew = newName.TrimStart('#').Trim();
-        if (sanitizedOld.Length == 0 || sanitizedNew.Length == 0)
+        string sanitizedNew = ValidName(newName, nameof(newName));
+        if (sanitizedOld.Length == 0)
         {
             return text;
         }
@@ -116,12 +122,21 @@ internal static partial class TagDocumentEditor
         }
         int start = block.Index;
         int end = block.Index + block.Length;
-        // Eine eventuelle Folge-Leerzeile mit entfernen.
+        // Die Zeilenumbrüche direkt hinter dem Block gehen mit, sonst bliebe dort eine
+        // leere Zeile stehen.
         while (end < text.Length && (text[end] == '\r' || text[end] == '\n'))
         {
             end++;
         }
         return string.Concat(text.AsSpan(0, start), text.AsSpan(end));
+    }
+
+    private static string ValidName(string name, string parameterName)
+    {
+        string sanitized = name.TrimStart('#').Trim();
+        return HashtagPattern.IsValidName(sanitized)
+            ? sanitized
+            : throw new ArgumentException($"Kein gültiger Schlagwort-Name: {name}", parameterName);
     }
 
     private static bool ContainsTagOrdinalIgnoreCase(IReadOnlyList<string> tags, string candidate)

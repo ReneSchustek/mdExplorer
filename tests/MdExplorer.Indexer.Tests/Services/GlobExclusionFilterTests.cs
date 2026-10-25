@@ -1,4 +1,3 @@
-using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
 using MdExplorer.Core.Settings;
 using MdExplorer.Indexer.Services;
@@ -7,6 +6,13 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.Indexer.Tests.Services;
 
+/// <summary>
+/// Der Ausschlussfilter wendet Muster aus den Einstellungen wurzelrelativ an, Muster aus einer
+/// .mdignore relativ zu ihrem Ordner, dazu die in der Oberfläche ausgeschlossenen Ordner. Er
+/// beachtet Verneinungen, verwechselt keine Geschwisterordner mit gleichem Namensanfang und baut
+/// sich nach einer Einstellungsänderung neu auf. Ein Fehler hier blendet Dateien still aus dem
+/// Index aus oder lässt ausgeschlossene darin stehen.
+/// </summary>
 public sealed class GlobExclusionFilterTests
 {
     private const string Root = @"C:\Wurzel";
@@ -113,9 +119,9 @@ public sealed class GlobExclusionFilterTests
         // wurzelrelativ. "Nicht ausgeschlossen" ist hier die sichere Antwort.
         using GlobExclusionFilter sut = Build(["**/*.md"]);
 
-        bool ausgeschlossen = sut.IsExcluded(@"C:\a.md", @"C:\Wurzel\tief");
+        bool excluded = sut.IsExcluded(@"C:\a.md", @"C:\Wurzel\tief");
 
-        Assert.False(ausgeschlossen);
+        Assert.False(excluded);
     }
 
     [Fact]
@@ -139,6 +145,34 @@ public sealed class GlobExclusionFilterTests
     }
 
     [Fact]
+    public void IsExcluded_WithAnMdIgnoreInASubfolder_MatchesRelativeToThatFolder()
+    {
+        // Wie in einer .gitignore: "*.md" in sub/.mdignore meint die Dateien in sub.
+        using GlobExclusionFilter sut = BuildWithMdIgnore([], @"C:\Wurzel\sub", "*.md");
+
+        Assert.True(sut.IsExcluded(@"C:\Wurzel\sub\note.md", Root));
+    }
+
+    [Fact]
+    public void IsExcluded_WithAnMdIgnoreInASubfolder_DoesNotReadItsPatternsFromTheRoot()
+    {
+        // Wurzelrelativ gelesen träfe "sub/note.md" die Datei; vom eigenen Ordner aus gibt es
+        // kein sub/sub/note.md.
+        using GlobExclusionFilter sut = BuildWithMdIgnore([], @"C:\Wurzel\sub", "sub/note.md");
+
+        Assert.False(sut.IsExcluded(@"C:\Wurzel\sub\note.md", Root));
+    }
+
+    [Fact]
+    public void IsExcluded_WithANegationInASubfolder_KeepsTheFileDespiteARootPattern()
+    {
+        using GlobExclusionFilter sut = BuildWithMdIgnore(["**/*.md"], @"C:\Wurzel\sub", "!keep.md");
+
+        Assert.False(sut.IsExcluded(@"C:\Wurzel\sub\keep.md", Root));
+        Assert.True(sut.IsExcluded(@"C:\Wurzel\sub\other.md", Root));
+    }
+
+    [Fact]
     public void Dispose_CalledTwice_DoesNotThrow()
     {
         GlobExclusionFilter sut = Build(["**/node_modules/**"]);
@@ -155,8 +189,18 @@ public sealed class GlobExclusionFilterTests
 
     private static GlobExclusionFilter Build(FakeSettingsService settings)
     {
-        MdIgnoreHierarchy hierarchy = new(new MdIgnoreReader(new EmptyFs()));
+        MdIgnoreHierarchy hierarchy = new(new MdIgnoreReader(new FakeFileSystem()));
         return new GlobExclusionFilter(settings, hierarchy, NullLogger<GlobExclusionFilter>.Instance);
+    }
+
+    private static GlobExclusionFilter BuildWithMdIgnore(IReadOnlyList<string> patterns, string folder, string mdIgnoreContent)
+    {
+        FakeFileSystem fs = new();
+        fs.AddDirectory(Root);
+        fs.AddDirectory(folder);
+        fs.AddFile(Path.Combine(folder, ".mdignore"), mdIgnoreContent + "\n", DateTime.UnixEpoch);
+        MdIgnoreHierarchy hierarchy = new(new MdIgnoreReader(fs));
+        return new GlobExclusionFilter(BuildSettings(patterns), hierarchy, NullLogger<GlobExclusionFilter>.Instance);
     }
 
     private static FakeSettingsService BuildSettings(IReadOnlyList<string> patterns)
@@ -172,30 +216,5 @@ public sealed class GlobExclusionFilterTests
             AppearanceSettings.Default,
             BehaviorSettings.Default);
         return new FakeSettingsService(initial);
-    }
-
-    private sealed class EmptyFs : IFileSystem
-    {
-        public bool DirectoryExists(string path) => true;
-        public bool FileExists(string path) => false;
-        public void EnsureDirectoryExists(string path) { }
-        public IEnumerable<string> EnumerateFiles(string directory, string searchPattern, bool recursive) => [];
-        public IEnumerable<string> EnumerateDirectories(string directory) => [];
-        public bool IsReparsePoint(string path) => false;
-        public string GetDirectoryFinalPath(string path) => path;
-        public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken) => Task.FromResult(Array.Empty<byte>());
-        public byte[] ReadAllBytes(string path) => [];
-        public System.IO.Stream OpenRead(string path) => System.IO.Stream.Null;
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.UnixEpoch;
-        public long GetFileSize(string path) => 0;
-        public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken) => Task.CompletedTask;
-
-        /// <inheritdoc />
-        public void MoveFile(string sourcePath, string destinationPath) =>
-            throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
-
-        /// <inheritdoc />
-        public void DeleteFile(string path) =>
-            throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
     }
 }

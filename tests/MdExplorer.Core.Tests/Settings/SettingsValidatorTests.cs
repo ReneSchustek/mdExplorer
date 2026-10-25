@@ -1,17 +1,22 @@
-using System.IO;
-using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
 using MdExplorer.Core.Settings;
+using MdExplorer.Core.Tests.Fakes;
 
 namespace MdExplorer.Core.Tests.Settings;
 
+/// <summary>
+/// Ungültige Einstellungen werden mit Feld und Position gemeldet, bevor sie gespeichert werden:
+/// fehlende oder relative Wurzeln, leere Muster und Zahlen außerhalb ihrer Grenzen. Die
+/// Theorien prüfen jeweils eine Einheit neben den Grenzen des Validators, bei der
+/// Entprellzeit auch die Grenzwerte selbst.
+/// </summary>
 public sealed class SettingsValidatorTests
 {
     [Fact]
     public void Validate_OnValidSettings_ReportsNoErrors()
     {
-        StubFileSystem fs = new();
-        _ = fs.Directories.Add(@"C:\Notes");
+        InMemoryFileSystem fs = new();
+        fs.AddDirectory(@"C:\Notes");
         SettingsValidator sut = new(fs);
 
         AppSettings input = new(
@@ -28,7 +33,7 @@ public sealed class SettingsValidatorTests
     [Fact]
     public void Validate_OnNonExistentRoot_ReportsError()
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         AppSettings input = new(
@@ -46,7 +51,7 @@ public sealed class SettingsValidatorTests
     [Fact]
     public void Validate_OnRelativePath_ReportsError()
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         AppSettings input = new(
@@ -64,7 +69,7 @@ public sealed class SettingsValidatorTests
     [Fact]
     public void Validate_OnEmptyExclusion_ReportsError()
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         AppSettings input = new(
@@ -84,7 +89,7 @@ public sealed class SettingsValidatorTests
     [InlineData(65, SettingsField.PreviewFontSize)]
     public void Validate_OnPreviewFontSizeOutOfRange_ReportsError(int fontSize, SettingsField expectedField)
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         AppSettings input = new(
@@ -104,7 +109,7 @@ public sealed class SettingsValidatorTests
     [InlineData(1001, SettingsField.ResultsPerPage)]
     public void Validate_OnResultsPerPageOutOfRange_ReportsError(int perPage, SettingsField expectedField)
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         AppSettings input = new(
@@ -126,7 +131,7 @@ public sealed class SettingsValidatorTests
     [InlineData(5_001, true)]
     public void Validate_OnSearchDebounceBoundary_DetectsRangeViolations(int debounceMs, bool expectError)
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         AppSettings input = new(
@@ -143,7 +148,7 @@ public sealed class SettingsValidatorTests
     [Fact]
     public void Validate_OnAppearanceOutOfRange_ReportsError()
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         AppSettings input = new(
@@ -164,7 +169,7 @@ public sealed class SettingsValidatorTests
     {
         // Ein leerer Eintrag entsteht, wenn im Einstellungsdialog eine Zeile stehen bleibt.
         // Ohne Befund liefe der Indexer gegen einen leeren Pfad.
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         SettingsValidationResult result = sut.Validate(new AppSettings(
@@ -181,7 +186,7 @@ public sealed class SettingsValidatorTests
     public void Validate_OnNegationWithoutPattern_ReportsError()
     {
         // "!" allein ist eine Ausnahme ohne Gegenstand; sie würde stillschweigend nichts tun.
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         SettingsValidationResult result = sut.Validate(new AppSettings(
@@ -197,13 +202,14 @@ public sealed class SettingsValidatorTests
     [Fact]
     public void Validate_OnResyncIntervalOutOfRange_ReportsError()
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         SettingsValidationResult result = sut.Validate(new AppSettings(
             AppSettings.CurrentSchemaVersion,
             new IndexingSettings([], [], [], true),
             AppearanceSettings.Default,
+            // Weit über der Obergrenze von einer Stunde.
             BehaviorSettings.Default with { IndexerResyncIntervalSeconds = 99_999 }));
 
         Assert.False(result.IsValid);
@@ -214,7 +220,7 @@ public sealed class SettingsValidatorTests
     public void Validate_OnANegatedPattern_AcceptsIt()
     {
         // Die Negation ist gültige Syntax und darf keinen Befund erzeugen.
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         SettingsValidationResult result = sut.Validate(new AppSettings(
@@ -229,7 +235,7 @@ public sealed class SettingsValidatorTests
     [Fact]
     public void Validate_WithoutSettings_Throws()
     {
-        StubFileSystem fs = new();
+        InMemoryFileSystem fs = new();
         SettingsValidator sut = new(fs);
 
         _ = Assert.Throws<ArgumentNullException>(() => sut.Validate(null!));
@@ -241,30 +247,93 @@ public sealed class SettingsValidatorTests
         _ = Assert.Throws<ArgumentNullException>(() => new SettingsValidator(null!));
     }
 
-    private sealed class StubFileSystem : IFileSystem
+    [Theory]
+    [InlineData("", SettingsRule.ValueEmpty)]
+    [InlineData("!", SettingsRule.NegationWithoutPattern)]
+    [InlineData(@"C:\Notizen\**", SettingsRule.PatternRooted)]
+    [InlineData("/absolut/**", SettingsRule.PatternRooted)]
+    [InlineData("[Dd]rafts/**", SettingsRule.PatternUnsupportedSyntax)]
+    [InlineData("{a,b}/**", SettingsRule.PatternUnsupportedSyntax)]
+    [InlineData("a//b", SettingsRule.PatternInvalid)]
+    [InlineData("**a/b", SettingsRule.PatternInvalid)]
+    [InlineData("***", SettingsRule.PatternInvalid)]
+    [InlineData("a/../b", SettingsRule.PatternInvalid)]
+    public void Validate_OnAPatternThatCannotWork_NamesTheRule(string pattern, SettingsRule expected)
     {
-        public HashSet<string> Directories { get; } = new(StringComparer.OrdinalIgnoreCase);
+        // Vorher nahm die Prüfung fast alles an, weil das Globbing-Paket kaum wirft: Ein absoluter
+        // Pfad oder eine Zeichenklasse lief durch und schloss danach still nichts aus.
+        SettingsValidator sut = new(new InMemoryFileSystem());
 
-        public bool DirectoryExists(string path) => Directories.Contains(path);
-        public bool FileExists(string path) => false;
-        public void EnsureDirectoryExists(string path) => Directories.Add(path);
-        public IEnumerable<string> EnumerateFiles(string directory, string searchPattern, bool recursive) => [];
-        public IEnumerable<string> EnumerateDirectories(string directory) => [];
-        public bool IsReparsePoint(string path) => false;
-        public string GetDirectoryFinalPath(string path) => path;
-        public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken) => Task.FromResult(Array.Empty<byte>());
-        public byte[] ReadAllBytes(string path) => [];
-        public Stream OpenRead(string path) => Stream.Null;
-        public DateTime GetLastWriteTimeUtc(string path) => DateTime.UnixEpoch;
-        public long GetFileSize(string path) => 0;
-        public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken) => Task.CompletedTask;
+        SettingsValidationResult result = sut.Validate(WithPatterns(pattern));
 
-        /// <inheritdoc />
-        public void MoveFile(string sourcePath, string destinationPath) =>
-            throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
-
-        /// <inheritdoc />
-        public void DeleteFile(string path) =>
-            throw new NotSupportedException("Diese Attrappe kennt keine Datei-Operationen.");
+        SettingsValidationError error = Assert.Single(result.Errors);
+        Assert.Equal(SettingsField.ExclusionPatterns, error.Field);
+        Assert.Equal(expected, error.Rule);
     }
+
+    [Theory]
+    [InlineData("**/.git/**")]
+    [InlineData("drafts/")]
+    [InlineData("**/*.tmp.md")]
+    [InlineData("!wichtig/**")]
+    public void Validate_OnUsualPatterns_AcceptsThem(string pattern)
+    {
+        SettingsValidator sut = new(new InMemoryFileSystem());
+
+        Assert.True(sut.Validate(WithPatterns(pattern)).IsValid);
+    }
+
+    [Fact]
+    public void Validate_OnARelativePausedFolder_ReportsIt()
+    {
+        // Pausierte Ordner vergleicht der Indexer als absolute Pfade; ein relativer träfe nie.
+        SettingsValidator sut = new(new InMemoryFileSystem());
+        AppSettings input = AppSettings.Default with { Indexing = AppSettings.Default.Indexing with { UiExcludedFolders = ["notizen"] } };
+
+        SettingsValidationError error = Assert.Single(sut.Validate(input).Errors);
+
+        Assert.Equal(SettingsField.UiExcludedFolders, error.Field);
+        Assert.Equal(SettingsRule.PathNotAbsolute, error.Rule);
+    }
+
+    [Fact]
+    public void Validate_OnAnUnknownTheme_ReportsIt()
+    {
+        SettingsValidator sut = new(new InMemoryFileSystem());
+        AppSettings input = AppSettings.Default with { Appearance = AppSettings.Default.Appearance with { Theme = (AppTheme)42 } };
+
+        SettingsValidationError error = Assert.Single(sut.Validate(input).Errors);
+
+        Assert.Equal(SettingsField.Theme, error.Field);
+        Assert.Equal(SettingsRule.UnknownValue, error.Rule);
+    }
+
+    [Fact]
+    public void Validate_OnAValueOutOfRange_CarriesTheBoundsForTheMessage()
+    {
+        // Die Oberfläche nennt die Grenzen; sie stehen im Befund, nicht noch einmal in der App.
+        SettingsValidator sut = new(new InMemoryFileSystem());
+        AppSettings input = AppSettings.Default with { Appearance = AppSettings.Default.Appearance with { PreviewFontSize = 2 } };
+
+        SettingsValidationError error = Assert.Single(sut.Validate(input).Errors);
+
+        Assert.Equal(SettingsRule.OutOfRange, error.Rule);
+        Assert.Equal(AppearanceSettings.MinPreviewFontSize, error.Minimum);
+        Assert.Equal(AppearanceSettings.MaxPreviewFontSize, error.Maximum);
+    }
+
+    [Fact]
+    public void Validate_OnAMissingRoot_NamesTheRuleAndThePath()
+    {
+        SettingsValidator sut = new(new InMemoryFileSystem());
+        AppSettings input = AppSettings.Default with { Indexing = AppSettings.Default.Indexing with { Roots = [@"C:\fehlt"] } };
+
+        SettingsValidationError error = Assert.Single(sut.Validate(input).Errors);
+
+        Assert.Equal(SettingsRule.DirectoryMissing, error.Rule);
+        Assert.Equal(@"C:\fehlt", error.Value);
+    }
+
+    private static AppSettings WithPatterns(params string[] patterns) =>
+        AppSettings.Default with { Indexing = AppSettings.Default.Indexing with { ExclusionPatterns = patterns } };
 }

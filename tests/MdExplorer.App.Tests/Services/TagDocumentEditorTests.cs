@@ -2,6 +2,11 @@ using MdExplorer.App.Services;
 
 namespace MdExplorer.App.Tests.Services;
 
+/// <summary>
+/// Schlagwörter ändern nur die Hashtags und den verwalteten Block am Dateiende, der übrige Text
+/// bleibt unberührt. Entfernen trifft nur das ganze Wort: <c>#tag</c> nimmt <c>#tagging</c>
+/// nicht mit.
+/// </summary>
 public sealed class TagDocumentEditorTests
 {
     [Fact]
@@ -13,6 +18,35 @@ public sealed class TagDocumentEditorTests
 
         Assert.Contains("<!-- mdexplorer-tags: #neu -->", result, StringComparison.Ordinal);
         Assert.StartsWith("# Titel", result, StringComparison.Ordinal);
+    }
+
+    /// <remarks>
+    /// Mit Leerzeichen zerrisse der Name im Text den Hashtag, mit <c>&gt;</c> oder <c>--&gt;</c>
+    /// endete der verwaltete Kommentar zu früh, und sein Rest stünde sichtbar in der Vorschau.
+    /// Solche Namen sind ein Fehler des Aufrufers; die Oberfläche lässt sie gar nicht erst zu.
+    /// </remarks>
+    [Theory]
+    [InlineData("zwei worte")]
+    [InlineData("a-->b")]
+    [InlineData("a>b")]
+    [InlineData("komma,dahinter")]
+    public void AddAndRename_WithAnInvalidName_Throw(string name)
+    {
+        _ = Assert.Throws<ArgumentException>(() => TagDocumentEditor.Add("Text", name, []));
+        _ = Assert.Throws<ArgumentException>(() => TagDocumentEditor.Rename("Text mit #alt", "alt", name));
+    }
+
+    /// <remarks>
+    /// Eine Datei mit Windows-Zeilenenden bleibt dabei. Ein angehängter Block mit bloßem LF ergäbe
+    /// gemischte Zeilenenden, und manche Werkzeuge melden die Datei danach als ganz geändert.
+    /// </remarks>
+    [Theory]
+    [InlineData("# Titel\r\n\r\nText\r\n", "# Titel\r\n\r\nText\r\n<!-- mdexplorer-tags: #neu -->\r\n")]
+    [InlineData("# Titel\r\n\r\nText", "# Titel\r\n\r\nText\r\n\r\n<!-- mdexplorer-tags: #neu -->\r\n")]
+    [InlineData("Text\n", "Text\n<!-- mdexplorer-tags: #neu -->\n")]
+    public void Add_KeepsTheLineEndingsOfTheDocument(string source, string expected)
+    {
+        Assert.Equal(expected, TagDocumentEditor.Add(source, "neu", []));
     }
 
     [Fact]
@@ -36,7 +70,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Remove_RemovesAllOccurrencesIgnoringCase()
+    public void Remove_WithDifferentCase_RemovesAllOccurrences()
     {
         string source = "Eins #Tag zwei #tag drei";
 
@@ -67,7 +101,7 @@ public sealed class TagDocumentEditorTests
     }
 
     [Fact]
-    public void Rename_ReplacesAllOccurrences()
+    public void Rename_WithSeveralOccurrences_ReplacesAll()
     {
         string source = "Eins #alt und #alt nochmal.";
 

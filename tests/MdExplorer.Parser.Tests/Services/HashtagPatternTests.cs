@@ -24,18 +24,33 @@ public sealed class HashtagPatternTests
     }
 
     /// <remarks>
-    /// Der eigentliche Befund. Was der eine nicht ersetzen kann, darf der andere nicht
+    /// Was der eine nicht ersetzen kann, darf der andere nicht
     /// aufnehmen, sonst laufen Datei und Index auseinander.
     /// </remarks>
     [Theory]
     [InlineData("Ein #notizé mitten im Wort.")]
     [InlineData("Ein #tagé und noch etwas.")]
-    [InlineData("Ein #wortß́ mit fremdem Zeichen.")]
-    public void WhatTheRewriterCannotReachIsNotIndexed(string source)
+    public void ExtractFromAst_WithALetterOutsideTheRule_IndexesNothing(string source)
     {
         MarkdownDocument ast = TestPipelineFactory.Parse(source);
 
         Assert.Empty(_extractor.ExtractFromAst(ast));
+    }
+
+    /// <remarks>
+    /// macOS speichert „ä“ oft als „a“ mit nachgestellten Punkten (NFD). Der Index liest den Namen
+    /// in der zusammengesetzten Form, und der Umschreiber findet die Raute in der Datei trotzdem:
+    /// Beide vergleichen über denselben Slug.
+    /// </remarks>
+    [Fact]
+    public void ExtractAndApply_OnADecomposedUmlaut_Agree()
+    {
+        const string Source = "Ein #Bär hier.";
+
+        Assert.Equal("Bär", Assert.Single(_extractor.ExtractFromAst(TestPipelineFactory.Parse(Source))));
+        Assert.Equal(
+            "Ein #honig hier.",
+            _rewriter.Apply(Source, new Dictionary<string, string?>(StringComparer.Ordinal) { ["bär"] = "honig" }));
     }
 
     /// <remarks>
@@ -44,7 +59,7 @@ public sealed class HashtagPatternTests
     /// hier ausdrücklich als erlaubter Fall festgehalten.
     /// </remarks>
     [Fact]
-    public void ATrailingHyphenStaysPartOfTheMatch()
+    public void ExtractFromAst_WithATrailingHyphen_KeepsItInTheMatch()
     {
         MarkdownDocument ast = TestPipelineFactory.Parse("Ein #tag- mit Bindestrich am Ende.");
 
@@ -53,27 +68,27 @@ public sealed class HashtagPatternTests
     }
 
     [Fact]
-    public void ExtractorAndRewriterAgreeOnAPlainTag()
+    public void ExtractAndApply_OnAPlainTag_Agree()
     {
         MarkdownDocument ast = TestPipelineFactory.Parse("Text mit #notiz darin.");
 
         Assert.Equal("notiz", Assert.Single(_extractor.ExtractFromAst(ast)));
         Assert.Equal(
             "Text mit #merkzettel darin.",
-            _rewriter.Apply("Text mit #notiz darin.", new Dictionary<string, string?> { ["notiz"] = "merkzettel" }));
+            _rewriter.Apply("Text mit #notiz darin.", new Dictionary<string, string?>(StringComparer.Ordinal) { ["notiz"] = "merkzettel" }));
     }
 
     /// <remarks>
     /// Farbwerte erfüllen jede Bedingung eines Schlagworts: erstes Zeichen ein Buchstabe, der
-    /// Rest erlaubt. Der Index trug 42 davon, <c>#F59E0B</c> allein an 21 Dateien, und
-    /// getroffen hat es ausgerechnet die Dokumentation der Gestaltungslinie.
+    /// Rest erlaubt. In einem Bestand mit Gestaltungsdokumentation ergab das 42 Schlagworte aus
+    /// Farbcodes, <c>#F59E0B</c> allein an 21 Dateien.
     /// </remarks>
     [Theory]
     [InlineData("Warning-600 #F59E0B in der Palette.")]
     [InlineData("Rot ist #FF0000 und sonst nichts.")]
     [InlineData("Mit Deckkraft: #FFAA33CC hier.")]
     [InlineData("Kurzform #ABC steht auch dort.")]
-    public void ColorLiteralsAreNotTags(string source)
+    public void ExtractFromAst_OnAColourValue_IndexesNothing(string source)
     {
         MarkdownDocument ast = TestPipelineFactory.Parse(source);
 
@@ -81,7 +96,7 @@ public sealed class HashtagPatternTests
     }
 
     /// <remarks>
-    /// Der bewusst in Kauf genommene Verlust, damit ihn niemand später für einen Fehler hält:
+    /// Der in Kauf genommene Verlust, damit ihn niemand später für einen Fehler hält:
     /// Wörter aus lauter Hexziffern fallen mit weg. In deutschsprachiger Dokumentation ist
     /// das die seltenere Sorte Schlagwort; wer sie braucht, nimmt die Länge aus der Liste.
     /// </remarks>
@@ -89,7 +104,7 @@ public sealed class HashtagPatternTests
     [InlineData("facade")]
     [InlineData("decade")]
     [InlineData("b2b")]
-    public void HexWordsAreLostOnPurpose(string word)
+    public void IsColorLiteral_OnAWordOfHexDigits_ReturnsTrue(string word)
     {
         Assert.True(HashtagPattern.IsColorLiteral(word));
     }
@@ -99,19 +114,34 @@ public sealed class HashtagPatternTests
     [InlineData("projekt")]
     [InlineData("f59e0")]
     [InlineData("F59E0B7")]
-    public void EverythingElseStaysATag(string word)
+    public void IsColorLiteral_OnOtherWords_ReturnsFalse(string word)
     {
         Assert.False(HashtagPattern.IsColorLiteral(word));
     }
 
+    [Theory]
+    [InlineData("notiz", true)]
+    [InlineData("#notiz", true)]
+    [InlineData("Projekt-Alpha_2", true)]
+    [InlineData("übersicht", true)]
+    [InlineData("neuer name", false)]
+    [InlineData("a, b]", false)]
+    [InlineData("2026", false)]
+    [InlineData("x", false)]
+    [InlineData("", false)]
+    public void IsValidName_OnSampleNames_FollowsTheSameRuleAsTheText(string name, bool expected)
+    {
+        Assert.Equal(expected, HashtagPattern.IsValidName(name));
+    }
+
     [Fact]
-    public void ForTagRejectsAnEmptyName()
+    public void ForTag_WithAnEmptyName_Throws()
     {
         _ = Assert.Throws<ArgumentException>(() => HashtagPattern.ForTag("  "));
     }
 
     [Fact]
-    public void ForTagMatchesTheSameBoundariesAsTheSharedExpression()
+    public void ForTag_OnSampleTexts_UsesTheSameBoundariesAsTheSharedExpression()
     {
         Assert.Equal(1, HashtagPattern.ForTag("notiz").Count("Text mit #notiz darin."));
         Assert.Equal(0, HashtagPattern.ForTag("notiz").Count("Text mit #notizé darin."));

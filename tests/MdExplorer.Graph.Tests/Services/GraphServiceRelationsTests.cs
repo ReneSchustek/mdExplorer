@@ -9,7 +9,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace MdExplorer.Graph.Tests.Services;
 
 /// <summary>
-/// Tests für die Verbindungen eines einzelnen Dokuments.
+/// Die Verbindungen eines einzelnen Dokuments kommen vollständig, ohne Dubletten, ohne
+/// Selbstverweis und unabhängig von der Knoten-Obergrenze des Graphen.
 /// </summary>
 /// <remarks>
 /// Der Rückweg ist der Teil, den man leicht vergisst: Wohin ein Dokument verweist, steht in

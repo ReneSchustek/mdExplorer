@@ -5,6 +5,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.Indexer.Tests.Services;
 
+/// <summary>
+/// Der Scanner findet nur Markdown-Dateien, lässt ausgeschlossene Ordner weg und kommt bei
+/// wechselseitigen Verknüpfungen zum Ende. Folgte er einer Junction-Schleife, hinge der Erst-Scan
+/// endlos; folgte er einem Link nach außen, landeten fremde Dateien im Index.
+/// </summary>
 public sealed class FileScannerTests
 {
     private static readonly DateTime FixedWrite = new(2026, 6, 7, 12, 0, 0, DateTimeKind.Utc);
@@ -21,7 +26,7 @@ public sealed class FileScannerTests
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter());
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken).Select(file => file.Path)];
 
         Assert.Equal(2, result.Count);
         Assert.Contains(@$"{Root}\a.md", result);
@@ -40,7 +45,7 @@ public sealed class FileScannerTests
 
         FileScanner sut = NewScanner(fs, new StubExclusionFilter(["node_modules", ".git", "bin"]));
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken).Select(file => file.Path)];
 
         _ = Assert.Single(result);
         Assert.Contains(@$"{Root}\readme.md", result);
@@ -52,7 +57,7 @@ public sealed class FileScannerTests
         FakeFileSystem fs = new();
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter());
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken).Select(file => file.Path)];
 
         Assert.Empty(result);
     }
@@ -81,13 +86,13 @@ public sealed class FileScannerTests
         fs.AddDirectory(@$"{Root}\dir2");
         fs.AddFile(@$"{Root}\dir1\file1.md", "# 1", FixedWrite);
         fs.AddFile(@$"{Root}\dir2\file2.md", "# 2", FixedWrite);
-        // Wechselseitige Junctions: würde die Default-Recursive-Enumeration in eine Endlosschleife treiben.
+        // Wechselseitige Junctions: Eine rekursive Aufzählung, die Links folgt, liefe hier endlos im Kreis.
         fs.AddSymlink(@$"{Root}\dir1\loop", @$"{Root}\dir2");
         fs.AddSymlink(@$"{Root}\dir2\loop", @$"{Root}\dir1");
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: false);
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken).Select(file => file.Path)];
 
         Assert.Equal(2, result.Count);
         Assert.Contains(@$"{Root}\dir1\file1.md", result);
@@ -108,7 +113,7 @@ public sealed class FileScannerTests
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: true);
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken).Select(file => file.Path)];
 
         // Keine Datei doppelt, Zyklus über Besucher-Set unterbrochen.
         Assert.Equal(2, result.Count);
@@ -123,14 +128,60 @@ public sealed class FileScannerTests
         fs.AddDirectory(Root);
         fs.AddDirectory(@"C:\Anderswo");
         fs.AddFile(@"C:\Anderswo\extern.md", "# Extern", FixedWrite);
-        // Linkziel liegt außerhalb des Roots; soll bei Default-Setting nicht indiziert werden.
+        // Das Linkziel liegt außerhalb der Wurzel und bleibt in der Voreinstellung draußen.
         fs.AddSymlink(@$"{Root}\link", @"C:\Anderswo");
 
         FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: false);
 
-        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken)];
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken).Select(file => file.Path)];
 
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public void EnumerateMarkdownFiles_OnAFileSymlink_WithFollowSymlinksFalse_SkipsIt()
+    {
+        // Auch eine einzelne Datei kann eine Verknüpfung auf ein Ziel außerhalb der Wurzel sein.
+        // In der Voreinstellung bleibt ihr Inhalt draußen, wie der eines verknüpften Ordners.
+        FakeFileSystem fs = new();
+        fs.AddDirectory(Root);
+        fs.AddFile(@$"{Root}\normal.md", "# Normal", FixedWrite);
+        fs.AddFile(@$"{Root}\link.md", "# Fremd", FixedWrite);
+        fs.MarkFileAsReparsePoint(@$"{Root}\link.md", linkTarget: @"C:\Anderswo\fremd.md");
+
+        FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: false);
+
+        List<string> result = [.. sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken).Select(file => file.Path)];
+
+        Assert.Equal([@$"{Root}\normal.md"], result);
+    }
+
+    [Fact]
+    public void EnumerateMarkdownFiles_OnAReparsePointFileWithoutLinkTarget_IncludesIt()
+    {
+        // OneDrive legt jede Datei als Reparse-Point ab, auch die vor Ort liegenden. Würde jeder
+        // Reparse-Point übersprungen, fehlten in einem OneDrive-Ordner alle Notizen.
+        FakeFileSystem fs = new();
+        fs.AddDirectory(Root);
+        fs.AddFile(@$"{Root}\cloud.md", "# Cloud", FixedWrite);
+        fs.MarkFileAsReparsePoint(@$"{Root}\cloud.md");
+
+        FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: false);
+
+        Assert.Equal([@$"{Root}\cloud.md"], sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken).Select(file => file.Path));
+    }
+
+    [Fact]
+    public void EnumerateMarkdownFiles_OnAFileSymlink_WithFollowSymlinksTrue_IncludesIt()
+    {
+        FakeFileSystem fs = new();
+        fs.AddDirectory(Root);
+        fs.AddFile(@$"{Root}\link.md", "# Fremd", FixedWrite);
+        fs.MarkFileAsReparsePoint(@$"{Root}\link.md", linkTarget: @"C:\Anderswo\fremd.md");
+
+        FileScanner sut = NewScanner(fs, new PassThroughExclusionFilter(), followSymlinks: true);
+
+        _ = Assert.Single(sut.EnumerateMarkdownFiles(Root, TestContext.Current.CancellationToken));
     }
 
     private static FileScanner NewScanner(

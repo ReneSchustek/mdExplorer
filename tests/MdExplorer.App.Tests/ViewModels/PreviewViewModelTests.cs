@@ -1,5 +1,4 @@
 using System.IO;
-using System.IO.Compression;
 using System.Text;
 using MdExplorer.App.Services;
 using MdExplorer.App.Tests.Fakes;
@@ -11,7 +10,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.ViewModels;
 
-/// <summary>Tests für die Preview-HTML-Pipeline und die CSP-Verpackung.</summary>
+/// <summary>
+/// Die Vorschau entpackt das gespeicherte HTML und liefert es nur mit der Richtlinie aus, die
+/// jedes Skript sperrt, auch wenn das Dokument fehlt oder selbst ein Skript mitbringt.
+/// </summary>
 public sealed class PreviewViewModelTests
 {
     private static readonly DateTime FixedUtc = new(2026, 6, 1, 8, 0, 0, DateTimeKind.Utc);
@@ -19,18 +21,18 @@ public sealed class PreviewViewModelTests
     [Fact]
     public async Task LoadAsync_BuildsHtmlWithCspAndBody()
     {
-        Guid fileId = Guid.NewGuid();
+        Guid fileId = new("eeeeeeee-0000-0000-0000-000000000008");
         FakeMarkdownDocumentRepository repo = new();
         MarkdownDocument document = new()
         {
-            Id = Guid.NewGuid(),
+            Id = new Guid("eeeeeeee-0000-0000-0000-000000000009"),
             MarkdownFileId = fileId,
             SourceContentHash = "hash",
             FrontmatterJson = "{}",
             OutlinksJson = "[]",
             ParsedAtUtc = FixedUtc,
         };
-        document.SetRenderedHtmlGz(Gzip("<h1>Titel</h1>"));
+        document.SetRenderedHtmlGz(TestGzip.Compress("<h1>Titel</h1>"));
         repo.Put(fileId, document);
 
         PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
@@ -53,7 +55,7 @@ public sealed class PreviewViewModelTests
         using ServiceProvider provider = BuildProvider(repo);
         PreviewViewModel vm = new(provider.GetRequiredService<IServiceScopeFactory>(), builder, NullLogger<PreviewViewModel>.Instance);
 
-        await vm.LoadAsync(Guid.NewGuid(), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await vm.LoadAsync(new Guid("eeeeeeee-0000-0000-0000-000000000010"), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.Contains("Content-Security-Policy", vm.Html, StringComparison.Ordinal);
     }
@@ -83,6 +85,7 @@ public sealed class PreviewViewModelTests
         Assert.Contains("script-src 'none'", html, StringComparison.Ordinal);
     }
 
+    /// <summary>Die <c>script-src</c>-Anweisung der Richtlinie bis zum nächsten Semikolon.</summary>
     private readonly record struct ScriptSrcSlice(string Policy)
     {
         public string Value
@@ -106,16 +109,5 @@ public sealed class PreviewViewModelTests
         ServiceCollection services = new();
         _ = services.AddScoped<IMarkdownDocumentRepository>(_ => repository);
         return services.BuildServiceProvider(validateScopes: true);
-    }
-
-    private static byte[] Gzip(string text)
-    {
-        using MemoryStream output = new();
-        using (GZipStream gz = new(output, CompressionLevel.Fastest))
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(text);
-            gz.Write(bytes, 0, bytes.Length);
-        }
-        return output.ToArray();
     }
 }

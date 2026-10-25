@@ -1,21 +1,17 @@
-using System.Diagnostics;
 using System.Text;
 using MdExplorer.Parser.Models;
 using MdExplorer.Parser.Services;
 using MdExplorer.Parser.Tests.Helpers;
-using MdExplorer.Core.Models;
 
 namespace MdExplorer.Parser.Tests.Services;
 
+/// <summary>
+/// Der Parser führt Schlagworte aus Frontmatter und Text ohne Dubletten zusammen, entschärft
+/// eingebettetes HTML, schreibt WikiLinks auf das eigene Schema um und legt das HTML als gültigen
+/// GZip-Strom ab. Rutschte ein <c>script</c> durch, liefe es in der Vorschau.
+/// </summary>
 public sealed class MarkdigParserTests
 {
-    /// <summary>
-    /// Zahl der Zeitmessungen, aus denen die kleinste gewertet wird. Zehn Durchläufe eines
-    /// Zehn-Kilobyte-Dokuments kosten kaum Zeit und machen es unwahrscheinlich, dass jeder
-    /// einzelne davon durch einen parallelen Testprozess verdrängt wurde.
-    /// </summary>
-    private const int MeasurementAttempts = 10;
-
     private readonly MarkdigParser _sut;
 
     public MarkdigParserTests()
@@ -138,33 +134,21 @@ public sealed class MarkdigParserTests
         Assert.Equal(["foo-bar", "café"], result.OutlinkSlugs);
     }
 
+    /// <remarks>
+    /// Die Laufzeit misst <c>ParseBenchmarks</c> im Messprojekt. Eine Stoppuhr im Testlauf hinge
+    /// an der Auslastung der Maschine; geprüft wird hier, dass ein großes Dokument vollständig
+    /// gerendert wird.
+    /// </remarks>
     [Fact]
-    public void Parse_Performance_TenKilobyteMarkdown_RendersUnderFiftyMilliseconds()
+    public void Parse_TenKilobyteMarkdown_RendersEveryParagraph()
     {
         string markdown = BuildLargeMarkdown(targetBytes: 10 * 1024);
+        int paragraphs = markdown.Split("\n\n", StringSplitOptions.RemoveEmptyEntries).Length;
 
-        // Warm-up: JIT, Markdig static init, GZip pipeline.
-        _ = _sut.Parse(markdown);
+        ParseResult result = _sut.Parse(markdown);
 
-        // Gemessen wird die kleinste von mehreren Zeiten, nicht eine einzelne. Beim
-        // vollständigen Lauf teilen sich neun Testprozesse dieselben Kerne, und eine
-        // Verdrängung kann eine Messung nur verlängern, nie verkürzen. Das Minimum
-        // schätzt damit die ungestörte Laufzeit: Es fällt, wenn der Parser schneller
-        // wird, steigt bei einer echten Regression und bleibt von der Auslastung
-        // der Maschine unbeeindruckt.
-        long bestMilliseconds = long.MaxValue;
-        ParseResult result = null!;
-        for (int attempt = 0; attempt < MeasurementAttempts; attempt++)
-        {
-            Stopwatch stopwatch = Stopwatch.StartNew();
-            result = _sut.Parse(markdown);
-            stopwatch.Stop();
-            bestMilliseconds = Math.Min(bestMilliseconds, stopwatch.ElapsedMilliseconds);
-        }
-
-        Assert.True(bestMilliseconds <= 50,
-            $"Erwartet ≤ 50 ms, schnellster von {MeasurementAttempts} Durchläufen: {bestMilliseconds} ms.");
-        Assert.NotEqual(0, result.RenderedHtmlGz.Length);
+        string html = GzipHelper.Decompress(result.RenderedHtmlGz);
+        Assert.Equal(paragraphs, html.Split("<p>").Length - 1);
     }
 
     [Fact]

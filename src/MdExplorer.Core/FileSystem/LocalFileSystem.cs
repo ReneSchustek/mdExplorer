@@ -39,6 +39,23 @@ public sealed class LocalFileSystem : IFileSystem
     }
 
     /// <inheritdoc />
+    public IEnumerable<FileEntry> EnumerateFileEntries(string directory, string searchPattern)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(searchPattern);
+
+        // Eine FileInfo aus der Aufzählung trägt Größe, Zeit und Attribute schon aus den Daten des
+        // Verzeichnisses; keiner der drei Werte fragt die Datei noch einmal ab.
+        return new DirectoryInfo(directory)
+            .EnumerateFiles(searchPattern, SearchOption.TopDirectoryOnly)
+            .Select(file => new FileEntry(
+                file.FullName,
+                file.Length,
+                file.LastWriteTimeUtc,
+                (file.Attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint));
+    }
+
+    /// <inheritdoc />
     public IEnumerable<string> EnumerateDirectories(string directory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(directory);
@@ -49,12 +66,17 @@ public sealed class LocalFileSystem : IFileSystem
     public bool IsReparsePoint(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        if (!Directory.Exists(path) && !File.Exists(path))
+        try
         {
+            FileAttributes attributes = File.GetAttributes(path);
+            return (attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint;
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // Ein fehlender Pfad ist kein Link. Abgefragt wird ohne vorheriges Exists: Zwischen
+            // beiden Aufrufen könnte die Datei verschwinden.
             return false;
         }
-        FileAttributes attributes = File.GetAttributes(path);
-        return (attributes & FileAttributes.ReparsePoint) == FileAttributes.ReparsePoint;
     }
 
     /// <inheritdoc />
@@ -95,6 +117,9 @@ public sealed class LocalFileSystem : IFileSystem
     public Stream OpenRead(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        // Geteilt mit Schreiben und Löschen: Ein Editor, der die Datei gerade speichert, soll
+        // nicht an der Sperre des Lesers scheitern. 81.920 Byte ist der Kopierpuffer von .NET
+        // und bleibt unter der Grenze, ab der ein Array im Large Object Heap landet.
         return new FileStream(
             path,
             FileMode.Open,
@@ -121,19 +146,30 @@ public sealed class LocalFileSystem : IFileSystem
     /// <inheritdoc />
     public async Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(path);
-
-        string targetDirectory = Path.GetDirectoryName(path)
-            ?? throw new InvalidOperationException($"Zielpfad enthält kein Verzeichnis: {path}");
-        _ = Directory.CreateDirectory(targetDirectory);
-
-        // Temp-Datei muss im selben Verzeichnis liegen, damit File.Move atomar bleibt
-        // (Volume-übergreifendes Move ist nicht atomar).
-        string tempPath = Path.Combine(targetDirectory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
-
+        string tempPath = PrepareTempPath(path);
         try
         {
             await WriteContentAsync(tempPath, content, cancellationToken).ConfigureAwait(false);
+            File.Move(tempPath, path, overwrite: true);
+        }
+        catch
+        {
+            TryDeleteSilently(tempPath);
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public void WriteAllBytesAtomic(string path, ReadOnlySpan<byte> content)
+    {
+        string tempPath = PrepareTempPath(path);
+        try
+        {
+            using (FileStream stream = new(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize: 4096, FileOptions.WriteThrough))
+            {
+                stream.Write(content);
+                stream.Flush();
+            }
             File.Move(tempPath, path, overwrite: true);
         }
         catch
@@ -169,6 +205,27 @@ public sealed class LocalFileSystem : IFileSystem
         File.Delete(path);
     }
 
+    /// <summary>Legt das Zielverzeichnis an und nennt die Zwischendatei daneben.</summary>
+    /// <remarks>
+    /// Die Zwischendatei muss im selben Verzeichnis liegen, damit <c>File.Move</c> atomar bleibt;
+    /// über Laufwerke hinweg ist es ein Kopieren.
+    /// </remarks>
+    private static string PrepareTempPath(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        // Bei einem bloßen Dateinamen ist das Verzeichnis leer, bei einer Laufwerkswurzel null;
+        // in beiden Fällen gäbe es keinen Ordner für die Zwischendatei.
+        string? targetDirectory = Path.GetDirectoryName(path);
+        if (string.IsNullOrEmpty(targetDirectory))
+        {
+            throw new ArgumentException($"Zielpfad enthält kein Verzeichnis: {path}", nameof(path));
+        }
+
+        _ = Directory.CreateDirectory(targetDirectory);
+        return Path.Combine(targetDirectory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+    }
+
     private static async Task WriteContentAsync(string tempPath, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
     {
         FileStreamOptions options = new()
@@ -195,13 +252,9 @@ public sealed class LocalFileSystem : IFileSystem
                 File.Delete(path);
             }
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Aufräumen einer Temp-Datei ist Best-Effort, denn der eigentliche Fehler wurde bereits geworfen.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // dito.
         }
     }
 }

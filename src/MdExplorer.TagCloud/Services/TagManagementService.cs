@@ -4,6 +4,7 @@ using System.Text;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Text;
 using MdExplorer.Parser.Abstractions;
+using MdExplorer.Parser.Services;
 using MdExplorer.TagCloud.Abstractions;
 using Microsoft.Extensions.Logging;
 
@@ -12,12 +13,13 @@ namespace MdExplorer.TagCloud.Services;
 /// <summary>
 /// Projektweite Tag-Verwaltung. Liest betroffene Pfade über <see cref="ITagFileLookupQuery"/>,
 /// schreibt jede Datei über <see cref="IFileSystem.WriteAllBytesAtomicAsync"/> atomar neu
-/// (Temp + Move) und überlasst den DB-Re-Sync dem Indexer-Watcher. Body-Vorkommen werden
+/// (Temp + Move) und überlässt den DB-Re-Sync dem Indexer-Watcher. Body-Vorkommen werden
 /// per Slug-Identität erkannt (Boundary-Regex + Normalizer), Frontmatter-Einträge
 /// werden zeilenbasiert manipuliert, gleicher Datei-Schreibpfad für Rename, Merge und Delete.
 /// </summary>
 public sealed partial class TagManagementService : ITagManagementService
 {
+    // Die Vorschau im Dialog zeigt Beispiele, keine vollständige Liste; die Gesamtzahl steht daneben.
     private const int SamplePathLimit = 10;
     private static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 
@@ -63,14 +65,9 @@ public sealed partial class TagManagementService : ITagManagementService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(oldSlug);
         ArgumentException.ThrowIfNullOrWhiteSpace(newRawName);
-        string sanitized = newRawName.TrimStart('#').Trim();
-        if (sanitized.Length == 0)
-        {
-            throw new ArgumentException("Neuer Tag-Name ist leer.", nameof(newRawName));
-        }
         Dictionary<string, string?> operations = new(StringComparer.Ordinal)
         {
-            [oldSlug] = sanitized,
+            [oldSlug] = ValidatedName(newRawName, nameof(newRawName)),
         };
         return ApplyAsync(oldSlug, operations, cancellationToken);
     }
@@ -80,14 +77,9 @@ public sealed partial class TagManagementService : ITagManagementService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourceSlug);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetRawName);
-        string sanitized = targetRawName.TrimStart('#').Trim();
-        if (sanitized.Length == 0)
-        {
-            throw new ArgumentException("Ziel-Tag-Name ist leer.", nameof(targetRawName));
-        }
         Dictionary<string, string?> operations = new(StringComparer.Ordinal)
         {
-            [sourceSlug] = sanitized,
+            [sourceSlug] = ValidatedName(targetRawName, nameof(targetRawName)),
         };
         return ApplyAsync(sourceSlug, operations, cancellationToken);
     }
@@ -101,6 +93,19 @@ public sealed partial class TagManagementService : ITagManagementService
             [slug] = null,
         };
         return ApplyAsync(slug, operations, cancellationToken);
+    }
+
+    // Geprüft wird vor der ersten Datei und nach derselben Regel, nach der der Index Schlagworte
+    // im Text erkennt. Ein Name mit Leerzeichen oder YAML-Zeichen stünde sonst in jeder Datei
+    // anders, oder wäre nicht wiederzufinden.
+    private static string ValidatedName(string rawName, string parameterName)
+    {
+        string sanitized = rawName.TrimStart('#').Trim();
+        if (!HashtagPattern.IsValidName(sanitized))
+        {
+            throw new ArgumentException("Kein gültiger Schlagwort-Name.", parameterName);
+        }
+        return sanitized;
     }
 
     [LoggerMessage(EventId = 1000, Level = LogLevel.Information, Message = "Tag-Operation '{Slug}' abgeschlossen — {FilesAffected}/{FilesAttempted} Dateien geändert, {ErrorCount} Fehler.")]
@@ -130,23 +135,33 @@ public sealed partial class TagManagementService : ITagManagementService
         foreach (string absolutePath in rows.Select(row => row.AbsolutePath))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            try
+            if (await TryRewriteAsync(absolutePath, operations, errors, cancellationToken).ConfigureAwait(false))
             {
-                bool changed = await RewriteSingleFileAsync(absolutePath, operations, cancellationToken).ConfigureAwait(false);
-                if (changed)
-                {
-                    filesAffected++;
-                }
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                errors[absolutePath] = ex.Message;
-                LogFileWriteFailed(_logger, ex, absolutePath);
+                filesAffected++;
             }
         }
 
         LogOperationCompleted(_logger, operationSlug, filesAffected, rows.Count, errors.Count);
         return new TagRewriteResult(operationSlug, filesAffected, rows.Count, errors);
+    }
+
+    // Ein Schreibfehler kostet nur diese Datei; er steht in der Fehlerliste des Ergebnisses.
+    private async Task<bool> TryRewriteAsync(
+        string absolutePath,
+        Dictionary<string, string?> operations,
+        Dictionary<string, string> errors,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await RewriteSingleFileAsync(absolutePath, operations, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            errors[absolutePath] = ex.Message;
+            LogFileWriteFailed(_logger, ex, absolutePath);
+            return false;
+        }
     }
 
     private async Task<bool> RewriteSingleFileAsync(
@@ -155,13 +170,20 @@ public sealed partial class TagManagementService : ITagManagementService
         CancellationToken cancellationToken)
     {
         byte[] bytes = await _fileSystem.ReadAllBytesAsync(absolutePath, cancellationToken).ConfigureAwait(false);
-        string original = Utf8Decoder.DecodeNoBom(bytes);
+
+        // Nur gültiges UTF-8 wird umgeschrieben: Aus einer anders kodierten Datei würden beim
+        // Zurückschreiben Ersatzzeichen. Eine Byte-Order-Mark bleibt, wie sie war.
+        if (!Utf8Decoder.TryDecodeStrict(bytes, out string original))
+        {
+            throw new InvalidDataException("Datei ist kein gültiges UTF-8 und bleibt unverändert.");
+        }
         string rewritten = _rewriter.Apply(original, operations);
         if (string.Equals(rewritten, original, StringComparison.Ordinal))
         {
             return false;
         }
-        byte[] payload = Utf8NoBom.GetBytes(rewritten);
+        bool hadBom = bytes.AsSpan().StartsWith(Encoding.UTF8.Preamble);
+        byte[] payload = hadBom ? [.. Encoding.UTF8.Preamble, .. Utf8NoBom.GetBytes(rewritten)] : Utf8NoBom.GetBytes(rewritten);
         await _fileSystem.WriteAllBytesAtomicAsync(absolutePath, payload, cancellationToken).ConfigureAwait(false);
         return true;
     }

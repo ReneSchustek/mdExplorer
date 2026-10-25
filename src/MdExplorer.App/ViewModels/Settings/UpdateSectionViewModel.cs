@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.App.Localization;
 using MdExplorer.Update.Abstractions;
 using MdExplorer.Update.Models;
 
@@ -27,7 +28,7 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
     private readonly CancellationTokenSource _cancellation = new();
 
     [ObservableProperty]
-    private string _statusText = "Noch nicht geprüft.";
+    private string _statusText = UiText.Get("Update_Status_NotChecked");
 
     [ObservableProperty]
     private bool _isBusy;
@@ -87,26 +88,23 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
     private static string DescribeResult(UpdateCheckResult result) => result.Status switch
     {
         UpdateCheckStatus.UpdateAvailable when result.IsInstallable =>
-            $"Version {result.LatestVersion} ist verfügbar (installiert: {result.CurrentVersion}).",
+            UiText.Format("Update_Status_Available", result.LatestVersion, result.CurrentVersion),
         UpdateCheckStatus.UpdateAvailable =>
-            $"Version {result.LatestVersion} ist verfügbar, lässt sich hier aber nicht installieren — "
-            + "zu diesem Release fehlt die Prüfsumme. Bitte über die Release-Seite herunterladen.",
-        UpdateCheckStatus.UpToDate => $"Die installierte Version {result.CurrentVersion} ist aktuell.",
-        UpdateCheckStatus.Failed => "Es ließ sich nicht feststellen, ob es eine neuere Version gibt — "
-            + "die Quelle war nicht erreichbar. Das heißt nicht, dass Sie aktuell sind.",
-        _ => "Noch nicht geprüft.",
+            UiText.Format("Update_Status_AvailableNotInstallable", result.LatestVersion),
+        UpdateCheckStatus.UpToDate => UiText.Format("Update_Status_UpToDate", result.CurrentVersion),
+        UpdateCheckStatus.Failed => UiText.Get("Update_Status_CheckFailed"),
+        _ => UiText.Get("Update_Status_NotChecked"),
     };
 
     private static string DescribeDownloadFailure(UpdateDownloadStatus status) => status switch
     {
-        UpdateDownloadStatus.DownloadFailed => "Der Download ist fehlgeschlagen. Bitte später erneut versuchen.",
-        UpdateDownloadStatus.ChecksumMismatch =>
-            "Die Prüfsumme der geladenen Datei stimmt nicht mit der veröffentlichten überein. "
-            + "Die Datei wurde verworfen und nicht ausgeführt.",
-        UpdateDownloadStatus.NoChecksumPublished =>
-            "Zu diesem Release ist keine Prüfsumme veröffentlicht — es wird nicht automatisch installiert.",
-        UpdateDownloadStatus.StorageFailed => "Das Paket ließ sich lokal nicht ablegen.",
-        _ => "Die Installation ist fehlgeschlagen.",
+        UpdateDownloadStatus.DownloadFailed => UiText.Get("Update_Download_Failed"),
+        UpdateDownloadStatus.ChecksumMismatch => UiText.Get("Update_Download_ChecksumMismatch"),
+        UpdateDownloadStatus.NoChecksumPublished => UiText.Get("Update_Download_NoChecksum"),
+        UpdateDownloadStatus.StorageFailed => UiText.Get("Update_Download_StorageFailed"),
+        UpdateDownloadStatus.NoSignaturePublished => UiText.Get("Update_Download_NoSignature"),
+        UpdateDownloadStatus.SignatureInvalid => UiText.Get("Update_Download_SignatureInvalid"),
+        _ => UiText.Get("Update_Download_InstallFailed"),
     };
 
     partial void OnIsBusyChanged(bool value)
@@ -129,26 +127,51 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
         IsBusy = true;
         IsInstallAvailable = false;
         _asset = null;
-        StatusText = "Suche nach Updates …";
+        StatusText = UiText.Get("Update_Status_Checking");
 
         try
         {
             // force: Der Nutzer hat den Knopf gedrückt; die Drossel gilt nur für die
             // automatische Prüfung beim Start.
-            UpdateCheckResult result = await _checker
-                .CheckForUpdateAsync(force: true, _cancellation.Token)
-                .ConfigureAwait(true);
-
-            StatusText = DescribeResult(result);
-            if (result.IsInstallable)
-            {
-                _asset = result.Asset;
-                IsInstallAvailable = true;
-            }
+            ShowResult(await _checker.CheckForUpdateAsync(force: true, _cancellation.Token).ConfigureAwait(true));
+        }
+        catch (OperationCanceledException)
+        {
+            // Der Dialog wurde während der Prüfung geschlossen; die Antwort braucht niemand mehr.
+            StatusText = UiText.Get("Update_Status_Cancelled");
         }
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private void ShowResult(UpdateCheckResult result)
+    {
+        StatusText = DescribeResult(result);
+        if (result.IsInstallable)
+        {
+            _asset = result.Asset;
+            IsInstallAvailable = true;
+        }
+    }
+
+    private void StartVerified(UpdateDownloadResult download)
+    {
+        if (download is not { IsVerified: true, InstallerPath: { } installerPath })
+        {
+            StatusText = DescribeDownloadFailure(download.Status);
+            return;
+        }
+
+        StatusText = UiText.Get("Update_Status_Verified");
+        if (_installer.StartInstaller(installerPath))
+        {
+            InstallerStarted?.Invoke(this, EventArgs.Empty);
+        }
+        else
+        {
+            StatusText = UiText.Format("Update_Status_InstallerNotStarted", installerPath);
         }
     }
 
@@ -162,37 +185,18 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
         IsBusy = true;
         IsProgressVisible = true;
         ProgressPercent = 0;
-        StatusText = "Lädt herunter …";
+        StatusText = UiText.Get("Update_Status_Downloading");
 
         try
         {
             Progress<int> progress = new(p => ProgressPercent = p);
-            UpdateDownloadResult download = await _installer
-                .DownloadAndVerifyAsync(_asset, progress, _cancellation.Token)
-                .ConfigureAwait(true);
-
-            if (!download.IsVerified)
-            {
-                StatusText = DescribeDownloadFailure(download.Status);
-                return;
-            }
-
-            StatusText = "Prüfsumme bestätigt — Installation wird gestartet.";
-            if (_installer.StartInstaller(download.InstallerPath!))
-            {
-                InstallerStarted?.Invoke(this, EventArgs.Empty);
-            }
-            else
-            {
-                StatusText = "Das Installationsprogramm ließ sich nicht starten. "
-                    + $"Die geprüfte Datei liegt unter {download.InstallerPath}.";
-            }
+            StartVerified(await _installer.DownloadAndVerifyAsync(_asset, progress, _cancellation.Token).ConfigureAwait(true));
         }
         catch (OperationCanceledException)
         {
             // Der Dialog wurde während des Downloads geschlossen. Der Teil-Download ist
             // bereits verworfen; hier bleibt nichts zu tun.
-            StatusText = "Abgebrochen.";
+            StatusText = UiText.Get("Update_Status_Cancelled");
         }
         finally
         {

@@ -5,6 +5,12 @@ namespace MdExplorer.Core.Models;
 /// Das Fluent-API-Mapping liegt in der Data-Schicht, die Persistenz-Schnittstelle ist
 /// <see cref="Abstractions.IMarkdownFileRepository"/>.
 /// </summary>
+/// <remarks>
+/// Die Eigenschaften haben öffentliche Setter, obwohl Entitäten ihren Zustand sonst über
+/// Methoden ändern. Indexer, Dateidienst und Repositories aktualisieren die verfolgte Instanz
+/// direkt; EF Core erkennt die Änderung daran. Eine eigene Methode je Feld brächte hier keine
+/// Regel, die sie schützen könnte.
+/// </remarks>
 public sealed class MarkdownFile
 {
     /// <summary>Primärschlüssel der Entität.</summary>

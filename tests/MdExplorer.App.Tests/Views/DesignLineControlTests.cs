@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using MdExplorer.App.Controls;
+using MdExplorer.App.Localization;
 
 namespace MdExplorer.App.Tests.Views;
 
@@ -13,11 +14,10 @@ namespace MdExplorer.App.Tests.Views;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Der Grund ist nicht die Abdeckungszahl, sondern das, was hier schiefgehen kann: Jeder der
-/// drei greift über <c>StaticResource</c> auf die Belegung zu: <c>PagePadding</c>,
-/// <c>FontSizeSubtitle</c>, <c>ControlCornerRadius</c>, <c>BoolToVisibility</c>. Wird einer
-/// dieser Namen umbenannt, **bleibt der Bau grün**: Das Markup wird erst beim Erzeugen
-/// gelesen. Der Fehler zeigt sich dann im laufenden Programm, an der Stelle, an der die
+/// Jeder der drei greift über <c>StaticResource</c> auf die Belegung zu, etwa auf
+/// <c>PagePadding</c>, <c>FontSizeSubtitle</c>, <c>ControlCornerRadius</c> und
+/// <c>BoolToVisibility</c>. Wird einer dieser Namen umbenannt, bleibt der Bau grün, weil das
+/// Markup erst beim Erzeugen gelesen wird. Der Fehler zeigt sich dann im laufenden Programm, an der Stelle, an der die
 /// Ansicht leer bleibt.
 /// </para>
 /// <para>
@@ -27,25 +27,13 @@ namespace MdExplorer.App.Tests.Views;
 /// </remarks>
 public sealed class DesignLineControlTests
 {
-    /// <summary>Die Wörterbücher, die <c>App.xaml</c> zusammenführt, in derselben Reihenfolge.</summary>
-    private static readonly string[] ThemeDictionaries =
-    [
-        "/Themes/Tokens.xaml",
-        "/Themes/Light.xaml",
-        "/Themes/ControlStyles.xaml",
-    ];
-
-    /// <summary>Name der Bibliothek, in der die Bausteine und die Belegung liegen.</summary>
-    private static readonly string AppAssemblyName =
-        typeof(SearchBox).Assembly.GetName().Name ?? "MdExplorer";
-
     /// <summary>Buchstaben für die Sprungleiste.</summary>
     private static readonly string[] Letters = ["A", "B", "C"];
 
     [Fact]
     public void AlphabetJumpBar_BuildsAgainstTheRealPalette() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             AlphabetJumpBar sut = new();
 
@@ -57,38 +45,37 @@ public sealed class DesignLineControlTests
     [Fact]
     public void AlphabetJumpBar_CarriesLettersAndCommand() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
-            IEnumerable buchstaben = Letters;
-            RecordingCommand befehl = new();
+            IEnumerable letters = Letters;
+            PlaceholderCommand command = new();
 
-            AlphabetJumpBar sut = new() { Letters = buchstaben, JumpCommand = befehl };
+            AlphabetJumpBar sut = new() { Letters = letters, JumpCommand = command };
 
-            Assert.Same(buchstaben, sut.Letters);
-            Assert.Same(befehl, sut.JumpCommand);
+            Assert.Same(letters, sut.Letters);
+            Assert.Same(command, sut.JumpCommand);
         });
     });
 
     [Fact]
     public void SearchBox_BuildsAgainstTheRealPalette() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             SearchBox sut = new();
 
             Assert.Empty(sut.Text);
-            Assert.Equal("Suchen …", sut.Placeholder, StringComparer.Ordinal);
+            Assert.Equal(UiText.Get("SearchBox_Placeholder"), sut.Placeholder, StringComparer.Ordinal);
         });
     });
 
     /// <remarks>
-    /// Die Zusage steht im Steuerelement: Wer über das Tastenkürzel herkommt, will tippen und
-    /// nicht erst löschen. Geprüft wird, dass der Text zweiweg-fähig gesetzt bleibt.
+    /// Gesetzter Text und eigener Platzhalter kommen unverändert an.
     /// </remarks>
     [Fact]
     public void SearchBox_KeepsTheTypedText() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             SearchBox sut = new() { Text = "bericht", Placeholder = "Notizen durchsuchen …" };
 
@@ -104,7 +91,7 @@ public sealed class DesignLineControlTests
     [Fact]
     public void SearchBox_FocusInput_ReachesTheNamedInputField() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             SearchBox sut = new() { Text = "vorher" };
 
@@ -119,7 +106,7 @@ public sealed class DesignLineControlTests
     [Fact]
     public void EmptyState_BuildsAgainstTheRealPalette() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             EmptyState sut = new();
 
@@ -130,7 +117,7 @@ public sealed class DesignLineControlTests
     [Fact]
     public void EmptyState_CarriesItsTexts() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             EmptyState sut = new()
             {
@@ -145,47 +132,6 @@ public sealed class DesignLineControlTests
         });
     });
 
-    /// <summary>
-    /// Legt dieselben Wörterbücher an, die <c>App.xaml</c> zusammenführt.
-    /// </summary>
-    /// <remarks>
-    /// Es entsteht bewusst **kein** Fenster: Zum Auflösen von <c>StaticResource</c> genügt eine
-    /// Anwendung mit gefüllten Ressourcen. Die Anwendung wird nur angelegt, wenn es noch keine
-    /// gibt, denn der Testläufer führt mehrere Prüfungen im selben Prozess aus.
-    /// </remarks>
-    private static void WithApplicationResources(Action body)
-    {
-        Application application = Application.Current ?? new Application();
-        if (application.Resources.MergedDictionaries.Count == 0)
-        {
-            foreach (string pfad in ThemeDictionaries)
-            {
-                application.Resources.MergedDictionaries.Add(new ResourceDictionary
-                {
-                    // Der Name kommt aus dem Steuerelement selbst und nicht aus einer
-                    // abgeschriebenen Zeichenkette: Der Projektname und der Name der
-                    // erzeugten Bibliothek sind hier nicht dasselbe.
-                    Source = new Uri(
-                        "pack://application:,,,/" + AppAssemblyName + ";component" + pfad,
-                        UriKind.Absolute),
-                });
-            }
-
-            application.Resources["BoolToVisibility"] = new BooleanToVisibilityConverter();
-        }
-
-        body();
-    }
-
-    /// <summary>Ein Befehl, der nur festhält, ob er ausgelöst wurde.</summary>
-    private sealed class RecordingCommand : ICommand
-    {
-        public event EventHandler? CanExecuteChanged;
-
-        public bool CanExecute(object? parameter) => true;
-
-        public void Execute(object? parameter) => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-    }
     /// <remarks>
     /// Die Zusage des Bausteins: Die Escape-Taste leert das Feld. Wer sucht und danebengreift,
     /// kommt mit einem Griff zurück, ohne die Hand von der Tastatur zu nehmen. Der Weg dorthin
@@ -194,10 +140,10 @@ public sealed class DesignLineControlTests
     [Fact]
     public void SearchBox_OnEscape_ClearsTheText() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             SearchBox sut = new() { Text = "bericht" };
-            TextBox eingabe = FindInput(sut);
+            TextBox input = FindInput(sut);
 
             KeyEventArgs escape = new(
                 Keyboard.PrimaryDevice,
@@ -207,7 +153,7 @@ public sealed class DesignLineControlTests
             {
                 RoutedEvent = Keyboard.KeyDownEvent,
             };
-            eingabe.RaiseEvent(escape);
+            input.RaiseEvent(escape);
 
             Assert.Empty(sut.Text);
             Assert.True(escape.Handled);
@@ -221,10 +167,10 @@ public sealed class DesignLineControlTests
     [Fact]
     public void SearchBox_OnAnyOtherKey_KeepsTheText() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             SearchBox sut = new() { Text = "bericht" };
-            TextBox eingabe = FindInput(sut);
+            TextBox input = FindInput(sut);
 
             KeyEventArgs enter = new(
                 Keyboard.PrimaryDevice,
@@ -234,7 +180,7 @@ public sealed class DesignLineControlTests
             {
                 RoutedEvent = Keyboard.KeyDownEvent,
             };
-            eingabe.RaiseEvent(enter);
+            input.RaiseEvent(enter);
 
             Assert.Equal("bericht", sut.Text, StringComparer.Ordinal);
             Assert.False(enter.Handled);
@@ -247,7 +193,7 @@ public sealed class DesignLineControlTests
     [Fact]
     public void SearchBox_OnClearButton_ClearsTheText() => StaRunner.Run(() =>
     {
-        WithApplicationResources(() =>
+        ApplicationResources.Use(() =>
         {
             SearchBox sut = new() { Text = "bericht" };
             Button clearButton = FindClearButton(sut);
@@ -264,21 +210,31 @@ public sealed class DesignLineControlTests
     private static Button FindClearButton(SearchBox box)
     {
         // Die Schaltfläche trägt keinen Namen; sie ist die einzige im Baustein.
-        Button? gefunden = Descendants(box).OfType<Button>().FirstOrDefault();
-        Assert.NotNull(gefunden);
-        return gefunden;
+        Button? found = Descendants(box).OfType<Button>().FirstOrDefault();
+        Assert.NotNull(found);
+        return found;
     }
 
-    private static IEnumerable<DependencyObject> Descendants(DependencyObject wurzel)
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {
-        foreach (DependencyObject kind in LogicalTreeHelper.GetChildren(wurzel).OfType<DependencyObject>())
+        foreach (DependencyObject kind in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
         {
             yield return kind;
-            foreach (DependencyObject enkel in Descendants(kind))
+            foreach (DependencyObject grandchild in Descendants(kind))
             {
-                yield return enkel;
+                yield return grandchild;
             }
         }
+    }
+
+    /// <summary>Platzhalter-Befehl; geprüft wird nur, dass er unverändert am Baustein ankommt.</summary>
+    private sealed class PlaceholderCommand : ICommand
+    {
+        public event EventHandler? CanExecuteChanged;
+
+        public bool CanExecute(object? parameter) => true;
+
+        public void Execute(object? parameter) => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Ein Ereignis-Ursprung für Tastatur-Ereignisse ohne Fenster.</summary>

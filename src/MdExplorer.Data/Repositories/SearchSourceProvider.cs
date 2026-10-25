@@ -22,24 +22,7 @@ public sealed class SearchSourceProvider : ISearchSourceProvider
     /// <inheritdoc />
     public async Task<SearchSourceData> LoadAsync(CancellationToken cancellationToken)
     {
-        List<SearchSourceDocument> documents = await _dbContext.Set<MarkdownDocument>()
-            .AsNoTracking()
-            .Join(
-                _dbContext.Set<MarkdownFile>().AsNoTracking(),
-                document => document.MarkdownFileId,
-                file => file.Id,
-                (document, file) => new SearchSourceDocument(
-                    document.MarkdownFileId,
-                    file.FileNameWithoutExtension,
-                    file.AbsolutePath,
-                    file.RelativePath,
-                    document.SourceContentHash,
-                    document.FrontmatterJson))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        documents.Sort(static (left, right) => left.MarkdownFileId.CompareTo(right.MarkdownFileId));
-
+        List<SearchSourceDocument> documents = await LoadDocumentsAsync(cancellationToken).ConfigureAwait(false);
         List<TagJoinRow> tagRows = await _dbContext.Set<MarkdownFileTag>()
             .AsNoTracking()
             .Join(
@@ -50,25 +33,42 @@ public sealed class SearchSourceProvider : ISearchSourceProvider
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        Dictionary<Guid, List<string>> tagBuffers = [];
-        foreach (TagJoinRow row in tagRows)
-        {
-            if (!tagBuffers.TryGetValue(row.MarkdownFileId, out List<string>? names))
-            {
-                names = [];
-                tagBuffers[row.MarkdownFileId] = names;
-            }
-            names.Add(row.Name);
-        }
-
-        Dictionary<Guid, IReadOnlyList<string>> tagsByFileId = new(tagBuffers.Count);
-        foreach (KeyValuePair<Guid, List<string>> entry in tagBuffers)
-        {
-            tagsByFileId[entry.Key] = entry.Value;
-        }
-
-        return new SearchSourceData(documents, tagsByFileId);
+        return new SearchSourceData(documents, TagsByFile.Group(tagRows.Select(row => (row.MarkdownFileId, row.Name))));
     }
 
+    /// <inheritdoc />
+    public async Task<SearchSourceVersion> LoadVersionAsync(CancellationToken cancellationToken)
+    {
+        IQueryable<MarkdownDocument> documents = _dbContext.Set<MarkdownDocument>().AsNoTracking();
+        IQueryable<MarkdownFile> files = _dbContext.Set<MarkdownFile>().AsNoTracking();
+        return new SearchSourceVersion(
+            await documents.CountAsync(cancellationToken).ConfigureAwait(false),
+            await documents.MaxAsync(document => (DateTime?)document.ParsedAtUtc, cancellationToken).ConfigureAwait(false),
+            await files.CountAsync(cancellationToken).ConfigureAwait(false),
+            await files.MaxAsync(file => (DateTime?)file.IndexedAtUtc, cancellationToken).ConfigureAwait(false));
+    }
+
+    // Feste Reihenfolge: Der Abgleich des Suchindex schneidet nach einer Stapelgröße ab, und
+    // ohne Reihenfolge wählte SQLite bei jedem Takt einen anderen Stapel. Sortiert wird in der
+    // Abfrage über den Primärschlüssel, nicht hinterher im Speicher.
+    private Task<List<SearchSourceDocument>> LoadDocumentsAsync(CancellationToken cancellationToken) =>
+        _dbContext.Set<MarkdownDocument>()
+            .AsNoTracking()
+            .Join(
+                _dbContext.Set<MarkdownFile>().AsNoTracking(),
+                document => document.MarkdownFileId,
+                file => file.Id,
+                (document, file) => new { Document = document, File = file })
+            .OrderBy(pair => pair.Document.MarkdownFileId)
+            .Select(pair => new SearchSourceDocument(
+                pair.Document.MarkdownFileId,
+                pair.File.FileNameWithoutExtension,
+                pair.File.AbsolutePath,
+                pair.File.RelativePath,
+                pair.Document.SourceContentHash,
+                pair.Document.FrontmatterJson))
+            .ToListAsync(cancellationToken);
+
+    /// <summary>Eine Zuordnung von Datei und Schlagwort mit dem Originalnamen, der in die Tags-Spalte geht.</summary>
     private sealed record TagJoinRow(Guid MarkdownFileId, string Name);
 }

@@ -3,6 +3,10 @@ using MdExplorer.Core.Models;
 
 namespace MdExplorer.Parser.Tests.Fakes;
 
+/// <summary>
+/// Fehlschlag-Vermerke im Arbeitsspeicher. Vermerken und Entfernen wirken wie bei EF erst mit
+/// <c>SaveChangesAsync</c>; die Zähler belegen, wie oft der Orchestrator nachfragt und schreibt.
+/// </summary>
 internal sealed class FakeParseFailureRepository : IParseFailureRepository
 {
     private readonly Dictionary<Guid, ParseFailure> _storeByFileId = [];

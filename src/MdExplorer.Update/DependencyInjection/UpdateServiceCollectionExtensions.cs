@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using MdExplorer.Core;
+using MdExplorer.Core.Abstractions;
 using MdExplorer.Update.Abstractions;
 using MdExplorer.Update.Options;
 using MdExplorer.Update.Services;
@@ -36,19 +37,21 @@ public static class UpdateServiceCollectionExtensions
             _ => new AssemblyAppVersionProvider(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()));
 
         _ = services.AddSingleton<IUpdateCheckJournal>(sp => new JsonFileUpdateCheckJournal(
-            Path.Combine(AppPaths.GetApplicationDataDirectory(), ReleaseJournalFileName),
+            Path.Combine(AppPaths.Default.ApplicationDataDirectory, ReleaseJournalFileName),
+            sp.GetRequiredService<IFileSystem>(),
             sp.GetRequiredService<ILogger<JsonFileUpdateCheckJournal>>()));
 
         _ = services
             .AddHttpClient<IUpdateChecker, GitHubUpdateChecker>(ConfigureGitHubClient);
 
         // Eigener, benannter Client für den Paket-Download: Der API-Client trägt ein knappes
-        // Timeout und GitHub-spezifische Header; für eine 45-MB-Datei wäre beides falsch.
+        // Timeout und GitHub-spezifische Header; für ein Paket von knapp 50 MB passt beides nicht.
         _ = services.AddHttpClient(DownloadClientName, ConfigureDownloadClient);
 
         _ = services.AddTransient<IUpdateInstaller>(sp => new HttpUpdateInstaller(
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(DownloadClientName),
-            Path.Combine(AppPaths.GetApplicationDataDirectory(), DownloadFolderName),
+            Path.Combine(AppPaths.Default.ApplicationDataDirectory, DownloadFolderName),
+            sp.GetRequiredService<TimeProvider>(),
             sp.GetRequiredService<ILogger<HttpUpdateInstaller>>()));
 
         return services;
@@ -56,8 +59,10 @@ public static class UpdateServiceCollectionExtensions
 
     private static void ConfigureDownloadClient(HttpClient client)
     {
-        // Große Datei über möglicherweise langsame Leitung: das API-Timeout wäre zu knapp.
-        client.Timeout = TimeSpan.FromMinutes(10);
+        // Der Download liest mit ResponseHeadersRead; das Timeout gilt damit nur bis zu den
+        // Kopfzeilen. Den Körper begrenzt der Installer selbst (DownloadLimits). Zwei Minuten
+        // lassen einer trägen Weiterleitung Zeit, ohne eine tote Gegenstelle lange abzuwarten.
+        client.Timeout = TimeSpan.FromMinutes(2);
         client.DefaultRequestHeaders.UserAgent.ParseAdd("MdExplorer-UpdateInstaller");
     }
 

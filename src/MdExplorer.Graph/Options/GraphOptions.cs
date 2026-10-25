@@ -10,7 +10,10 @@ public sealed class GraphOptions
     /// <summary>Konfigurations-Sektion in <c>IConfiguration</c>.</summary>
     public const string SectionName = "Graph";
 
-    /// <summary>Validierungs-Obergrenze für <see cref="MaxNodes"/>.</summary>
+    /// <summary>
+    /// Validierungs-Obergrenze für <see cref="MaxNodes"/>. Sie fängt nur Tippfehler in der
+    /// Konfiguration ab; flüssig darstellen lässt sich eine solche Menge nicht.
+    /// </summary>
     private const int MaxNodesUpperBound = 100_000;
 
     /// <summary>
@@ -24,16 +27,21 @@ public sealed class GraphOptions
     /// <summary>
     /// Harte Obergrenze für die Anzahl Knoten im Snapshot. Beim Überschreiten werden die
     /// Knoten nach Verbindungsgrad (eingehend + ausgehend) absteigend sortiert und die Top-N
-    /// behalten. Default 1000 als empirisches Maximum, ab dem das Cytoscape-Force-Layout im
-    /// WebView2 noch interaktiv reagiert.
+    /// behalten. Das Graph-Fenster rechnet die Abstoßung zwischen allen Knotenpaaren, der Aufwand
+    /// wächst also mit dem Quadrat der Knotenzahl. Der Default 1000 gilt als Grenze, bis zu der
+    /// das Bild noch flüssig auf Zoom und Verschieben reagiert.
     /// </summary>
     [Range(1, MaxNodesUpperBound)]
     public int MaxNodes { get; set; } = 1000;
 
     /// <summary>
     /// Glob-Muster (relativ zum Root, Trennzeichen <c>/</c>) für Dateien, die nie in den Graph
-    /// einfließen sollen. Wirkt analog zu den Indexer-Ausschlussmustern. Defaults zielen auf
-    /// klassische Vendor- und Generated-Pfade.
+    /// einfließen sollen. Wirkt analog zu den Indexer-Ausschlussmustern. Die Defaults nehmen
+    /// fremde Pakete (<c>vendor</c>, <c>node_modules</c>), mitgelieferte Changelogs unter
+    /// <c>_core</c> und abgelegte Altstände (<c>alt</c>) heraus: Dokumente, die keine WikiLinks
+    /// tragen und das Bild nur mit unverbundenen Punkten füllen. Ohne <c>**/</c> davor greifen
+    /// die Muster nur direkt unter der Wurzel. Andere Dateiendungen als <c>.md</c> brauchen kein
+    /// Muster, der Indexer nimmt sie gar nicht erst auf.
     /// </summary>
     public IList<string> PathExclusions { get; } =
     [
@@ -41,6 +49,5 @@ public sealed class GraphOptions
         "node_modules/**",
         "_core/**/changelog/**",
         "alt/**",
-        "*.bak",
     ];
 }

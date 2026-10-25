@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.App.Localization;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
 
@@ -78,7 +79,7 @@ internal sealed partial class IndexingTabViewModel : ObservableObject
 
     private void AddRoot()
     {
-        string? picked = _dialogService.PickDirectory("Index-Root wählen", null);
+        string? picked = _dialogService.PickDirectory(UiText.Get("Settings_Indexing_RootDialog_Title"), null);
         if (picked is null)
         {
             return;

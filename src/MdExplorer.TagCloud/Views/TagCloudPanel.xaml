@@ -1,7 +1,9 @@
 <UserControl x:Class="MdExplorer.TagCloud.Views.TagCloudPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="clr-namespace:MdExplorer.TagCloud.Localization"
              xmlns:models="clr-namespace:MdExplorer.TagCloud.Models"
+             xmlns:msg="clr-namespace:MdExplorer.TagCloud.Messaging"
              xmlns:vm="clr-namespace:MdExplorer.TagCloud.ViewModels"
              xmlns:conv="clr-namespace:MdExplorer.TagCloud.Converters"
              xmlns:sys="clr-namespace:System;assembly=netstandard"
@@ -10,6 +12,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
     <UserControl.Resources>
+        <conv:SortOptionTextConverter x:Key="SortOptionText" />
         <ObjectDataProvider x:Key="SortOptions"
                             MethodName="GetValues"
                             ObjectType="{x:Type sys:Enum}">
@@ -17,33 +20,108 @@
                 <x:Type TypeName="models:TagCloudSortOption" />
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
+        <!--
+            Ein Tag als Chip wie die Filter der Web-Apps: Haarlinie, keine Schatten, bei Maus
+            und Fokus eine hellere Fläche und der Fokusrand. Der Radius der Linie statt einer
+            Pille: Große Tags würden sonst zu Ovalen.
+        -->
+        <Style x:Key="TagChipStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="0,0,4,4" />
+            <Setter Property="Padding" Value="10,2" />
+            <Setter Property="Background" Value="{DynamicResource TagBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TagForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TagBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Shape"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource ControlCornerRadius}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource InputBorderFocusBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
     <DockPanel LastChildFill="True">
-        <Grid DockPanel.Dock="Top" Margin="8,8,8,4">
+        <!-- Kopf: Überschrift und ✕ in einer Zeile. -->
+        <Grid DockPanel.Dock="Top" Margin="8,6,4,0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0"
-                       Text="Tag-Cloud"
+                       Text="{l:Loc TagCloud_Header}"
+                       ToolTip="{l:Loc TagCloud_Header_ToolTip}"
                        FontWeight="SemiBold"
-                       VerticalAlignment="Center" />
-            <ComboBox Grid.Column="2"
-                      Margin="8,0"
-                      Width="140"
-                      ItemsSource="{Binding Source={StaticResource SortOptions}}"
-                      SelectedItem="{Binding Sort, Mode=TwoWay}" />
-            <ToggleButton Grid.Column="3"
-                          Content="Mehr"
-                          Padding="6,2"
-                          ToolTip="Long-Tail anzeigen"
-                          IsChecked="{Binding IsLongTailExpanded, Mode=TwoWay}" />
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis" />
+            <!-- Sichtbar erst mit Befehl (TagCloudPanel.CloseCommand). Die Verweise sind dynamisch:
+                 Stil und Zeichen stammen aus der App, und ohne sie lädt der Bereich trotzdem. -->
+            <Button x:Name="CloseButton"
+                    Grid.Column="1"
+                    Visibility="Collapsed"
+                    Style="{DynamicResource IconButtonStyle}"
+                    Content="{DynamicResource GlyphClose}"
+                    Command="{Binding CloseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    ToolTip="{l:Loc TagCloud_Close}"
+                    AutomationProperties.Name="{l:Loc TagCloud_Close}" />
         </Grid>
+        <!--
+            Umbrechend statt in festen Spalten: In einer schmalen Spalte stand der Knopf „Mehr“
+            sonst halb außerhalb. Reicht der Platz nicht, rutscht er unter die Sortierung.
+        -->
+        <WrapPanel DockPanel.Dock="Top" Margin="8,4,8,4">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <ComboBox Margin="0,0,8,0"
+                          MinWidth="120"
+                          AutomationProperties.Name="{l:Loc TagCloud_Sort_Label}"
+                          ToolTip="{l:Loc TagCloud_Sort_Label}"
+                          ItemsSource="{Binding Source={StaticResource SortOptions}}"
+                          SelectedItem="{Binding Sort, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource SortOptionText}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                            <Setter Property="AutomationProperties.Name" Value="{Binding Converter={StaticResource SortOptionText}}" />
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                </ComboBox>
+                <ToggleButton Content="{l:Loc TagCloud_More}"
+                              Padding="6,2"
+                              ToolTip="{l:Loc TagCloud_More_ToolTip}"
+                              IsChecked="{Binding IsLongTailExpanded, Mode=TwoWay}" />
+            </StackPanel>
+        </WrapPanel>
         <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Items}" Margin="8,4">
+                <!-- Jeder Eintrag erscheint im Automatisierungsbaum; ohne Namen hieße er nach
+                     seinem ViewModel-Typ. -->
+                <ItemsControl.ItemContainerStyle>
+                    <Style TargetType="ContentPresenter">
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                    </Style>
+                </ItemsControl.ItemContainerStyle>
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel Orientation="Horizontal" />
@@ -51,15 +129,21 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:TagItemViewModel}">
-                        <Button Margin="2"
-                                Padding="6,2"
-                                Background="Transparent"
-                                BorderBrush="{DynamicResource TagBorderBrush}"
-                                BorderThickness="1"
-                                Cursor="Hand"
+                        <Button Style="{StaticResource TagChipStyle}"
                                 Click="OnTagClicked"
-                                ToolTip="{Binding Count, StringFormat='{}{0} Treffer'}">
-                            <TextBlock Text="{Binding Name}" FontSize="11" />
+                                AutomationProperties.HelpText="{l:Loc TagCloud_Header_ToolTip}"
+                                ToolTip="{Binding Count, StringFormat={l:Loc TagCloud_Count_ToolTip}}">
+                            <!-- Ausschließen und Hinzufügen ohne Maus: Alt+Leertaste öffnet das
+                                 Systemmenü, die Menütaste erreicht dagegen dieses Kontextmenü. -->
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="{l:Loc TagCloud_Menu_Replace}" Tag="{x:Static msg:TagFilterMode.Replace}" Click="OnTagMenuClicked" />
+                                    <MenuItem Header="{l:Loc TagCloud_Menu_Add}" Tag="{x:Static msg:TagFilterMode.Add}" Click="OnTagMenuClicked" />
+                                    <MenuItem Header="{l:Loc TagCloud_Menu_Exclude}" Tag="{x:Static msg:TagFilterMode.Exclude}" Click="OnTagMenuClicked" />
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                            <!-- Die Größe zeigt die Häufigkeit; gerechnet wird sie einmal je Snapshot. -->
+                            <TextBlock Text="{Binding Name}" FontSize="{Binding FontSize}" />
                         </Button>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

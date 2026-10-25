@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.Messaging;
 using MdExplorer.App.Messaging;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Hosting;
 using MdExplorer.Update.Abstractions;
 using MdExplorer.Update.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -86,8 +87,17 @@ internal sealed partial class UpdateCheckBackgroundService : BackgroundService
         {
             // erwartete Abbruchsemantik beim Herunterfahren
         }
+        catch (Exception exception) when (BackgroundServiceWatchdog.IsRecoverable(exception, stoppingToken))
+        {
+            // Die Zusage „nicht-fatal“ hängt nicht an der Fangliste des Prüfers: Endete
+            // ExecuteAsync mit einer Ausnahme, führe der Host die ganze Anwendung herunter.
+            LogCheckFailed(_logger, exception);
+        }
     }
 
     [LoggerMessage(EventId = 720, Level = LogLevel.Debug, Message = "Update-Prüfung beim Start ist in den Einstellungen deaktiviert.")]
     private static partial void LogDisabled(ILogger logger);
+
+    [LoggerMessage(EventId = 721, Level = LogLevel.Warning, Message = "Update-Prüfung beim Start gescheitert; die Anwendung läuft ohne sie weiter.")]
+    private static partial void LogCheckFailed(ILogger logger, Exception exception);
 }

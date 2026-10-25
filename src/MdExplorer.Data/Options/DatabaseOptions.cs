@@ -11,7 +11,7 @@ public sealed class DatabaseOptions
     /// <summary>Konfigurations-Sektion in <c>IConfiguration</c>.</summary>
     public const string SectionName = "Database";
 
-    /// <summary>Obergrenze des zulässigen Befehls-Timeouts in Sekunden.</summary>
+    /// <summary>Obergrenze des zulässigen Befehls-Timeouts in Sekunden (zehn Minuten).</summary>
     private const int MaxCommandTimeoutSeconds = 600;
 
     /// <summary>Vollständiger Pfad zur SQLite-Datenbank.</summary>
@@ -19,8 +19,9 @@ public sealed class DatabaseOptions
     public string DatabasePath { get; set; } = string.Empty;
 
     /// <summary>
-    /// Befehls-Timeout in Sekunden für lange laufende Operationen
-    /// (z. B. FTS5-Bulk-Updates). Standard: 30 s.
+    /// Befehls-Timeout in Sekunden. Standard: 30 s, derselbe Wert, den ADO.NET ohne Angabe nimmt.
+    /// Er gilt auch für die Volltext-Befehle: EF Core legt ihn als <c>DefaultTimeout</c> an der
+    /// Verbindung ab, und jeder dort angelegte Befehl übernimmt ihn.
     /// </summary>
     [Range(1, MaxCommandTimeoutSeconds)]
     public int CommandTimeoutSeconds { get; set; } = 30;

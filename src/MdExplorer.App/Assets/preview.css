@@ -1,0 +1,87 @@
+/*
+    Vorschau einer Notiz. Die Farben stehen als Variablen; hell gilt am Wurzelelement, dunkel,
+    wenn das Dokument data-theme="dark" trägt. So gibt es die Regeln nur einmal, und eine
+    Änderung am Satzbild gilt in beiden Erscheinungsbildern. Die Schriftgröße fehlt hier mit
+    Absicht: Sie kommt aus den Einstellungen und wird hinter diesem Stylesheet gesetzt.
+*/
+:root {
+    --preview-text: #24292f;
+    --preview-background: #ffffff;
+    --preview-muted: #57606a;
+    --preview-line: #d0d7de;
+    --preview-link: #0969da;
+    --preview-code-background: #f6f8fa;
+    --preview-mark-background: #fff8c5;
+    --preview-mark-text: #24292f;
+    --preview-wikilink-background: #ddf4ff;
+}
+
+:root[data-theme="dark"] {
+    --preview-text: #c9d1d9;
+    --preview-background: #0d1117;
+    --preview-muted: #8b949e;
+    --preview-line: #30363d;
+    --preview-link: #58a6ff;
+    --preview-code-background: #161b22;
+    --preview-mark-background: #b08800;
+    --preview-mark-text: #0d1117;
+    --preview-wikilink-background: rgba(31, 111, 235, 0.2);
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    line-height: 1.55;
+    color: var(--preview-text);
+    background-color: var(--preview-background);
+    margin: 0;
+    padding: 24px;
+}
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+    line-height: 1.25;
+}
+h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid var(--preview-line); }
+h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid var(--preview-line); }
+h3 { font-size: 1.25em; }
+h4 { font-size: 1em; }
+h5 { font-size: 0.875em; }
+h6 { font-size: 0.85em; color: var(--preview-muted); }
+p { margin: 0 0 1em 0; }
+/* Unterstrichen, nicht nur farbig: Ein Verweis darf nicht allein an der Farbe erkennbar sein. */
+a { color: var(--preview-link); text-decoration: underline; }
+code {
+    font-family: Consolas, 'Cascadia Code', 'Courier New', monospace;
+    font-size: 0.9em;
+    background-color: var(--preview-code-background);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+}
+pre {
+    background-color: var(--preview-code-background);
+    padding: 16px;
+    border-radius: 6px;
+    overflow: auto;
+    margin: 0 0 1em 0;
+}
+pre code { background-color: transparent; padding: 0; border-radius: 0; }
+blockquote {
+    margin: 0 0 1em 0;
+    padding: 0 1em;
+    border-left: 4px solid var(--preview-line);
+    color: var(--preview-muted);
+}
+ul, ol { padding-left: 2em; margin: 0 0 1em 0; }
+table { border-collapse: collapse; margin: 0 0 1em 0; }
+th, td { border: 1px solid var(--preview-line); padding: 6px 13px; }
+th { background-color: var(--preview-code-background); font-weight: 600; }
+img { max-width: 100%; height: auto; }
+mark { background-color: var(--preview-mark-background); color: var(--preview-mark-text); padding: 0 0.2em; }
+.wikilink {
+    color: var(--preview-link);
+    background-color: var(--preview-wikilink-background);
+    padding: 0 4px;
+    border-radius: 4px;
+}
+hr { border: 0; border-top: 1px solid var(--preview-line); margin: 1.5em 0; }

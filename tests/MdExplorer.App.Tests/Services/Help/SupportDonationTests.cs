@@ -41,8 +41,8 @@ public sealed class SupportDonationTests
     [Fact]
     public void IsConfigured_IsTrue_WhenRealHandleIsSet()
     {
-        // Ein echter Handle ist hinterlegt (kein Platzhalter mehr); der Spenden-Eintrag
-        // wird dadurch im Über-Dialog sichtbar geschaltet.
+        // Nur mit einem echten Handle statt des Platzhalters erscheint der Spenden-Eintrag
+        // im Über-Dialog. Fällt der Test um, fehlt der Eintrag in der ausgelieferten Fassung.
         Assert.True(SupportDonation.IsConfigured);
     }
 }

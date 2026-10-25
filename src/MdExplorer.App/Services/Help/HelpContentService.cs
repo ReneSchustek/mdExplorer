@@ -11,15 +11,15 @@ using Microsoft.Extensions.Logging;
 namespace MdExplorer.App.Services.Help;
 
 /// <summary>
-/// Standard-Implementierung von <see cref="IHelpContentService"/>: lädt die
-/// eingebettete Datei <c>Handbuch.md</c>, rendert sie mit Markdig zu HTML
-/// (Auto-Identifier für Anker, ohne WikiLink-Rewrite) und extrahiert die
-/// H2-Überschriften als Inhaltsverzeichnis. Das Resultat wird thread-safe
-/// gecacht, denn das Handbuch ändert sich zur Laufzeit nicht.
+/// Standard-Implementierung von <see cref="IHelpContentService"/>: liest das eingebettete
+/// <c>docs/HANDBUCH.md</c>, rendert es mit einer eigenen Markdig-Pipeline (ohne die WikiLink-
+/// Erweiterung der Notizen) und nimmt die H2-Überschriften als Inhaltsverzeichnis. Das Ergebnis
+/// wird einmal gebaut und gehalten, denn das Handbuch ändert sich zur Laufzeit nicht.
 /// </summary>
 internal sealed partial class HelpContentService : IHelpContentService, IDisposable
 {
     private const string ResourceName = "MdExplorer.App.Assets.Help.Handbuch.md";
+    // Die Kapitel des Handbuchs sind H2; die Abschnitte darunter gehören nicht ins Verzeichnis.
     private const int TocHeadingLevel = 2;
 
     private readonly ILogger<HelpContentService> _logger;
@@ -36,6 +36,7 @@ internal sealed partial class HelpContentService : IHelpContentService, IDisposa
         _pipeline = new MarkdownPipelineBuilder()
             .UseAdvancedExtensions()
             .UseAutoIdentifiers()
+            // Rohes HTML im Handbuch erscheint als Text und nicht als Auszeichnung.
             .DisableHtml()
             .Build();
     }
@@ -58,14 +59,8 @@ internal sealed partial class HelpContentService : IHelpContentService, IDisposa
                 return snapshot;
             }
 
-            string markdown = ReadEmbeddedResource();
-            MarkdownDocument ast = Markdown.Parse(markdown, _pipeline);
-            string html = ast.ToHtml(_pipeline);
-            List<HelpTocEntry> toc = ExtractToc(ast);
-            string plainText = ExtractPlainText(ast);
-            HelpContent built = new(html, toc, plainText);
+            HelpContent built = Build();
             Volatile.Write(ref _cached, built);
-            LogLoaded(_logger, toc.Count, plainText.Length);
             return built;
         }
         finally
@@ -186,4 +181,14 @@ internal sealed partial class HelpContentService : IHelpContentService, IDisposa
 
     [LoggerMessage(EventId = 1100, Level = LogLevel.Information, Message = "Hilfe-Inhalt geladen ({TocCount} Kapitel, {TextLength} Zeichen Plaintext).")]
     private static partial void LogLoaded(ILogger logger, int tocCount, int textLength);
+
+    /// <summary>Liest das Handbuch und baut daraus HTML, Inhaltsverzeichnis und Suchtext.</summary>
+    private HelpContent Build()
+    {
+        MarkdownDocument ast = Markdown.Parse(ReadEmbeddedResource(), _pipeline);
+        List<HelpTocEntry> toc = ExtractToc(ast);
+        string plainText = ExtractPlainText(ast);
+        LogLoaded(_logger, toc.Count, plainText.Length);
+        return new HelpContent(ast.ToHtml(_pipeline), toc, plainText);
+    }
 }
