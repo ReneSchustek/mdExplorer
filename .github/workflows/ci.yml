@@ -25,6 +25,13 @@ jobs:
       - name: Restore
         run: dotnet restore MdExplorer.slnx
 
+      # Die Formatprüfung braucht den Code, den der XAML-Übersetzer erzeugt, und zwar in der
+      # Debug-Konfiguration, mit der dotnet format arbeitet. Ohne ihn fehlen die benannten
+      # Elemente der Ansichten, und die Analysatoren halten Methoden, die nur auf sie zugreifen,
+      # für statisch.
+      - name: Build für die Formatprüfung
+        run: dotnet build MdExplorer.slnx --no-restore
+
       - name: Format (no changes allowed)
         run: dotnet format MdExplorer.slnx --verify-no-changes --no-restore
 
