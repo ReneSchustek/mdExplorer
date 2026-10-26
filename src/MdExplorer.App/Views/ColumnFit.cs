@@ -4,11 +4,11 @@ namespace MdExplorer.App.Views;
 /// Passt die Breiten der linken Spalte und der Tag-Cloud an das Fenster an.
 /// </summary>
 /// <remarks>
-/// Ohne diese Rechnung behielt die linke Spalte ihre gespeicherte Breite, die Vorschau ihre
-/// Mindestbreite, und was darüber hinausging, schnitt das Fenster am rechten Rand ab: die halbe
-/// Tag-Cloud samt ihrem ✕. Jetzt geben bei Platzmangel zuerst die linke Spalte, dann die
-/// Tag-Cloud bis zu ihren Mindestbreiten nach. Die Wunschbreiten bleiben dabei unberührt; wird
-/// das Fenster wieder breiter, kehren die Spalten zu ihnen zurück.
+/// Bei Platzmangel geben zuerst die linke Spalte, dann die Tag-Cloud bis zu ihren Mindestbreiten
+/// nach. Ohne diese Rechnung behielte die linke Spalte ihre gespeicherte Breite, die Vorschau ihre
+/// Mindestbreite, und was darüber hinausginge, schnitte das Fenster am rechten Rand ab: die halbe
+/// Tag-Cloud samt ihrem ✕. Die Wunschbreiten bleiben dabei unberührt; wird das Fenster wieder
+/// breiter, kehren die Spalten zu ihnen zurück.
 /// </remarks>
 internal static class ColumnFit
 {

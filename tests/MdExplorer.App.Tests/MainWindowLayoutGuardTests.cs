@@ -41,11 +41,28 @@ public sealed class MainWindowLayoutGuardTests
     [Fact]
     public void TheTagCloudToggle_BindsBothWays()
     {
-        // Mit Befehl statt Bindung wechselte der Schalter über die Bedienungshilfen nur den Haken.
+        // Mit Befehl statt Bindung wechselte der Schalter über die Bedienungshilfen nur seinen
+        // Haken, nicht den Zustand.
         XElement toggle = Assert.Single(MainWindow().Descendants(Presentation + "ToggleButton"));
 
         Assert.Equal("{Binding IsTagCloudShown, Mode=TwoWay}", (string?)toggle.Attribute("IsChecked"));
         Assert.Null(toggle.Attribute("Command"));
+    }
+
+    [Fact]
+    public void EverySplitter_HasItsOwnHandlers_ForDraggingAndForTheKeyboard()
+    {
+        // Ein gemeinsamer Handler nähme im schmalen Fenster die gestauchte Breite der anderen
+        // Spalte als Wunschbreite. Pfeiltasten melden kein DragCompleted, nur KeyUp.
+        XElement[] splitters = [.. MainWindow().Descendants(Presentation + "GridSplitter")];
+        string?[] dragHandlers = [.. splitters.Select(splitter => (string?)splitter.Attribute("DragCompleted"))];
+        string?[] keyHandlers = [.. splitters.Select(splitter => (string?)splitter.Attribute("KeyUp"))];
+
+        Assert.Equal(2, splitters.Length);
+        Assert.All(dragHandlers, handler => Assert.False(string.IsNullOrEmpty(handler)));
+        Assert.All(keyHandlers, handler => Assert.False(string.IsNullOrEmpty(handler)));
+        Assert.Equal(dragHandlers.Length, dragHandlers.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(keyHandlers.Length, keyHandlers.Distinct(StringComparer.Ordinal).Count());
     }
 
     private static XElement MainWindow() =>

@@ -7,6 +7,24 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.16.1] - 2026-10-26
+
+### Behoben
+- Eine Datei auf einem Netzlaufwerk, das nicht antwortet, hält die Übergabe zwischen zwei
+  Instanzen nicht mehr auf; die zweite Instanz meldet keinen Fehler mehr, während die erste die
+  Datei doch öffnet, und das Beenden wartet nicht auf das Laufwerk.
+- Doppelklicks während der Rückfrage zu ungespeicherten Änderungen öffnen keine zweite Rückfrage
+  mehr darüber; danach öffnet die zuletzt gewählte Datei.
+- Hat ein anderer Benutzer oder eine Instanz mit erhöhten Rechten den Namen der Einzelinstanz-Sperre
+  belegt, startet MdExplorer trotzdem.
+- Die Übergabe zwischen Instanzen fällt nicht mehr für die ganze Laufzeit aus, wenn der Kanal einmal
+  kurz nicht anzulegen ist.
+- Gerätepfade und alternative Datenströme werden als Datei von außen abgewiesen.
+- Die Spaltenbreiten bleiben erhalten, wenn ein Trenner im schmalen Fenster oder mit den Pfeiltasten
+  bewegt wird.
+- Die Vorschau erkennt ihr eigenes Dokument unabhängig davon, wie die WebView2-Laufzeit
+  Navigationen kennzeichnet.
+
 ## [0.16.0] - 2026-10-25
 
 ### Hinzugefügt
@@ -435,7 +453,8 @@ Diese Fassung enthält keine Änderung am Funktionsumfang.
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.16.0...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.16.1
 [0.16.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.16.0
 [0.15.5]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.16.0
 [0.15.4]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.15.4

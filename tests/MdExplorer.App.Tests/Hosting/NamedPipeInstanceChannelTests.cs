@@ -141,6 +141,95 @@ public sealed class NamedPipeInstanceChannelTests : IDisposable
     }
 
     [Fact]
+    public async Task Server_WhenTheNameIsFreedAfterAFailedAttempt_StartsListening()
+    {
+        // Scheitert das Anlegen nur kurz, darf das Lauschen nicht für die ganze Laufzeit enden.
+        NamedPipeServerStream squatter = new(_pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+        await using NamedPipeInstanceServer server = StartServer();
+        await Task.Delay(NamedPipeInstanceServer.CreateRetryDelay / 2, Token()).ConfigureAwait(true);
+        await squatter.DisposeAsync().ConfigureAwait(true);
+
+        await WaitAsync(new NamedPipeInstanceClient(_pipeName).SendAsync(@"C:\danach.md", Token())).ConfigureAwait(true);
+
+        Assert.Equal(@"C:\danach.md", Take(), StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task SendAsync_WhileTheReceiverIsStillBusy_IsConfirmedRightAway()
+    {
+        // Prüft der Empfänger eine Datei auf einem Netzlaufwerk, das nicht antwortet, darf die
+        // zweite Instanz darauf nicht warten; sonst meldete sie nach der Zeitgrenze einen Fehler,
+        // obwohl die Datei später doch geöffnet wird.
+        using ManualResetEventSlim release = new();
+        List<string?> handled = [];
+        NamedPipeInstanceServer server = new(
+            _pipeName,
+            path =>
+            {
+                _ = release.Wait(Patience);
+                lock (handled)
+                {
+                    handled.Add(path);
+                }
+            },
+            NullLogger<NamedPipeInstanceServer>.Instance);
+        server.Start();
+        try
+        {
+            NamedPipeInstanceClient client = new(_pipeName);
+
+            await WaitAsync(client.SendAsync(@"C:\eins.md", Token())).ConfigureAwait(true);
+            await WaitAsync(client.SendAsync(@"C:\zwei.md", Token())).ConfigureAwait(true);
+            lock (handled)
+            {
+                Assert.Empty(handled);
+            }
+
+            release.Set();
+            await WaitAsync(Task.Run(() => SpinWait.SpinUntil(() => { lock (handled) { return handled.Count == 2; } }, Patience), Token())).ConfigureAwait(true);
+
+            string?[] expected = [@"C:\eins.md", @"C:\zwei.md"];
+            Assert.Equal(expected, handled);
+        }
+        finally
+        {
+            release.Set();
+            await server.DisposeAsync().ConfigureAwait(true);
+        }
+    }
+
+    [Fact]
+    public async Task Server_WhenTheReceiverThrows_KeepsHandlingTheNextRequests()
+    {
+        int calls = 0;
+        NamedPipeInstanceServer server = new(
+            _pipeName,
+            path =>
+            {
+                if (Interlocked.Increment(ref calls) == 1)
+                {
+                    throw new InvalidOperationException("kaputt");
+                }
+                _received.Add(path);
+            },
+            NullLogger<NamedPipeInstanceServer>.Instance);
+        server.Start();
+        try
+        {
+            NamedPipeInstanceClient client = new(_pipeName);
+
+            await client.SendAsync(@"C:\eins.md", Token()).ConfigureAwait(true);
+            await client.SendAsync(@"C:\zwei.md", Token()).ConfigureAwait(true);
+
+            Assert.Equal(@"C:\zwei.md", Take(), StringComparer.Ordinal);
+        }
+        finally
+        {
+            await server.DisposeAsync().ConfigureAwait(true);
+        }
+    }
+
+    [Fact]
     public void Constructor_RejectsMissingParts()
     {
         _ = Assert.Throws<ArgumentException>(() => new NamedPipeInstanceServer(" ", _received.Add, NullLogger<NamedPipeInstanceServer>.Instance));

@@ -24,6 +24,7 @@ internal sealed partial class PreviewPanel : UserControl
     private readonly ILogger<PreviewPanel> _logger;
     private readonly INavigationService _navigationService;
     private readonly IExternalLinkLauncher _linkLauncher;
+    private readonly OwnNavigations _ownNavigations = new();
     private bool _isCoreReady;
     private string? _pendingHtml;
 
@@ -112,6 +113,7 @@ internal sealed partial class PreviewPanel : UserControl
     private void ShowHtml(string html)
     {
         MapDocumentFolder();
+        _ownNavigations.Expect();
         Browser.NavigateToString(html);
     }
 
@@ -170,7 +172,7 @@ internal sealed partial class PreviewPanel : UserControl
     private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
-        PreviewNavigationKind kind = PreviewNavigationPolicy.Classify(args.Uri, args.IsUserInitiated);
+        PreviewNavigationKind kind = PreviewNavigationPolicy.Classify(args.Uri, args.IsUserInitiated, _ownNavigations.TryConsume);
         if (kind == PreviewNavigationKind.Document)
         {
             return;

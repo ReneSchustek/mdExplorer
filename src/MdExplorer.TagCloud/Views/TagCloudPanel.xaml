@@ -84,7 +84,7 @@
                     AutomationProperties.Name="{l:Loc TagCloud_Close}" />
         </Grid>
         <!--
-            Umbrechend statt in festen Spalten: In einer schmalen Spalte stand der Knopf „Mehr“
+            Umbrechend statt in festen Spalten: In einer schmalen Spalte stünde der Knopf „Mehr“
             sonst halb außerhalb. Reicht der Platz nicht, rutscht er unter die Sortierung.
         -->
         <WrapPanel DockPanel.Dock="Top" Margin="8,4,8,4">

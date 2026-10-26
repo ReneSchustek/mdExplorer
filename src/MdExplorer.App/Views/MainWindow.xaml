@@ -216,9 +216,9 @@
                     <panels:SearchPanel x:Name="SearchPanelControl" DataContext="{Binding Search}" />
                 </TabItem>
             </TabControl>
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="{DynamicResource SplitterBrush}" DragCompleted="OnFolderSplitterDragCompleted" />
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="{DynamicResource SplitterBrush}" DragCompleted="OnFolderSplitterDragCompleted" KeyUp="OnFolderSplitterKeyUp" />
             <ContentControl x:Name="DocumentHost" Grid.Column="2" DataContext="{Binding DocumentPanel}" />
-            <GridSplitter x:Name="TagCloudSplitter" Grid.Column="3" Width="6" HorizontalAlignment="Stretch" Background="{DynamicResource SplitterBrush}" DragCompleted="OnFolderSplitterDragCompleted" />
+            <GridSplitter x:Name="TagCloudSplitter" Grid.Column="3" Width="6" HorizontalAlignment="Stretch" Background="{DynamicResource SplitterBrush}" DragCompleted="OnTagCloudSplitterDragCompleted" KeyUp="OnTagCloudSplitterKeyUp" />
             <ContentControl x:Name="TagCloudHost" Grid.Column="4" DataContext="{Binding TagCloud}" />
         </Grid>
     </DockPanel>

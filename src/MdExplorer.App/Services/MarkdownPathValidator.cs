@@ -8,8 +8,18 @@ namespace MdExplorer.App.Services;
 /// oder von einer zweiten Instanz, die ihn weiterreicht.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Erst die Form, dann die Endung, zuletzt die Platte: Ein Pfad mit falscher Endung wird abgewiesen,
 /// ohne dass dafür auf den Datenträger zugegriffen wird.
+/// </para>
+/// <para>
+/// Zur Form gehört, dass der Pfad eine gewöhnliche Datei meint. Gerätepfade (<c>\\?\</c>,
+/// <c>\\.\</c>) erreichen auch benannte Kanäle und Laufwerke als Ganzes, ein Doppelpunkt hinter
+/// dem Laufwerk einen alternativen Datenstrom: Hängt hinter <c>Plan.txt:</c> ein Name mit der
+/// Endung <c>.md</c>, besteht der Pfad die Prüfung der Endung, gespeichert würde aber unsichtbar
+/// neben <c>Plan.txt</c>. Freigaben im Netz
+/// (<c>\\server\freigabe\…</c>) sind gewöhnliche Dateien und bleiben erlaubt.
+/// </para>
 /// </remarks>
 internal sealed class MarkdownPathValidator
 {
@@ -70,6 +80,16 @@ internal sealed class MarkdownPathValidator
         }
     }
 
+    private static bool IsOrdinaryFilePath(string fullPath)
+    {
+        if (fullPath.StartsWith(@"\\?\", StringComparison.Ordinal) || fullPath.StartsWith(@"\\.\", StringComparison.Ordinal))
+        {
+            return false;
+        }
+        int rootLength = Path.GetPathRoot(fullPath)?.Length ?? 0;
+        return fullPath.IndexOf(':', rootLength) < 0;
+    }
+
     private static bool HasSupportedExtension(string path)
     {
         string extension = Path.GetExtension(path);
@@ -85,7 +105,7 @@ internal sealed class MarkdownPathValidator
         }
 
         string? fullPath = Normalize(value, baseDirectory);
-        if (fullPath is null)
+        if (fullPath is null || !IsOrdinaryFilePath(fullPath))
         {
             return MarkdownPathCheck.Rejected(value, MarkdownPathProblem.InvalidPath);
         }
@@ -104,7 +124,10 @@ internal sealed class MarkdownPathValidator
 /// <summary>Warum ein Pfad von außen nicht geöffnet wird.</summary>
 internal enum MarkdownPathProblem
 {
-    /// <summary>Leer, mit unzulässigen Zeichen oder relativ, wo ein vollständiger Pfad verlangt ist.</summary>
+    /// <summary>
+    /// Leer, mit unzulässigen Zeichen, relativ, wo ein vollständiger Pfad verlangt ist, oder keine
+    /// gewöhnliche Datei (Gerätepfad, alternativer Datenstrom).
+    /// </summary>
     InvalidPath,
 
     /// <summary>Weder <c>.md</c> noch <c>.markdown</c>.</summary>

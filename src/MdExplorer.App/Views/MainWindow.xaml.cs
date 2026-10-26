@@ -233,10 +233,22 @@ internal sealed partial class MainWindow : Window
         }
     }
 
-    // Nur das Ziehen am Trenner ändert die Wunschbreite; das Anpassen an das Fenster nicht.
-    private void OnFolderSplitterDragCompleted(object sender, DragCompletedEventArgs args)
+    // Nur der Trenner ändert die Wunschbreite, und jeder nur die seiner Spalte; das Anpassen an
+    // das Fenster nicht. Sonst würde im schmalen Fenster die gestauchte Breite der anderen Spalte
+    // zum Wunsch und beim Schließen gespeichert. Mit Pfeiltasten bewegt, meldet der Trenner kein
+    // DragCompleted; deshalb auch beim Loslassen einer Taste übernehmen.
+    private void OnFolderSplitterDragCompleted(object sender, DragCompletedEventArgs args) => TakeFolderColumnWidth();
+
+    private void OnFolderSplitterKeyUp(object sender, KeyEventArgs args) => TakeFolderColumnWidth();
+
+    private void OnTagCloudSplitterDragCompleted(object sender, DragCompletedEventArgs args) => TakeTagCloudColumnWidth();
+
+    private void OnTagCloudSplitterKeyUp(object sender, KeyEventArgs args) => TakeTagCloudColumnWidth();
+
+    private void TakeFolderColumnWidth() => _wantedFolderColumnWidth = FolderColumn.ActualWidth;
+
+    private void TakeTagCloudColumnWidth()
     {
-        _wantedFolderColumnWidth = FolderColumn.ActualWidth;
         if (TagCloudColumn.ActualWidth > 0.0)
         {
             _restoredTagCloudColumnWidth = TagCloudColumn.ActualWidth;

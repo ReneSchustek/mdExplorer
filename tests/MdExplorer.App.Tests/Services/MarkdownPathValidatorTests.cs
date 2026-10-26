@@ -161,6 +161,35 @@ public sealed class MarkdownPathValidatorTests
         Assert.Equal(path, check.RejectedValue, StringComparer.Ordinal);
     }
 
+    [Theory]
+    [InlineData(@"\\?\C:\Notizen\Plan.md")]
+    [InlineData(@"\\.\pipe\Plan.md")]
+    [InlineData(@"\\.\C:\Notizen\Plan.md")]
+    [InlineData(@"C:\Notizen\Plan.txt:notiz.md")]
+    [InlineData(@"C:\Notizen\Plan.md:Zone.Identifier.md")]
+    public void CheckForwarded_WithAPathThatIsNoOrdinaryFile_IsRejected(string path)
+    {
+        // Ein Gerätepfad liest aus einem Kanal oder einem ganzen Laufwerk, ein Datenstrom schreibt
+        // beim Speichern unsichtbar neben eine andere Datei. Beide enden auf .md.
+        _fileSystem.Files[path] = [];
+
+        MarkdownPathCheck result = CreateSut().CheckForwarded(path);
+
+        Assert.Equal(MarkdownPathProblem.InvalidPath, result.Problem);
+        Assert.Null(result.AbsolutePath);
+    }
+
+    [Fact]
+    public void CheckForwarded_WithAPathOnANetworkShare_AcceptsIt()
+    {
+        const string sharePath = @"\\nas\notizen\Plan.md";
+        _fileSystem.Files[sharePath] = [];
+
+        MarkdownPathCheck result = CreateSut().CheckForwarded(sharePath);
+
+        Assert.Equal(sharePath, result.AbsolutePath, StringComparer.Ordinal);
+    }
+
     [Fact]
     public void Constructor_WithoutFileSystem_Throws()
     {

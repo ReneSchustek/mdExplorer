@@ -43,8 +43,8 @@
         </Grid>
         <!--
             Beide Auswahlen so breit wie ihr Eintrag; reicht die Spalte nicht, rutscht die
-            Ähnlichkeit in die nächste Zeile. In festen Spaltenanteilen schnitt die schmale linke
-            Spalte „Volltext“ ab, und „Regulärer Ausdruck“ passte gar nicht.
+            Ähnlichkeit in die nächste Zeile. Feste Spaltenanteile schnitten in der schmalen
+            linken Spalte „Volltext“ ab, und „Regulärer Ausdruck“ passte nie hinein.
         -->
         <WrapPanel DockPanel.Dock="Top" Margin="8,0,8,4">
             <StackPanel Orientation="Horizontal" Margin="0,0,12,4">

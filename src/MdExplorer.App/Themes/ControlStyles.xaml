@@ -448,9 +448,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBox">
                     <!--
-                        Der Pfeil hat eine eigene Spalte. Lag er mit dem Text in derselben Zelle,
-                        lief ein langer Eintrag in einer schmalen Spalte unter ihn, und der Pfeil
-                        stand als grauer Fleck auf den letzten Buchstaben.
+                        Der Pfeil hat eine eigene Spalte, damit ein langer Eintrag in einer
+                        schmalen Spalte vor ihm endet. In derselben Zelle liefe der Text unter den
+                        Pfeil, und der stünde als grauer Fleck auf den letzten Buchstaben.
                     -->
                     <Grid>
                         <Grid.ColumnDefinitions>

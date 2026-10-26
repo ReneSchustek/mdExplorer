@@ -14,10 +14,14 @@ internal sealed class FakeUnsavedChangesDialogService : IUnsavedChangesDialogSer
 
     public string? LastDocumentName { get; private set; }
 
+    /// <summary>Läuft, während der Dialog offen steht, wie ein Auftrag, den der Dialog nebenbei verarbeitet.</summary>
+    public Action? WhileOpen { get; set; }
+
     public UnsavedChangesDecision Ask(string documentName)
     {
         AskCount++;
         LastDocumentName = documentName;
+        WhileOpen?.Invoke();
         return Decision;
     }
 }

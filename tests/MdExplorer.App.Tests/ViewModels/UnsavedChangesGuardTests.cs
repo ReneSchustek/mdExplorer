@@ -93,6 +93,42 @@ public sealed class UnsavedChangesGuardTests
     }
 
     [Fact]
+    public async Task ConfirmLeaveAsync_WhileTheQuestionIsOpen_KeepsTheChangesForTheFirstAnswer()
+    {
+        // Ein Doppelklick im Explorer erreicht das Programm, während der modale Dialog offen
+        // steht. Die zweite Rückfrage darf die Änderungen nicht verwerfen, bevor der Nutzer auf
+        // die erste „Speichern“ geantwortet hat.
+        Fixture fixture = await Fixture.CreateDirtyAsync(UnsavedChangesDecision.Save).ConfigureAwait(true);
+        Task<bool>? nested = null;
+        fixture.Dialog.WhileOpen = () =>
+        {
+            fixture.Dialog.WhileOpen = null;
+            fixture.Dialog.Decision = UnsavedChangesDecision.Discard;
+            nested = fixture.Guard.ConfirmLeaveAsync(TestContext.Current.CancellationToken);
+            fixture.Dialog.Decision = UnsavedChangesDecision.Save;
+        };
+
+        bool allowed = await fixture.Guard.ConfirmLeaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.NotNull(nested);
+        Assert.False(await nested.ConfigureAwait(true));
+        Assert.Equal(1, fixture.Dialog.AskCount);
+        Assert.True(allowed);
+        Assert.Equal("# Entwurf ergänzt", Encoding.UTF8.GetString(fixture.FileSystem.WrittenFiles[FilePath]), StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConfirmLeaveAsync_AfterAnAnsweredQuestion_AsksAgain()
+    {
+        Fixture fixture = await Fixture.CreateDirtyAsync(UnsavedChangesDecision.Cancel).ConfigureAwait(true);
+
+        _ = await fixture.Guard.ConfirmLeaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await fixture.Guard.ConfirmLeaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Equal(2, fixture.Dialog.AskCount);
+    }
+
+    [Fact]
     public async Task HasUnsavedChanges_FollowsTheEditor()
     {
         Fixture fixture = await Fixture.CreateAsync().ConfigureAwait(true);

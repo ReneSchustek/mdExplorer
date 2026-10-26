@@ -109,7 +109,13 @@ ist.
   kommt dieselbe Frage wie beim Wechsel der Datei. „Abbrechen“ lässt
   das bisherige Dokument offen.
 - **Datei fehlt oder ist keine Markdown-Datei:** MdExplorer meldet das
-  mit dem Pfad und öffnet nichts.
+  mit dem Pfad und öffnet nichts. Dateien auf Freigaben im Netz
+  (`\\server\freigabe\notiz.md`) öffnen wie lokale. Abgewiesen werden
+  Gerätepfade (`\\?\…`, `\\.\…`) und alternative Datenströme
+  (`Plan.txt:notiz.md`): Sie enden zwar auf `.md`, meinen aber keine
+  gewöhnliche Datei.
+- **Mehrere Doppelklicks während einer Rückfrage:** Es bleibt bei einer
+  Frage. Danach öffnet MdExplorer die zuletzt doppelt geklickte Datei.
 - **Programm antwortet nicht:** Reagiert das laufende Programm nicht
   binnen fünf Sekunden, meldet das die neu gestartete Instanz und
   beendet sich wieder. Endet das laufende Programm gerade, übernimmt

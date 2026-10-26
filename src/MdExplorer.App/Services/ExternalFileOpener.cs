@@ -8,15 +8,25 @@ namespace MdExplorer.App.Services;
 /// ein abgewiesener Pfad wird gemeldet.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Geöffnet wird über denselben Weg wie ein Klick in der Dateiliste. Damit greift auch dieselbe
 /// Rückfrage zu ungespeicherten Änderungen, und eine Datei außerhalb des Index wird direkt von
 /// der Platte gelesen.
+/// </para>
+/// <para>
+/// Aufträge laufen nacheinander. Kommt einer, während ein anderer noch öffnet oder auf die
+/// Rückfrage wartet, wird er vorgemerkt und danach ausgeführt; von mehreren wartenden gilt der
+/// jüngste, denn der Dokumentbereich zeigt nur eine Datei. Aufgerufen wird nur auf dem
+/// UI-Thread, deshalb kommt die Warteschlange ohne Sperre aus.
+/// </para>
 /// </remarks>
 internal sealed partial class ExternalFileOpener
 {
     private readonly Func<string, Task<bool>> _openFile;
     private readonly IDialogService _dialogs;
     private readonly ILogger<ExternalFileOpener> _logger;
+    private MarkdownPathCheck? _waiting;
+    private bool _isOpening;
 
     /// <summary>Erzeugt den Öffner.</summary>
     /// <param name="openFile">Öffnet eine Datei über ihren Pfad; <see langword="false"/>, wenn der Nutzer abgebrochen hat.</param>
@@ -39,6 +49,41 @@ internal sealed partial class ExternalFileOpener
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (_isOpening)
+        {
+            _waiting = request;
+            return;
+        }
+
+        _isOpening = true;
+        try
+        {
+            MarkdownPathCheck? next = request;
+            while (next is not null)
+            {
+                _waiting = null;
+                await OpenOneAsync(next).ConfigureAwait(true);
+                next = _waiting;
+            }
+        }
+        finally
+        {
+            _isOpening = false;
+            _waiting = null;
+        }
+    }
+
+    [LoggerMessage(EventId = 1700, Level = LogLevel.Warning, Message = "Datei von außen abgewiesen ({Problem}): {Path}")]
+    private static partial void LogRejected(ILogger logger, string? path, MarkdownPathProblem problem);
+
+    [LoggerMessage(EventId = 1701, Level = LogLevel.Information, Message = "Datei von außen wird geöffnet: {Path}")]
+    private static partial void LogOpening(ILogger logger, string path);
+
+    [LoggerMessage(EventId = 1702, Level = LogLevel.Information, Message = "Datei {Path} nicht geöffnet; ungespeicherte Änderungen bleiben im Editor.")]
+    private static partial void LogKeptCurrentDocument(ILogger logger, string path);
+
+    private async Task OpenOneAsync(MarkdownPathCheck request)
+    {
         if (request.Problem is { } problem)
         {
             LogRejected(_logger, request.RejectedValue, problem);
@@ -58,13 +103,4 @@ internal sealed partial class ExternalFileOpener
             LogKeptCurrentDocument(_logger, path);
         }
     }
-
-    [LoggerMessage(EventId = 1700, Level = LogLevel.Warning, Message = "Datei von außen abgewiesen ({Problem}): {Path}")]
-    private static partial void LogRejected(ILogger logger, string? path, MarkdownPathProblem problem);
-
-    [LoggerMessage(EventId = 1701, Level = LogLevel.Information, Message = "Datei von außen wird geöffnet: {Path}")]
-    private static partial void LogOpening(ILogger logger, string path);
-
-    [LoggerMessage(EventId = 1702, Level = LogLevel.Information, Message = "Datei {Path} nicht geöffnet; ungespeicherte Änderungen bleiben im Editor.")]
-    private static partial void LogKeptCurrentDocument(ILogger logger, string path);
 }

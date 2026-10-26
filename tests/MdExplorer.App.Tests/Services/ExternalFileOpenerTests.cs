@@ -11,6 +11,8 @@ namespace MdExplorer.App.Tests.Services;
 public sealed class ExternalFileOpenerTests
 {
     private const string NotePath = @"C:\Notizen\Plan.md";
+    private const string SecondPath = @"C:\Notizen\Zwei.md";
+    private const string ThirdPath = @"C:\Notizen\Drei.md";
 
     private readonly FakeDialogService _dialogs = new();
     private readonly List<string> _opened = [];
@@ -61,6 +63,45 @@ public sealed class ExternalFileOpenerTests
 
         Assert.Empty(_opened);
         Assert.Null(_dialogs.LastError);
+    }
+
+    [Fact]
+    public async Task OpenAsync_WhileAnotherOpens_RunsTheYoungestAfterwards()
+    {
+        // Die Rückfrage zu ungespeicherten Änderungen hält das erste Öffnen offen. Zwei weitere
+        // Doppelklicks in dieser Zeit dürfen keine zweite Rückfrage darüberlegen; danach gilt der
+        // jüngste.
+        TaskCompletionSource<bool> firstOpen = new();
+        List<string> opened = [];
+        ExternalFileOpener sut = new(
+            path =>
+            {
+                opened.Add(path);
+                return opened.Count == 1 ? firstOpen.Task : Task.FromResult(true);
+            },
+            _dialogs,
+            NullLogger<ExternalFileOpener>.Instance);
+
+        Task first = sut.OpenAsync(MarkdownPathCheck.Accepted(NotePath));
+        await sut.OpenAsync(MarkdownPathCheck.Accepted(SecondPath)).ConfigureAwait(true);
+        await sut.OpenAsync(MarkdownPathCheck.Accepted(ThirdPath)).ConfigureAwait(true);
+        Assert.Equal([NotePath], opened);
+
+        firstOpen.SetResult(true);
+        await first.ConfigureAwait(true);
+
+        Assert.Equal([NotePath, ThirdPath], opened);
+    }
+
+    [Fact]
+    public async Task OpenAsync_AfterTheQueueIsDone_OpensRightAway()
+    {
+        ExternalFileOpener sut = CreateSut();
+
+        await sut.OpenAsync(MarkdownPathCheck.Accepted(NotePath)).ConfigureAwait(true);
+        await sut.OpenAsync(MarkdownPathCheck.Accepted(SecondPath)).ConfigureAwait(true);
+
+        Assert.Equal([NotePath, SecondPath], _opened);
     }
 
     [Fact]

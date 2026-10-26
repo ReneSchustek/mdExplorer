@@ -47,16 +47,17 @@ internal sealed class FirstInstance : IDisposable
     {
         ArgumentNullException.ThrowIfNull(startup);
 
-        InstanceLock instanceLock = InstanceLock.Acquire(startup.Identity.LockName);
+        SerilogLoggerFactory loggers = new(Serilog.Log.Logger);
+        InstanceLock instanceLock = InstanceLock.Acquire(startup.Identity.LockName, loggers.CreateLogger<InstanceLock>());
         if (!instanceLock.IsFirstInstance)
         {
             instanceLock.Dispose();
+            loggers.Dispose();
             return null;
         }
 
         PendingOpenRequests requests = new();
         requests.Post(startup.File);
-        SerilogLoggerFactory loggers = new(Serilog.Log.Logger);
         MarkdownPathValidator validator = startup.Validator;
         // Der Kanal lauscht schon während des Startbilds; was dann ankommt, halten die
         // PendingOpenRequests bis zum Hauptfenster zurück.
