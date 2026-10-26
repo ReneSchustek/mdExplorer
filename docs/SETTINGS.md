@@ -153,7 +153,7 @@ Mechanismen **additiv** (eine Datei gilt als ausgeschlossen, sobald
 
 ## Tabs im Settings-Dialog
 
-`Datei → Einstellungen…` oder `Strg+,` öffnet einen modalen Dialog
+Das Zahnrad in der Kopfleiste oder `Strg+,` öffnet einen modalen Dialog
 mit drei Tabs:
 
 - **Indexierung**: `roots`, `exclusionPatterns`, `autoExtractHashtags`

@@ -87,6 +87,14 @@ Bedienelemente. Getauscht wird zur Laufzeit genau ein Wörterbuch: die Belegung.
 Wiederverwendbare Bausteine (Suchfeld, Leerzustand, Sprungleiste) stehen als
 Steuerelemente in `Controls/`, nicht als abgeschriebenes Markup.
 
+Vor dem Host entscheidet `Hosting/FirstInstance`, ob diese Instanz die erste des
+Benutzers ist: ein benannter Mutex je Benutzer (`InstanceLock`) und eine Named
+Pipe (`NamedPipeInstanceServer`/`-Client`). Eine zweite Instanz reicht die Datei
+aus der Befehlszeile weiter und endet, ohne Datenbank oder Hintergrunddienste zu
+berühren; die erste bestätigt sofort, prüft den Pfad danach
+(`MarkdownPathValidator`) und öffnet ihn über `ExternalFileOpener`, der Aufträge
+während einer Rückfrage einreiht.
+
 ### MdExplorer.Core
 
 Abstraktionen, Datenmodelle und Cross-Cutting-Services ohne externe

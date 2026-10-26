@@ -114,7 +114,9 @@ bricht Inno Setup ab, damit kein Setup mit falscher Versionsnummer entsteht.
 Ein Release entsteht über einen Tag `v<Version>`. Der Workflow
 `.github/workflows/release.yml` prüft, dass der Tag zu `VERSION` passt, baut und
 testet die Lösung und veröffentlicht danach Archiv, Setup, dessen SHA-256-Prüfsumme und
-Signatur. Den privaten Schlüssel erwartet er im Secret `RELEASE_SIGNING_KEY`.
+Signatur. Den privaten Schlüssel erwartet er im Secret `RELEASE_SIGNING_KEY`. Ist es nicht
+hinterlegt, bricht der Workflow nach Build und Tests ab, ohne etwas zu veröffentlichen; Setup,
+Prüfsumme und Signatur entstehen dann lokal und werden von Hand an das Release gehängt.
 
 Die Signatur ist ECDSA mit P-256 über SHA-256 des Setups, im DER-Format; dasselbe liefert
 `openssl dgst -sha256 -sign <privater-schlüssel.pem> -out <setup>.sig <setup>`. Den
