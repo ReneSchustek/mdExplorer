@@ -11,12 +11,14 @@ namespace MdExplorer.App.ViewModels;
 /// <param name="Search">Linke Spalte, Register Suche.</param>
 /// <param name="DocumentPanel">Mittlere Spalte mit Vorschau, Editor und Bezügen.</param>
 /// <param name="TagCloud">Zuschaltbare Tag-Cloud.</param>
+/// <param name="RecentFiles">Verlauf der zuletzt geöffneten Dateien.</param>
 internal sealed record MainPanels(
     FolderTreeViewModel FolderTree,
     AllFilesViewModel AllFiles,
     SearchViewModel Search,
     DocumentPanelViewModel DocumentPanel,
-    TagCloudViewModel TagCloud);
+    TagCloudViewModel TagCloud,
+    RecentFilesViewModel RecentFiles);
 
 /// <summary>Die Dienste, auf die das <see cref="MainViewModel"/> zugreift.</summary>
 /// <param name="DocumentLocator">Löst WikiLinks und Pfade auf.</param>

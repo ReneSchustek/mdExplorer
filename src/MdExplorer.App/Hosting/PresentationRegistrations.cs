@@ -147,7 +147,8 @@ internal static class PresentationRegistrations
                 sp.GetRequiredService<AllFilesViewModel>(),
                 sp.GetRequiredService<SearchViewModel>(),
                 sp.GetRequiredService<DocumentPanelViewModel>(),
-                sp.GetRequiredService<TagCloudViewModel>()),
+                sp.GetRequiredService<TagCloudViewModel>(),
+                sp.GetRequiredService<RecentFilesViewModel>()),
             new MainServices(
                 sp.GetRequiredService<IDocumentLocator>(),
                 sp.GetRequiredService<UiSettingsStore>(),
@@ -160,6 +161,12 @@ internal static class PresentationRegistrations
             sp.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping));
         // Navigiert wird über das eine MainViewModel, das die Panels kennt.
         _ = services.AddSingleton<INavigationService>(sp => sp.GetRequiredService<MainViewModel>());
+        _ = services.AddSingleton<IRecentFilesJumpList, WindowsRecentFilesJumpList>();
+        _ = services.AddSingleton(sp => new RecentFilesViewModel(
+            sp.GetRequiredService<UiSettingsStore>(),
+            sp.GetRequiredService<IFileSystem>(),
+            sp.GetRequiredService<IRecentFilesJumpList>(),
+            sp.GetRequiredService<ILogger<RecentFilesViewModel>>()));
         _ = services.AddSingleton(sp => new ExternalFileOpener(
             sp.GetRequiredService<MainViewModel>().OpenFileAsync,
             sp.GetRequiredService<IDialogService>(),

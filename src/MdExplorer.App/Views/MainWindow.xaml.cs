@@ -1,11 +1,14 @@
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Navigation;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.App.Localization;
 using MdExplorer.App.Services;
 using MdExplorer.App.Services.Help;
 using MdExplorer.App.ViewModels;
@@ -30,6 +33,9 @@ internal sealed partial class MainWindow : Window
 
     /// <summary>Schmalste sinnvolle Breite der Tag-Cloud, solange sie sichtbar ist.</summary>
     private const double DefaultTagCloudMinWidth = 180.0;
+
+    /// <summary>So viele Zeichen des Ordners zeigt ein Eintrag im Verlauf.</summary>
+    private const int MaxFolderLength = 48;
 
     private readonly MainViewModel _viewModel;
     private readonly SecondaryWindows _windows;
@@ -73,9 +79,35 @@ internal sealed partial class MainWindow : Window
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(_windows.ShowSettings), Key.OemComma, ModifierKeys.Control));
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(OnHelpHotkey), Key.F1, ModifierKeys.None));
         _ = InputBindings.Add(new KeyBinding(_viewModel.ToggleTagCloudCommand, Key.T, ModifierKeys.Control));
+        _ = InputBindings.Add(new KeyBinding(new RelayCommand(ShowRecentFiles), Key.R, ModifierKeys.Control));
         PreviewGotKeyboardFocus += OnPreviewGotKeyboardFocus;
         SizeChanged += OnSizeChanged;
     }
+
+    private static MenuItem CreateRecentFileEntry(RecentFileItem item, RecentFilesViewModel recent)
+    {
+        // Ein TextBlock statt eines bloßen Texts als Kopf: Ein Unterstrich im Dateinamen würde
+        // sonst als Zugriffstaste gelesen und verschwände.
+        MenuItem entry = new()
+        {
+            Header = new TextBlock { Text = item.Exists ? item.Name : UiText.Format("RecentFiles_Missing_Format", item.Name) },
+            InputGestureText = ShortenFolder(item.Folder),
+            ToolTip = item.Exists ? item.FullPath : UiText.Format("RecentFiles_Missing_ToolTip", item.FullPath),
+            Command = recent.OpenCommand,
+            CommandParameter = item,
+        };
+        AutomationProperties.SetHelpText(entry, item.FullPath);
+        if (!item.Exists)
+        {
+            entry.SetResourceReference(ForegroundProperty, "TextDisabledBrush");
+        }
+        return entry;
+    }
+
+    // Lange Ordner würden das Menü über den Bildschirm ziehen; das Ende des Pfads trägt die
+    // Unterscheidung, der volle Pfad steht im Tooltip.
+    private static string ShortenFolder(string folder) =>
+        folder.Length <= MaxFolderLength ? folder : "…" + folder[^MaxFolderLength..];
 
     private static string ResolveContextSlug(DependencyObject focused)
     {
@@ -131,6 +163,35 @@ internal sealed partial class MainWindow : Window
     }
 
     private void OnSettingsClick(object sender, RoutedEventArgs args) => _windows.ShowSettings();
+
+    private void OnRecentFilesClick(object sender, RoutedEventArgs args) => ShowRecentFiles();
+
+    /// <summary>
+    /// Klappt den Verlauf unter seinem Knopf auf (Klick oder Strg+R).
+    /// </summary>
+    /// <remarks>
+    /// Das Menü entsteht bei jedem Aufklappen neu: Vorher wird jeder Eintrag auf der Platte geprüft,
+    /// damit eine inzwischen gelöschte Datei als solche erscheint. Die Einträge rufen nur die Befehle
+    /// des <see cref="RecentFilesViewModel"/>; entschieden wird dort.
+    /// </remarks>
+    private void ShowRecentFiles()
+    {
+        RecentFilesViewModel recent = _viewModel.RecentFiles;
+        recent.Refresh();
+
+        ContextMenu menu = new() { PlacementTarget = RecentFilesButton, Placement = PlacementMode.Bottom };
+        if (!recent.HasItems)
+        {
+            _ = menu.Items.Add(new MenuItem { Header = UiText.Get("RecentFiles_Empty"), IsEnabled = false });
+        }
+        foreach (RecentFileItem item in recent.Items)
+        {
+            _ = menu.Items.Add(CreateRecentFileEntry(item, recent));
+        }
+        _ = menu.Items.Add(new Separator());
+        _ = menu.Items.Add(new MenuItem { Header = UiText.Get("RecentFiles_Clear"), Command = recent.ClearCommand });
+        menu.IsOpen = true;
+    }
 
     private void OnGraphClick(object sender, RoutedEventArgs args) => _windows.ShowGraph();
 

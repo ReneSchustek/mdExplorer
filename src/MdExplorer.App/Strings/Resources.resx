@@ -548,6 +548,9 @@ Einzelheiten stehen im Protokoll.</value>
   <data name="Main_Toolbar_Manual" xml:space="preserve">
     <value>Handbuch (F1)</value>
   </data>
+  <data name="Main_Toolbar_RecentFiles" xml:space="preserve">
+    <value>Zuletzt geöffnet (Strg+R)</value>
+  </data>
   <data name="Main_Toolbar_Settings" xml:space="preserve">
     <value>Einstellungen (Strg+,)</value>
   </data>
@@ -593,6 +596,21 @@ Versuchen Sie es erneut, sobald das Programm wieder reagiert.</value>
   </data>
   <data name="OpenFile_Rejected_UnsupportedExtension" xml:space="preserve">
     <value>„{0}“ ist keine Markdown-Datei. MdExplorer öffnet Dateien mit der Endung .md oder .markdown.</value>
+  </data>
+  <data name="RecentFiles_Clear" xml:space="preserve">
+    <value>Verlauf leeren</value>
+  </data>
+  <data name="RecentFiles_Empty" xml:space="preserve">
+    <value>Noch keine Dateien geöffnet</value>
+  </data>
+  <data name="RecentFiles_JumpListCategory" xml:space="preserve">
+    <value>Zuletzt geöffnet</value>
+  </data>
+  <data name="RecentFiles_Missing_Format" xml:space="preserve">
+    <value>{0} (nicht gefunden)</value>
+  </data>
+  <data name="RecentFiles_Missing_ToolTip" xml:space="preserve">
+    <value>Nicht gefunden: {0}. Ein Klick entfernt den Eintrag aus dem Verlauf.</value>
   </data>
   <data name="Relations_Delete" xml:space="preserve">
     <value>Löschen …</value>

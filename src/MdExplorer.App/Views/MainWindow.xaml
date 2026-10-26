@@ -46,6 +46,12 @@
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="RecentFilesButton"
+                            Style="{StaticResource IconButtonStyle}"
+                            Content="{StaticResource GlyphHistory}"
+                            Click="OnRecentFilesClick"
+                            ToolTip="{l:Loc Main_Toolbar_RecentFiles}"
+                            AutomationProperties.Name="{l:Loc Main_Toolbar_RecentFiles}" />
                     <ToggleButton Style="{StaticResource IconToggleButtonStyle}"
                                   Content="{StaticResource GlyphSidePanel}"
                                   IsChecked="{Binding IsTagCloudShown, Mode=TwoWay}"

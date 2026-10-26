@@ -53,13 +53,15 @@ internal sealed class MainTestHarness : IDisposable
         Search = new SearchViewModel(scopes, Time, Messenger, SettingsService, UiDispatcher, NullLogger<SearchViewModel>.Instance);
         DocumentPanel = CreateDocumentPanel(scopes);
         TagCloud = new TagCloudViewModel(TagStats, Messenger, MicrosoftOptions.Create(new TagCloudOptions()), NullLogger<TagCloudViewModel>.Instance);
+        SettingsStore = new UiSettingsStore(FileSystem, LayoutPath, NullLogger<UiSettingsStore>.Instance);
+        RecentFiles = new RecentFilesViewModel(SettingsStore, FileSystem, JumpList, NullLogger<RecentFilesViewModel>.Instance);
         Panels = new MainPanels(
             FolderTree,
             new AllFilesViewModel(scopes, Time, NullLogger<AllFilesViewModel>.Instance),
             Search,
             DocumentPanel,
-            TagCloud);
-        SettingsStore = new UiSettingsStore(FileSystem, LayoutPath, NullLogger<UiSettingsStore>.Instance);
+            TagCloud,
+            RecentFiles);
         Services = new MainServices(Locator, SettingsStore, HealthProvider, UiDispatcher, Indexer, Messenger, Time);
         Main = new MainViewModel(Panels, Services, NullLogger<MainViewModel>.Instance);
     }
@@ -76,6 +78,8 @@ internal sealed class MainTestHarness : IDisposable
     public FakeMarkdownDocumentRepository DocRepo { get; } = new();
     public FakeMarkdownFileRepository FileRepo { get; } = new();
     public EmptyTagStatistics TagStats { get; } = new();
+    public RecordingJumpList JumpList { get; } = new();
+    public RecentFilesViewModel RecentFiles { get; }
     public FakeIndexer Indexer { get; } = new();
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(FixedUtc));
 

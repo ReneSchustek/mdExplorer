@@ -64,6 +64,7 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         Search = panels.Search;
         DocumentPanel = panels.DocumentPanel;
         TagCloud = panels.TagCloud;
+        RecentFiles = panels.RecentFiles;
         _services = services;
         _logger = logger;
         _shutdownToken = shutdownToken;
@@ -103,6 +104,9 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
 
     /// <summary>Tag-Cloud-Panel (zuschaltbar).</summary>
     public TagCloudViewModel TagCloud { get; }
+
+    /// <summary>Verlauf der zuletzt geöffneten Dateien.</summary>
+    public RecentFilesViewModel RecentFiles { get; }
 
     /// <summary>Statuszeile: Indexstand und Betriebsanzeige.</summary>
     public StatusBarViewModel StatusBar { get; }
@@ -255,6 +259,8 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         DocumentPanel.FolderRequested -= OnFolderRequested;
         DocumentPanel.TagRequested -= OnTagRequested;
         DocumentPanel.DocumentChanged -= OnDocumentChanged;
+        DocumentPanel.DocumentOpened -= RecentFiles.Record;
+        RecentFiles.OpenRequested -= OnRecentFileRequested;
     }
 
     [LoggerMessage(EventId = 200, Level = LogLevel.Information, Message = "MainViewModel erstellt.")]
@@ -286,7 +292,15 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
         DocumentPanel.FolderRequested += OnFolderRequested;
         DocumentPanel.TagRequested += OnTagRequested;
         DocumentPanel.DocumentChanged += OnDocumentChanged;
+        // Jedes erfolgreiche Laden kommt in den Verlauf, gleich woher: Liste, Suche, WikiLink,
+        // Doppelklick oder der Verlauf selbst.
+        DocumentPanel.DocumentOpened += RecentFiles.Record;
+        RecentFiles.OpenRequested += OnRecentFileRequested;
     }
+
+    /// <summary>Öffnet einen Eintrag aus dem Verlauf über den Weg, den auch ein Klick in der Liste nimmt.</summary>
+    private void OnRecentFileRequested(string absolutePath) =>
+        ObservedTask.Forget(NavigateToPathAsync(absolutePath), _logger);
 
     /// <summary>Öffnet ein Dokument, das am geöffneten hängt.</summary>
     private void OnRelatedDocumentRequested(Guid markdownFileId) =>

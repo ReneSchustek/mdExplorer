@@ -69,6 +69,7 @@
     <!-- Segoe Fluent Icons ab Windows 11, Segoe MDL2 Assets trägt Windows 10 mit denselben Codes. -->
     <FontFamily x:Key="IconFontFamily">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
     <!-- Die Zeichen der Symbolschrift, mit Namen statt Code im Markup. -->
+    <system:String x:Key="GlyphHistory">&#xE81C;</system:String> <!-- Uhr: Zuletzt geöffnet -->
     <system:String x:Key="GlyphSidePanel">&#xE90D;</system:String> <!-- Seitenleiste (DockRight): Tag-Cloud ein und aus -->
     <system:String x:Key="GlyphTag">&#xE8EC;</system:String> <!-- Tag: Tag-Verwaltung -->
     <system:String x:Key="GlyphGraph">&#xF003;</system:String> <!-- Beziehung: WikiLink-Graph -->

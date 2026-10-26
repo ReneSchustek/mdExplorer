@@ -13,13 +13,16 @@ namespace MdExplorer.App.Services;
 /// <param name="LeftTabIndex">Zuletzt gewählter Tab in der linken Spalte (0=Ordner, 1=Alle Dateien, 2=Suche).</param>
 /// <param name="GraphPathPrefix">Zuletzt im Graph-Fenster gesetzter Pfad-Prefix-Filter. <see langword="null"/>
 /// oder leer = kein Filter. Persistierung erlaubt Wiederkehr in die zuletzt fokussierte Sicht.</param>
+/// <param name="RecentFiles">Verlauf der zuletzt geöffneten Dateien, jüngste zuerst; <see langword="null"/>,
+/// solange noch keine geöffnet war.</param>
 internal sealed record UiLayout(
     double FolderColumnWidth,
     double PreviewColumnWidth,
     WindowGeometry? HelpWindow = null,
     bool IsTagCloudVisible = true,
     int LeftTabIndex = 0,
-    string? GraphPathPrefix = null)
+    string? GraphPathPrefix = null,
+    IReadOnlyList<string>? RecentFiles = null)
 {
     // Die Ordnerspalte bekommt ein Viertel der Startbreite des Hauptfensters von 1280. Die
     // Vorschau ist die einzige Sternspalte und füllt den Rest; ihr Wert wirkt nur als Gewicht.

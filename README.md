@@ -267,8 +267,9 @@ Glob-`ExclusionPatterns` und `.mdignore`-Dateien.
 
 Zwei Spalten mit optionaler Tag-Cloud rechts:
 
-1. **Oben:** Kopfleiste mit Symbolknöpfen für Tag-Cloud, Tag-Verwaltung, Graph, Protokoll,
-   Einstellungen, Handbuch und Info; der Tooltip nennt jeweils das Tastenkürzel
+1. **Oben:** Kopfleiste mit Symbolknöpfen für den Verlauf („Zuletzt geöffnet“), Tag-Cloud,
+   Tag-Verwaltung, Graph, Protokoll, Einstellungen, Handbuch und Info; der Tooltip nennt jeweils
+   das Tastenkürzel
 2. **Links:** drei Register als Segmentleiste: „Ordner" (Baum), „Alle Dateien" (flache
    Liste) und „Suche" (Suchfeld mit Trefferliste)
 3. **Mitte:** Dokument-Panel (Lese-/Bearbeiten-Modus)
@@ -287,6 +288,7 @@ Spalte und dann die Tag-Cloud bis zu ihrer Mindestbreite nach; abgeschnitten wir
 | `Strg+F` | Suchfeld fokussieren; im Bearbeiten-Modus: im Dokument suchen |
 | `F3` / `Umschalt+F3` | Im Bearbeiten-Modus: nächster / vorheriger Fund im Dokument |
 | `Strg+T` | Tag-Cloud ein- oder ausblenden |
+| `Strg+R` | Verlauf der zuletzt geöffneten Dateien aufklappen |
 | `Esc` | Sucheingabe leeren |
 | `Strg+,` | Einstellungen öffnen |
 | `Strg+E` | Dokument-Panel zwischen Lesen und Bearbeiten umschalten |
@@ -294,6 +296,18 @@ Spalte und dann die Tag-Cloud bis zu ihrer Mindestbreite nach; abgeschnitten wir
 | `F1` | Handbuch-Fenster öffnen |
 | `Esc` im Einstellungsdialog | Dialog schließen, ohne zu speichern |
 | `+` / `-` / `0` / Pfeiltasten im Graph | Zoomen, Ansicht zurücksetzen, verschieben |
+
+### Zuletzt geöffnet
+
+Der Uhr-Knopf in der Kopfleiste (oder `Strg+R`) klappt die zuletzt geöffneten Dateien auf, bis zu
+15, die jüngste oben, jede nur einmal. Erfasst wird jede Datei, die im Dokument-Panel erscheint,
+gleich woher: Liste, Suche, WikiLink oder Doppelklick, auch außerhalb der indizierten Ordner. Ein
+Klick öffnet sie wieder, mit derselben Rückfrage bei ungespeicherten Änderungen wie überall. Eine
+Datei, die es nicht mehr gibt, steht als „nicht gefunden“ da; ein Klick nimmt sie aus der Liste.
+„Verlauf leeren“ am Ende der Liste leert den Verlauf.
+
+Dieselben Dateien stehen in der Sprungliste am Taskleistensymbol (Rechtsklick), und „Verlauf
+leeren“ leert auch sie. Gespeichert wird der Verlauf in `ui-layout.json`, nicht in der Datenbank.
 
 ### Suche
 

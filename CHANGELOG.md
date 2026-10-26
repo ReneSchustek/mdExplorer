@@ -7,6 +7,14 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.17.0] - 2026-10-26
+
+### Hinzugefügt
+- Verlauf „Zuletzt geöffnet“: Der Uhr-Knopf in der Kopfleiste oder `Strg+R` zeigt die zuletzt
+  geöffneten Dateien, auch solche außerhalb der indizierten Ordner. Ein Klick öffnet sie wieder;
+  nicht mehr vorhandene Dateien sind gekennzeichnet. Dieselben Dateien stehen in der Sprungliste
+  am Taskleistensymbol, und „Verlauf leeren“ leert beide.
+
 ## [0.16.1] - 2026-10-26
 
 ### Behoben
@@ -453,7 +461,8 @@ Diese Fassung enthält keine Änderung am Funktionsumfang.
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.16.1...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.17.0
 [0.16.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.16.1
 [0.16.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.16.0
 [0.15.5]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.16.0

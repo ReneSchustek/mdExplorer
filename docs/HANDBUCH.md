@@ -148,8 +148,9 @@ auf einen anderen Rechner mitnehmen.
 ## 3. Die Oberfläche {#layout}
 
 Oben im Hauptfenster steht eine schlanke Kopfleiste: links der Name,
-rechts die Werkzeuge als Symbole — Tag-Cloud ein und aus, Tag-Verwaltung,
-Graph, Protokoll, Einstellungen, Handbuch und Info. Wer mit der Maus auf
+rechts die Werkzeuge als Symbole — der Verlauf „Zuletzt geöffnet“,
+Tag-Cloud ein und aus, Tag-Verwaltung, Graph, Protokoll, Einstellungen,
+Handbuch und Info. Wer mit der Maus auf
 einem Symbol verweilt, liest, was es tut und welches Tastenkürzel dazu
 gehört.
 
@@ -237,6 +238,26 @@ gespeicherte Wahl bleibt dabei unberührt. Wer sie im schmalen Fenster
 linke Spalte nach, dann die Tag-Cloud bis zu ihrer Mindestbreite. Sie zeigt
 die häufigsten Tags des aktuellen Bestands; Details dazu folgen in
 Kapitel 6.
+
+### Zuletzt geöffnet
+
+Der Uhr-Knopf in der Kopfleiste, ebenso `Strg+R`, klappt die zuletzt
+geöffneten Dateien auf: bis zu 15, die jüngste oben, jede nur einmal.
+Neben dem Namen steht der Ordner, der volle Pfad erscheint, wenn die Maus
+darauf verweilt. In den Verlauf kommt jede Datei, die im Dokumentbereich
+erscheint, gleich ob aus dem Ordnerbaum, der Dateiliste, der Suche, über
+einen WikiLink oder per Doppelklick im Explorer, und auch dann, wenn sie
+in keinem indizierten Ordner liegt.
+
+Ein Klick öffnet die Datei wieder. Hält der Editor ungespeicherte
+Änderungen, kommt dieselbe Frage wie bei jedem Wechsel der Datei. Gibt
+es eine Datei nicht mehr, steht sie gedämpft als „nicht gefunden“ in
+der Liste; ein Klick darauf nimmt sie heraus. „Verlauf leeren“ am Ende
+der Liste leert den ganzen Verlauf.
+
+Dieselben Dateien bietet die Sprungliste am Taskleistensymbol an, nach
+einem Rechtsklick darauf. Auch sie leert „Verlauf leeren“. Der Verlauf
+steht in `ui-layout.json` und bleibt über einen Neustart erhalten.
 
 ### Helles und dunkles Erscheinungsbild
 

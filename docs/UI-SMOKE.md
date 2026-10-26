@@ -43,6 +43,7 @@ stabilisiert haben und der WebView2-Wait-Pattern lösbar ist.
 | 10 | **Zweite Instanz** | Bei laufendem, minimiertem MdExplorer eine weitere `.md`-Datei öffnen | Die Datei erscheint im vorhandenen Fenster, das Fenster kommt nach vorn. Im Task-Manager läuft genau ein `MdExplorer.exe`. | PASS / FAIL / N.A. |
 | 11 | **Doppelklick bei ungespeicherten Änderungen** | Im Editor Text ändern, nicht speichern. Eine andere `.md`-Datei per Doppelklick öffnen, „Abbrechen“ wählen; noch einmal, „Nein“ wählen | Genau eine Rückfrage erscheint. „Abbrechen“ lässt die geänderte Datei offen, „Nein“ öffnet die neue. Zwei schnelle Doppelklicks während der Rückfrage erzeugen keine zweite Rückfrage. | PASS / FAIL / N.A. |
 | 12 | **Schmales Fenster** | Fenster auf etwa 900 Pixel Breite ziehen, Tag-Cloud über den Knopf einschalten, Trenner links mit der Maus und mit den Pfeiltasten bewegen. App schließen+neustarten | Unter 960 Pixeln blendet sich die Tag-Cloud aus; auf Knopfdruck erscheint sie samt ✕, nichts ist am rechten Rand abgeschnitten. Die mit dem Trenner gesetzte Breite der linken Spalte bleibt nach dem Neustart erhalten. | PASS / FAIL / N.A. |
+| 13 | **Verlauf** | Zwei Dateien öffnen, eine davon außerhalb des Index. App schließen+neustarten, `Strg+R` drücken, ältere Datei wählen. Eine Datei im Explorer umbenennen, Verlauf erneut aufklappen und sie anklicken. Rechtsklick auf das Taskleistensymbol. „Verlauf leeren“ | Beide Dateien stehen nach dem Neustart im Verlauf, jüngste oben; die gewählte öffnet. Die umbenannte steht als „nicht gefunden“ da und verschwindet beim Klick. Die Sprungliste zeigt dieselben Dateien; nach „Verlauf leeren“ sind Verlauf und Sprungliste leer. | PASS / FAIL / N.A. |
 
 ## Lauf-Berichte
 
@@ -78,6 +79,7 @@ stabilisiert haben und der WebView2-Wait-Pattern lösbar ist.
 | 10 | Zweite Instanz | PASS / FAIL / N.A. | … |
 | 11 | Doppelklick bei ungespeicherten Änderungen | PASS / FAIL / N.A. | … |
 | 12 | Schmales Fenster | PASS / FAIL / N.A. | … |
+| 13 | Verlauf | PASS / FAIL / N.A. | … |
 
 ## Auffälligkeiten
 - …

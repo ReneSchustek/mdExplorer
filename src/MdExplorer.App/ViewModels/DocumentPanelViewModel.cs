@@ -82,6 +82,9 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
     /// </summary>
     public event Action<string?>? DocumentChanged;
 
+    /// <summary>Eine Datei steht jetzt in Vorschau und Editor; übergeben wird ihr vollständiger Pfad.</summary>
+    public event Action<string>? DocumentOpened;
+
     /// <summary>Liefert die Preview im Read-Modus.</summary>
     public PreviewViewModel Preview { get; }
 
@@ -234,6 +237,10 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
             if (absolutePath is not null && load.IsCurrent)
             {
                 await LoadPartsAsync(markdownFileId, absolutePath, load).ConfigureAwait(true);
+                if (load.IsCurrent)
+                {
+                    DocumentOpened?.Invoke(absolutePath);
+                }
             }
             else if (load.IsCurrent)
             {
@@ -310,6 +317,7 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         Editor.LoadDirect(absolutePath, file.Bytes);
         Relations.Clear();
         LogDirectLoadCompleted(_logger, absolutePath);
+        DocumentOpened?.Invoke(absolutePath);
     }
 
     private void OnRelatedDocumentRequested(Guid markdownFileId) => RelatedDocumentRequested?.Invoke(markdownFileId);
