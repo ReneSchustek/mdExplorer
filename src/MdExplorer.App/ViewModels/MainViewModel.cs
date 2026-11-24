@@ -123,6 +123,30 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     /// <summary>Wahr, solange der Editor Änderungen hält, die nicht auf der Platte stehen.</summary>
     public bool HasUnsavedChanges => DocumentPanel.HasUnsavedChanges;
 
+    /// <summary>
+    /// Ob die Tag-Cloud gerade zu sehen ist: die gespeicherte Wahl, in einem schmalen Fenster
+    /// eingeschränkt durch <see cref="TagCloudVisibility"/>.
+    /// </summary>
+    /// <remarks>
+    /// Setzbar, damit ein Schalter in beide Richtungen binden kann. Ein Schalter, der nur einen
+    /// Befehl auslöst, wechselt über die Bedienungshilfen nur seinen Haken, nicht den Zustand.
+    /// </remarks>
+    public bool IsTagCloudShown
+    {
+        get
+        {
+            return _tagCloudVisibility.IsShown(IsTagCloudVisible);
+        }
+
+        set
+        {
+            if (value != IsTagCloudShown)
+            {
+                ToggleTagCloud();
+            }
+        }
+    }
+
     /// <summary>Merkt sich die Spaltenbreiten beim Schließen für den nächsten Start.</summary>
     /// <param name="folderWidth">Breite der linken Spalte.</param>
     /// <param name="previewWidth">Breite der Vorschau.</param>
@@ -166,26 +190,6 @@ internal sealed partial class MainViewModel : ObservableObject, INavigationServi
     /// <summary>Fragt vor dem Schließen des Hauptfensters nach ungespeicherten Änderungen.</summary>
     /// <returns><see langword="true"/>, wenn das Fenster schließen darf.</returns>
     public Task<bool> ConfirmCloseAsync() => DocumentPanel.ConfirmLeaveAsync(CancellationToken.None);
-
-    /// <summary>
-    /// Ob die Tag-Cloud gerade zu sehen ist: die gespeicherte Wahl, in einem schmalen Fenster
-    /// eingeschränkt durch <see cref="TagCloudVisibility"/>.
-    /// </summary>
-    /// <remarks>
-    /// Setzbar, damit ein Schalter in beide Richtungen binden kann. Ein Schalter, der nur einen
-    /// Befehl auslöst, wechselt über die Bedienungshilfen nur seinen Haken, nicht den Zustand.
-    /// </remarks>
-    public bool IsTagCloudShown
-    {
-        get => _tagCloudVisibility.IsShown(IsTagCloudVisible);
-        set
-        {
-            if (value != IsTagCloudShown)
-            {
-                ToggleTagCloud();
-            }
-        }
-    }
 
     /// <summary>Schaltet die Tag-Cloud um, wie der Nutzer sie sieht (Knopf, Strg+T). Gespeichert wird im <see cref="OnIsTagCloudVisibleChanged(bool)"/>-Hook.</summary>
     [RelayCommand]

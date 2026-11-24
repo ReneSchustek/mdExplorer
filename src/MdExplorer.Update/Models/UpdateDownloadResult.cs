@@ -33,6 +33,12 @@ public enum UpdateDownloadStatus
     /// Paket stammt aber nicht vom Herausgeber; die Datei wird verworfen.
     /// </summary>
     SignatureInvalid = 6,
+
+    /// <summary>
+    /// Das Paket ist echt signiert, trägt aber nicht die Version, die das Release ankündigt. So sähe
+    /// ein älteres, echtes Paket unter einer neueren Versionsangabe aus; die Datei wird verworfen.
+    /// </summary>
+    VersionMismatch = 7,
 }
 
 /// <summary>

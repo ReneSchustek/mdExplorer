@@ -50,6 +50,23 @@ public sealed class EffectiveThemeProviderTests
         Assert.True(sut.IsDarkMode);
     }
 
+    /// <remarks>
+    /// Der Kontrastmodus ist eine Einstellung der Bedienungshilfen in Windows. Wer ihn braucht,
+    /// bekommt ihn, gleich ob in MdExplorer Hell, Dunkel oder System gewählt ist.
+    /// </remarks>
+    [Theory]
+    [InlineData(AppTheme.Light)]
+    [InlineData(AppTheme.Dark)]
+    [InlineData(AppTheme.System)]
+    public void IsHighContrast_FollowsWindowsWhateverWasChosen(AppTheme chosen)
+    {
+        EffectiveThemeProvider on = new(new FakeSettingsService(SettingsWith(chosen)), new FakeSystemTheme(isDarkMode: false, isHighContrast: true));
+        EffectiveThemeProvider off = new(new FakeSettingsService(SettingsWith(chosen)), new FakeSystemTheme(isDarkMode: false, isHighContrast: false));
+
+        Assert.True(on.IsHighContrast);
+        Assert.False(off.IsHighContrast);
+    }
+
     [Fact]
     public void Constructor_OnMissingDependencies_Throws()
     {
@@ -66,8 +83,10 @@ public sealed class EffectiveThemeProviderTests
         AppSettings.Default with { Appearance = AppearanceSettings.Default with { Theme = theme } };
 
     /// <summary>Windows-Erscheinungsbild als fester Wert statt aus der Registry.</summary>
-    private sealed class FakeSystemTheme(bool isDarkMode) : ISystemThemeProvider
+    private sealed class FakeSystemTheme(bool isDarkMode, bool isHighContrast = false) : ISystemThemeProvider
     {
         public bool IsDarkMode { get; } = isDarkMode;
+
+        public bool IsHighContrast { get; } = isHighContrast;
     }
 }

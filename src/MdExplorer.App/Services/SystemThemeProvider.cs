@@ -1,6 +1,6 @@
-using Microsoft.Win32;
-
 using System.Diagnostics.CodeAnalysis;
+using System.Windows;
+using Microsoft.Win32;
 
 namespace MdExplorer.App.Services;
 
@@ -44,4 +44,7 @@ internal sealed class SystemThemeProvider : ISystemThemeProvider
             }
         }
     }
+
+    /// <inheritdoc />
+    public bool IsHighContrast => SystemParameters.HighContrast;
 }

@@ -53,6 +53,7 @@ public sealed class MainViewModelTests
     {
         using MainTestHarness harness = new();
         harness.Locator.SetAbsolutePath(TargetPath, TargetId);
+        harness.FileSystem.Files[TargetPath] = "# Ziel"u8.ToArray();
         harness.DocRepo.Put(TargetId, RenderedDocuments.Create(TargetId, "<h1>Ziel</h1>", MainTestHarness.FixedUtc));
 
         harness.Main.Dispose();

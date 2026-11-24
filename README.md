@@ -21,13 +21,19 @@ eine einblendbare Tag-Cloud. MIT-Lizenz.
 
 ## Oberfläche
 
-Volltextsuche mit Trefferstellen und Vorschau:
+Alle Dateien mit Tags, Zeitraum-Filter und Änderungsdatum, daneben die Vorschau und die
+eingeblendete Tag-Cloud:
+
+![Liste aller Dateien](docs/screenshots/dateiliste.png)
+
+Volltextsuche mit Trefferstellen, Modus und Ähnlichkeit (hier Wortstamm: „Verweis“ findet auch
+„Verweise“ und „verweisen“):
 
 ![Suche über den gesamten Bestand](docs/screenshots/suche.png)
 
-Alle Dateien mit Tags, Zeitraum-Filter und Änderungsdatum:
+Die zuletzt geöffneten Dateien, aufgeklappt über den Uhr-Knopf in der Kopfleiste:
 
-![Liste aller Dateien](docs/screenshots/dateiliste.png)
+![Zuletzt geöffnete Dateien](docs/screenshots/verlauf.png)
 
 Verweise zwischen den Notizen als Graph:
 
@@ -59,7 +65,8 @@ Start deshalb eine Warnung, die sich über „Weitere Informationen" übergehen 
 Die Update-Funktion in den Einstellungen lädt nur von der Releases-Seite dieses
 Repositorys und installiert nur ein Setup, dessen Signatur zum in MdExplorer eingebauten
 Schlüssel passt. Fehlt die Signatur oder passt sie nicht, bleibt der Weg über die
-Releases-Seite.
+Releases-Seite. Das Setup muss außerdem die Version tragen, die das Release ankündigt; ein
+älteres, echt signiertes Setup unter einer neueren Versionsangabe wird verworfen.
 
 ### Markdown-Dateien per Doppelklick öffnen
 
@@ -142,7 +149,8 @@ Produktivprojekte ziehen `StyleCop.Analyzers` und `SonarAnalyzer.CSharp`
 zentral über `Directory.Build.props` ein; Tests bleiben ausgenommen.
 Der Build läuft mit `TreatWarningsAsErrors=true`, jede StyleCop- oder
 Sonar-Meldung bricht ihn also ab. Regelwerk: `stylecop.json` und der
-StyleCop/Sonar-Abschnitt in `.editorconfig`.
+StyleCop/Sonar-Abschnitt in `.editorconfig`. Jeder Typ steht in einer eigenen Datei, auch
+Records und Enums, und die Mitglieder folgen der Reihenfolge von StyleCop.
 
 ```powershell
 dotnet build MdExplorer.slnx -warnaserror
@@ -172,6 +180,18 @@ Im XAML setzt `{l:Loc Schlüssel}` sie ein, in ViewModels `UiText.Get` und
 `UiText.Format`. Ein Wächter-Test prüft, dass jeder verwendete Schlüssel
 existiert, jeder Eintrag verwendet wird und kein Markup einen festen Text trägt.
 
+### Schriften
+
+Die Oberfläche setzt Roboto Flex, Pfade, Protokoll und Rohtext Roboto Mono. Beide
+Schriften stecken in der Programmdatei und gelten damit auch auf Rechnern, auf
+denen keine Roboto installiert ist; nichts wird aus dem Netz geladen. WPF liest
+feste Schnitte (Normal und SemiBold) aus `Assets/Fonts/*.ttf`, erzeugt mit
+`tools/schriften-statisch.py` aus den variablen Dateien von Google Fonts, weil WPF
+die Gewichtsachse einer variablen Schrift nicht auswertet. Vorschau, Hilfe und Graph
+bekommen die WOFF2-Dateien als `data:`-URI in ihr Stylesheet; ihre
+Sicherheitsregeln erlauben Schriften nur auf diesem Weg (`font-src data:`). Ein
+Wächter-Test hält fest, dass keine Ansicht eine Schrift selbst setzt.
+
 Vollständige Anleitung: [`docs/HANDBUCH.md`](docs/HANDBUCH.md).
 
 ## Projektstruktur
@@ -185,6 +205,7 @@ Produktivcode liegt unter `src/`, die Tests spiegeln ihn unter `tests/`.
 | `src/MdExplorer.Data` | EF Core / SQLite, Repositories, Migrations |
 | `src/MdExplorer.Indexer` | Datei-Scan, `FileSystemWatcher`, Hash-Pipeline |
 | `src/MdExplorer.Parser` | Markdig-basierter Parser mit WikiLink-Erweiterung |
+| `src/MdExplorer.Presentation` | Gemeinsame Oberflächenbausteine für App und Tag-Cloud (Ansage für Screenreader) |
 | `src/MdExplorer.Search` | FTS5-Suche über SQLite |
 | `src/MdExplorer.Graph` | WikiLink-Graph (Snapshot + Canvas-Renderer) |
 | `src/MdExplorer.TagCloud` | Tag-Cloud-UserControl + Hintergrund-Refresh |
@@ -378,6 +399,9 @@ am Dateiende gepflegt. `Strg+S` speichert atomar (Temp-Datei +
 `File.Move`); das ursprüngliche Zeilenende (CRLF/LF) bleibt erhalten.
 Externe Änderungen während einer Edit-Session werden vor dem Schreiben
 erkannt und blockieren das Speichern bis zur manuellen Auflösung.
+Nach dem Speichern wechselt das Panel zurück in die formatierte Ansicht,
+mit dem gespeicherten Stand, und die Datei ist wieder gesperrt. Lässt sich
+der gespeicherte Text nicht darstellen, bleibt der Rohtext stehen.
 
 **Schreibschutz (Default):** Jede frisch geladene Datei ist gegen
 versehentliches Editieren gesperrt. Tippen, Tag-Hinzufügen, Tag-
@@ -501,3 +525,8 @@ unverändert.
 ## Lizenz
 
 Veröffentlicht unter der [MIT-Lizenz](LICENSE), © 2026 Rene Schustek.
+
+Mitgeliefert werden die Schriften Roboto Flex und Roboto Mono unter der SIL Open Font
+License 1.1 ([`OFL-roboto-flex.txt`](src/MdExplorer.App/Assets/Fonts/OFL-roboto-flex.txt),
+[`OFL-roboto-mono.txt`](src/MdExplorer.App/Assets/Fonts/OFL-roboto-mono.txt)); das Setup
+legt beide Texte im Programmordner unter `Lizenzen` ab.

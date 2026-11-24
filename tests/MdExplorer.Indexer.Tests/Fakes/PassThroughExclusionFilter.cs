@@ -10,6 +10,8 @@ internal sealed class PassThroughExclusionFilter : IExclusionFilter
 {
     public bool IsExcluded(string absoluteFilePath, string rootAbsolutePath) => false;
 
+    public bool IsDirectoryExcluded(string absoluteDirectoryPath, string rootAbsolutePath) => false;
+
     public void Invalidate()
     {
     }

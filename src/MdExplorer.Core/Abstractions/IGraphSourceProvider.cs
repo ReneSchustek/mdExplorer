@@ -52,17 +52,3 @@ public interface IGraphSourceProvider
 public sealed record GraphSourceData(
     IReadOnlyList<GraphSourceFile> Files,
     IReadOnlyList<GraphSourceDocument> Documents);
-
-/// <summary>Minimal-Repräsentation einer indizierten Markdown-Datei für den Graph.</summary>
-/// <param name="Id">Stabiler Schlüssel.</param>
-/// <param name="FileNameWithoutExtension">Dateiname ohne Erweiterung als Basis für die Slug-Auflösung.</param>
-/// <param name="RelativePath">Pfad relativ zum Root.</param>
-public sealed record GraphSourceFile(
-    Guid Id,
-    string FileNameWithoutExtension,
-    string RelativePath);
-
-/// <summary>Minimal-Repräsentation eines geparsten Dokuments.</summary>
-/// <param name="MarkdownFileId">Fremdschlüssel auf <see cref="GraphSourceFile.Id"/>.</param>
-/// <param name="OutlinksJson">JSON-Array mit den WikiLink-Zielen (Slug-Form).</param>
-public sealed record GraphSourceDocument(Guid MarkdownFileId, string OutlinksJson);

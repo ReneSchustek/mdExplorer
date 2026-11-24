@@ -16,6 +16,7 @@ public sealed class Fts5PunctuationIntegrationTests
     private static readonly Guid ReleaseFileId = new("22222222-2222-2222-2222-222222222222");
     private static readonly Guid TaggedFileId = new("33333333-3333-3333-3333-333333333333");
     private static readonly Guid SluggedFileId = new("44444444-4444-4444-4444-444444444444");
+    private static readonly Guid PlainTagFileId = new("55555555-5555-5555-5555-555555555555");
 
     [Theory]
     [InlineData("e-mail", "mail.md")]
@@ -27,6 +28,10 @@ public sealed class Fts5PunctuationIntegrationTests
     [InlineData("tag:projekt-alpha", "projekt.md,slug.md")]
     [InlineData("tag:\"projekt alpha\"", "projekt.md,slug.md")]
     [InlineData("bericht -e-mail", "release.md")]
+    // Ganze Schlagworte, keine Teile: „projekt“ ist nicht „projekt-alpha“. Ein Klick in der
+    // Tag-Cloud und ihr Ausschluss liefern sonst falsche Mengen.
+    [InlineData("tag:projekt", "nurprojekt.md")]
+    [InlineData("notiz -tag:projekt", "projekt.md,slug.md")]
     public async Task SearchAsync_OnTermsWithPunctuation_FindsTheFiles(string input, string expectedPaths)
     {
         SearchTestHarness harness = new();
@@ -36,6 +41,7 @@ public sealed class Fts5PunctuationIntegrationTests
             await SeedAsync(harness, ReleaseFileId, "release.md", "bericht release-notes v1.2 vom 2026-10-24", []).ConfigureAwait(true);
             await SeedAsync(harness, TaggedFileId, "projekt.md", "notiz", [("projekt-alpha", "Projekt Alpha")]).ConfigureAwait(true);
             await SeedAsync(harness, SluggedFileId, "slug.md", "notiz", [("projekt-alpha-2", "projekt-alpha")]).ConfigureAwait(true);
+            await SeedAsync(harness, PlainTagFileId, "nurprojekt.md", "notiz", [("projekt", "projekt")]).ConfigureAwait(true);
             _ = await harness.Maintainer.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             using IServiceScope scope = harness.Services.CreateScope();

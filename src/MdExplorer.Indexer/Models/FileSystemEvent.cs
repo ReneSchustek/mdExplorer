@@ -43,20 +43,3 @@ public enum FileSystemEventKind
 /// <param name="OldPath">Bei <see cref="FileSystemEventKind.Renamed"/> und <see cref="FileSystemEventKind.DirectoryRenamed"/> der vorherige Pfad, sonst <see langword="null"/>.</param>
 /// <param name="Root">Index-Wurzel, unter der das Ereignis aufgetreten ist.</param>
 public sealed record FileSystemEvent(FileSystemEventKind Kind, string Path, string? OldPath, string Root);
-
-/// <summary>
-/// <see cref="EventArgs"/>-Hülle für <see cref="FileSystemEvent"/>. Wird vom <see cref="MdExplorer.Indexer.Abstractions.IFileWatcher"/>
-/// genutzt, weil <see cref="EventHandler{T}"/> ein <see cref="EventArgs"/>-Derivat erwartet (CA1003) und Records nicht von <see cref="EventArgs"/> erben dürfen.
-/// </summary>
-public sealed class WatcherEventArgs : EventArgs
-{
-    /// <summary>Erzeugt eine neue Hülle um das gelieferte Ereignis.</summary>
-    public WatcherEventArgs(FileSystemEvent fileSystemEvent)
-    {
-        ArgumentNullException.ThrowIfNull(fileSystemEvent);
-        Event = fileSystemEvent;
-    }
-
-    /// <summary>Das gelieferte, debouncierungsfähige Datei-System-Ereignis.</summary>
-    public FileSystemEvent Event { get; }
-}

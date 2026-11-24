@@ -22,7 +22,7 @@ internal sealed class OperationHealthProvider : IOperationHealthProvider, IDispo
     private readonly IMemoryLogStore _store;
     private readonly IParseFailureStatus _parseFailureStatus;
     private readonly IBackgroundServiceStatus _serviceStatus;
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private OperationHealth _current = OperationHealth.Healthy;
     private string _detail = UiText.Get("Health_Healthy");
     private bool _disposed;
@@ -41,6 +41,9 @@ internal sealed class OperationHealthProvider : IOperationHealthProvider, IDispo
         _parseFailureStatus.Changed += OnStatusChanged;
         _serviceStatus.Changed += OnStatusChanged;
     }
+
+    /// <inheritdoc />
+    public event EventHandler? Changed;
 
     /// <inheritdoc />
     public OperationHealth Current
@@ -65,9 +68,6 @@ internal sealed class OperationHealthProvider : IOperationHealthProvider, IDispo
             }
         }
     }
-
-    /// <inheritdoc />
-    public event EventHandler? Changed;
 
     /// <summary>Hebt die Abo-Bindungen auf.</summary>
     public void Dispose()

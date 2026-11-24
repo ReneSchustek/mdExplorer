@@ -26,6 +26,8 @@ internal sealed partial class PreviewPanel : UserControl
     private readonly IExternalLinkLauncher _linkLauncher;
     private readonly OwnNavigations _ownNavigations = new();
     private bool _isCoreReady;
+    private bool _isStarted;
+    private Window? _owner;
     private string? _pendingHtml;
 
     /// <summary>Erstellt das Panel mit den Abhängigkeiten aus dem DI-Container.</summary>
@@ -47,8 +49,24 @@ internal sealed partial class PreviewPanel : UserControl
     [LoggerMessage(EventId = 413, Level = LogLevel.Debug, Message = "Navigation aus der Vorschau verworfen ({Kind}).")]
     private static partial void LogNavigationBlocked(ILogger logger, PreviewNavigationKind kind);
 
+    /// <remarks>
+    /// <c>Loaded</c> kommt nicht nur einmal: Auch ein Wechsel des Windows-Designs lädt die Fläche
+    /// neu. Gestartet wird der Browser deshalb nur beim ersten Mal, und freigegeben wird er erst,
+    /// wenn das Fenster schließt; an <c>Unloaded</c> gebunden, wäre die Vorschau nach dem ersten
+    /// Designwechsel bis zum Neustart tot.
+    /// </remarks>
     private async void OnLoaded(object sender, RoutedEventArgs args)
     {
+        if (_isStarted)
+        {
+            return;
+        }
+        _isStarted = true;
+        _owner = Window.GetWindow(this);
+        if (_owner is not null)
+        {
+            _owner.Closed += OnOwnerClosed;
+        }
         if (!await EmbeddedBrowser.TryStartAsync(Browser, UnavailableHint, _logger).ConfigureAwait(true))
         {
             return;
@@ -58,8 +76,12 @@ internal sealed partial class PreviewPanel : UserControl
         FlushPendingHtml();
     }
 
-    private void OnUnloaded(object sender, RoutedEventArgs args)
+    private void OnOwnerClosed(object? sender, EventArgs args)
     {
+        if (_owner is not null)
+        {
+            _owner.Closed -= OnOwnerClosed;
+        }
         DataContextChanged -= OnDataContextChanged;
         if (DataContext is PreviewViewModel previousViewModel)
         {

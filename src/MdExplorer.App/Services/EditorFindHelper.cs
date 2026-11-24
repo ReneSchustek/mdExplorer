@@ -9,11 +9,6 @@ namespace MdExplorer.App.Services;
 /// </summary>
 internal static class EditorFindHelper
 {
-    /// <summary>Position eines Treffers im Quelltext.</summary>
-    /// <param name="StartIndex">Nullbasierter Start-Index des Treffers.</param>
-    /// <param name="Length">Treffer-Länge in Zeichen.</param>
-    internal readonly record struct FindMatch(int StartIndex, int Length);
-
     /// <summary>Sucht das nächste Vorkommen von <paramref name="query"/> in <paramref name="text"/>
     /// ab <paramref name="startIndex"/>. Wenn ab dort kein Treffer existiert, wird vom Anfang wieder gesucht
     /// (Wrap-Around). Liefert <see langword="null"/>, wenn der Suchstring leer ist oder kein Treffer existiert.</summary>
@@ -53,4 +48,9 @@ internal static class EditorFindHelper
         }
         return hit < 0 ? null : new FindMatch(hit, query.Length);
     }
+
+    /// <summary>Position eines Treffers im Quelltext.</summary>
+    /// <param name="StartIndex">Nullbasierter Start-Index des Treffers.</param>
+    /// <param name="Length">Treffer-Länge in Zeichen.</param>
+    internal readonly record struct FindMatch(int StartIndex, int Length);
 }

@@ -32,12 +32,13 @@
     <CornerRadius x:Key="BadgeCornerRadius">4</CornerRadius>
 
     <!-- ── Typografie ───────────────────────────────────────────────────── -->
-    <!-- Segoe UI Variable ist ab Windows 11 vorhanden; Segoe UI trägt ältere
-         Systeme, ohne dass ein Rückfall auf eine Serifenschrift kippt. -->
-    <FontFamily x:Key="AppFontFamily">Segoe UI Variable Text, Segoe UI</FontFamily>
-    <!-- Für Pfade, Kennungen und Auszeichnungen: dort trägt gleiche Zeichenbreite
+    <!-- Roboto Flex und Roboto Mono liegen in der Programmdatei (Assets/Fonts) und gelten
+         damit auch auf Rechnern ohne installierte Roboto. Die Segoe-Schriften dahinter greifen
+         nur, wenn die eingebettete Datei nicht lesbar ist, und kippen nicht in eine Serifenschrift. -->
+    <FontFamily x:Key="AppFontFamily">pack://application:,,,/MdExplorer;component/Assets/Fonts/#Roboto Flex, Segoe UI Variable Text, Segoe UI</FontFamily>
+    <!-- Für Pfade, Kennungen, Protokoll und Rohtext: dort trägt gleiche Zeichenbreite
          die Lesbarkeit, weil man Stellen untereinander vergleicht. -->
-    <FontFamily x:Key="MonospaceFontFamily">Cascadia Mono, Consolas</FontFamily>
+    <FontFamily x:Key="MonospaceFontFamily">pack://application:,,,/MdExplorer;component/Assets/Fonts/#Roboto Mono, Cascadia Mono, Consolas</FontFamily>
 
     <system:Double x:Key="FontSizeCaption">11</system:Double>
     <system:Double x:Key="FontSizeBody">13</system:Double>

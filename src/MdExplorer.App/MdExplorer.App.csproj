@@ -16,6 +16,7 @@
     <ProjectReference Include="..\MdExplorer.Graph\MdExplorer.Graph.csproj" />
     <ProjectReference Include="..\MdExplorer.Indexer\MdExplorer.Indexer.csproj" />
     <ProjectReference Include="..\MdExplorer.Parser\MdExplorer.Parser.csproj" />
+    <ProjectReference Include="..\MdExplorer.Presentation\MdExplorer.Presentation.csproj" />
     <ProjectReference Include="..\MdExplorer.Search\MdExplorer.Search.csproj" />
     <ProjectReference Include="..\MdExplorer.TagCloud\MdExplorer.TagCloud.csproj" />
     <ProjectReference Include="..\MdExplorer.Update\MdExplorer.Update.csproj" />
@@ -34,6 +35,11 @@
 
   <ItemGroup>
     <Resource Include="Assets\Logo.png" />
+    <!-- Schriften der Gestaltungslinie, mitgeliefert statt vorausgesetzt (OFL-1.1, Lizenztexte
+         daneben). WPF liest feste TTF-Schnitte, erzeugt mit tools/schriften-statisch.py; die
+         HTML-Seiten bekommen die WOFF2-Dateien als data:-URI über WebFontFaces. -->
+    <Resource Include="Assets\Fonts\*.ttf" />
+    <EmbeddedResource Include="Assets\Fonts\*.woff2" LogicalName="MdExplorer.App.Assets.Fonts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets\preview.css" />
     <EmbeddedResource Include="Assets\Graph\graph.html" />
     <EmbeddedResource Include="Assets\Graph\graph.css" />

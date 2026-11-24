@@ -67,7 +67,7 @@ public sealed class AboutInfoProviderTests
     public void Read_ForEveryLicense_UsesAnSpdxIdentifier()
     {
         AboutInfoProvider sut = new(Clock);
-        string[] allowed = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause"];
+        string[] allowed = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "OFL-1.1"];
 
         AboutInfo info = sut.Read();
 
@@ -86,6 +86,27 @@ public sealed class AboutInfoProviderTests
         Assert.Contains("Markdig", names, StringComparer.Ordinal);
         Assert.Contains("Microsoft.Data.Sqlite", names, StringComparer.Ordinal);
         Assert.Contains("Microsoft.Web.WebView2", names, StringComparer.Ordinal);
+    }
+
+    /// <remarks>
+    /// Die Schriften stecken in der Programmdatei; die OFL verlangt den Hinweis wie jede andere
+    /// Lizenz. Ein Test gegen die Projektdatei hält fest, dass jede mitgelieferte Familie genannt ist.
+    /// </remarks>
+    [Fact]
+    public void Read_ForEveryShippedFontFamily_NamesItWithTheOpenFontLicense()
+    {
+        AboutInfo info = new AboutInfoProvider(Clock).Read();
+        string fonts = Path.Combine(RepositoryPaths.Project("MdExplorer.App"), "Assets", "Fonts");
+        string[] families =
+        [
+            .. Directory.EnumerateFiles(fonts, "*.ttf")
+                .Select(file => Path.GetFileNameWithoutExtension(file).Split('-'))
+                .Select(parts => "Roboto " + char.ToUpperInvariant(parts[1][0]) + parts[1][1..])
+                .Distinct(StringComparer.Ordinal),
+        ];
+
+        Assert.Equal(["Roboto Flex", "Roboto Mono"], families.Order(StringComparer.Ordinal));
+        Assert.All(families, family => Assert.Contains(info.Libraries, lib => lib.Name == family && lib.License == "OFL-1.1"));
     }
 
     /// <remarks>

@@ -41,6 +41,12 @@ internal sealed class FakeMarkdownFileRepository(FakeMarkdownFileStore store) : 
         }
     }
 
+    public Task<IReadOnlyList<Guid>> GetIdsOutsideRootsAsync(IReadOnlyCollection<string> rootAbsolutePaths, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(rootAbsolutePaths);
+        return Task.FromResult(store.FindOutside(rootAbsolutePaths));
+    }
+
     public Task<int> CountAsync(CancellationToken cancellationToken) => Task.FromResult(store.Count());
 
     public Task AddAsync(MarkdownFile entity, CancellationToken cancellationToken)

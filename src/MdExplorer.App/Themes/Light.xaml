@@ -71,9 +71,11 @@
     <!-- ── Auswahl, Linien, Fokus ───────────────────────────────────────── -->
     <SolidColorBrush x:Key="SelectionBackgroundBrush" Color="#EDF1F7" />
     <SolidColorBrush x:Key="SelectionBorderBrush"     Color="#105776" />
+    <!-- Rand einer Auswahl, die sonst nur ihre Fläche färbt. Hier unsichtbar; im Kontrastmodus
+         trägt er die Auswahl, weil die Fläche dort Fensterfarbe bleibt (HighContrastPalette). -->
+    <SolidColorBrush x:Key="SelectionOutlineBrush"    Color="Transparent" />
     <SolidColorBrush x:Key="DividerBrush"             Color="#D0D7DE" />
     <SolidColorBrush x:Key="SplitterBrush"            Color="#E5E7EB" />
-    <SolidColorBrush x:Key="FocusVisualBrush"         Color="#2D7FA8" />
 
     <!-- ── Hinweise ─────────────────────────────────────────────────────── -->
     <!--
@@ -115,6 +117,11 @@
     <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FFFFFF" />
     <SolidColorBrush x:Key="{x:Static SystemColors.ControlLightBrushKey}" Color="#E0E0E0" />
     <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#1A1A1A" />
+
+    <!-- Das Fokusrechteck des Windows-Designs zeichnet in dieser Farbe; jede Ansicht, die keinen
+         eigenen Fokusrahmen hat, zeigt die Tastaturposition damit. Sie ist zugleich die Schrift
+         ungestalteter Steuerelemente und deshalb die Textfarbe der Belegung. -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#1A1A1A" />
 
 
     <!--

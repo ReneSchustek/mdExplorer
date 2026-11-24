@@ -109,6 +109,39 @@ public sealed class HttpUpdateInstallerTests : IDisposable
         Assert.Empty(_bench.StoredFiles());
     }
 
+    /// <remarks>
+    /// Die Signatur deckt nur den Inhalt ab. Wer das Release übernimmt, könnte ein älteres, echt
+    /// signiertes Paket unter einer neueren Versionsangabe ausliefern; installiert würde dann die
+    /// ältere Fassung. Die Version im Paket gehört zum signierten Inhalt und muss passen.
+    /// </remarks>
+    [Theory]
+    [InlineData("0.9.0")]
+    [InlineData(null)]
+    [InlineData("kaputt")]
+    public async Task DownloadAndVerifyAsync_WhenThePackageCarriesAnotherVersion_DeletesFile(string? packaged)
+    {
+        byte[] content = "Ein älteres, echt signiertes Paket."u8.ToArray();
+        _bench.PackagedVersion = packaged;
+        HttpUpdateInstaller sut = _bench.CreateSut(InstallerTestBench.WithPayload(content));
+
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(_bench.AssetFor(content), progress: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(UpdateDownloadStatus.VersionMismatch, result.Status);
+        Assert.Empty(_bench.StoredFiles());
+    }
+
+    [Fact]
+    public async Task DownloadAndVerifyAsync_WithoutAnAnnouncedVersion_DeletesFile()
+    {
+        byte[] content = "Ein Paket ohne angekündigte Version."u8.ToArray();
+        HttpUpdateInstaller sut = _bench.CreateSut(InstallerTestBench.WithPayload(content));
+
+        UpdateDownloadResult result = await sut.DownloadAndVerifyAsync(_bench.AssetFor(content) with { Version = null }, progress: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(UpdateDownloadStatus.VersionMismatch, result.Status);
+        Assert.Empty(_bench.StoredFiles());
+    }
+
     [Fact]
     public async Task DownloadAndVerifyAsync_WithSignatureOfAnotherKey_DeletesFile()
     {

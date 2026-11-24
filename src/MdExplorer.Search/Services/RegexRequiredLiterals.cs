@@ -79,7 +79,6 @@ internal static class RegexRequiredLiterals
     {
         private readonly StringBuilder _run = new();
 
-        private static bool IsWordCharacter(char character) => char.IsLetterOrDigit(character) || character == '_';
         private int _index;
         private bool _boundaryBefore;
         private bool _runAnchored;
@@ -94,6 +93,8 @@ internal static class RegexRequiredLiterals
             }
             EndRun();
         }
+
+        private static bool IsWordCharacter(char character) => char.IsLetterOrDigit(character) || character == '_';
 
         private void Step(char character)
         {

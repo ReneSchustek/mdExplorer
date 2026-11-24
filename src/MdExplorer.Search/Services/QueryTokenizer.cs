@@ -120,7 +120,7 @@ internal static class QueryTokenizer
     {
         if (TryStripPrefix(word, TagFilterPrefix, out string tagValue))
         {
-            string formatted = FormatFilterValue(ConsumeRawFilterValue(tagValue, input, ref position));
+            string formatted = FormatTagValue(ConsumeRawFilterValue(tagValue, input, ref position));
             return formatted.Length == 0 ? null : new QueryToken(QueryTokenType.TagTerm, formatted, string.Empty);
         }
 
@@ -157,10 +157,14 @@ internal static class QueryTokenizer
         return new QueryToken(QueryTokenType.Term, SearchTokens.FormatPhrase(sanitized, wildcard), stemmable);
     }
 
-    private static string FormatFilterValue(string raw)
+    // Der ganze Name zwischen den Grenzmarken der Tag-Spalte (SearchIndexText.JoinTags): So trifft
+    // tag:projekt nur den Namen „projekt“, nicht „projekt-alpha“.
+    private static string FormatTagValue(string raw)
     {
         string sanitized = SearchTokens.SanitizeTerm(raw);
-        return sanitized.Length == 0 ? string.Empty : SearchTokens.FormatPhrase(sanitized, withWildcard: false);
+        return sanitized.Length == 0
+            ? string.Empty
+            : SearchTokens.FormatPhrase($"{SearchIndexText.TagBoundary} {sanitized} {SearchIndexText.TagBoundary}", withWildcard: false);
     }
 
     private static string ConsumeRawFilterValue(string inlineValue, string input, ref int position)

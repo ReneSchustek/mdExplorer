@@ -22,6 +22,13 @@ public sealed record UpdateAsset(string FileName, Uri DownloadUrl, string? Expec
     {
     }
 
+    /// <summary>
+    /// Die Version, die das Release ankündigt. Die Signatur deckt nur den Inhalt ab; erst der
+    /// Abgleich mit der Version, die das Paket selbst trägt, schließt aus, dass ein älteres, echt
+    /// signiertes Paket als neues ausgeliefert wird. Ohne sie wird nicht installiert.
+    /// </summary>
+    public SemanticVersion? Version { get; init; }
+
     /// <summary><see langword="true"/>, wenn Prüfwert und Signatur vorliegen und damit installiert werden darf.</summary>
     public bool IsVerifiable => !string.IsNullOrWhiteSpace(ExpectedSha256) && !Signature.IsEmpty;
 }

@@ -175,7 +175,7 @@ internal sealed partial class App : System.Windows.Application
         IHost host = AppHostBuilder.Build();
         _host = host;
         _logger = host.Services.GetRequiredService<ILogger<App>>();
-        _shutdown = new HostShutdown(() => host.StopAsync(ServiceStopTimeout), host.Services.GetRequiredService<ILogger<HostShutdown>>());
+        _shutdown = new HostShutdown(() => StopServicesAsync(host), host.Services.GetRequiredService<ILogger<HostShutdown>>());
 
         SplashViewModel splash = ShowSplash(host.Services);
         CancellationToken stoppingToken = host.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping;
@@ -189,12 +189,8 @@ internal sealed partial class App : System.Windows.Application
 
         await host.StartAsync(stoppingToken).ConfigureAwait(true);
 
-        new ThemeFollower(
-            this,
-            host.Services.GetRequiredService<ISettingsService>(),
-            host.Services.GetRequiredService<ThemeApplier>(),
-            host.Services.GetRequiredService<PreviewViewModel>(),
-            host.Services.GetRequiredService<IEffectiveThemeProvider>()).Start();
+        // Der Wirt besitzt den Nachführer und meldet ihn beim Freigeben von Windows ab.
+        host.Services.GetRequiredService<ThemeFollower>().Start();
 
         ShowMainWindow(host.Services);
     }
@@ -236,12 +232,36 @@ internal sealed partial class App : System.Windows.Application
         {
             return;
         }
-        if (_firstInstance is not null)
+        // Während des Stoppens keine Eingaben mehr: Was jetzt noch getippt würde, fragte beim
+        // zweiten Schließen nach, und wer dort abbräche, arbeitete mit gestoppten Diensten weiter.
+        if (MainWindow is { } window)
         {
-            await _firstInstance.StopListeningAsync().ConfigureAwait(true);
+            window.IsEnabled = false;
         }
         await _shutdown.StopAsync().ConfigureAwait(true);
         MainWindow?.Close();
+    }
+
+    /// <summary>
+    /// Nimmt keine Übergaben anderer Instanzen mehr an und stoppt dann die Dienste.
+    /// </summary>
+    /// <remarks>
+    /// Beides in dem Ablauf, den <see cref="HostShutdown"/> überwacht: Scheitert schon das Ende der
+    /// Übergaben, steht es im Protokoll, die Dienste stoppen trotzdem, und das Fenster schließt.
+    /// </remarks>
+    private async Task StopServicesAsync(IHost host)
+    {
+        try
+        {
+            if (_firstInstance is not null)
+            {
+                await _firstInstance.StopListeningAsync().ConfigureAwait(true);
+            }
+        }
+        finally
+        {
+            await host.StopAsync(ServiceStopTimeout).ConfigureAwait(true);
+        }
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs args)

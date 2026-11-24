@@ -119,6 +119,60 @@ public sealed class DocumentFileActionsViewModelTests
         Assert.Equal(@"C:\notes\Neu.md", changedTo);
     }
 
+    /// <remarks>
+    /// Nach dem Umbenennen lädt der Bereich das Dokument unter dem neuen Pfad neu und richtet die
+    /// Aktionen dabei neu aus. Die Erfolgsmeldung muss das überstehen, sonst sieht sie niemand.
+    /// </remarks>
+    [Fact]
+    public async Task RenameCommand_TheSuccessMessageSurvivesTheReloadUnderTheNewPath()
+    {
+        DocumentFileActionsViewModel sut = Targeted(new RecordingDocumentFileService(), new FakeDialogService());
+        sut.DocumentChanged += path =>
+        {
+            sut.Release();
+            sut.Target(OpenId, path!, "Neu");
+        };
+
+        sut.NewName = "Neu";
+        await sut.RenameCommand.ExecuteAsync(null).ConfigureAwait(true);
+
+        Assert.Equal("Erledigt.", sut.OperationMessage);
+    }
+
+    [Fact]
+    public async Task RenameCommand_TheSuccessMessageIsNotShownAtAnotherDocument()
+    {
+        DocumentFileActionsViewModel sut = Targeted(new RecordingDocumentFileService(), new FakeDialogService());
+        sut.NewName = "Neu";
+        await sut.RenameCommand.ExecuteAsync(null).ConfigureAwait(true);
+
+        sut.Release();
+        sut.Target(new Guid("22222222-2222-2222-2222-222222222222"), @"C:\notes\Fremd.md", "Fremd");
+
+        Assert.Empty(sut.OperationMessage);
+    }
+
+    /// <remarks>
+    /// Die Folgenabschätzung liest den Index. Ist er gerade belegt, wird das eine Meldung im
+    /// Bereich, kein unerwarteter Fehler; nichts wird umbenannt oder gelöscht.
+    /// </remarks>
+    [Fact]
+    public async Task FileOperations_WhenTheImpactCannotBeRead_ReportInsteadOfThrowing()
+    {
+        RecordingDocumentFileService fileService = new() { FailOnImpact = new TestDbException("belegt") };
+        DocumentFileActionsViewModel sut = Targeted(fileService, new FakeDialogService { ConfirmResult = true });
+        sut.NewName = "Neu";
+
+        await sut.RenameCommand.ExecuteAsync(null).ConfigureAwait(true);
+        string afterRename = sut.OperationMessage;
+        await sut.DeleteCommand.ExecuteAsync(null).ConfigureAwait(true);
+
+        Assert.NotEmpty(afterRename);
+        Assert.NotEmpty(sut.OperationMessage);
+        Assert.Null(fileService.RenamedTo);
+        Assert.False(fileService.DeleteCalled);
+    }
+
     [Fact]
     public async Task RenameCommand_WithIncomingLinks_AsksBeforeBreakingThem()
     {

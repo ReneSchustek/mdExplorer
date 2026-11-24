@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Parser.Abstractions;
 using MdExplorer.Parser.Services;
 using MdExplorer.TagCloud.Abstractions;
 using MdExplorer.TagCloud.Services;
@@ -247,6 +248,28 @@ public sealed class TagManagementServiceTests
         Assert.Equal("Mehr #bar und mehr.", fs.ReadText(@"C:\notes\b.md"));
     }
 
+    /// <remarks>
+    /// Scheitert der Umschreiber an einer Datei (zu tief verschachtelt, Zeitgrenze des Ausdrucks),
+    /// brach der Lauf bisher ab: Die ersten Dateien waren umbenannt, die übrigen nicht.
+    /// </remarks>
+    [Fact]
+    public async Task RenameAsync_WhenTheRewriterFailsOnOneFile_ReportsItAndRewritesTheOthers()
+    {
+        InMemoryFileSystem fs = new();
+        fs.AddFile(@"C:\notes\a.md", "Zu tief #foo verschachtelt.");
+        fs.AddFile(@"C:\notes\b.md", "Mehr #foo und mehr.");
+        FakeTagFileLookupQuery query = new();
+        query.SetFiles("foo",
+            new TagFileLookupRow(IdOf(907), @"C:\notes\a.md", "a.md"),
+            new TagFileLookupRow(IdOf(908), @"C:\notes\b.md", "b.md"));
+        TagManagementService sut = new(query, fs, new FailingOnDeepNesting(), NullLogger<TagManagementService>.Instance);
+
+        TagRewriteResult result = await sut.RenameAsync("foo", "bar", TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Equal([@"C:\notes\a.md"], result.Errors.Keys);
+        Assert.Equal("Mehr #bar und mehr.", fs.ReadText(@"C:\notes\b.md"));
+    }
+
     [Fact]
     public async Task RenameAsync_OnACancelledToken_WritesNothing()
     {
@@ -266,6 +289,17 @@ public sealed class TagManagementServiceTests
 
     private static Guid IdOf(int index) =>
         new(index.ToString("D8", System.Globalization.CultureInfo.InvariantCulture) + "-0000-0000-0000-000000000000");
+
+    /// <summary>Der echte Umschreiber, der wie Markdig bei zu tiefer Verschachtelung wirft.</summary>
+    private sealed class FailingOnDeepNesting : IMarkdownTagRewriter
+    {
+        private readonly MarkdownTagRewriter _inner = new(new TagNormalizer());
+
+        public string Apply(string original, IReadOnlyDictionary<string, string?> operations) =>
+            original.Contains("Zu tief", StringComparison.Ordinal)
+                ? throw new ArgumentException("Die Verschachtelung ist zu tief.")
+                : _inner.Apply(original, operations);
+    }
 
     private static TagManagementService CreateSut(FakeTagFileLookupQuery query, InMemoryFileSystem fs)
     {

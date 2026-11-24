@@ -70,6 +70,43 @@ public sealed partial class GlobExclusionFilter : IExclusionFilter, IDisposable
     }
 
     /// <inheritdoc />
+    public bool IsDirectoryExcluded(string absoluteDirectoryPath, string rootAbsolutePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(absoluteDirectoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootAbsolutePath);
+
+        string normalizedDirectory = PathScope.TrimSeparators(Path.GetFullPath(absoluteDirectoryPath));
+        string normalizedRoot = PathScope.TrimSeparators(Path.GetFullPath(rootAbsolutePath));
+        if (!PathScope.IsBelow(normalizedDirectory, normalizedRoot))
+        {
+            return false;
+        }
+
+        // Ein pausierter Ordner ist ein Pfad-Präfix; ein „!" hebt ihn auch bei Dateien nicht auf.
+        if (UiExcludedFolderList().Any(folder => PathScope.IsAtOrBelow(normalizedDirectory, folder)))
+        {
+            return true;
+        }
+
+        // Maßgeblich sind die Quellen oberhalb des Ordners. Eine .mdignore in ihm selbst wird nicht
+        // mehr gelesen, wenn er übersprungen wird; deshalb zählt sie auch für die Entscheidung nicht.
+        string? parent = Path.GetDirectoryName(normalizedDirectory);
+        if (parent is null)
+        {
+            return false;
+        }
+        IReadOnlyList<PatternScope> scopes = GetOrBuildScopes(normalizedRoot, parent);
+
+        // Ein „!" könnte unter diesem Ordner eine Datei wieder aufnehmen. Ob es das tut, sagt erst die
+        // Datei; der Ordner bleibt deshalb offen, sobald es irgendwo darüber eines gibt.
+        if (scopes.Any(scope => scope.HasInclusions))
+        {
+            return false;
+        }
+        return scopes.Any(scope => scope.DirectoryExclusions.Match(scope.RelativePathOf(normalizedDirectory)).HasMatches);
+    }
+
+    /// <inheritdoc />
     public void Invalidate()
     {
         _uiExcluded = null;
@@ -96,6 +133,8 @@ public sealed partial class GlobExclusionFilter : IExclusionFilter, IDisposable
     {
         Matcher exclusions = new(StringComparison.OrdinalIgnoreCase);
         Matcher inclusions = new(StringComparison.OrdinalIgnoreCase);
+        Matcher directoryExclusions = new(StringComparison.OrdinalIgnoreCase);
+        bool hasInclusions = false;
         foreach (string pattern in patterns)
         {
             if (string.IsNullOrWhiteSpace(pattern))
@@ -105,15 +144,32 @@ public sealed partial class GlobExclusionFilter : IExclusionFilter, IDisposable
             if (pattern[0] != '!')
             {
                 _ = exclusions.AddInclude(pattern);
+                AddDirectoryPattern(directoryExclusions, pattern);
                 continue;
             }
             string positive = pattern[1..].TrimStart();
             if (positive.Length > 0)
             {
                 _ = inclusions.AddInclude(positive);
+                hasInclusions = true;
             }
         }
-        return new PatternScope(baseDirectory, exclusions, inclusions);
+        return new PatternScope(baseDirectory, exclusions, inclusions, directoryExclusions, hasInclusions);
+    }
+
+    // Nur ein Muster, das auf „/**" endet, schließt sicher alles unter einem Ordner aus: Was den
+    // Vorderteil trifft, ist ein Ordner, und „/**" nimmt jede Datei darunter mit. Das ganze Muster
+    // trifft zusätzlich jeden Ordner tiefer darin. Bei „**/*.md" oder „drafts/*" hängt es an der
+    // einzelnen Datei; dort muss der Scanner weiter hineinsehen.
+    private static void AddDirectoryPattern(Matcher directoryExclusions, string pattern)
+    {
+        const string AnythingBelow = "/**";
+        string trimmed = pattern.Trim();
+        if (trimmed.Length > AnythingBelow.Length && trimmed.EndsWith(AnythingBelow, StringComparison.Ordinal))
+        {
+            _ = directoryExclusions.AddInclude(trimmed[..^AnythingBelow.Length]);
+            _ = directoryExclusions.AddInclude(trimmed);
+        }
     }
 
     [LoggerMessage(EventId = 700, Level = LogLevel.Debug, Message = "Glob-Exclusion-Filter invalidiert (Cache geleert).")]
@@ -126,7 +182,10 @@ public sealed partial class GlobExclusionFilter : IExclusionFilter, IDisposable
         return excluded && !scopes.Any(scope => scope.Inclusions.Match(scope.RelativePathOf(file)).HasMatches);
     }
 
-    private bool IsBelowUiExcludedFolder(string normalizedAbsoluteFile)
+    private bool IsBelowUiExcludedFolder(string normalizedAbsoluteFile) =>
+        UiExcludedFolderList().Any(folder => PathScope.IsBelow(normalizedAbsoluteFile, folder));
+
+    private IReadOnlyList<string> UiExcludedFolderList()
     {
         IReadOnlyList<string> configured = _settings.Current.Indexing.UiExcludedFolders;
 
@@ -145,7 +204,7 @@ public sealed partial class GlobExclusionFilter : IExclusionFilter, IDisposable
             cached = new UiExcludedFolders(configured, normalized);
             _uiExcluded = cached;
         }
-        return cached.Normalized.Any(folder => PathScope.IsBelow(normalizedAbsoluteFile, folder));
+        return cached.Normalized;
     }
 
     private IReadOnlyList<PatternScope> GetOrBuildScopes(string root, string directory)
@@ -176,7 +235,12 @@ public sealed partial class GlobExclusionFilter : IExclusionFilter, IDisposable
     private sealed record UiExcludedFolders(IReadOnlyList<string> Source, IReadOnlyList<string> Normalized);
 
     /// <summary>Die Muster einer Quelle mit dem Ordner, auf den sie sich beziehen.</summary>
-    private sealed record PatternScope(string BaseDirectory, Matcher Exclusions, Matcher Inclusions)
+    private sealed record PatternScope(
+        string BaseDirectory,
+        Matcher Exclusions,
+        Matcher Inclusions,
+        Matcher DirectoryExclusions,
+        bool HasInclusions)
     {
         public string RelativePathOf(string absoluteFile) =>
             Path.GetRelativePath(BaseDirectory, absoluteFile).Replace('\\', '/');

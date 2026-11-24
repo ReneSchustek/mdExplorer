@@ -25,6 +25,8 @@
     // Bildpunkten der Zeichenfläche.
     const ZOOM_STEP = 1.1;
     const PAN_STEP = 40;
+    // Die Beschriftung nutzt die mitgelieferte Schrift; die Größe setzt drawNodes je Zoomstufe.
+    const LABEL_FONT_FAMILY = "'Roboto Flex', 'Segoe UI', sans-serif";
 
     // Die Zeichenfläche kennt kein CSS. Sie bekommt jede Farbe als Wert übergeben.
     // Deshalb werden die Variablen des Stylesheets einmal ausgelesen; so steht die
@@ -180,7 +182,7 @@
             ctx.stroke();
         }
         ctx.fillStyle = graph.palette.label;
-        ctx.font = (10 / graph.view.scale) + "px 'Segoe UI', sans-serif";
+        ctx.font = (10 / graph.view.scale) + "px " + LABEL_FONT_FAMILY;
         for (let i = 0; i < graph.nodes.length; i++) {
             const n = graph.nodes[i];
             ctx.fillText(n.title, n.x + nodeRadius(n) + 2, n.y + 3);
@@ -367,6 +369,16 @@
         attachKeyboard(graph);
         attachPointer(graph);
         startSimulation(graph);
+        redrawOnceTheLabelFontIsLoaded(graph);
+    }
+
+    // Die Zeichenfläche lädt keine Schrift nach. Kommt ein kleiner Graph zur Ruhe, bevor die
+    // Schrift bereitsteht, bliebe sein letztes Bild in der Ersatzschrift; deshalb einmal nachzeichnen.
+    function redrawOnceTheLabelFontIsLoaded(graph) {
+        if (!document.fonts) {
+            return;
+        }
+        document.fonts.load("10px " + LABEL_FONT_FAMILY).then(function () { draw(graph); });
     }
 
     window.MdExplorerGraph = { render: render };

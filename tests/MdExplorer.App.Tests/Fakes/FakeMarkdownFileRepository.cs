@@ -35,6 +35,9 @@ internal sealed class FakeMarkdownFileRepository : IMarkdownFileRepository
     public Task<IReadOnlyList<MarkdownFile>> GetAllUnderRootAsync(string rootAbsolutePath, CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<MarkdownFile>>([.. _store.Values]);
 
+    public Task<IReadOnlyList<Guid>> GetIdsOutsideRootsAsync(IReadOnlyCollection<string> rootAbsolutePaths, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<Guid>>([]);
+
     public Task<int> CountAsync(CancellationToken cancellationToken) => Task.FromResult(_store.Count);
 
     public Task AddAsync(MarkdownFile entity, CancellationToken cancellationToken) { Add(entity); return Task.CompletedTask; }

@@ -151,6 +151,14 @@ Mechanismen **additiv** (eine Datei gilt als ausgeschlossen, sobald
    Folder-Tree pausiert wurden. Wirken via Pfad-Präfix (alle Dateien
    unterhalb des Pfades), nicht via Glob.
 
+**Ausgeschlossene Ordner werden nicht betreten.** Ein Muster, das auf `/**` endet
+(`**/vendor/**`, `archive/**`), schließt einen ganzen Ordner aus; der Scanner steigt dann
+gar nicht erst hinein. Das spart bei großen Werkzeugordnern den größten Teil des Durchlaufs.
+Steht in den Einstellungen oder in einer `.mdignore` oberhalb ein `!`-Muster, betritt er den
+Ordner weiterhin, damit die Ausnahme greifen kann. Wie bei Git wird aber eine `.mdignore`, die
+**in** einem ausgeschlossenen Ordner liegt, nicht gelesen: Ein `!` darin nimmt nichts wieder auf.
+Ebenso werden pausierte Ordner nicht betreten.
+
 ## Tabs im Settings-Dialog
 
 Das Zahnrad in der Kopfleiste oder `Strg+,` öffnet einen modalen Dialog

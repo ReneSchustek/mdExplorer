@@ -17,6 +17,11 @@ public interface IMarkdownFileRepository
     /// <summary>Lädt alle Dateien unterhalb der angegebenen Wurzel.</summary>
     Task<IReadOnlyList<MarkdownFile>> GetAllUnderRootAsync(string rootAbsolutePath, CancellationToken cancellationToken);
 
+    /// <summary>Liefert die Schlüssel aller Dateien, die unter keiner der angegebenen Wurzeln liegen.</summary>
+    /// <param name="rootAbsolutePaths">Die eingetragenen Wurzeln; ohne Wurzel liegt jede Datei außerhalb.</param>
+    /// <param name="cancellationToken">Abbruch-Merker.</param>
+    Task<IReadOnlyList<Guid>> GetIdsOutsideRootsAsync(IReadOnlyCollection<string> rootAbsolutePaths, CancellationToken cancellationToken);
+
     /// <summary>Zählt alle Dateien im Index (Statusleiste in der UI).</summary>
     Task<int> CountAsync(CancellationToken cancellationToken);
 

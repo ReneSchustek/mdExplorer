@@ -26,11 +26,11 @@ public enum BackgroundServiceKind
 /// </remarks>
 public interface IBackgroundServiceStatus
 {
-    /// <summary>Die angehaltenen Dienste.</summary>
-    IReadOnlyCollection<BackgroundServiceKind> Stopped { get; }
-
     /// <summary>Wird gefeuert, sobald ein weiterer Dienst angehalten hat.</summary>
     event EventHandler? Changed;
+
+    /// <summary>Die angehaltenen Dienste.</summary>
+    IReadOnlyCollection<BackgroundServiceKind> Stopped { get; }
 
     /// <summary>Meldet, dass ein Dienst nach einem unerwarteten Fehler angehalten hat.</summary>
     /// <param name="service">Der Dienst.</param>

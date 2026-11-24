@@ -36,4 +36,11 @@ internal sealed class EffectiveThemeProvider : IEffectiveThemeProvider
         // umgekehrt verschwindet sie.
         _ => _systemTheme.IsDarkMode,
     };
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Keine Wahl in MdExplorer überstimmt das: Der Kontrastmodus ist eine Bedienungshilfe von
+    /// Windows, und wer ihn eingeschaltet hat, braucht ihn auch in dieser Anwendung.
+    /// </remarks>
+    public bool IsHighContrast => _systemTheme.IsHighContrast;
 }

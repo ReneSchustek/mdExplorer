@@ -1,7 +1,6 @@
 using System.Data.Common;
 using System.IO;
 using MdExplorer.Core.Abstractions;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -133,7 +132,10 @@ public sealed partial class DatabaseMigrator(
         {
             _ = await dbContext.Database.ExecuteSqlRawAsync("PRAGMA optimize;", cancellationToken).ConfigureAwait(false);
         }
-        catch (SqliteException exception)
+        // DbException, nicht nur SqliteException: Ist die Datei über alle Wiederholungen belegt,
+        // meldet die Datenschicht das als DatabaseOperationException, und ein optionaler Schritt darf
+        // den Start nicht abbrechen.
+        catch (DbException exception)
         {
             // Eine verpasste Statistik verlangsamt höchstens Abfragen; der Start darf daran nicht scheitern.
             LogOptimizeFailed(_logger, exception);

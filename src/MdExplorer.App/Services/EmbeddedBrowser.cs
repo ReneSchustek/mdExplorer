@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
@@ -12,8 +13,9 @@ namespace MdExplorer.App.Services;
 /// </summary>
 /// <remarks>
 /// An einer Stelle, damit alle drei dieselben Startfehler abfangen und dieselben Funktionen
-/// abschalten. Vorher fing das Hilfefenster nur einen der drei Fälle; fehlte die Laufzeit,
-/// erschien bei jedem F1 der allgemeine Fehlerdialog.
+/// abschalten. Ein Startfehler ist ein erwartbarer Zustand der Umgebung (Laufzeit fehlt, Datenordner
+/// gesperrt, Fläche schon freigegeben) und zeigt einen Hinweis an der Fläche statt des allgemeinen
+/// Fehlerdialogs.
 /// </remarks>
 [ExcludeFromCodeCoverage]
 internal static partial class EmbeddedBrowser
@@ -42,7 +44,11 @@ internal static partial class EmbeddedBrowser
         {
             LogRuntimeMissing(logger, exception);
         }
-        catch (Exception exception) when (exception is InvalidOperationException or FileNotFoundException)
+        // Die Fehlerarten, die EnsureCoreWebView2Async und das Anlegen der Umgebung laut Dokumentation
+        // werfen: Zustand der Fläche, fehlende oder gesperrte Dateien, ein abgewiesener Datenordner und
+        // Fehler des Browserprozesses selbst.
+        catch (Exception exception) when (exception is InvalidOperationException or IOException
+            or UnauthorizedAccessException or ArgumentException or COMException)
         {
             LogStartFailed(logger, exception);
         }

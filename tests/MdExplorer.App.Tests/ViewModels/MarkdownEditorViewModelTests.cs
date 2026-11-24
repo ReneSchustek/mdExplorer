@@ -133,6 +133,31 @@ public sealed class MarkdownEditorViewModelTests
         Assert.Equal(["gamma"], vm.Tags);
     }
 
+    /// <remarks>
+    /// Das Eingabefeld bleibt während des Speicherns beschreibbar. Was in dieser Zeit getippt wird,
+    /// steht nicht in der Datei und darf deshalb nicht als gespeichert gelten; sonst ginge es beim
+    /// nächsten Dokumentwechsel ohne Rückfrage verloren.
+    /// </remarks>
+    [Fact]
+    public async Task SaveAsync_WhenTextChangesWhileWriting_SavesTheOldTextAndStaysDirty()
+    {
+        FakeFileSystem fs = new() { WriteGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+        fs.Files[TestPath] = Encoding.UTF8.GetBytes("alt");
+        using MarkdownEditorViewModel vm = TestEditors.Create(fs);
+        await vm.LoadAsync(TestId, TestPath, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        vm.EnterEditMode();
+        vm.Text = "gespeichert";
+
+        Task saving = vm.SaveAsync(TestContext.Current.CancellationToken);
+        vm.Text = "gespeichert und weiter getippt";
+        fs.WriteGate.SetResult();
+        await saving.ConfigureAwait(true);
+
+        Assert.Equal("gespeichert", Encoding.UTF8.GetString(fs.WrittenFiles[TestPath]), StringComparer.Ordinal);
+        Assert.Equal("gespeichert und weiter getippt", vm.Text, StringComparer.Ordinal);
+        Assert.True(vm.IsDirty);
+    }
+
     [Fact]
     public async Task SaveAsync_PersistsAtomicallyAndResetsIsDirty()
     {

@@ -1,8 +1,8 @@
 using System.Collections.ObjectModel;
-using System.Data.Common;
 using System.Windows.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Parser.Services;
 using MdExplorer.TagCloud.Abstractions;
 using MdExplorer.TagCloud.Localization;
@@ -80,7 +80,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
         {
             // Refresh wurde abgebrochen, kein Fehler.
         }
-        catch (DbException exception)
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             // Eine SQLite-Spitze: Die Liste bleibt auf dem vorigen Stand, der Status sagt es.
             LogRefreshFailed(_logger, exception);
@@ -216,7 +216,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
         {
             _ = await ReloadItemsAsync(cancellationToken).ConfigureAwait(true);
         }
-        catch (DbException reloadException)
+        catch (Exception reloadException) when (DataLoadFailure.IsExpected(reloadException))
         {
             LogRefreshFailed(_logger, reloadException);
         }
@@ -230,7 +230,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
         {
             return await _managementService.GetPreviewAsync(slug, cancellationToken).ConfigureAwait(true);
         }
-        catch (DbException exception)
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             LogRefreshFailed(_logger, exception);
             StatusMessage = UiText.Format("TagManagement_Status_Failed", title);
@@ -257,7 +257,7 @@ public sealed partial class TagManagementViewModel : ObservableObject
         {
             // Operation wurde abgebrochen; kein Fehler.
         }
-        catch (DbException exception)
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             // Datenbank-Spitze beim Lesen der betroffenen Dateien.
             LogRefreshFailed(_logger, exception);
@@ -268,17 +268,4 @@ public sealed partial class TagManagementViewModel : ObservableObject
             IsBusy = false;
         }
     }
-}
-
-/// <summary>Ein Tag-Eintrag im Tag-Management-Fenster.</summary>
-/// <param name="Name">Original-Schreibweise des Tags.</param>
-/// <param name="Slug">Eindeutiger Slug.</param>
-/// <param name="Count">Anzahl Dateien mit diesem Tag.</param>
-public sealed record TagManagementItem(string Name, string Slug, int Count);
-
-/// <summary>UI-Abstraktion für Tag-Management-Bestätigungen.</summary>
-public interface ITagManagementDialogService
-{
-    /// <summary>Zeigt eine Bestätigung und liefert die Antwort des Benutzers.</summary>
-    bool Confirm(string title, string message);
 }

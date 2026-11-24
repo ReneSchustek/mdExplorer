@@ -40,7 +40,7 @@ internal sealed class DocumentPanelHarness : IDisposable
 
         IServiceScopeFactory scopes = _provider.GetRequiredService<IServiceScopeFactory>();
         PreviewHtmlBuilder builder = new(new FakeThemeProvider(isDarkMode: false), new FakeSettingsService(AppSettings.Default));
-        Editor = TestEditors.Create(FileSystem);
+        Editor = TestEditors.Create(FileSystem, confirmation: Confirmation);
         Sut = new DocumentPanelViewModel(
             new PreviewViewModel(scopes, builder, NullLogger<PreviewViewModel>.Instance),
             Editor,
@@ -53,6 +53,9 @@ internal sealed class DocumentPanelHarness : IDisposable
     }
 
     public FakeFileSystem FileSystem { get; } = new();
+
+    /// <summary>Die Rückfrage „wirklich speichern?“; ab Werk wird bestätigt.</summary>
+    public FakeEditorConfirmation Confirmation { get; } = new();
 
     public FakeMarkdownDocumentRepository Repository { get; } = new();
 

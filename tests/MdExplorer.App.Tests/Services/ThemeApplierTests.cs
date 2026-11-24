@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Media;
 using MdExplorer.App.Services;
 using MdExplorer.App.Tests.Fakes;
 
@@ -32,6 +33,26 @@ public sealed class ThemeApplierTests
 
         Assert.NotNull(loader.LastUri);
         Assert.EndsWith(expectedFile, loader.LastUri.OriginalString, StringComparison.Ordinal);
+    }
+
+    /// <remarks>
+    /// Im Kontrastmodus kommt keine Belegung aus einer Datei: Die Farben gibt Windows vor, und sie
+    /// gelten auch dann, wenn in MdExplorer Dunkel gewählt ist.
+    /// </remarks>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Apply_InHighContrast_TakesTheColorsOfWindows(bool isDarkMode)
+    {
+        RecordingLoader loader = new();
+        ThemeApplier sut = new(new FakeThemeProvider(isDarkMode, isHighContrast: true), loader.Load);
+        Collection<ResourceDictionary> dictionaries = [PaletteStandIn("vorher")];
+
+        sut.Apply(dictionaries);
+
+        Assert.Null(loader.LastUri);
+        SolidColorBrush background = Assert.IsType<SolidColorBrush>(Assert.Single(dictionaries)[PaletteMarkerKey]);
+        Assert.Equal(SystemColors.WindowColor, background.Color);
     }
 
     [Fact]

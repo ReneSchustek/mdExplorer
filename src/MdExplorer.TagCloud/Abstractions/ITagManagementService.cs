@@ -40,14 +40,3 @@ public interface ITagManagementService
 /// <param name="FileCount">Anzahl betroffener Dateien.</param>
 /// <param name="SamplePaths">Erste 10 relativen Pfade (alphabetisch) für die UI.</param>
 public sealed record TagPreview(string Slug, int FileCount, IReadOnlyList<string> SamplePaths);
-
-/// <summary>Ergebnis einer Schreiboperation.</summary>
-/// <param name="Slug">Bearbeiteter Slug.</param>
-/// <param name="FilesAffected">Anzahl Dateien, in denen tatsächlich geschrieben wurde.</param>
-/// <param name="FilesAttempted">Anzahl Dateien, die laut Index potenziell betroffen waren.</param>
-/// <param name="Errors">Fehler je Datei (Pfad → Meldung). Leer = vollständig erfolgreich.</param>
-public sealed record TagRewriteResult(
-    string Slug,
-    int FilesAffected,
-    int FilesAttempted,
-    IReadOnlyDictionary<string, string> Errors);

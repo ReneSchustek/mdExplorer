@@ -163,6 +163,30 @@ public sealed class SettingsChangeBridgeTests
         Assert.Equal(0, received);
     }
 
+    /// <remarks>
+    /// Der Wirt gibt nach dem Stoppen Datenbank und Dienste frei. Liefe ein abgebrochener Durchlauf
+    /// dann noch, griffe er auf Freigegebenes zu.
+    /// </remarks>
+    [Fact]
+    public async Task StopAsync_WaitsUntilTheCancelledRescanHasEnded()
+    {
+        (SettingsChangeBridge sut, FakeSettingsService settings, FakeIndexer indexer, _) = Create();
+        indexer.HoldScans = true;
+        indexer.AfterCancellation = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await sut.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await settings.SaveAsync(WithRoot, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Task stopping = sut.StopAsync(TestContext.Current.CancellationToken);
+        await indexer.CancellationSeen.Task.ConfigureAwait(true);
+        // Gelegenheit zum Fertigwerden. Wartet das Stoppen richtig, kann es das nicht, solange das
+        // Tor zu ist; die Prüfung hängt in dieser Richtung nicht an der Last der Maschine.
+        _ = await Task.WhenAny(stopping, Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken)).ConfigureAwait(true);
+
+        Assert.False(stopping.IsCompleted);
+        indexer.AfterCancellation.SetResult();
+        await stopping.ConfigureAwait(true);
+    }
+
     [Theory]
     [InlineData(typeof(ArgumentException))]
     [InlineData(typeof(System.IO.IOException))]

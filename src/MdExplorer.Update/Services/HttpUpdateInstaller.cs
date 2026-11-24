@@ -32,6 +32,7 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
     private readonly ReleaseSignatureVerifier _signature;
     private readonly TimeProvider _timeProvider;
     private readonly Action<string> _launch;
+    private readonly Func<string, string?> _readProductVersion;
     private readonly ILogger<HttpUpdateInstaller> _logger;
     private VerifiedInstaller? _verified;
 
@@ -45,7 +46,7 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
         string downloadDirectory,
         TimeProvider timeProvider,
         ILogger<HttpUpdateInstaller> logger)
-        : this(httpClient, downloadDirectory, DownloadLimits.Default, ReleaseSignatureVerifier.FromEmbeddedKey(), timeProvider, StartWithShell, logger)
+        : this(httpClient, downloadDirectory, DownloadLimits.Default, ReleaseSignatureVerifier.FromEmbeddedKey(), timeProvider, StartWithShell, ReadProductVersion, logger)
     {
     }
 
@@ -57,6 +58,7 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
         ReleaseSignatureVerifier signature,
         TimeProvider timeProvider,
         Action<string> launch,
+        Func<string, string?> readProductVersion,
         ILogger<HttpUpdateInstaller> logger)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
@@ -65,6 +67,7 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
         ArgumentNullException.ThrowIfNull(signature);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(launch);
+        ArgumentNullException.ThrowIfNull(readProductVersion);
         ArgumentNullException.ThrowIfNull(logger);
 
         _httpClient = httpClient;
@@ -73,6 +76,7 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
         _signature = signature;
         _timeProvider = timeProvider;
         _launch = launch;
+        _readProductVersion = readProductVersion;
         _logger = logger;
     }
 
@@ -145,6 +149,9 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
         }
     }
 
+    // Das Setup trägt die Version, mit der es gebaut wurde, als Produktversion (Inno: AppVersion).
+    private static string? ReadProductVersion(string installerPath) => FileVersionInfo.GetVersionInfo(installerPath).ProductVersion;
+
     private static void StartWithShell(string installerPath)
     {
         using Process? process = Process.Start(new ProcessStartInfo(installerPath) { UseShellExecute = true });
@@ -212,6 +219,9 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
 
     [LoggerMessage(EventId = 729, Level = LogLevel.Error, Message = "Start abgelehnt: {Path} hat sich seit der Prüfung verändert.")]
     private static partial void LogChangedSinceVerification(ILogger logger, string path);
+
+    [LoggerMessage(EventId = 733, Level = LogLevel.Error, Message = "Paket {FileName} verworfen: Das Release kündigt {Announced} an, das Paket trägt {Carried}.")]
+    private static partial void LogVersionMismatch(ILogger logger, string fileName, string announced, string carried);
 
     [LoggerMessage(EventId = 730, Level = LogLevel.Debug, Message = "Früherer Download-Ordner bleibt vorerst liegen: {Folder}")]
     private static partial void LogCleanupSkipped(ILogger logger, string folder, Exception exception);
@@ -347,9 +357,31 @@ public sealed partial class HttpUpdateInstaller : IUpdateInstaller
             return UpdateDownloadStatus.SignatureInvalid;
         }
 
+        // Nach der Signatur: Erst jetzt ist die Versionsangabe im Paket echt, denn sie gehört zum
+        // signierten Inhalt. Die Angabe des Release allein ist es nicht.
+        if (!CarriesAnnouncedVersion(asset, targetPath))
+        {
+            TryDelete(targetPath);
+            return UpdateDownloadStatus.VersionMismatch;
+        }
+
         _verified = new VerifiedInstaller(Path.GetFullPath(targetPath), actual);
         LogVerified(_logger, asset.FileName);
         return UpdateDownloadStatus.Verified;
+    }
+
+    private bool CarriesAnnouncedVersion(UpdateAsset asset, string targetPath)
+    {
+        string? packaged = _readProductVersion(targetPath);
+        if (asset.Version is { } announced
+            && SemanticVersion.TryParse(packaged?.Trim(), out SemanticVersion carried)
+            && carried == announced)
+        {
+            return true;
+        }
+
+        LogVersionMismatch(_logger, asset.FileName, asset.Version?.ToString() ?? string.Empty, packaged ?? string.Empty);
+        return false;
     }
 
     private async Task<string?> TryHashAsync(string path, CancellationToken cancellationToken)

@@ -15,9 +15,6 @@ namespace MdExplorer.Parser.Services;
 /// </summary>
 public sealed partial class MarkdownTagRewriter : IMarkdownTagRewriter
 {
-    [GeneratedRegex(HashtagPattern.Expression, RegexOptions.CultureInvariant, HashtagPattern.MatchTimeoutMilliseconds)]
-    private static partial Regex HashtagRegex();
-
     private readonly ITagNormalizer _normalizer;
     private readonly ISettingsService? _settingsService;
 
@@ -67,6 +64,9 @@ public sealed partial class MarkdownTagRewriter : IMarkdownTagRewriter
         string withBody = CountsBodyHashtags() ? RewriteBody(original, bodyStart, tagOperations) : original;
         return bounds is null ? withBody : RewriteFrontmatter(withBody, bounds, tagOperations);
     }
+
+    [GeneratedRegex(HashtagPattern.Expression, RegexOptions.CultureInvariant, HashtagPattern.MatchTimeoutMilliseconds)]
+    private static partial Regex HashtagRegex();
 
     private static string RewriteFrontmatter(string text, FrontmatterBounds bounds, TagOperations tagOperations)
     {

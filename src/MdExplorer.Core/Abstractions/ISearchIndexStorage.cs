@@ -55,37 +55,3 @@ public sealed record SearchIndexEntry(
     string Frontmatter,
     string Path,
     string SourceContentHash);
-
-/// <summary>FTS5-Suchanfrage mit Pfad-Filter, Pagination und Gewichten.</summary>
-/// <param name="MatchExpression">FTS5-MATCH-Ausdruck (vom <c>SearchQueryBuilder</c> aufbereitet).</param>
-/// <param name="PathLikePattern">Optionaler LIKE-Pfadfilter (z. B. <c>"notes%"</c>) mit Backslash als Escape-Zeichen für <c>%</c> und <c>_</c>, oder <see langword="null"/>.</param>
-/// <param name="Take">Maximale Trefferzahl.</param>
-/// <param name="Skip">Anzahl zu überspringender Treffer (Pagination).</param>
-/// <param name="TitleWeight">bm25-Gewicht der Titelspalte.</param>
-/// <param name="BodyWeight">bm25-Gewicht der Body-Spalte.</param>
-/// <param name="TagsWeight">bm25-Gewicht der Tags-Spalte.</param>
-/// <param name="FrontmatterWeight">bm25-Gewicht der Frontmatter-Spalte.</param>
-/// <param name="SnippetTokenCount">Anzahl Tokens für die FTS5-Snippet-Erzeugung.</param>
-public sealed record SearchIndexQuery(
-    string MatchExpression,
-    string? PathLikePattern,
-    int Take,
-    int Skip,
-    double TitleWeight,
-    double BodyWeight,
-    double TagsWeight,
-    double FrontmatterWeight,
-    int SnippetTokenCount);
-
-/// <summary>Ein Treffer einer <see cref="SearchIndexQuery"/>.</summary>
-/// <param name="MarkdownFileId">Identität des Dokuments.</param>
-/// <param name="Path">Pfad-Spalte (relativ).</param>
-/// <param name="Title">Titel-Spalte.</param>
-/// <param name="Snippet">Vom FTS5-Snippet erzeugter Auszug, Trefferstellen zwischen den <see cref="SnippetMarkers"/>.</param>
-/// <param name="Score">bm25-Score; kleiner = relevanter.</param>
-public sealed record SearchIndexHit(
-    Guid MarkdownFileId,
-    string Path,
-    string Title,
-    string Snippet,
-    double Score);

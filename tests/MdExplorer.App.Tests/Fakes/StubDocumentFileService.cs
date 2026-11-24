@@ -13,8 +13,8 @@ namespace MdExplorer.App.Tests.Fakes;
 /// </remarks>
 internal sealed class StubDocumentFileService : IDocumentFileService
 {
-    public Task<DocumentImpact> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
-        Task.FromResult(DocumentImpact.Unknown);
+    public Task<DocumentImpact?> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
+        Task.FromResult<DocumentImpact?>(DocumentImpact.Unknown);
 
     public Task<DocumentFileResult> RenameAsync(Guid markdownFileId, string newFileName, CancellationToken cancellationToken) =>
         Task.FromResult(DocumentFileResult.Failed("Diese Attrappe führt keine Vorgänge aus."));
@@ -44,8 +44,11 @@ internal sealed class RecordingDocumentFileService : IDocumentFileService
     /// <summary>Ob gelöscht wurde.</summary>
     public bool DeleteCalled { get; private set; }
 
-    public Task<DocumentImpact> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
-        Task.FromResult(Impact);
+    /// <summary>Fehler, den <see cref="GetImpactAsync"/> statt einer Antwort liefert.</summary>
+    public Exception? FailOnImpact { get; set; }
+
+    public Task<DocumentImpact?> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken) =>
+        FailOnImpact is null ? Task.FromResult<DocumentImpact?>(Impact) : Task.FromResult<DocumentImpact?>(null);
 
     public Task<DocumentFileResult> RenameAsync(Guid markdownFileId, string newFileName, CancellationToken cancellationToken)
     {

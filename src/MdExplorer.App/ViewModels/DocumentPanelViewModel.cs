@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MdExplorer.App.Services;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Core.Hosting;
 using MdExplorer.Parser.Abstractions;
 using MdExplorer.Parser.Models;
@@ -14,7 +15,8 @@ namespace MdExplorer.App.ViewModels;
 /// Container-ViewModel der rechten Spalte. Schaltet zwischen <see cref="DocumentPanelMode.Read"/>
 /// (WebView2-Vorschau) und <see cref="DocumentPanelMode.Edit"/> (Markdown-Editor) um. Nach dem
 /// Speichern rendert es den gespeicherten Text selbst in die Vorschau, statt auf den Indexer zu
-/// warten, der die Datei erst nach der Meldung des Datei-Watchers neu liest.
+/// warten, der die Datei erst nach der Meldung des Datei-Watchers neu liest, und kehrt in die
+/// formatierte Ansicht zurück.
 /// </summary>
 internal sealed partial class DocumentPanelViewModel : ObservableObject, IDisposable
 {
@@ -185,10 +187,6 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         Mode = Mode == DocumentPanelMode.Read ? DocumentPanelMode.Edit : DocumentPanelMode.Read;
     }
 
-    /// <summary>Speichert den Editor. Das <c>DocumentPanel</c> ruft es über Strg+S.</summary>
-    [RelayCommand]
-    public Task SaveAsync(CancellationToken cancellationToken) => Editor.SaveAsync(cancellationToken);
-
     /// <summary>Löst Event-Handler und gibt Ressourcen frei.</summary>
     public void Dispose()
     {
@@ -285,7 +283,11 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             LogPathLookupFailed(_logger, absolutePath, exception);
-            Clear();
+            // Wie im Erfolgsweg: Ein überholter Klick leert nicht den Bereich des neueren.
+            if (load.IsCurrent)
+            {
+                Clear();
+            }
             return PathLookup.Failed;
         }
     }
@@ -339,9 +341,31 @@ internal sealed partial class DocumentPanelViewModel : ObservableObject, IDispos
         {
             // Die Datei liegt zu diesem Zeitpunkt schon gespeichert auf der Platte. Weist der
             // Parser den Text ab, bleibt nur die Vorschau auf dem alten Stand; das Speichern
-            // selbst darf daran nicht nachträglich scheitern.
+            // selbst darf daran nicht nachträglich scheitern. Der Rohtext bleibt dann stehen:
+            // Die formatierte Ansicht zeigte einen Stand, der nicht mehr auf der Platte steht.
             LogPreviewRefreshFailed(_logger, exception);
+            return;
         }
+
+        // Kam während des Speicherns Text dazu, ist er noch nicht auf der Platte; der Rohtext
+        // bleibt offen und beschreibbar, statt Ungespeichertes hinter der Sperre zu verstecken.
+        if (!Editor.IsDirty)
+        {
+            ReturnToFormattedView();
+        }
+    }
+
+    /// <summary>
+    /// Stellt das Panel auf den Zustand nach dem Laden zurück: formatierte Ansicht, Editor gesperrt.
+    /// </summary>
+    /// <remarks>
+    /// Gesperrt, damit ein späterer Wechsel in den Rohtext wieder mit „Bearbeiten“ beginnt und
+    /// nicht unbemerkt in einem beschreibbaren Text landet.
+    /// </remarks>
+    private void ReturnToFormattedView()
+    {
+        Editor.ExitEditMode();
+        Mode = DocumentPanelMode.Read;
     }
 
     /// <summary>Was das Nachschlagen im Index ergeben hat.</summary>

@@ -7,6 +7,37 @@ folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+## [0.18.0] - 2026-11-24
+
+### Behoben
+- Eine neu eingetragene Wurzel wird sofort beobachtet und abgeglichen, auch die erste nach einem
+  Start ohne Wurzel; bisher kamen Änderungen dort erst nach einem Neustart an. Eine entfernte Wurzel
+  wird nicht mehr beobachtet, und ihre Dateien verschwinden aus dem Index.
+- Ein Schlagwort-Filter trifft nur noch ganze Schlagworte: `tag:projekt` findet keine Dateien mit
+  „projekt-alpha“ mehr, und ein Ausschluss in der Tag-Cloud schließt nur das gewählte Schlagwort aus.
+- Nach dem Umbenennen oder Verschieben einer Datei findet die Suche sie unter dem neuen Namen und
+  Ordner; bisher zeigte der Volltextindex dauerhaft die alte Stelle. Bestehende Indizes werden
+  nach dem Update einmal neu aufgebaut.
+- Die Update-Funktion installiert nur ein Setup, das die angekündigte Version trägt. Ein älteres,
+  echt signiertes Setup unter einer neueren Versionsangabe wird verworfen.
+- Im Protokoll zeigen die Auswahlfelder „Level“ und „Zeitraum“ wieder ihren Text („Alle“,
+  „Alles“) statt einer technischen Beschreibung des Eintrags.
+
+### Geändert
+- Die Oberfläche, die Vorschau, die Hilfe und der Graph zeigen Roboto Flex, Protokoll, Rohtext
+  und Code Roboto Mono. Beide Schriften liefert das Programm selbst mit; sie sehen auf jedem
+  Rechner gleich aus, auch ohne installierte Roboto, und nichts wird dafür aus dem Netz geladen.
+  Die Lizenztexte legt das Setup unter `Lizenzen` ab, der Info-Dialog nennt beide Schriften.
+- Nach dem Speichern einer Bearbeitung wechselt das Dokument-Panel zurück in die formatierte
+  Ansicht und zeigt den gespeicherten Stand. Lässt sich der Text nicht darstellen, bleibt der
+  Rohtext stehen.
+- Ausgeschlossene Ordner wie `vendor`, `node_modules` oder `.git` betritt der Indexer nicht mehr;
+  der Abgleich beim Start ist dadurch spürbar schneller. Wie bei Git wirkt eine `.mdignore`, die
+  in einem so ausgeschlossenen Ordner liegt, nicht mehr; Ausnahmen mit `!` aus den Einstellungen
+  oder aus einer `.mdignore` weiter oben gelten weiter.
+- Die mitgelieferten Bibliotheken sind auf aktuellem Stand, darunter die Markdown-Darstellung,
+  die Browser-Komponente von Vorschau und Graph sowie die Datenbankanbindung.
+
 ## [0.17.0] - 2026-10-26
 
 ### Hinzugefügt
@@ -461,7 +492,8 @@ Diese Fassung enthält keine Änderung am Funktionsumfang.
   `.mdignore`-Hierarchie und UI-seitiger Indexierungs-Pause.
 - Einstellungs-Dialog mit Audit-Trail, Live-Log-Viewer und Health-Anzeige.
 
-[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.17.0...HEAD
+[Unveröffentlicht]: https://github.com/ReneSchustek/mdExplorer/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.18.0
 [0.17.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.17.0
 [0.16.1]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.16.1
 [0.16.0]: https://github.com/ReneSchustek/mdExplorer/releases/tag/v0.16.0

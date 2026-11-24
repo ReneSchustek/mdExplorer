@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using MdExplorer.App.Controls;
 
 namespace MdExplorer.App.Tests.Views;
@@ -51,7 +52,7 @@ internal static class ApplicationResources
 
     private static void EnsureApplication()
     {
-        Application application = Application.Current ?? new Application();
+        Application application = Application.Current ?? CreateApplication();
         if (application.Resources.MergedDictionaries.Count == 0)
         {
             foreach (string path in ThemeDictionaries)
@@ -69,5 +70,35 @@ internal static class ApplicationResources
 
             application.Resources["BoolToVisibility"] = new BooleanToVisibilityConverter();
         }
+    }
+
+    /// <summary>Legt die Anwendung auf einem eigenen Thread an, der bis zum Prozessende läuft.</summary>
+    /// <remarks>
+    /// Gehörte sie dem Thread der Prüfung, die zufällig zuerst kommt, beendete WPF sie, sobald dort
+    /// ein Fenster schließt. Eine zweite Anwendung lässt sich im selben Prozess nicht anlegen; jede
+    /// spätere Prüfung mit Ressourcen scheiterte dann, und welche Prüfung zuerst kommt, hängt von der
+    /// Reihenfolge der Testklassen ab. Auf dem eigenen Thread entsteht kein Fenster, und
+    /// <see cref="ShutdownMode.OnExplicitShutdown"/> hält sie auch sonst am Leben.
+    /// </remarks>
+    private static Application CreateApplication()
+    {
+        Application? created = null;
+        using ManualResetEventSlim ready = new();
+
+        Thread thread = new(() =>
+        {
+            created = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            ready.Set();
+            Dispatcher.Run();
+        })
+        {
+            IsBackground = true,
+            Name = "Testanwendung",
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        ready.Wait();
+
+        return created!; // vor ready.Set() gesetzt, ready.Wait() wartet darauf
     }
 }

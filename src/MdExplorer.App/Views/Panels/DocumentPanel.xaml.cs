@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using MdExplorer.App.Localization;
 using MdExplorer.App.Services;
 using MdExplorer.App.ViewModels;
+using MdExplorer.Presentation;
 
 namespace MdExplorer.App.Views.Panels;
 
@@ -35,6 +36,8 @@ internal sealed partial class DocumentPanel : UserControl
         _ = InputBindings.Add(new KeyBinding(new RelayCommand(FindPrevious, IsEditMode), Key.F3, ModifierKeys.Shift));
     }
 
+    private DocumentPanelViewModel? ViewModel => DataContext as DocumentPanelViewModel;
+
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs args)
     {
         if (args.NewValue is DocumentPanelViewModel viewModel)
@@ -42,8 +45,6 @@ internal sealed partial class DocumentPanel : UserControl
             _previewPanel.DataContext = viewModel.Preview;
         }
     }
-
-    private DocumentPanelViewModel? ViewModel => DataContext as DocumentPanelViewModel;
 
     /// <summary>Öffnet im Bearbeitungsmodus die Suchleiste und übernimmt eine markierte Stelle als
     /// Suchbegriff. Im Lesemodus greift die Bindung nicht, und Strg+F erreicht die Suche des
@@ -129,7 +130,12 @@ internal sealed partial class DocumentPanel : UserControl
         UpdateFindStatus(UiText.Format("Document_Find_HitAtLine", line + 1));
     }
 
-    private void UpdateFindStatus(string? status) => FindStatus.Text = status ?? string.Empty;
+    // Im Code gesetzt, nicht gebunden: Die Ansage löst deshalb dieser Aufruf aus.
+    private void UpdateFindStatus(string? status)
+    {
+        FindStatus.Text = status ?? string.Empty;
+        LiveRegion.AnnounceNow(FindStatus);
+    }
 
     private void OnFindInputKeyDown(object sender, KeyEventArgs args)
     {
@@ -166,11 +172,12 @@ internal sealed partial class DocumentPanel : UserControl
 
     private void ToggleMode() => ViewModel?.ToggleModeCommand.Execute(null);
 
-    // Über den Befehl der Schaltfläche, nicht SaveAsync direkt: Er lässt keinen zweiten
-    // Speichervorgang zu, solange einer läuft. Mehrfaches Strg+S speicherte sonst parallel.
+    // Über den Befehl des Editors, nicht SaveAsync direkt: Er speichert nur Geändertes und lässt
+    // keinen zweiten Speichervorgang zu, solange einer läuft. Mehrfaches Strg+S speicherte sonst
+    // parallel oder schriebe eine unveränderte Datei neu.
     private void Save()
     {
-        if (ViewModel?.SaveCommand is { } save && save.CanExecute(CancellationToken.None))
+        if (ViewModel?.Editor.SaveCommand is { } save && save.CanExecute(CancellationToken.None))
         {
             save.Execute(CancellationToken.None);
         }

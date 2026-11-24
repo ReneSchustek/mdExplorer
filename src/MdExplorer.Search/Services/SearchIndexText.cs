@@ -10,6 +10,12 @@ namespace MdExplorer.Search.Services;
 internal static class SearchIndexText
 {
     /// <summary>
+    /// Grenzmarke um jeden Schlagwortnamen in der Tag-Spalte. Ein Wort, das in keinem Namen vorkommt
+    /// und das der Zerleger als ein einziges Wort behält.
+    /// </summary>
+    internal const string TagBoundary = "mdxtagqq";
+
+    /// <summary>
     /// Schneidet den Frontmatter-Block ab, damit YAML nicht als Fließtext im Index landet. Seine Werte gehen
     /// getrennt über <see cref="FlattenFrontmatter"/> in die Frontmatter-Spalte.
     /// </summary>
@@ -70,9 +76,14 @@ internal static class SearchIndexText
     /// <param name="tagsByFileId">Schlagworte je Datei.</param>
     /// <param name="markdownFileId">Die Datei.</param>
     /// <returns>Die Namen, oder leer.</returns>
+    /// <remarks>
+    /// Jeder Name steht zwischen zwei <see cref="TagBoundary"/>. Die Spalte ist nach Wörtern zerlegt;
+    /// ohne Grenze träfe <c>tag:projekt</c> auch „projekt-alpha“ und „alt-projekt“. Die Abfrage sucht
+    /// den Namen samt Grenzen als Phrase (<see cref="QueryTokenizer"/>) und trifft so nur ganze Namen.
+    /// </remarks>
     public static string JoinTags(IReadOnlyDictionary<Guid, IReadOnlyList<string>> tagsByFileId, Guid markdownFileId) =>
         tagsByFileId.TryGetValue(markdownFileId, out IReadOnlyList<string>? tagNames)
-            ? string.Join(' ', tagNames)
+            ? string.Join(' ', tagNames.Select(name => $"{TagBoundary} {name} {TagBoundary}"))
             : string.Empty;
 
     private static string WordsOf(JsonProperty property)

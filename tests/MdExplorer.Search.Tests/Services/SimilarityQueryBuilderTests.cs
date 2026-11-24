@@ -152,7 +152,7 @@ public sealed class SimilarityQueryBuilderTests
 
         Fts5QueryPlan plan = sut.BuildSimilarity("berichte tag:projekt path:notizen", SimilarityMode.Stemmed);
 
-        Assert.Equal("(\"bericht\"*) AND Tags:\"projekt\"", plan.MatchExpression);
+        Assert.Equal("(\"bericht\"*) AND Tags:\"mdxtagqq projekt mdxtagqq\"", plan.MatchExpression);
         Assert.Equal("notizen", Assert.Single(plan.PathPrefixes));
     }
 

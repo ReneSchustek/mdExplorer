@@ -334,6 +334,25 @@ public sealed class MarkdownIndexerTests
         Assert.False(executeTask.IsCompleted, "Service-Loop darf nach Batch-Fehler nicht beendet sein.");
     }
 
+    /// <remarks>
+    /// Der Takt ist hier abgeschaltet, wie es die Einstellungen erlauben. Den verlorenen Stapel holt
+    /// dann der sofortige Abgleich seiner Wurzel nach, nicht erst der nächste Start.
+    /// </remarks>
+    [Fact]
+    public async Task ProcessBatch_OnSaveChangesFailure_ResyncsTheRootOfTheLostBatch()
+    {
+        await using IndexerTestHarness harness = IndexerTestHarness.Create();
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+
+        harness.Store.ThrowOnNextSave = new DatabaseOperationException("Speichern fehlgeschlagen.");
+        harness.FileSystem.AddFile(@"C:\Wurzel\verloren.md", "Verloren", FixedWrite);
+        await harness.ProcessAsync(Created(@"C:\Wurzel\verloren.md")).ConfigureAwait(true);
+
+        await harness.WaitUntilAsync(
+            () => harness.Store.Snapshot.ContainsKey(@"C:\Wurzel\verloren.md"),
+            "Der verlorene Stapel wurde nicht nachgeholt.").ConfigureAwait(true);
+    }
+
     [Fact]
     public async Task ExecuteAsync_OnCancellation_StopsGracefullyWithoutException()
     {

@@ -68,6 +68,13 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject, IDispo
     /// <summary>Wird ausgelöst, wenn das Fenster geschlossen werden soll.</summary>
     public event EventHandler<SettingsCloseEventArgs>? CloseRequested;
 
+    /// <summary>Das Installationsprogramm läuft; die Anwendung soll enden.</summary>
+    public event EventHandler? InstallerStarted
+    {
+        add => Behavior.Update.InstallerStarted += value;
+        remove => Behavior.Update.InstallerStarted -= value;
+    }
+
     /// <summary>Tab „Indexierung".</summary>
     public IndexingTabViewModel Indexing { get; }
 
@@ -77,24 +84,17 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject, IDispo
     /// <summary>Tab „Verhalten".</summary>
     public BehaviorTabViewModel Behavior { get; }
 
-    /// <summary>Das Installationsprogramm läuft; die Anwendung soll enden.</summary>
-    public event EventHandler? InstallerStarted
-    {
-        add => Behavior.Update.InstallerStarted += value;
-        remove => Behavior.Update.InstallerStarted -= value;
-    }
+    /// <summary>Speichert die Settings und schließt das Fenster.</summary>
+    public AsyncRelayCommand ApplyAndCloseCommand { get; }
+
+    /// <summary>Verwirft die Eingaben und schließt das Fenster.</summary>
+    public RelayCommand CancelCommand { get; }
 
     /// <summary>
     /// Bricht einen noch laufenden Download ab. Sonst liefe er nach dem Schließen ins Leere
     /// weiter und startete am Ende das Installationsprogramm, ohne dass die Anwendung endet.
     /// </summary>
     public void Dispose() => Behavior.Update.Dispose();
-
-    /// <summary>Speichert die Settings und schließt das Fenster.</summary>
-    public AsyncRelayCommand ApplyAndCloseCommand { get; }
-
-    /// <summary>Verwirft die Eingaben und schließt das Fenster.</summary>
-    public RelayCommand CancelCommand { get; }
 
     private static string FormatValidationErrors(SettingsValidationResult validation)
     {
@@ -143,14 +143,4 @@ internal sealed partial class SettingsWindowViewModel : ObservableObject, IDispo
     }
 
     private void RaiseCloseRequested() => CloseRequested?.Invoke(this, new SettingsCloseEventArgs(false));
-}
-
-/// <summary>Eventdaten zum Schließen des Settings-Fensters.</summary>
-internal sealed class SettingsCloseEventArgs : EventArgs
-{
-    /// <summary>Erzeugt das Event.</summary>
-    public SettingsCloseEventArgs(bool savedChanges) => SavedChanges = savedChanges;
-
-    /// <summary><see langword="true"/>, wenn die Änderungen persistiert wurden.</summary>
-    public bool SavedChanges { get; }
 }

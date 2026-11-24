@@ -1,8 +1,10 @@
+using System.Data.Common;
 using MdExplorer.Core.Models;
 using MdExplorer.Data.Repositories;
 using MdExplorer.Data.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace MdExplorer.Data.Tests;
 
@@ -18,6 +20,7 @@ public sealed class ParseFailureRepositoryTests : IAsyncDisposable
     private readonly SqliteConnection _connection;
     private readonly MdExplorerDbContext _dbContext;
     private readonly ParseFailureRepository _repository;
+    private readonly ReaderCounter _readers = new();
 
     public ParseFailureRepositoryTests()
     {
@@ -27,7 +30,7 @@ public sealed class ParseFailureRepositoryTests : IAsyncDisposable
 
         DbContextOptions<MdExplorerDbContext> options = new DbContextOptionsBuilder<MdExplorerDbContext>()
             .UseSqlite(_connection)
-            .AddInterceptors(new SqlitePragmaInterceptor())
+            .AddInterceptors(new SqlitePragmaInterceptor(), _readers)
             .Options;
 
         _dbContext = new MdExplorerDbContext(options);
@@ -70,6 +73,36 @@ public sealed class ParseFailureRepositoryTests : IAsyncDisposable
             .GetByMarkdownFileIdsAsync([FileId], TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
         Assert.Equal("hash-2", stored[FileId].ContentHash);
+    }
+
+    /// <remarks>
+    /// Der Parser lädt die Vermerke einer Portion vorab. Fragte jedes Vermerken danach noch einmal,
+    /// wären es bei 500 gescheiterten Dateien 500 Abfragen statt keiner.
+    /// </remarks>
+    [Fact]
+    public async Task RecordAsync_AfterLoadingTheMarksOfABatch_AsksTheDatabaseNoMore()
+    {
+        Guid[] ids =
+        [
+            new("21111111-1111-1111-1111-111111111111"),
+            new("31111111-1111-1111-1111-111111111111"),
+            new("41111111-1111-1111-1111-111111111111"),
+        ];
+        foreach (Guid id in ids)
+        {
+            _ = await SeedFileAsync(id, "hash-1").ConfigureAwait(true);
+            await _repository.RecordAsync(CreateFailure(id, "hash-1"), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        }
+        _ = await _repository.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = await _repository.GetByMarkdownFileIdsAsync(ids, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _readers.Count = 0;
+
+        foreach (Guid id in ids)
+        {
+            await _repository.RecordAsync(CreateFailure(id, "hash-2"), TestContext.Current.CancellationToken).ConfigureAwait(true);
+        }
+
+        Assert.Equal(0, _readers.Count);
     }
 
     [Fact]
@@ -148,9 +181,10 @@ public sealed class ParseFailureRepositoryTests : IAsyncDisposable
         MarkdownFile file = new()
         {
             Id = id,
-            AbsolutePath = @"C:\notes\bad.md",
-            RelativePath = @"bad.md",
-            FileNameWithoutExtension = "bad",
+            // Je Kennung eine eigene Datei: Der Pfad ist im Index eindeutig.
+            AbsolutePath = $@"C:\notes\{id:N}.md",
+            RelativePath = $"{id:N}.md",
+            FileNameWithoutExtension = id.ToString("N"),
             SizeBytes = 42,
             LastWriteTimeUtc = new DateTime(2026, 8, 18, 11, 0, 0, DateTimeKind.Utc),
             ContentHash = contentHash,
@@ -159,5 +193,21 @@ public sealed class ParseFailureRepositoryTests : IAsyncDisposable
         _ = await _dbContext.Set<MarkdownFile>().AddAsync(file, TestContext.Current.CancellationToken).ConfigureAwait(true);
         _ = await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         return file;
+    }
+
+    /// <summary>Zählt die lesenden Abfragen an die Datenbank.</summary>
+    private sealed class ReaderCounter : DbCommandInterceptor
+    {
+        public int Count { get; set; }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            Count++;
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 }

@@ -273,6 +273,9 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
 
     private async Task PersistAsync(string filePath, CancellationToken cancellationToken)
     {
+        // Vor dem ersten Warten festhalten: Das Eingabefeld bleibt beschreibbar, und was danach
+        // getippt wird, steht nicht in der Datei.
+        string text = Text;
         IsSaving = true;
         try
         {
@@ -283,9 +286,9 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
                 return;
             }
 
-            (string normalized, byte[] payload) = _baseline.Encode(Text);
+            (string normalized, byte[] payload) = _baseline.Encode(text);
             await _fileSystem.WriteAllBytesAtomicAsync(filePath, payload, cancellationToken).ConfigureAwait(true);
-            MarkSaved(filePath, normalized, payload);
+            MarkSaved(filePath, text, normalized, payload);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -298,10 +301,11 @@ internal sealed partial class MarkdownEditorViewModel : ObservableObject, IDispo
         }
     }
 
-    private void MarkSaved(string filePath, string normalized, byte[] payload)
+    private void MarkSaved(string filePath, string savedText, string normalized, byte[] payload)
     {
-        _baseline = _baseline.AfterSave(Text, payload);
-        IsDirty = false;
+        _baseline = _baseline.AfterSave(savedText, payload);
+        // Dieselbe Regel wie beim Tippen: Was nach dem Festhalten dazukam, bleibt ungespeichert.
+        IsDirty = !string.Equals(Text, savedText, StringComparison.Ordinal);
         StatusMessage = UiText.Format("Editor_Status_Saved", _timeProvider.GetLocalNow());
         LogSaved(_logger, filePath);
         Saved?.Invoke(this, new EditorSavedEventArgs(normalized));

@@ -53,7 +53,9 @@
         Muster, der Eintrag in der Leiste und der Eintrag im Aufklappteil.
     -->
     <ControlTemplate x:Key="MenuEntryTemplate" TargetType="MenuItem">
-        <Border x:Name="Shape" Background="{DynamicResource SurfaceBrush}" Padding="10,5">
+        <!-- Der Rand ist aus dem Innenabstand genommen (vorher 10,5): gleiche Größe, und im
+             Kontrastmodus trägt er Markierung und Haken (SelectionOutlineBrush). -->
+        <Border x:Name="Shape" Background="{DynamicResource SurfaceBrush}" BorderBrush="Transparent" BorderThickness="1" Padding="9,4">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -70,9 +72,11 @@
         <ControlTemplate.Triggers>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource SelectionOutlineBrush}" />
             </Trigger>
             <Trigger Property="IsChecked" Value="True">
                 <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SelectionBackgroundBrush}" />
+                <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource SelectionOutlineBrush}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
@@ -90,7 +94,8 @@
     -->
     <ControlTemplate x:Key="MenuTitleTemplate" TargetType="MenuItem">
         <Grid>
-            <Border x:Name="Shape" Background="{TemplateBinding Background}" Padding="10,4">
+            <!-- Rand aus dem Innenabstand genommen (vorher 10,4), wie beim Eintrag im Aufklappteil. -->
+            <Border x:Name="Shape" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" Padding="9,3">
                 <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
             </Border>
             <Popup x:Name="PART_Popup"
@@ -110,9 +115,11 @@
         <ControlTemplate.Triggers>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource SelectionOutlineBrush}" />
             </Trigger>
             <Trigger Property="IsSubmenuOpen" Value="True">
                 <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource SelectionOutlineBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
@@ -365,9 +372,14 @@
 
     <Style TargetType="TreeViewItem">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <!-- Die Fläche der Auswahl färbt das mitgelieferte Muster über die Systemfarbe der
+             Hervorhebung, die jede Belegung setzt; im Kontrastmodus ist sie Fensterfarbe, und
+             dieser Rand, sonst unsichtbar, trägt die Auswahl. -->
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="1" />
         <Style.Triggers>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource SelectionBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectionOutlineBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -398,6 +410,7 @@
             <Trigger Property="IsSelected" Value="True">
                 <Setter Property="Background" Value="{DynamicResource SelectionBackgroundBrush}" />
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource SelectionOutlineBrush}" />
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -468,6 +481,8 @@
                                       Focusable="False"
                                       IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
                                       ClickMode="Press" />
+                        <!-- DisplayMemberPath setzt WPF über den ItemTemplateSelector um. Ohne ihn
+                             zeigte das geschlossene Feld ToString() des Eintrags statt seines Texts. -->
                         <ContentPresenter Grid.Column="0"
                                           Margin="{TemplateBinding Padding}"
                                           HorizontalAlignment="Left"
@@ -475,6 +490,7 @@
                                           IsHitTestVisible="False"
                                           Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                           ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
                         <Popup Grid.ColumnSpan="2"
                                IsOpen="{TemplateBinding IsDropDownOpen}"
@@ -517,15 +533,18 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
-                    <Border x:Name="Shape" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                    <!-- Rand nur im Kontrastmodus sichtbar: Dort zeigen Markierung und Wahl sich so. -->
+                    <Border x:Name="Shape" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SurfaceHoverBrush}" />
+                            <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource SelectionOutlineBrush}" />
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Shape" Property="Background" Value="{DynamicResource SelectionBackgroundBrush}" />
+                            <Setter TargetName="Shape" Property="BorderBrush" Value="{DynamicResource SelectionOutlineBrush}" />
                             <Setter Property="FontWeight" Value="SemiBold" />
                         </Trigger>
                     </ControlTemplate.Triggers>

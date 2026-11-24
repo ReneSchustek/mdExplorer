@@ -1,3 +1,4 @@
+using System.IO;
 using MdExplorer.Core.Models;
 using MdExplorer.Core.Settings;
 using MdExplorer.Core.Tests.Fakes;
@@ -150,6 +151,42 @@ public sealed class JsonSettingsServiceLoadTests
         string backup = Assert.Single(fileSystem.FilePaths, path => path.Contains(".schema-", StringComparison.Ordinal));
         Assert.Equal(newer, fileSystem.Text(backup));
         Assert.Equal(400, loaded.Behavior.SearchDebounceMs);
+    }
+
+    /// <remarks>
+    /// Lässt sich die Datei aus der neueren Fassung nicht sichern, darf sie auch nicht überschrieben
+    /// werden; sonst wären die Felder, die diese Fassung nicht kennt, trotz Versprechen verloren.
+    /// </remarks>
+    [Fact]
+    public async Task SaveAsync_AfterANewerSchemaThatCannotBeBackedUp_RefusesAndKeepsTheFile()
+    {
+        InMemoryFileSystem fileSystem = new();
+        const string newer = """{ "schemaVersion": 9, "futureField": "wichtig" }""";
+        fileSystem.AddFile(SettingsPath, newer);
+        using JsonSettingsService sut = Create(fileSystem);
+        AppSettings loaded = await sut.LoadAsync(TestContext.Current.CancellationToken);
+        fileSystem.FailReadsOf(SettingsPath, new IOException("gesperrt"));
+
+        _ = await Assert.ThrowsAsync<IOException>(
+            () => sut.SaveAsync(loaded with { Appearance = loaded.Appearance with { Theme = AppTheme.Dark } }, TestContext.Current.CancellationToken));
+
+        Assert.Equal(newer, fileSystem.Text(SettingsPath));
+    }
+
+    [Fact]
+    public async Task SaveAsync_AfterInvalidJsonThatCouldNotBeBackedUp_RefusesAndKeepsTheFile()
+    {
+        InMemoryFileSystem fileSystem = new();
+        const string broken = "{ \"indexing\": ";
+        fileSystem.AddFile(SettingsPath, broken);
+        fileSystem.FailWritesOf(SettingsPath + ".corrupt-20260610T120000000", new IOException("voll"));
+        using JsonSettingsService sut = Create(fileSystem);
+        AppSettings loaded = await sut.LoadAsync(TestContext.Current.CancellationToken);
+
+        _ = await Assert.ThrowsAsync<IOException>(
+            () => sut.SaveAsync(loaded with { Appearance = loaded.Appearance with { Theme = AppTheme.Dark } }, TestContext.Current.CancellationToken));
+
+        Assert.Equal(broken, fileSystem.Text(SettingsPath));
     }
 
     /// <remarks>

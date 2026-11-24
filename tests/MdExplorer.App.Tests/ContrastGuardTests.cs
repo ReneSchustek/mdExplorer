@@ -25,6 +25,9 @@ public sealed class ContrastGuardTests
     /// </summary>
     private const double ControlMinimum = 3.0;
 
+    // So steht der Systemschlüssel in den Belegungen; der Wächter liest die Dateien als Text.
+    private const string FocusRectangleKey = "{x:Static SystemColors.ControlTextBrushKey}";
+
     // Jede Textfarbe auf jedem Grund, auf dem sie tatsächlich steht. Neue Textfarben fängt
     // EveryTextColourHasAPair ab, damit diese Liste nicht still hinter den Belegungen zurückbleibt.
     private static readonly (string Foreground, string Background)[] TextUsages =
@@ -70,8 +73,9 @@ public sealed class ContrastGuardTests
         ("AccentPrimaryBrush", "AppBackgroundBrush"),
         ("ButtonSecondaryBorderBrush", "ButtonSecondaryBackgroundBrush"),
         ("ButtonSecondaryBorderBrush", "AppBackgroundBrush"),
-        ("FocusVisualBrush", "SurfaceBrush"),
-        ("FocusVisualBrush", "AppBackgroundBrush"),
+        // Das Fokusrechteck des Windows-Designs; es zeichnet in der Systemfarbe für Steuerelementtext.
+        (FocusRectangleKey, "SurfaceBrush"),
+        (FocusRectangleKey, "AppBackgroundBrush"),
         ("SelectionBorderBrush", "SurfaceBrush"),
     ];
 

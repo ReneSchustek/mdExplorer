@@ -1,4 +1,5 @@
 using MdExplorer.App.Services;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Search.Abstractions;
 using MdExplorer.Search.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,11 @@ internal sealed partial class DebouncedSearchRunner : IDisposable
     private ITimer? _timer;
     private bool _disposed;
 
+    // Zählt jede Planung und jedes Anhalten. Ein Zeitgeber-Rückruf gilt nur, wenn seine Nummer noch
+    // die aktuelle ist: Entsorgen hält einen schon laufenden Rückruf nicht auf, und der wartete
+    // sonst auf die Sperre und machte sich danach zum aktuellen Lauf.
+    private long _generation;
+
     /// <summary>Erzeugt den Läufer.</summary>
     /// <param name="scopeFactory">Liefert je Lauf den Suchdienst.</param>
     /// <param name="timeProvider">Die Uhr der Wartezeit.</param>
@@ -66,7 +72,7 @@ internal sealed partial class DebouncedSearchRunner : IDisposable
             StopCurrent();
             if (!_disposed)
             {
-                _timer = _timeProvider.CreateTimer(OnElapsed, query, delay, Timeout.InfiniteTimeSpan);
+                _timer = _timeProvider.CreateTimer(OnElapsed, new ScheduledQuery(query, _generation), delay, Timeout.InfiniteTimeSpan);
             }
         }
     }
@@ -95,7 +101,7 @@ internal sealed partial class DebouncedSearchRunner : IDisposable
 
     private void OnElapsed(object? state)
     {
-        if (state is not SearchQuery query)
+        if (state is not ScheduledQuery(SearchQuery query, long generation))
         {
             return;
         }
@@ -103,7 +109,7 @@ internal sealed partial class DebouncedSearchRunner : IDisposable
         CancellationToken token;
         lock (_gate)
         {
-            if (_disposed)
+            if (_disposed || generation != _generation)
             {
                 return;
             }
@@ -158,6 +164,7 @@ internal sealed partial class DebouncedSearchRunner : IDisposable
 
     private void StopCurrent()
     {
+        _generation++;
         _timer?.Dispose();
         _timer = null;
         CancellationTokenSource? run = _currentRun;
@@ -169,4 +176,7 @@ internal sealed partial class DebouncedSearchRunner : IDisposable
         run.Cancel();
         run.Dispose();
     }
+
+    /// <summary>Eine geplante Anfrage samt der Planung, zu der sie gehört.</summary>
+    private sealed record ScheduledQuery(SearchQuery Query, long Generation);
 }

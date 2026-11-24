@@ -69,7 +69,8 @@ public sealed class Fts5IndexMaintainerSyncTests
             _ = await harness.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             SearchIndexEntry entry = Assert.Single(harness.Storage.Entries);
-            Assert.Equal("bericht quartal", entry.Tags, StringComparer.Ordinal);
+            // Jeder Name zwischen Grenzmarken, damit tag: nur ganze Namen trifft.
+            Assert.Equal("mdxtagqq bericht mdxtagqq mdxtagqq quartal mdxtagqq", entry.Tags, StringComparer.Ordinal);
         }
     }
 
@@ -172,7 +173,7 @@ public sealed class Fts5IndexMaintainerSyncTests
             _ = await harness.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
             Assert.Equal("Jetzt lesbar", Assert.Single(harness.Storage.Entries).Body, StringComparer.Ordinal);
-            Assert.Equal("hash-A", harness.Storage.Indexed[IdA], StringComparer.Ordinal);
+            Assert.Equal(Fts5IndexMaintainer.SyncKeyOf(harness.Source.Documents[0]), harness.Storage.Indexed[IdA], StringComparer.Ordinal);
         }
     }
 
@@ -212,7 +213,31 @@ public sealed class Fts5IndexMaintainerSyncTests
 
             _ = await harness.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
-            Assert.Equal("hash-B", harness.Storage.Indexed[IdB], StringComparer.Ordinal);
+            Assert.Equal(Fts5IndexMaintainer.SyncKeyOf(harness.Source.Documents[1]), harness.Storage.Indexed[IdB], StringComparer.Ordinal);
+        }
+    }
+
+    /// <remarks>
+    /// Solange eine gesperrte Datei nur wartet, gibt es nichts zu tun. Bisher lud jeder Takt dann
+    /// den ganzen Bestand, bei einer dauerhaft gesperrten Datei die ganze Sitzung lang.
+    /// </remarks>
+    [Fact]
+    public async Task SynchronizeAsync_WhileAnUnreadableFileOnlyWaits_SkipsTheFullLoad()
+    {
+        LoopHarness harness = new();
+        await using (harness.ConfigureAwait(true))
+        {
+            harness.Source.FixedVersion = new SearchSourceVersion(1, null, 0, null);
+            harness.Source.Documents.Add(MaintainerDocuments.Document(IdA, "hash-A", @"C:\notizen\gesperrt.md"));
+            harness.Files.FailWith(@"C:\notizen\gesperrt.md", new IOException("Datei gesperrt"));
+            _ = await harness.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+            _ = await harness.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+            int loadsBefore = harness.Source.CallCount;
+
+            harness.AdvanceTime(TimeSpan.FromSeconds(5));
+            _ = await harness.Sut.SynchronizeAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+            Assert.Equal(loadsBefore, harness.Source.CallCount);
         }
     }
 

@@ -110,6 +110,36 @@ public sealed partial class GitHubUpdateChecker : IUpdateChecker
         return await CompareAsync(current, latest, release, cancellationToken).ConfigureAwait(false);
     }
 
+    [LoggerMessage(EventId = 710, Level = LogLevel.Debug, Message = "Update-Prüfung übersprungen — letzte Prüfung jünger als {IntervalHours} h.")]
+    private static partial void LogThrottled(ILogger logger, int intervalHours);
+
+    [LoggerMessage(EventId = 711, Level = LogLevel.Warning, Message = "Update-Prüfung fehlgeschlagen — kein Netz oder ungültige Antwort.")]
+    private static partial void LogCheckFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 712, Level = LogLevel.Warning, Message = "Update-Prüfung: Release-Tag nicht interpretierbar: {Tag}")]
+    private static partial void LogUnparsableRelease(ILogger logger, string tag);
+
+    [LoggerMessage(EventId = 713, Level = LogLevel.Information, Message = "Update verfügbar: {Latest} (installiert: {Current}).")]
+    private static partial void LogUpdateAvailable(ILogger logger, SemanticVersion latest, SemanticVersion current);
+
+    [LoggerMessage(EventId = 714, Level = LogLevel.Debug, Message = "Anwendung ist aktuell (Version {Current}).")]
+    private static partial void LogUpToDate(ILogger logger, SemanticVersion current);
+
+    [LoggerMessage(EventId = 715, Level = LogLevel.Information, Message = "Release enthält kein Installationspaket — nur der Weg über die Release-Seite bleibt.")]
+    private static partial void LogNoSetupAsset(ILogger logger);
+
+    [LoggerMessage(EventId = 716, Level = LogLevel.Information, Message = "Zu {FileName} fehlt die Datei {Suffix} im Release — es wird nicht automatisch installiert.")]
+    private static partial void LogMissingCompanion(ILogger logger, string fileName, string suffix);
+
+    [LoggerMessage(EventId = 717, Level = LogLevel.Warning, Message = "Prüfsummen-Datei ist nicht interpretierbar.")]
+    private static partial void LogUnparsableChecksum(ILogger logger);
+
+    [LoggerMessage(EventId = 718, Level = LogLevel.Warning, Message = "Begleitdatei {Path} des Releases konnte nicht geladen werden.")]
+    private static partial void LogCompanionFetchFailed(ILogger logger, string path, Exception exception);
+
+    [LoggerMessage(EventId = 719, Level = LogLevel.Warning, Message = "Adresse im Feld {Field} gehört nicht zum Repository oder nutzt kein https — sie wird nicht verwendet.")]
+    private static partial void LogUntrustedAddress(ILogger logger, string field);
+
     private async Task<UpdateCheckResult> CompareAsync(
         SemanticVersion current,
         SemanticVersion latest,
@@ -124,7 +154,7 @@ public sealed partial class GitHubUpdateChecker : IUpdateChecker
 
         LogUpdateAvailable(_logger, latest, current);
         UpdateAsset? asset = await ResolveAssetAsync(release, cancellationToken).ConfigureAwait(false);
-        return UpdateCheckResult.Available(current, latest, ResolveReleaseUrl(release), asset);
+        return UpdateCheckResult.Available(current, latest, ResolveReleaseUrl(release), asset is null ? null : asset with { Version = latest });
     }
 
     /// <summary>
@@ -315,34 +345,4 @@ public sealed partial class GitHubUpdateChecker : IUpdateChecker
     private sealed record GitHubAsset(
         [property: JsonPropertyName("name")] string? Name,
         [property: JsonPropertyName("browser_download_url")] string? DownloadUrl);
-
-    [LoggerMessage(EventId = 710, Level = LogLevel.Debug, Message = "Update-Prüfung übersprungen — letzte Prüfung jünger als {IntervalHours} h.")]
-    private static partial void LogThrottled(ILogger logger, int intervalHours);
-
-    [LoggerMessage(EventId = 711, Level = LogLevel.Warning, Message = "Update-Prüfung fehlgeschlagen — kein Netz oder ungültige Antwort.")]
-    private static partial void LogCheckFailed(ILogger logger, Exception exception);
-
-    [LoggerMessage(EventId = 712, Level = LogLevel.Warning, Message = "Update-Prüfung: Release-Tag nicht interpretierbar: {Tag}")]
-    private static partial void LogUnparsableRelease(ILogger logger, string tag);
-
-    [LoggerMessage(EventId = 713, Level = LogLevel.Information, Message = "Update verfügbar: {Latest} (installiert: {Current}).")]
-    private static partial void LogUpdateAvailable(ILogger logger, SemanticVersion latest, SemanticVersion current);
-
-    [LoggerMessage(EventId = 714, Level = LogLevel.Debug, Message = "Anwendung ist aktuell (Version {Current}).")]
-    private static partial void LogUpToDate(ILogger logger, SemanticVersion current);
-
-    [LoggerMessage(EventId = 715, Level = LogLevel.Information, Message = "Release enthält kein Installationspaket — nur der Weg über die Release-Seite bleibt.")]
-    private static partial void LogNoSetupAsset(ILogger logger);
-
-    [LoggerMessage(EventId = 716, Level = LogLevel.Information, Message = "Zu {FileName} fehlt die Datei {Suffix} im Release — es wird nicht automatisch installiert.")]
-    private static partial void LogMissingCompanion(ILogger logger, string fileName, string suffix);
-
-    [LoggerMessage(EventId = 717, Level = LogLevel.Warning, Message = "Prüfsummen-Datei ist nicht interpretierbar.")]
-    private static partial void LogUnparsableChecksum(ILogger logger);
-
-    [LoggerMessage(EventId = 718, Level = LogLevel.Warning, Message = "Begleitdatei {Path} des Releases konnte nicht geladen werden.")]
-    private static partial void LogCompanionFetchFailed(ILogger logger, string path, Exception exception);
-
-    [LoggerMessage(EventId = 719, Level = LogLevel.Warning, Message = "Adresse im Feld {Field} gehört nicht zum Repository oder nutzt kein https — sie wird nicht verwendet.")]
-    private static partial void LogUntrustedAddress(ILogger logger, string field);
 }

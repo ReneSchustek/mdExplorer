@@ -20,9 +20,6 @@ namespace MdExplorer.Parser.Services;
 /// </remarks>
 public sealed partial class TagExtractor : ITagExtractor
 {
-    [GeneratedRegex(HashtagPattern.Expression, RegexOptions.CultureInvariant, HashtagPattern.MatchTimeoutMilliseconds)]
-    private static partial Regex HashtagRegex();
-
     // Dieselben Erweiterungen wie der Index, einmal gebaut und von allen Aufrufen geteilt: Die
     // Pipeline ist nach dem Bauen unveränderlich und damit threadsicher. Der Normalisierer bildet
     // nur die Slugs der WikiLink-Ziele, die für das Zählen keine Rolle spielen; er sorgt dafür,
@@ -94,6 +91,9 @@ public sealed partial class TagExtractor : ITagExtractor
             }
         }
     }
+
+    [GeneratedRegex(HashtagPattern.Expression, RegexOptions.CultureInvariant, HashtagPattern.MatchTimeoutMilliseconds)]
+    private static partial Regex HashtagRegex();
 
     private static List<string> ExtractFromAstCore(MarkdownDocument ast)
     {

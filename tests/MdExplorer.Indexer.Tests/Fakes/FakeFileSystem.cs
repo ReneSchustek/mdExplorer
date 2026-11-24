@@ -22,6 +22,7 @@ internal sealed class FakeFileSystem : IFileSystem
     private readonly HashSet<string> _fileReparsePoints = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _vanishOnOpenRead = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _openReadFailures = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _enumeratedDirectories = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Lässt die Aufzählung nach so vielen gelieferten Dateien abbrechen.
@@ -35,6 +36,18 @@ internal sealed class FakeFileSystem : IFileSystem
 
     /// <summary>Wie oft eine Datei vollständig gelesen wurde.</summary>
     public int ReadAllBytesCalls { get; private set; }
+
+    /// <summary>Ordner, deren Unterordner aufgezählt wurden; zeigt, welche der Scanner betreten hat.</summary>
+    public IReadOnlyCollection<string> EnumeratedDirectories
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _enumeratedDirectories];
+            }
+        }
+    }
 
     public void AddDirectory(string path)
     {
@@ -198,6 +211,7 @@ internal sealed class FakeFileSystem : IFileSystem
         List<string> directories;
         lock (_gate)
         {
+            _ = _enumeratedDirectories.Add(normalizedRoot);
             directories = [.. _directories];
         }
 

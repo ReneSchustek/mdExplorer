@@ -115,6 +115,29 @@ public sealed class MarkdownFileRepositoryTests : IAsyncDisposable
             () => _sut.GetAllUnderRootAsync("   ", TestContext.Current.CancellationToken));
 
     [Fact]
+    public async Task GetIdsOutsideRootsAsync_ReturnsOnlyFilesUnderNoRoot()
+    {
+        _ = await CreateStoredFileAsync(@"C:\Notes\inside.md", "inside.md", "inside");
+        _ = await CreateStoredFileAsync(@"c:\notes\upper\klein.md", "upper/klein.md", "klein");
+        MarkdownFile sibling = await CreateStoredFileAsync(@"C:\Notes-alt\outside.md", "outside.md", "outside");
+        MarkdownFile removed = await CreateStoredFileAsync(@"D:\Entfernt\weg.md", "weg.md", "weg");
+
+        IReadOnlyList<Guid> outside = await _sut.GetIdsOutsideRootsAsync([@"C:\Notes\"], TestContext.Current.CancellationToken);
+
+        Assert.Equal([sibling.Id, removed.Id], outside.Order());
+    }
+
+    [Fact]
+    public async Task GetIdsOutsideRootsAsync_WithoutAnyRoot_ReturnsEveryFile()
+    {
+        MarkdownFile file = await CreateStoredFileAsync(@"C:\Notes\a.md", "a.md", "a");
+
+        IReadOnlyList<Guid> outside = await _sut.GetIdsOutsideRootsAsync([], TestContext.Current.CancellationToken);
+
+        Assert.Equal([file.Id], outside);
+    }
+
+    [Fact]
     public async Task CountAsync_CountsAllEntries()
     {
         Assert.Equal(0, await _sut.CountAsync(TestContext.Current.CancellationToken));

@@ -9,7 +9,7 @@ namespace MdExplorer.Core.Diagnostics;
 /// </summary>
 public sealed class BackgroundServiceStatus : IBackgroundServiceStatus
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly HashSet<BackgroundServiceKind> _stopped = [];
 
     /// <inheritdoc />

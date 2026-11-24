@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Text;
 using MdExplorer.Parser.Abstractions;
@@ -14,8 +15,9 @@ namespace MdExplorer.TagCloud.Services;
 /// Projektweite Tag-Verwaltung. Liest betroffene Pfade über <see cref="ITagFileLookupQuery"/>,
 /// schreibt jede Datei über <see cref="IFileSystem.WriteAllBytesAtomicAsync"/> atomar neu
 /// (Temp + Move) und überlässt den DB-Re-Sync dem Indexer-Watcher. Body-Vorkommen werden
-/// per Slug-Identität erkannt (Boundary-Regex + Normalizer), Frontmatter-Einträge
-/// werden zeilenbasiert manipuliert, gleicher Datei-Schreibpfad für Rename, Merge und Delete.
+/// per Slug-Identität erkannt (Boundary-Regex + Normalizer); die Frontmatter-Einträge schreibt der
+/// <see cref="IMarkdownTagRewriter"/> über die Lage-Angaben des YAML-Lesers um. Gleicher
+/// Datei-Schreibpfad für Rename, Merge und Delete.
 /// </summary>
 public sealed partial class TagManagementService : ITagManagementService
 {
@@ -145,7 +147,11 @@ public sealed partial class TagManagementService : ITagManagementService
         return new TagRewriteResult(operationSlug, filesAffected, rows.Count, errors);
     }
 
-    // Ein Schreibfehler kostet nur diese Datei; er steht in der Fehlerliste des Ergebnisses.
+    // Ein Schreibfehler kostet nur diese Datei; er steht in der Fehlerliste des Ergebnisses. Das gilt
+    // auch, wenn der Umschreiber an der Datei scheitert: Markdig wirft bei zu tiefer Verschachtelung
+    // eine ArgumentException, der Hashtag-Ausdruck läuft mit Zeitgrenze. Die Namen sind vorher
+    // geprüft; eine ArgumentException hier betrifft nur den Inhalt dieser Datei. Ginge sie durch,
+    // bliebe das Schlagwort halb umbenannt.
     private async Task<bool> TryRewriteAsync(
         string absolutePath,
         Dictionary<string, string?> operations,
@@ -156,7 +162,8 @@ public sealed partial class TagManagementService : ITagManagementService
         {
             return await RewriteSingleFileAsync(absolutePath, operations, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException
+            or ArgumentException or RegexMatchTimeoutException)
         {
             errors[absolutePath] = ex.Message;
             LogFileWriteFailed(_logger, ex, absolutePath);

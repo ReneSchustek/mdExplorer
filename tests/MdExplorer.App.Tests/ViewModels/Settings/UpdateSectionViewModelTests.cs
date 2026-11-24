@@ -87,6 +87,32 @@ public sealed class UpdateSectionViewModelTests
         Assert.True(started);
     }
 
+    /// <remarks>
+    /// Der Zustand ist ein Wert, nicht vier Schalter: Jede Station hat genau eine Anzeige. Nach einem
+    /// gescheiterten Herunterladen bleibt ein zweiter Versuch möglich.
+    /// </remarks>
+    [Fact]
+    public async Task State_FromCheckToAFailedDownload_StaysRetryable()
+    {
+        UpdateAsset asset = new("MdExplorer-1.1.0-setup.exe", AssetUrl, new string('a', 64), new byte[] { 0x30 });
+        FakeUpdateChecker checker = new(UpdateCheckResult.Available(Current, Newer, ReleaseUrl, asset));
+        FakeUpdateInstaller installer = new(UpdateDownloadResult.Failed(UpdateDownloadStatus.ChecksumMismatch));
+        using UpdateSectionViewModel sut = new(checker, installer);
+        Assert.Equal(UpdateSectionState.NotChecked, sut.State);
+
+        await sut.CheckCommand.ExecuteAsync(null);
+        Assert.Equal(UpdateSectionState.Available, sut.State);
+        Assert.True(sut.InstallCommand.CanExecute(null));
+
+        await sut.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(UpdateSectionState.DownloadFailed, sut.State);
+        Assert.False(sut.IsBusy);
+        Assert.False(sut.IsProgressVisible);
+        Assert.True(sut.IsInstallAvailable);
+        Assert.True(sut.InstallCommand.CanExecute(null));
+    }
+
     [Fact]
     public async Task InstallCommand_OnChecksumMismatch_StartsNothing()
     {

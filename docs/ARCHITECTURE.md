@@ -60,17 +60,24 @@ ausschließlich über Abstraktionen in `MdExplorer.Core.Abstractions`.
 
 | Modul | Projekt-Referenzen |
 |-------|--------------------|
-| `MdExplorer.App` | Core, Data, Graph, Indexer, Parser, Search, TagCloud, Update |
+| `MdExplorer.App` | Core, Data, Graph, Indexer, Parser, Presentation, Search, TagCloud, Update |
 | `MdExplorer.Core` | — (keine) |
 | `MdExplorer.Data` | Core |
 | `MdExplorer.Indexer` | Core |
 | `MdExplorer.Parser` | Core |
 | `MdExplorer.Search` | Core |
 | `MdExplorer.Graph` | Core |
-| `MdExplorer.TagCloud` | Core, Parser |
+| `MdExplorer.Presentation` | — (keine; nur WPF) |
+| `MdExplorer.TagCloud` | Core, Parser, Presentation |
 | `MdExplorer.Update` | Core |
 
 ## Modul-Verantwortlichkeiten
+
+### MdExplorer.Presentation
+
+Bausteine der Oberfläche, die App und Tag-Cloud gemeinsam brauchen und keines der beiden
+besitzt; heute `LiveRegion`, das Änderungen eines Elements einem Screenreader ansagt. Keine
+Fachlogik, keine Abhängigkeit auf andere Module.
 
 ### MdExplorer.App
 
@@ -170,7 +177,9 @@ geladen, bei Abweichung die Datei verworfen statt ausgeführt.
   einzeln auf, auch die über eine Fabrik.
 - **Logging** über `Microsoft.Extensions.Logging` mit `LoggerMessage`-
   Source-Generators (Event-IDs pro Bereich).
-- **Tests** für jedes Modul in `tests/<Modul>.Tests/` auf xUnit-Basis.
+- **Tests** für jedes Modul in `tests/<Modul>.Tests/` auf Basis von xUnit v3. Sie laufen über
+  VSTest (Paket `xunit.v3.mtp-off`), damit `dotnet test`, die Abdeckungsmessung mit
+  `coverlet.collector` und `tests.runsettings` ohne Umstellung gelten.
 
 ## Datenfluss: Datei → Index → Suche
 

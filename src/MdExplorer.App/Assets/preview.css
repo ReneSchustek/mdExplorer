@@ -29,7 +29,7 @@
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Roboto Flex', 'Segoe UI', system-ui, -apple-system, sans-serif;
     line-height: 1.55;
     color: var(--preview-text);
     background-color: var(--preview-background);
@@ -52,7 +52,7 @@ p { margin: 0 0 1em 0; }
 /* Unterstrichen, nicht nur farbig: Ein Verweis darf nicht allein an der Farbe erkennbar sein. */
 a { color: var(--preview-link); text-decoration: underline; }
 code {
-    font-family: Consolas, 'Cascadia Code', 'Courier New', monospace;
+    font-family: 'Roboto Mono', Consolas, 'Cascadia Code', 'Courier New', monospace;
     font-size: 0.9em;
     background-color: var(--preview-code-background);
     padding: 0.2em 0.4em;

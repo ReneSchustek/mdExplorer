@@ -21,7 +21,7 @@ internal static class HelpDocumentBuilder
 
         KeyValuePair<string, string>[] parts =
         [
-            new("__INLINE_CSS__", EmbeddedDocument.ReadAsset(AssetPrefix + "help.css")),
+            new("__INLINE_CSS__", WebFontFaces.Css + EmbeddedDocument.ReadAsset(AssetPrefix + "help.css")),
             new("__INLINE_JS__", EmbeddedDocument.ReadAsset(AssetPrefix + "help.js")),
             new("__THEME__", isDarkMode ? "dark" : "light"),
             new("__TITLE__", WebUtility.HtmlEncode(UiText.Get("Help_Title"))),

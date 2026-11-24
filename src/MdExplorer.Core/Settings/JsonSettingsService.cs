@@ -28,7 +28,9 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
     private readonly TimeProvider _timeProvider;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private AppSettings _current = AppSettings.Default;
-    private bool _fileHasNewerSchema;
+    // Der Grund, aus dem die Datei vor dem nächsten Überschreiben gesichert werden muss
+    // („schema“, „corrupt“), oder null. Gelingt die Sicherung nicht, wird nicht überschrieben.
+    private string? _pendingBackupReason;
     private bool _disposed;
 
     /// <summary>Erzeugt den Service.</summary>
@@ -56,10 +58,10 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
     }
 
     /// <inheritdoc />
-    public AppSettings Current => _current;
+    public event EventHandler<SettingsChangedEventArgs>? SettingsChanged;
 
     /// <inheritdoc />
-    public event EventHandler<SettingsChangedEventArgs>? SettingsChanged;
+    public AppSettings Current => _current;
 
     /// <inheritdoc />
     public async Task<AppSettings> LoadAsync(CancellationToken cancellationToken)
@@ -180,6 +182,9 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
     [LoggerMessage(EventId = 602, Level = LogLevel.Warning, Message = "Settings-Datei enthält ungültiges JSON — Defaults werden verwendet, die Datei ist gesichert unter {BackupPath}")]
     private static partial void LogJsonInvalid(ILogger logger, string backupPath, Exception exception);
 
+    [LoggerMessage(EventId = 615, Level = LogLevel.Warning, Message = "Settings-Datei enthält ungültiges JSON und ließ sich nicht sichern — Defaults werden verwendet, die Datei bleibt bis zu einer gelungenen Sicherung unverändert.")]
+    private static partial void LogJsonInvalidNotBackedUp(ILogger logger, Exception exception);
+
     [LoggerMessage(EventId = 603, Level = LogLevel.Warning, Message = "Settings-Datei nicht lesbar — Defaults werden verwendet: {Path}")]
     private static partial void LogReadFailed(ILogger logger, string path, Exception exception);
 
@@ -218,7 +223,16 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
         {
             // Die kaputte Datei bleibt erhalten: Beim nächsten Speichern würde sie sonst
             // überschrieben, und mit ihr alles, was der Nutzer von Hand eingetragen hatte.
-            LogJsonInvalid(_logger, await BackupAsync("corrupt", cancellationToken).ConfigureAwait(false), ex);
+            string? backupPath = await BackupAsync("corrupt", cancellationToken).ConfigureAwait(false);
+            if (backupPath is null)
+            {
+                _pendingBackupReason = "corrupt";
+                LogJsonInvalidNotBackedUp(_logger, ex);
+            }
+            else
+            {
+                LogJsonInvalid(_logger, backupPath, ex);
+            }
             return AppSettings.Default;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -235,9 +249,9 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
             LogFileEmpty(_logger, _settingsFilePath);
             return AppSettings.Default;
         }
-        _fileHasNewerSchema = loaded.SchemaVersion > AppSettings.CurrentSchemaVersion;
-        if (_fileHasNewerSchema)
+        if (loaded.SchemaVersion > AppSettings.CurrentSchemaVersion)
         {
+            _pendingBackupReason = "schema";
             LogNewerSchema(_logger, loaded.SchemaVersion, AppSettings.CurrentSchemaVersion);
         }
         AppSettings result = WithinLimits(Normalize(loaded));
@@ -271,10 +285,14 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
         string serializedPrevious = JsonSerializer.Serialize(previous, SerializerOptions);
         string serializedCurrent = JsonSerializer.Serialize(normalized, SerializerOptions);
 
-        if (_fileHasNewerSchema)
+        if (_pendingBackupReason is { } reason)
         {
-            _ = await BackupAsync("schema", cancellationToken).ConfigureAwait(false);
-            _fileHasNewerSchema = false;
+            if (await BackupAsync(reason, cancellationToken).ConfigureAwait(false) is null)
+            {
+                throw new IOException(
+                    $"Die Einstellungsdatei {_settingsFilePath} ließ sich vor dem Überschreiben nicht sichern; sie bleibt unverändert.");
+            }
+            _pendingBackupReason = null;
         }
         await _fileSystem.WriteAllBytesAtomicAsync(
                 _settingsFilePath,
@@ -319,9 +337,9 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
         }
     }
 
-    // Legt eine Kopie der aktuellen Datei neben sie. Gelingt das nicht, bleibt die Datei, wie sie
-    // ist; überschrieben wird sie erst beim nächsten Speichern.
-    private async Task<string> BackupAsync(string reason, CancellationToken cancellationToken)
+    // Legt eine Kopie der aktuellen Datei neben sie und liefert ihren Pfad, oder null, wenn das nicht
+    // gelang. Dann wird die Datei auch nicht überschrieben (PersistAsync).
+    private async Task<string?> BackupAsync(string reason, CancellationToken cancellationToken)
     {
         string stamp = _timeProvider.GetUtcNow().UtcDateTime.ToString("yyyyMMddTHHmmssfff", CultureInfo.InvariantCulture);
         string backupPath = $"{_settingsFilePath}.{reason}-{stamp}";
@@ -333,6 +351,7 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             LogBackupFailed(_logger, backupPath, ex);
+            return null;
         }
         return backupPath;
     }
@@ -359,9 +378,6 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
         context.Post(static carrier => ((NotificationState)carrier!).Deliver(), state);
     }
 
-    /// <summary>Der alte Stand eines tatsächlich geänderten Speichervorgangs.</summary>
-    private sealed record SavedChange(AppSettings Previous);
-
     /// <summary>
     /// Trägt Handler, Absender und Ereignisdaten in einem Objekt zum Zielthread. Die statischen
     /// Lambdas oben fangen so nichts aus der Methode ein.
@@ -385,4 +401,7 @@ public sealed partial class JsonSettingsService : ISettingsService, IDisposable
             }
         }
     }
+
+    /// <summary>Der alte Stand eines tatsächlich geänderten Speichervorgangs.</summary>
+    private sealed record SavedChange(AppSettings Previous);
 }

@@ -23,8 +23,9 @@ namespace MdExplorer.App.Tests;
 /// </remarks>
 public sealed partial class UiTextResourceGuardTests
 {
-    // Der Produktname bleibt in jeder Sprache gleich und gehört deshalb nicht in die Ressourcen.
-    private static readonly string[] BrandNames = ["MdExplorer"];
+    // Eigennamen bleiben in jeder Sprache gleich und gehören deshalb nicht in die Ressourcen: der
+    // Produktname und die mitgelieferten Schriften.
+    private static readonly string[] ProperNames = ["MdExplorer", "Roboto Flex", "Roboto Mono"];
 
     private static readonly string[] ModuleNames = ["MdExplorer.App", "MdExplorer.TagCloud"];
 
@@ -216,7 +217,7 @@ public sealed partial class UiTextResourceGuardTests
     private static bool IsFixedText(string value) =>
         !value.StartsWith('{')
         && Word().IsMatch(value)
-        && !BrandNames.Contains(value.Trim(), StringComparer.Ordinal);
+        && !ProperNames.Contains(value.Trim(), StringComparer.Ordinal);
 
     // In einem Format zählt nur, was um die Platzhalter herum steht: „{}{0:N0}" ist kein Text,
     // „{}{0} öffnen" schon.
@@ -250,10 +251,14 @@ public sealed partial class UiTextResourceGuardTests
         index > 0 && lines[index - 1].TrimEnd().EndsWith("Exception(", StringComparison.Ordinal);
 
     // Ein Literal, das mit „<“ beginnt, ist HTML-Gerüst; Text in Dokumentvorlagen prüft der
-    // Wächter für die Vorlagen eigens. „S1075:…“ ist die Kennung einer Analyseregel.
+    // Wächter für die Vorlagen eigens. „S1075:…“ ist die Kennung einer Analyseregel, „font-src
+    // data:“ eine Anweisung der Sicherheitsregel, ein Eigenname wie „Roboto Flex“ wird nicht übersetzt.
     private static bool LooksLikeProse(string value)
     {
-        if (value.StartsWith('<') || AnalyzerRule().IsMatch(value))
+        if (value.StartsWith('<')
+            || AnalyzerRule().IsMatch(value)
+            || SecurityPolicyDirective().IsMatch(value)
+            || ProperNames.Contains(value.Trim(), StringComparer.Ordinal))
         {
             return false;
         }
@@ -332,6 +337,10 @@ public sealed partial class UiTextResourceGuardTests
 
     [GeneratedRegex(@"\p{L}{2,}")]
     private static partial Regex Word();
+
+    // Anweisungen der Content-Security-Policy heißen alle „…-src“, etwa „font-src“.
+    [GeneratedRegex(@"\b[a-z]+-src\s")]
+    private static partial Regex SecurityPolicyDirective();
 
     [GeneratedRegex(@"(\{l:Loc\s+|UiText\.(Get|Format)\(\s*"")(?<key>\w+)")]
     private static partial Regex KeyUsage();

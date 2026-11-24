@@ -3,16 +3,6 @@ using Microsoft.Extensions.Logging;
 
 namespace MdExplorer.App.Logging;
 
-/// <summary>Auswahleintrag des Stufenfilters.</summary>
-/// <param name="MinimumLevel">Untere Grenze: Einträge mit niedrigerem Level werden ausgeblendet.</param>
-/// <param name="Display">Anzeige-Label.</param>
-internal sealed record LogLevelFilter(LogLevel MinimumLevel, string Display);
-
-/// <summary>Auswahleintrag des Zeitraumfilters.</summary>
-/// <param name="Window">Wie weit zurück; <see langword="null"/> für alles.</param>
-/// <param name="Display">Anzeige-Label.</param>
-internal sealed record LogPeriodFilter(TimeSpan? Window, string Display);
-
 /// <summary>
 /// Welche Einträge das Protokollfenster zeigt: ab einer Stufe, mit einem Suchtext im Text oder in
 /// der Quelle, und aus einem Zeitraum bis jetzt.

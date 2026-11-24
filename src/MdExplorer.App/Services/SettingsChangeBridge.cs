@@ -33,6 +33,10 @@ internal sealed partial class SettingsChangeBridge : IHostedService
     private CancellationTokenSource? _lifetime;
     private CancellationTokenSource? _currentRescan;
 
+    // Der zuletzt gestartete Durchlauf; das Beenden wartet auf ihn, weil der Wirt danach Datenbank
+    // und Dienste freigibt, auf die er noch zugreifen könnte.
+    private Task _rescanRun = Task.CompletedTask;
+
     /// <summary>Erzeugt die Bridge und löst Pflichtabhängigkeiten auf.</summary>
     public SettingsChangeBridge(
         ISettingsService settingsService,
@@ -54,7 +58,10 @@ internal sealed partial class SettingsChangeBridge : IHostedService
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        lock (_rescanLock)
+        {
+            _lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        }
         _settingsService.SettingsChanged += OnSettingsChanged;
         return Task.CompletedTask;
     }
@@ -63,13 +70,31 @@ internal sealed partial class SettingsChangeBridge : IHostedService
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _settingsService.SettingsChanged -= OnSettingsChanged;
-        CancellationTokenSource? lifetime = _lifetime;
-        _lifetime = null;
-        if (lifetime is not null)
+        CancellationTokenSource? lifetime;
+        Task running;
+        lock (_rescanLock)
         {
-            // Der Abbruch der Lebensdauer erreicht über die Verknüpfung auch den laufenden Durchlauf.
-            await lifetime.CancelAsync().ConfigureAwait(false);
-            lifetime.Dispose();
+            // Unter derselben Sperre wie das Anlegen eines Durchlaufs: Keiner kann danach mehr an der
+            // schon freigegebenen Lebensdauer hängen.
+            lifetime = _lifetime;
+            _lifetime = null;
+            running = _rescanRun;
+        }
+        if (lifetime is null)
+        {
+            return;
+        }
+
+        // Der Abbruch der Lebensdauer erreicht über die Verknüpfung auch den laufenden Durchlauf.
+        await lifetime.CancelAsync().ConfigureAwait(false);
+        lifetime.Dispose();
+        try
+        {
+            await running.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Die Frist des Wirts ist um; er gibt die Dienste jetzt frei, wartet aber nicht länger.
         }
     }
 
@@ -103,7 +128,11 @@ internal sealed partial class SettingsChangeBridge : IHostedService
         }
 
         LogSettingsChanged(_logger);
-        _ = RescanAsync();
+        Task run = RescanAsync();
+        lock (_rescanLock)
+        {
+            _rescanRun = run;
+        }
     }
 
     private async Task RescanAsync()

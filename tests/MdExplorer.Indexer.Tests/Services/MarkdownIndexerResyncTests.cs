@@ -69,6 +69,24 @@ public sealed class MarkdownIndexerResyncTests
         await harness.WaitUntilAsync(() => harness.Store.Snapshot.ContainsKey(path), "Nach dem Datenbankfehler lief kein Abgleich mehr.").ConfigureAwait(true);
     }
 
+    /// <remarks>
+    /// Jede andere Ausnahme als ein Datenbankfehler beendete den Takt bisher still bis zum Neustart.
+    /// </remarks>
+    [Fact]
+    public async Task ResyncLoop_AfterAnUnexpectedError_KeepsRunning()
+    {
+        await using IndexerTestHarness harness = IndexerTestHarness.Create(resyncInterval: ResyncInterval);
+        await StartWithResyncAsync(harness).ConfigureAwait(true);
+        harness.Store.ThrowOnNextRootQuery = new InvalidOperationException("Zustand des Kontexts passt nicht.");
+        await harness.RunOneResyncAsync(ResyncInterval).ConfigureAwait(true);
+
+        string path = Path.Combine(Root, "nach-dem-fehler.md");
+        harness.FileSystem.AddFile(path, "# Nach dem Fehler", FixedTime);
+        harness.TimeProvider.Advance(ResyncInterval);
+
+        await harness.WaitUntilAsync(() => harness.Store.Snapshot.ContainsKey(path), "Nach dem Fehler lief kein Abgleich mehr.").ConfigureAwait(true);
+    }
+
     [Fact]
     public async Task ResyncLoop_WithoutChanges_ReportsNoProgress()
     {

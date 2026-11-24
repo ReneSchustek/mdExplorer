@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using MdExplorer.App.Localization;
 using MdExplorer.App.ViewModels;
 using MdExplorer.Core.Abstractions;
@@ -81,6 +82,29 @@ public sealed class AllFilesViewModelTests
         Assert.Equal(FileBId, onlyByTag.MarkdownFileId);
 
         sut.SearchText = string.Empty;
+        Assert.Equal(2, sut.Items.Count);
+    }
+
+    /// <remarks>
+    /// Die Liste ist gruppiert. Meldete jeder Eintrag beim Neuaufbau einzeln, ordnete die Ansicht bei
+    /// jedem Tastendruck tausendfach neu; ein einziger Austausch genügt.
+    /// </remarks>
+    [Fact]
+    public async Task SearchText_RebuildsTheListWithASingleNotification()
+    {
+        FakeAllFilesQuery query = new([
+            new AllFilesRow(FileAId, "Alpha", "Sub/Alpha.md", @"C:\notes\Sub\Alpha.md", OlderUtc, ["projekt"]),
+            new AllFilesRow(FileBId, "Beta", "Beta.md", @"C:\notes\Beta.md", NewerUtc, ["wichtig"]),
+        ]);
+        using ServiceProvider provider = BuildProvider(query);
+        AllFilesViewModel sut = new(provider.GetRequiredService<IServiceScopeFactory>(), new FakeTimeProvider(new DateTimeOffset(NewerUtc)), NullLogger<AllFilesViewModel>.Instance);
+        await sut.RefreshAsync().ConfigureAwait(true);
+        List<NotifyCollectionChangedAction> changes = [];
+        sut.Items.CollectionChanged += (_, args) => changes.Add(args.Action);
+
+        sut.SearchText = "a";
+
+        Assert.Equal([NotifyCollectionChangedAction.Reset], changes);
         Assert.Equal(2, sut.Items.Count);
     }
 

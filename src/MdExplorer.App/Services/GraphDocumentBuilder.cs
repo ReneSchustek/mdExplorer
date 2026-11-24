@@ -33,7 +33,7 @@ internal static class GraphDocumentBuilder
 
         KeyValuePair<string, string>[] parts =
         [
-            new("__INLINE_CSS__", EmbeddedDocument.ReadAsset(AssetPrefix + "graph.css")),
+            new("__INLINE_CSS__", WebFontFaces.Css + EmbeddedDocument.ReadAsset(AssetPrefix + "graph.css")),
             new("__INLINE_JS__", EmbeddedDocument.ReadAsset(AssetPrefix + "graph.js")),
             new("__THEME__", isDarkMode ? "dark" : "light"),
             new("__TITLE__", WebUtility.HtmlEncode(UiText.Get("Graph_Title"))),

@@ -23,7 +23,7 @@ internal sealed class MemorySink : ILogEventSink, IMemoryLogStore
 
     private readonly Queue<LogEntry> _buffer = new();
     private readonly int _capacity;
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     /// <summary>
     /// Sichtbar für Tests; Produktivcode geht über <see cref="Instance"/>,
@@ -38,14 +38,14 @@ internal sealed class MemorySink : ILogEventSink, IMemoryLogStore
         _capacity = capacity;
     }
 
+    /// <inheritdoc />
+    public event EventHandler<LogEntry>? EntryAdded;
+
     /// <summary>Prozessweite Singleton-Instanz. Wird sowohl von Serilog als auch vom DI-Container geteilt.</summary>
     public static MemorySink Instance => LazyInstance.Value;
 
     /// <inheritdoc />
     public int Capacity => _capacity;
-
-    /// <inheritdoc />
-    public event EventHandler<LogEntry>? EntryAdded;
 
     /// <inheritdoc />
     public void Emit(LogEvent logEvent)

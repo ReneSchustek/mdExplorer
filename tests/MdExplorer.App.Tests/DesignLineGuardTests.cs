@@ -48,6 +48,12 @@ public sealed class DesignLineGuardTests
         + "|\"#[0-9A-Fa-f]{3,8}\"",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    // Eine Schrift als Wert, im Attribut oder im Setter. Ein Verweis in geschweiften Klammern ist
+    // der erlaubte Weg über die Bausteine.
+    private static readonly Regex FixedFontFamily = new(
+        "FontFamily\\s*=\\s*\"(?!\\{)|Property\\s*=\\s*\"FontFamily\"\\s+Value\\s*=\\s*\"(?!\\{)",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     [Fact]
     public void ViewsAndControlsContainNoColorValues()
     {
@@ -296,6 +302,53 @@ public sealed class DesignLineGuardTests
             "Eine Liste mit Gruppen ohne IsVirtualizingWhenGrouping baut jede Zeile des gesamten "
             + "Bestands auf — auch die, die niemand sieht:"
             + Environment.NewLine + string.Join(Environment.NewLine, findings));
+    }
+
+    /// <remarks>
+    /// Die Schrift kommt aus den Bausteinen (<c>AppFontFamily</c>, <c>MonospaceFontFamily</c>),
+    /// die auf die mitgelieferten Dateien zeigen. Eine Ansicht, die „Consolas“ selbst setzt, geht
+    /// daran vorbei und sieht auf jedem Rechner anders aus.
+    /// </remarks>
+    [Fact]
+    public void ViewsSetNoFontFamilyThemselves()
+    {
+        List<string> findings = [];
+
+        foreach (string file in ViewAndControlFiles())
+        {
+            string[] lines = File.ReadAllLines(file);
+            for (int index = 0; index < lines.Length; index++)
+            {
+                if (FixedFontFamily.IsMatch(lines[index]))
+                {
+                    findings.Add($"{Path.GetFileName(file)}:{index + 1}: {lines[index].Trim()}");
+                }
+            }
+        }
+
+        Assert.True(
+            findings.Count == 0,
+            "Schriften kommen aus Themes/Tokens.xaml, nicht aus der Ansicht:"
+            + Environment.NewLine + string.Join(Environment.NewLine, findings));
+    }
+
+    /// <remarks>
+    /// Die HTML-Seiten bekommen Roboto über <c>WebFontFaces</c>; ihr Stylesheet muss die Schrift
+    /// auch zuerst nennen, sonst lädt der Browser sie und zeigt trotzdem Segoe.
+    /// </remarks>
+    [Theory]
+    [InlineData("preview.css")]
+    [InlineData("Help/help.css")]
+    [InlineData("Graph/graph.css")]
+    public void WebStylesheetsNameTheShippedFontsFirst(string stylesheet)
+    {
+        string path = Path.Combine(RepositoryPaths.Project("MdExplorer.App"), "Assets", stylesheet);
+        string[] families = [.. File.ReadAllLines(path)
+            .Select(line => line.Trim())
+            .Where(line => line.StartsWith("font-family:", StringComparison.Ordinal))];
+
+        Assert.NotEmpty(families);
+        Assert.All(families, line => Assert.Matches("^font-family: ['\"]Roboto (Flex|Mono)['\"],", line));
     }
 
     // Alle Ansichten aller Module, nicht nur die des Hauptmoduls: Die Tag-Verwaltung liegt in

@@ -11,7 +11,8 @@ body {
     --help-link: #0969da;
     --help-code-background: #f6f8fa;
     --help-hit-background: #fff3a3;
-    --help-hit-current: #d4a72c;
+    /* Umriss des aktuellen Treffers: mindestens 3:1 gegen Weiß und gegen die gelbe Trefferfläche. */
+    --help-hit-current: #8a5a00;
 }
 body[data-theme="dark"] {
     --help-text: #c9d1d9;
@@ -25,7 +26,7 @@ body[data-theme="dark"] {
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Roboto Flex', 'Segoe UI', system-ui, -apple-system, sans-serif;
     font-size: 14px;
     line-height: 1.6;
     margin: 0;
@@ -49,7 +50,7 @@ p { margin: 0 0 1em 0; }
 /* Unterstrichen, nicht nur farbig: Ein Verweis darf nicht allein an der Farbe erkennbar sein. */
 a { color: var(--help-link); text-decoration: underline; }
 code {
-    font-family: Consolas, 'Cascadia Code', 'Courier New', monospace;
+    font-family: 'Roboto Mono', Consolas, 'Cascadia Code', 'Courier New', monospace;
     font-size: 0.9em;
     padding: 0.15em 0.4em;
     border-radius: 6px;

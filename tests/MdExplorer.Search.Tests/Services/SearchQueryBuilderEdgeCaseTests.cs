@@ -95,7 +95,7 @@ public sealed class SearchQueryBuilderEdgeCaseTests
 
         Fts5QueryPlan plan = sut.Build("tag:projekt");
 
-        Assert.Equal("Tags:\"projekt\"", plan.MatchExpression, StringComparer.Ordinal);
+        Assert.Equal("Tags:\"mdxtagqq projekt mdxtagqq\"", plan.MatchExpression, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public sealed class SearchQueryBuilderEdgeCaseTests
 
         Fts5QueryPlan plan = sut.Build("tag:\"zwei teile\"");
 
-        Assert.Equal("Tags:\"zwei teile\"", plan.MatchExpression, StringComparer.Ordinal);
+        Assert.Equal("Tags:\"mdxtagqq zwei teile mdxtagqq\"", plan.MatchExpression, StringComparer.Ordinal);
     }
 
     /// <remarks>

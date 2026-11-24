@@ -6,16 +6,16 @@ namespace MdExplorer.Indexer.Abstractions;
 /// </summary>
 public interface IIndexer
 {
-    /// <summary>Führt einen einmaligen, vollständigen Scan aller konfigurierten Wurzeln aus.</summary>
-    /// <param name="cancellationToken">Abbruchsteuerung.</param>
-    Task RunInitialScanAsync(CancellationToken cancellationToken);
-
     /// <summary>
     /// Meldet geschriebene Stapel und das Ende eines Durchgangs je Wurzel. Der Erst-Scan meldet
     /// immer, damit sich die Oberfläche nach und nach füllt; ein späterer Abgleich nur, wenn er
     /// etwas geändert hat. Sonst lüde die Liste „Alle Dateien“ bei jedem Takt neu.
     /// </summary>
     event EventHandler<IndexerScanProgressEventArgs>? InitialScanProgress;
+
+    /// <summary>Führt einen einmaligen, vollständigen Scan aller konfigurierten Wurzeln aus.</summary>
+    /// <param name="cancellationToken">Abbruchsteuerung.</param>
+    Task RunInitialScanAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>Fortschritts-Snapshot des Initial-Scans für eine Wurzel.</summary>

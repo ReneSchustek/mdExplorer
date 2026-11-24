@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using MdExplorer.App.Localization;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Core.Models;
 using MdExplorer.Graph.Abstractions;
 using MdExplorer.Graph.Models;
@@ -53,22 +54,30 @@ internal sealed partial class DocumentFileService : IDocumentFileService
     }
 
     /// <inheritdoc />
-    public async Task<DocumentImpact> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken)
+    public async Task<DocumentImpact?> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken)
     {
         AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         await using (scope.ConfigureAwait(false))
         {
-            IMarkdownFileRepository files = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
-            MarkdownFile? file = await files.GetByIdAsync(markdownFileId, cancellationToken).ConfigureAwait(false);
-            if (file is null)
+            try
             {
-                return DocumentImpact.Unknown;
+                IMarkdownFileRepository files = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
+                MarkdownFile? file = await files.GetByIdAsync(markdownFileId, cancellationToken).ConfigureAwait(false);
+                if (file is null)
+                {
+                    return DocumentImpact.Unknown;
+                }
+
+                IGraphService graph = scope.ServiceProvider.GetRequiredService<IGraphService>();
+                DocumentRelations relations = await graph.GetRelationsAsync(markdownFileId, cancellationToken).ConfigureAwait(false);
+
+                return new DocumentImpact(file.FileNameWithoutExtension, relations.Incoming.Count);
             }
-
-            IGraphService graph = scope.ServiceProvider.GetRequiredService<IGraphService>();
-            DocumentRelations relations = await graph.GetRelationsAsync(markdownFileId, cancellationToken).ConfigureAwait(false);
-
-            return new DocumentImpact(file.FileNameWithoutExtension, relations.Incoming.Count);
+            catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
+            {
+                LogLookupFailed(_logger, markdownFileId, exception);
+                return null;
+            }
         }
     }
 
@@ -135,7 +144,7 @@ internal sealed partial class DocumentFileService : IDocumentFileService
             }
 
             files.Remove(file);
-            return await CommitAsync(files, FileOperation.Delete, file.FileNameWithoutExtension, newAbsolutePath: null, cancellationToken).ConfigureAwait(false);
+            return await CommitAsync(files, FileOperation.Delete, file.FileNameWithoutExtension, newAbsolutePath: null).ConfigureAwait(false);
         }
     }
 
@@ -216,7 +225,7 @@ internal sealed partial class DocumentFileService : IDocumentFileService
                 return DocumentFileResult.Failed(UiText.Get("DocumentFile_SameFile"));
             }
 
-            return await RelocateAsync(files, file, destination, operation, cancellationToken).ConfigureAwait(false);
+            return await RelocateAsync(files, file, destination, operation).ConfigureAwait(false);
         }
     }
 
@@ -225,8 +234,7 @@ internal sealed partial class DocumentFileService : IDocumentFileService
         IMarkdownFileRepository files,
         MarkdownFile file,
         string destination,
-        FileOperation operation,
-        CancellationToken cancellationToken)
+        FileOperation operation)
     {
         DocumentFileResult? failure = TryOnDisk(() => _fileSystem.MoveFile(file.AbsolutePath, destination), operation, file.AbsolutePath);
         if (failure is not null)
@@ -238,7 +246,7 @@ internal sealed partial class DocumentFileService : IDocumentFileService
         file.AbsolutePath = destination;
         file.FileNameWithoutExtension = Path.GetFileNameWithoutExtension(destination);
         files.Update(file);
-        return await CommitAsync(files, operation, file.FileNameWithoutExtension, destination, cancellationToken).ConfigureAwait(false);
+        return await CommitAsync(files, operation, file.FileNameWithoutExtension, destination).ConfigureAwait(false);
     }
 
     /// <summary>Liest den Eintrag; fehlt er oder ist der Index nicht lesbar, liegt statt seiner das Ergebnis vor.</summary>
@@ -254,7 +262,7 @@ internal sealed partial class DocumentFileService : IDocumentFileService
                 ? new Lookup(null, DocumentFileResult.Failed(UiText.Get("DocumentFile_NotInIndex")))
                 : new Lookup(file, null);
         }
-        catch (DbException exception)
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             LogLookupFailed(_logger, markdownFileId, exception);
             return new Lookup(null, DocumentFileResult.Failed(UiText.Get("DocumentFile_IndexUnavailable")));
@@ -281,13 +289,15 @@ internal sealed partial class DocumentFileService : IDocumentFileService
         IMarkdownFileRepository files,
         FileOperation operation,
         string title,
-        string? newAbsolutePath,
-        CancellationToken cancellationToken)
+        string? newAbsolutePath)
     {
         string done = DoneMessage(operation, title);
         try
         {
-            _ = await files.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            // Ohne Abbruch: Der Schritt auf der Platte ist schon geschehen und nicht umkehrbar. Bräche
+            // das Beenden hier ab, stünde statt „gelungen, Index hinkt nach“ ein Abbruch da, und der
+            // Index liefe der Platte bis zum nächsten Abgleich hinterher, ohne dass es jemand erfährt.
+            _ = await files.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             return new DocumentFileResult(true, done, newAbsolutePath);
         }
         catch (DbException exception)

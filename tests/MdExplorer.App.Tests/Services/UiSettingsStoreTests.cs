@@ -54,5 +54,39 @@ public sealed class UiSettingsStoreTests
         Assert.Equal(UiLayout.Default, layout);
     }
 
+    /// <remarks>
+    /// Die Datei liegt im Profil des Nutzers und lässt sich von Hand bearbeiten. Eine negative Breite
+    /// ließ das Hauptfenster beim Aufbau werfen, und zwar bei jedem Start; jetzt gilt dafür der Standard.
+    /// </remarks>
+    [Fact]
+    public void Load_WithValuesTheWindowCannotUse_FallsBackForEachOfThem()
+    {
+        _fileSystem.Files[FilePath] = Encoding.UTF8.GetBytes("""
+            { "FolderColumnWidth": -40, "PreviewColumnWidth": 0, "LeftTabIndex": 7,
+              "HelpWindow": { "Left": 10, "Top": 10, "Width": -1, "Height": 300 },
+              "RecentFiles": [ "notiz.md", null, "" ] }
+            """);
+        UiSettingsStore store = CreateStore();
+
+        UiLayout layout = store.Load();
+
+        Assert.Equal(UiLayout.Default.FolderColumnWidth, layout.FolderColumnWidth);
+        Assert.Equal(UiLayout.Default.PreviewColumnWidth, layout.PreviewColumnWidth);
+        Assert.Equal(0, layout.LeftTabIndex);
+        Assert.Null(layout.HelpWindow);
+        Assert.Equal(["notiz.md"], layout.RecentFiles!);
+    }
+
+    [Fact]
+    public void Load_WithUsableValues_KeepsThem()
+    {
+        UiSettingsStore store = CreateStore();
+        UiLayout saved = new(280, 580, new WindowGeometry(10, 20, 800, 600), IsTagCloudVisible: false, LeftTabIndex: 2);
+        store.Save(saved);
+
+        Assert.Equal(saved, store.Load());
+        Assert.DoesNotContain("IsUsable", Encoding.UTF8.GetString(_fileSystem.WrittenFiles[FilePath]), StringComparison.Ordinal);
+    }
+
     private UiSettingsStore CreateStore() => new(_fileSystem, FilePath, NullLogger<UiSettingsStore>.Instance);
 }

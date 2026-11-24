@@ -83,6 +83,7 @@ public sealed class MainViewModelWiringTests
         using MainTestHarness harness = new();
         Guid target = new("77777777-7777-7777-7777-777777777777");
         harness.Locator.SetAbsolutePath(@"C:\notizen\ziel.md", target);
+        harness.FileSystem.Files[@"C:\notizen\ziel.md"] = "# Ziel"u8.ToArray();
         harness.DocRepo.Put(target, RenderedDocuments.Create(target, "<h1>Ziel</h1>", MainTestHarness.FixedUtc));
         RelatedDocumentViewModel entry = new(new RelatedDocument(target, "ziel", "ziel.md"));
 

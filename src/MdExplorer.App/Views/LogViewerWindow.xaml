@@ -3,6 +3,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Style="{StaticResource {x:Type Window}}"
+        xmlns:c="clr-namespace:MdExplorer.Presentation;assembly=MdExplorer.Presentation"
         xmlns:l="clr-namespace:MdExplorer.App.Localization"
         xmlns:vm="clr-namespace:MdExplorer.App.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -73,11 +74,11 @@
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="8,4">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Right"
-                           Text="{Binding ExportMessage}"
+                           Text="{Binding ExportMessage, NotifyOnTargetUpdated=True}"
                            TextTrimming="CharacterEllipsis"
                            ToolTip="{Binding ExportMessage}"
                            Foreground="{DynamicResource TextSecondaryBrush}"
-                           AutomationProperties.LiveSetting="Polite" />
+                           c:LiveRegion.Announce="True" />
                 <TextBlock>
                     <Run Text="{l:Loc LogViewer_Visible_Label}" />
                     <Run Text="{Binding VisibleCount, Mode=OneWay}" FontWeight="SemiBold" />
@@ -97,29 +98,31 @@
                 </Style>
             </ListView.ItemContainerStyle>
             <ListView.View>
+                <!-- Breiten für Roboto Mono in Grundgröße (7,8 px je Zeichen): Der Zeitstempel hat
+                     23 Zeichen, die längste Stufe („Diagnose“, „Kritisch“) 8, dazu der Spaltenkopf „Stufe“. Schmaler schneidet sie ab. -->
                 <GridView>
-                    <GridViewColumn Header="{l:Loc LogViewer_Column_Time}" Width="180">
+                    <GridViewColumn Header="{l:Loc LogViewer_Column_Time}" Width="200">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" FontFamily="Consolas" />
+                                <TextBlock Text="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss.fff'}" FontFamily="{StaticResource MonospaceFontFamily}" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="{l:Loc LogViewer_Column_Level}" Width="80">
+                    <GridViewColumn Header="{l:Loc LogViewer_Column_Level}" Width="110">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Level, Converter={StaticResource EnumDisplay}}" FontFamily="Consolas" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Level, Converter={StaticResource EnumDisplay}}" FontFamily="{StaticResource MonospaceFontFamily}" FontWeight="SemiBold" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
                     <GridViewColumn Header="{l:Loc LogViewer_Column_Source}" Width="220">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding SourceContext}" FontFamily="Consolas" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding SourceContext}" FontFamily="{StaticResource MonospaceFontFamily}" TextTrimming="CharacterEllipsis" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="{l:Loc LogViewer_Column_Message}" Width="420">
+                    <GridViewColumn Header="{l:Loc LogViewer_Column_Message}" Width="390">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />

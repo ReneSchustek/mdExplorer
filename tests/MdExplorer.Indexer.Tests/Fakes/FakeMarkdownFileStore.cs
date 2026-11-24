@@ -139,6 +139,17 @@ internal sealed class FakeMarkdownFileStore
         }
     }
 
+    internal IReadOnlyList<Guid> FindOutside(IReadOnlyCollection<string> roots)
+    {
+        string[] prefixes = [.. roots.Select(root => root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar)];
+        lock (_gate)
+        {
+            return [.. _committed.Values
+                .Where(file => !Array.Exists(prefixes, prefix => file.AbsolutePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                .Select(file => file.Id)];
+        }
+    }
+
     internal IReadOnlyList<MarkdownFile> FindUnder(string directory)
     {
         Exception? toThrow;

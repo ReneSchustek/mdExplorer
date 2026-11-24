@@ -48,12 +48,16 @@ internal sealed class ThemeApplier
     /// <summary>
     /// Setzt die geltende Belegung in den angegebenen Wörterbüchern.
     /// </summary>
+    /// <remarks>
+    /// Im Kontrastmodus von Windows kommt die Belegung nicht aus einer Datei, sondern aus den
+    /// Systemfarben (<see cref="HighContrastPalette"/>); sie geht der Wahl Hell oder Dunkel vor.
+    /// </remarks>
     /// <param name="dictionaries">Wörterbücher der Anwendung.</param>
     public void Apply(Collection<ResourceDictionary> dictionaries)
     {
         ArgumentNullException.ThrowIfNull(dictionaries);
 
-        ResourceDictionary palette = _paletteLoader(_effectiveTheme.IsDarkMode ? DarkPalette : LightPalette);
+        ResourceDictionary palette = _effectiveTheme.IsHighContrast ? HighContrastPalette.Create() : LoadPalette();
 
         int existingIndex = IndexOfPalette(dictionaries);
         if (existingIndex >= 0)
@@ -85,4 +89,6 @@ internal sealed class ThemeApplier
 
         return -1;
     }
+
+    private ResourceDictionary LoadPalette() => _paletteLoader(_effectiveTheme.IsDarkMode ? DarkPalette : LightPalette);
 }

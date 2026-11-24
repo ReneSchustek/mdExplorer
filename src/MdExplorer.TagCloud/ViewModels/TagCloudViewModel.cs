@@ -1,8 +1,8 @@
-using System.Data.Common;
 using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Core.Hosting;
 using MdExplorer.TagCloud.Abstractions;
 using MdExplorer.TagCloud.Messaging;
@@ -112,7 +112,7 @@ public sealed partial class TagCloudViewModel : ObservableObject, IDisposable,
         {
             // Abgebrochen, von außen oder durch einen neueren Abruf; kein Fehler.
         }
-        catch (Exception exception) when (exception is DbException or InvalidOperationException)
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             // Eine Datenbank-Spitze nach ausgeschöpften Wiederholungen; die Anzeige bleibt auf dem vorigen Stand.
             LogRefreshFailure(_logger, exception);
@@ -181,10 +181,12 @@ public sealed partial class TagCloudViewModel : ObservableObject, IDisposable,
     }
 
     private static TagStatistic[] TopByCount(IReadOnlyList<TagStatistic> snapshot, int topN) =>
-        [.. snapshot
+    [
+        .. snapshot
             .OrderByDescending(stat => stat.Count)
             .ThenBy(stat => stat.Slug, StringComparer.Ordinal)
-            .Take(topN)];
+            .Take(topN),
+    ];
 
     private static TagStatistic[] SortSnapshot(IReadOnlyList<TagStatistic> snapshot, TagCloudSortOption sort)
     {

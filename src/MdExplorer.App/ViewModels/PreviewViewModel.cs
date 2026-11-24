@@ -1,9 +1,12 @@
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MdExplorer.App.Localization;
 using MdExplorer.App.Services;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -141,12 +144,17 @@ internal sealed partial class PreviewViewModel : ObservableObject
         {
             // Ein neuerer Klick hat übernommen; die Anzeige bleibt, wie sie ist.
         }
-        catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
+        catch (Exception exception) when (DataLoadFailure.IsExpected(exception) || exception is InvalidDataException)
         {
-            // Datenbank-Spitze beim Nachschlagen: Die Datei gilt als angezeigt, nur leer. Sonst
-            // lüde die Oberfläche dieselbe Datei endlos nach.
+            // Datenbank-Spitze beim Nachschlagen oder beschädigtes gespeichertes HTML. Die Datei
+            // gilt als angezeigt, mit Hinweis statt leer: Sonst lüde die Oberfläche dieselbe Datei
+            // endlos nach, und eine leere Fläche sähe aus wie eine leere Datei. Ein überholter
+            // Ladevorgang lässt die Anzeige des neueren stehen.
             LogPreviewLoadFailed(_logger, markdownFileId, exception);
-            ShowEmptyFor(markdownFileId);
+            if (!cancellationToken.IsCancellationRequested)
+            {
+                ShowFailureFor(markdownFileId);
+            }
         }
     }
 
@@ -166,7 +174,7 @@ internal sealed partial class PreviewViewModel : ObservableObject
     [LoggerMessage(EventId = 310, Level = LogLevel.Warning, Message = "Kein Markdown-Dokument für Datei {MarkdownFileId} im Parser-Store.")]
     private static partial void LogDocumentMissing(ILogger logger, Guid markdownFileId);
 
-    [LoggerMessage(EventId = 311, Level = LogLevel.Warning, Message = "Preview-Lookup für Datei {MarkdownFileId} fehlgeschlagen — Datenbank-Spitze.")]
+    [LoggerMessage(EventId = 311, Level = LogLevel.Warning, Message = "Vorschau für Datei {MarkdownFileId} nicht geladen: Index nicht lesbar oder gespeichertes HTML beschädigt.")]
     private static partial void LogPreviewLoadFailed(ILogger logger, Guid markdownFileId, Exception exception);
 
     [LoggerMessage(EventId = 312, Level = LogLevel.Warning, Message = "Bildpfade der Vorschau nicht umgeschrieben, die Prüfung brauchte zu lange; das Dokument erscheint ohne relative Bilder.")]
@@ -211,6 +219,14 @@ internal sealed partial class PreviewViewModel : ObservableObject
         // den virtuellen Ordner vor dem Anzeigen ein.
         ImageBase = imageBase;
         Html = Compose();
+        CurrentDocumentId = markdownFileId;
+    }
+
+    private void ShowFailureFor(Guid markdownFileId)
+    {
+        _body = "<p>" + WebUtility.HtmlEncode(UiText.Get("Preview_LoadFailed")) + "</p>";
+        ImageBase = null;
+        Html = _htmlBuilder.Build(_body);
         CurrentDocumentId = markdownFileId;
     }
 

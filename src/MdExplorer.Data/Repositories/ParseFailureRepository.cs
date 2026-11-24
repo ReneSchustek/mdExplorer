@@ -22,8 +22,8 @@ public sealed class ParseFailureRepository(MdExplorerDbContext dbContext) : IPar
 
         Guid[] ids = [.. markdownFileIds];
         Dictionary<Guid, ParseFailure> result = new(ids.Length);
-        // Getrackt geladen. RecordAsync und RemoveAsync fragen die Vermerke selbst noch einmal ab
-        // und bekommen im selben Kontext über die Identitätsauflösung genau diese Instanzen
+        // Getrackt geladen: RecordAsync findet diese Instanzen danach im Kontext, ohne die Datenbank
+        // noch einmal zu fragen, und RemoveAsync bekommt über die Identitätsauflösung genau sie
         // zurück; ein zweites Objekt für dieselbe Zeile entsteht so nicht.
         foreach (Guid[] chunk in ids.Chunk(SqliteInList.BatchSize))
         {
@@ -44,9 +44,13 @@ public sealed class ParseFailureRepository(MdExplorerDbContext dbContext) : IPar
     {
         ArgumentNullException.ThrowIfNull(failure);
 
-        ParseFailure? existing = await _dbContext.Set<ParseFailure>()
-            .FirstOrDefaultAsync(candidate => candidate.MarkdownFileId == failure.MarkdownFileId, cancellationToken)
-            .ConfigureAwait(false);
+        // Erst unter den schon verfolgten Vermerken: Der Parser lädt sie je Portion vorab, und eine
+        // Abfrage je gescheiterter Datei wäre ein N+1. Die Datenbank fragt nur, wer nicht vorab lud.
+        ParseFailure? existing = _dbContext.Set<ParseFailure>().Local
+            .FirstOrDefault(candidate => candidate.MarkdownFileId == failure.MarkdownFileId)
+            ?? await _dbContext.Set<ParseFailure>()
+                .FirstOrDefaultAsync(candidate => candidate.MarkdownFileId == failure.MarkdownFileId, cancellationToken)
+                .ConfigureAwait(false);
 
         if (existing is null)
         {

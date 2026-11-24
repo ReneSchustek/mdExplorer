@@ -63,7 +63,7 @@ internal sealed partial class UiSettingsStore : IUiLayoutStore
         try
         {
             UiLayout? layout = JsonSerializer.Deserialize<UiLayout>(_fileSystem.ReadAllBytes(_filePath), JsonOptions);
-            return layout ?? UiLayout.Default;
+            return layout?.Sanitized() ?? UiLayout.Default;
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {

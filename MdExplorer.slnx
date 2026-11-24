@@ -6,6 +6,7 @@
     <Project Path="src/MdExplorer.Graph/MdExplorer.Graph.csproj" />
     <Project Path="src/MdExplorer.Indexer/MdExplorer.Indexer.csproj" />
     <Project Path="src/MdExplorer.Parser/MdExplorer.Parser.csproj" />
+    <Project Path="src/MdExplorer.Presentation/MdExplorer.Presentation.csproj" />
     <Project Path="src/MdExplorer.Search/MdExplorer.Search.csproj" />
     <Project Path="src/MdExplorer.TagCloud/MdExplorer.TagCloud.csproj" />
     <Project Path="src/MdExplorer.Update/MdExplorer.Update.csproj" />

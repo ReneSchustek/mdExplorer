@@ -17,9 +17,16 @@ internal sealed class StubExclusionFilter : IExclusionFilter
         _excludedSegments = new HashSet<string>(excludedFolderNames, StringComparer.OrdinalIgnoreCase);
     }
 
-    public bool IsExcluded(string absoluteFilePath, string rootAbsolutePath)
+    public bool IsExcluded(string absoluteFilePath, string rootAbsolutePath) =>
+        ContainsExcludedSegment(absoluteFilePath, rootAbsolutePath);
+
+    // Ein Ordner mit ausgeschlossenem Namen schließt alles unter sich aus, wie „**/name/**".
+    public bool IsDirectoryExcluded(string absoluteDirectoryPath, string rootAbsolutePath) =>
+        ContainsExcludedSegment(absoluteDirectoryPath, rootAbsolutePath);
+
+    private bool ContainsExcludedSegment(string absolutePath, string rootAbsolutePath)
     {
-        string relative = Path.GetRelativePath(rootAbsolutePath, absoluteFilePath);
+        string relative = Path.GetRelativePath(rootAbsolutePath, absolutePath);
         foreach (string segment in relative.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries))
         {
             if (_excludedSegments.Contains(segment))

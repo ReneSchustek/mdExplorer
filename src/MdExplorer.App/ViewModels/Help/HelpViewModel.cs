@@ -12,15 +12,15 @@ namespace MdExplorer.App.ViewModels.Help;
 /// </summary>
 internal sealed partial class HelpViewModel : ObservableObject
 {
-    /// <summary>Beobachtbares Inhaltsverzeichnis für die linke ListBox.</summary>
-    public ObservableCollection<HelpTocEntry> Toc { get; } = [];
-
     [ObservableProperty]
     private HelpTocEntry? _selectedEntry;
 
     /// <summary>Stand der Suche im Handbuch, etwa „2 / 7“.</summary>
     [ObservableProperty]
     private string _hitSummary = FormatHits(0, -1);
+
+    /// <summary>Beobachtbares Inhaltsverzeichnis für die linke ListBox.</summary>
+    public ObservableCollection<HelpTocEntry> Toc { get; } = [];
 
     /// <summary>Schreibt eine neue TOC-Liste in die <see cref="Toc"/>-Collection.</summary>
     public void SetToc(IReadOnlyList<HelpTocEntry> entries)

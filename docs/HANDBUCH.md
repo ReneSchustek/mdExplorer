@@ -215,7 +215,8 @@ auf „Bearbeiten" umschalten; an dieser Stelle erscheint eine
 Monospace-TextBox mit dem Rohtext. Tags lassen sich über eine Leiste
 am oberen Rand der Datei manuell hinzufügen, entfernen oder
 umbenennen; `Strg+S` speichert die Änderungen atomar zurück in die
-Datei. Wer eine Datei extern verändert während sie im Bearbeiten-
+Datei. Danach wechselt das Panel von selbst zurück auf „Lesen“ und
+zeigt den gespeicherten Stand formatiert. Wer eine Datei extern verändert während sie im Bearbeiten-
 Modus offen ist, bekommt vor dem Speichern eine Warnung und kann den
 Konflikt manuell auflösen.
 
@@ -337,6 +338,15 @@ behalten will, legt eine `.mdignore` in den Ordner selbst, etwa nach
 *
 !important.md
 ```
+
+Einen Ordner, den ein Muster mit `/**` am Ende ganz ausschließt (etwa
+`**/vendor/**` oder `archive/**`), betritt der Scanner gar nicht erst. Das
+spart bei großen Werkzeug-Verzeichnissen viel Zeit. Gibt es weiter oben ein
+`!`-Muster wie im ersten Beispiel, sieht er trotzdem hinein, damit die
+Ausnahme greift. Eine `.mdignore`, die **in** einem so ausgeschlossenen
+Ordner liegt, liest er dagegen nicht, genau wie Git: Ein `!` darin holt
+nichts zurück. Wer dort etwas behalten will, schreibt die Ausnahme in die
+Einstellungen oder in eine `.mdignore` oberhalb.
 
 Tritt eine Datei in keiner Quelle als ausgeschlossen auf, läuft sie
 durch den Parser. Der Parser baut auf Markdig auf und ergänzt eine

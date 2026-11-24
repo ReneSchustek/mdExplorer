@@ -31,6 +31,26 @@ public sealed class DocumentPanelViewModelLoadTests
         Assert.True(harness.Sut.Relations.FileActions.DeleteCommand.CanExecute(null));
     }
 
+    /// <remarks>
+    /// Der Index kennt die Datei noch, auf der Platte ist sie zwischen Klick und Laden verschwunden.
+    /// Der Bereich zeigt dann keine Datei statt der vorigen; sonst bearbeitete der Nutzer die alte
+    /// Datei, während er die neue gewählt hat.
+    /// </remarks>
+    [Fact]
+    public async Task LoadAsync_WhenTheFileVanishedBeforeLoading_ShowsNoDocument()
+    {
+        using DocumentPanelHarness harness = new();
+        harness.AddIndexed(FirstId, TestPath, "# Erste", "<h1>Erste</h1>");
+        harness.AddIndexed(SecondId, @"C:\notes\zweite.md", "# Zweite", "<h1>Zweite</h1>");
+        _ = await harness.Sut.LoadAsync(FirstId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        _ = harness.FileSystem.Files.Remove(@"C:\notes\zweite.md");
+
+        _ = await harness.Sut.LoadAsync(SecondId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Null(harness.Editor.FilePath);
+        Assert.Null(harness.Sut.Preview.CurrentDocumentId);
+    }
+
     [Fact]
     public async Task LoadByPathAsync_OnIndexedFile_GoesThroughTheIndex()
     {

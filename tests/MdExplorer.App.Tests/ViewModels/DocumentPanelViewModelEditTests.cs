@@ -82,6 +82,81 @@ public sealed class DocumentPanelViewModelEditTests
     }
 
     [Fact]
+    public async Task OnEditorSaved_ReturnsToTheFormattedViewAndLocksTheEditor()
+    {
+        // Nach dem Speichern steht das Panel wie nach dem Laden: formatiert und gesperrt.
+        using DocumentPanelHarness harness = new();
+        harness.AddIndexed(FileId, TestPath, "alt", "<p>vor Save</p>");
+        _ = await harness.Sut.LoadAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        harness.Sut.IsEditMode = true;
+        harness.Editor.EnterEditMode();
+        harness.Editor.Text = "neuer Text";
+
+        await harness.Editor.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.True(harness.Sut.IsReadMode);
+        Assert.True(harness.Editor.IsLocked);
+    }
+
+    [Fact]
+    public async Task OnEditorSaved_WhenTheTextCannotBeRendered_StaysInTheRawView()
+    {
+        // Die formatierte Ansicht zeigte sonst den Stand vor dem Speichern.
+        using DocumentPanelHarness harness = new();
+        harness.AddIndexed(FileId, TestPath, "alt", "<p>vor Save</p>");
+        _ = await harness.Sut.LoadAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        harness.Sut.IsEditMode = true;
+        harness.Editor.EnterEditMode();
+        harness.Editor.Text = "neuer Text";
+        harness.Parser.FailOnParse = new InvalidOperationException("Zu tief verschachtelt.");
+
+        await harness.Editor.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.True(harness.Sut.IsEditMode);
+        Assert.Equal("neuer Text", Encoding.UTF8.GetString(harness.FileSystem.WrittenFiles[TestPath]), StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task OnEditorSaved_WhenTextWasTypedWhileSaving_StaysInTheRawView()
+    {
+        // Was während des Speicherns dazukam, steht nicht in der Datei; der Rohtext bleibt offen.
+        using DocumentPanelHarness harness = new();
+        harness.AddIndexed(FileId, TestPath, "alt", "<p>vor Save</p>");
+        _ = await harness.Sut.LoadAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        harness.Sut.IsEditMode = true;
+        harness.Editor.EnterEditMode();
+        harness.Editor.Text = "neuer Text";
+        harness.FileSystem.WriteGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Task saving = harness.Editor.SaveAsync(TestContext.Current.CancellationToken);
+        harness.Editor.Text = "neuer Text und mehr";
+        harness.FileSystem.WriteGate.SetResult();
+        await saving.ConfigureAwait(true);
+
+        Assert.True(harness.Sut.IsEditMode);
+        Assert.False(harness.Editor.IsLocked);
+        Assert.True(harness.Editor.IsDirty);
+    }
+
+    [Fact]
+    public async Task SaveAsync_WhenTheUserCancels_KeepsTheRawViewAndTheTypedText()
+    {
+        using DocumentPanelHarness harness = new();
+        harness.AddIndexed(FileId, TestPath, "alt", "<p>vor Save</p>");
+        _ = await harness.Sut.LoadAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        harness.Sut.IsEditMode = true;
+        harness.Editor.EnterEditMode();
+        harness.Editor.Text = "neuer Text";
+        harness.Confirmation.Result = false;
+
+        await harness.Editor.SaveAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.True(harness.Sut.IsEditMode);
+        Assert.False(harness.Editor.IsLocked);
+        Assert.True(harness.Editor.IsDirty);
+    }
+
+    [Fact]
     public void ToggleMode_FlipsBetweenReadAndEdit()
     {
         using DocumentPanelHarness harness = new();

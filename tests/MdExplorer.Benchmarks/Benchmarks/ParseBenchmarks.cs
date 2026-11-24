@@ -30,12 +30,12 @@ public class ParseBenchmarks
 
     private IndexedStock? _stock;
     private IMarkdownParser? _parser;
+    private string _typicalNote = string.Empty;
+    private string _largestNote = string.Empty;
 
     // BenchmarkDotNet ruft GlobalSetup vor jeder Messung; fehlt der Parser, ist das ein Fehler im
     // Aufbau und keine Messung wert.
     private IMarkdownParser Parser => _parser ?? throw new InvalidOperationException("GlobalSetup ist nicht gelaufen.");
-    private string _typicalNote = string.Empty;
-    private string _largestNote = string.Empty;
 
     /// <summary>Wählt die Notiz mittlerer Länge und die längste Notiz des Bestands.</summary>
     /// <returns>Ein Task, der nach dem Aufbau endet.</returns>
@@ -45,9 +45,12 @@ public class ParseBenchmarks
         _stock = await IndexedStock.OpenAsync(CancellationToken.None).ConfigureAwait(false);
         _parser = _stock.Services.GetRequiredService<IMarkdownParser>();
 
-        List<FileInfo> notes = [.. new DirectoryInfo(_stock.RootPath)
-            .EnumerateFiles("*.md", SearchOption.AllDirectories)
-            .OrderBy(file => file.Length)];
+        List<FileInfo> notes =
+        [
+            .. new DirectoryInfo(_stock.RootPath)
+                .EnumerateFiles("*.md", SearchOption.AllDirectories)
+                .OrderBy(file => file.Length),
+        ];
         MeasurementCheck.RequireRows(notes.Count, "Notizen im Messbestand");
 
         _typicalNote = await File.ReadAllTextAsync(notes[notes.Count / MedianDivisor].FullName).ConfigureAwait(false);

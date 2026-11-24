@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\MdExplorer.Core\MdExplorer.Core.csproj" />
     <ProjectReference Include="..\MdExplorer.Parser\MdExplorer.Parser.csproj" />
+    <ProjectReference Include="..\MdExplorer.Presentation\MdExplorer.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

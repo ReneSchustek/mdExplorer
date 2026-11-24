@@ -19,17 +19,68 @@ public sealed class MarkdownIndexerEdgeCaseTests
     private const string Root = IndexerTestHarness.DefaultRoot;
     private static readonly DateTime FixedWrite = new(2026, 6, 7, 12, 0, 0, DateTimeKind.Utc);
 
+    /// <remarks>
+    /// Der Erststart ohne Wurzel ist die Voreinstellung. Beendete sich der Dienst dabei, kam nach
+    /// dem Eintragen der ersten Wurzel bis zum Neustart keine Änderung mehr im Index an.
+    /// </remarks>
     [Fact]
-    public async Task ExecuteAsync_WithoutAnyConfiguredRoot_StopsWithoutWatchers()
+    public async Task RunInitialScanAsync_AfterAFirstRootIsAdded_WatchesItWithoutRestart()
     {
-        await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: []);
-
+        const string NewRoot = @"C:\Neu";
+        await using IndexerTestHarness harness = IndexerTestHarness.Create(resyncInterval: TimeSpan.FromMinutes(1), roots: []);
+        harness.FileSystem.AddDirectory(NewRoot);
+        harness.FileSystem.AddFile(@"C:\Neu\a.md", "Inhalt A", FixedWrite);
+        long mark = harness.TimeProvider.PeriodicTimersCreated.Mark;
         await harness.Indexer.StartAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
-        await harness.Indexer.ExecuteTask!.WaitAsync(IndexerTestHarness.Patience, TestContext.Current.CancellationToken).ConfigureAwait(true); // gesetzt durch StartAsync
-
-        // Ohne Wurzel gibt es nichts zu beobachten; der Dienst darf dann auch keinen
-        // Beobachter anlegen, statt leer weiterzulaufen.
+        // Der Takt entsteht erst im laufenden Betrieb: Danach ist der Dienst ohne Wurzel angelaufen.
+        Assert.True(await harness.TimeProvider.PeriodicTimersCreated.WaitAsync(mark, 1, IndexerTestHarness.Patience, TestContext.Current.CancellationToken).ConfigureAwait(true));
         Assert.Empty(harness.WatcherFactory.Watchers);
+
+        await SetRootsAsync(harness, [NewRoot]).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.True(harness.WatcherFor(NewRoot).IsStarted);
+        Assert.False(harness.Indexer.ExecuteTask!.IsCompleted);
+        Assert.Contains(@"C:\Neu\a.md", harness.Store.Snapshot.Keys);
+    }
+
+    /// <remarks>
+    /// Eine entfernte Wurzel blieb beobachtet, und ihre Dateien blieben durchsuchbar, auch nach
+    /// einem Neustart.
+    /// </remarks>
+    [Fact]
+    public async Task RunInitialScanAsync_AfterARootIsRemoved_StopsWatchingItAndDropsItsEntries()
+    {
+        const string SecondRoot = @"C:\Zweite";
+        await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: [Root, SecondRoot]);
+        harness.FileSystem.AddFile(@"C:\Wurzel\a.md", "Inhalt A", FixedWrite);
+        harness.FileSystem.AddFile(@"C:\Zweite\b.md", "Inhalt B", FixedWrite);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+        Assert.Contains(@"C:\Zweite\b.md", harness.Store.Snapshot.Keys);
+
+        await SetRootsAsync(harness, [Root]).ConfigureAwait(true);
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.True(harness.WatcherFor(SecondRoot).IsDisposed);
+        Assert.Equal([@"C:\Wurzel\a.md"], harness.Store.Snapshot.Keys);
+    }
+
+    /// <remarks>
+    /// Ein gerade fehlendes Laufwerk ist keine entfernte Wurzel: Sein Index bleibt stehen, bis es
+    /// wieder da ist.
+    /// </remarks>
+    [Fact]
+    public async Task RunInitialScanAsync_WithAConfiguredButMissingRoot_KeepsItsEntries()
+    {
+        const string SecondRoot = @"C:\Zweite";
+        await using IndexerTestHarness harness = IndexerTestHarness.Create(roots: [Root, SecondRoot]);
+        harness.FileSystem.AddFile(@"C:\Zweite\b.md", "Inhalt B", FixedWrite);
+        await harness.StartAndWaitForInitialScanAsync().ConfigureAwait(true);
+        harness.FileSystem.RemoveDirectory(SecondRoot);
+
+        await harness.Indexer.RunInitialScanAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Contains(@"C:\Zweite\b.md", harness.Store.Snapshot.Keys);
     }
 
     [Fact]

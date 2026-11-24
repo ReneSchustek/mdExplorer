@@ -35,11 +35,12 @@ internal sealed class EnumDisplayConverter : IValueConverter
         [AppTheme.Light] = UiText.Get("Enum_AppTheme_Light"),
         [AppTheme.Dark] = UiText.Get("Enum_AppTheme_Dark"),
         [LogLevel.Trace] = UiText.Get("Enum_LogLevel_Trace"),
-        [LogLevel.Debug] = UiText.Get("LogViewer_Level_Debug"),
-        [LogLevel.Information] = UiText.Get("LogViewer_Level_Information"),
-        [LogLevel.Warning] = UiText.Get("LogViewer_Level_Warning"),
-        [LogLevel.Error] = UiText.Get("LogViewer_Level_Error"),
-        [LogLevel.Critical] = UiText.Get("LogViewer_Level_Critical"),
+        // Die Stufe eines einzelnen Eintrags, nicht die Auswahl des Filters („ab dieser Stufe“).
+        [LogLevel.Debug] = UiText.Get("Enum_LogLevel_Debug"),
+        [LogLevel.Information] = UiText.Get("Enum_LogLevel_Information"),
+        [LogLevel.Warning] = UiText.Get("Enum_LogLevel_Warning"),
+        [LogLevel.Error] = UiText.Get("Enum_LogLevel_Error"),
+        [LogLevel.Critical] = UiText.Get("Enum_LogLevel_Critical"),
     };
 
     /// <summary>Anzeigetext eines Werts.</summary>

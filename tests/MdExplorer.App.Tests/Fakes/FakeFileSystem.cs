@@ -57,18 +57,29 @@ internal sealed class FakeFileSystem : IFileSystem
     /// </remarks>
     public Exception? FailOnRead { get; set; }
 
-    public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken) =>
-        FailOnRead is not null
-            ? Task.FromException<byte[]>(FailOnRead)
-            : Task.FromResult(Files.TryGetValue(path, out byte[]? bytes) ? bytes : Array.Empty<byte>());
+    public Task<byte[]> ReadAllBytesAsync(string path, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Task.FromResult(ReadAllBytes(path));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return Task.FromException<byte[]>(ex);
+        }
+    }
 
+    /// <remarks>
+    /// Eine fehlende Datei wirft wie auf der Platte. Lieferte sie leere Bytes, liefe der Pfad
+    /// „zwischen Klick und Laden gelöscht“ an den Tests vorbei.
+    /// </remarks>
     public byte[] ReadAllBytes(string path)
     {
         if (FailOnRead is not null)
         {
             throw FailOnRead;
         }
-        return Files.TryGetValue(path, out byte[]? bytes) ? bytes : Array.Empty<byte>();
+        return Files.TryGetValue(path, out byte[]? bytes) ? bytes : throw new FileNotFoundException("Datei fehlt im Testdateisystem.", path);
     }
 
     public Stream OpenRead(string path) => Stream.Null;
@@ -86,14 +97,28 @@ internal sealed class FakeFileSystem : IFileSystem
     /// </summary>
     public Exception? FailOnWrite { get; set; }
 
-    public Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
+    /// <summary>
+    /// Hält <see cref="WriteAllBytesAtomicAsync"/> an, bis der Test es freigibt. So lässt sich
+    /// prüfen, was während eines laufenden Speicherns passiert.
+    /// </summary>
+    public TaskCompletionSource? WriteGate { get; set; }
+
+    public async Task WriteAllBytesAtomicAsync(string path, ReadOnlyMemory<byte> content, CancellationToken cancellationToken)
     {
         if (FailOnWrite is not null)
         {
-            return Task.FromException(FailOnWrite);
+            throw FailOnWrite;
         }
-        WrittenFiles[path] = content.ToArray();
-        return Task.CompletedTask;
+        // Der Inhalt wird vor dem Warten festgehalten, wie ihn das echte Schreiben übergeben bekäme.
+        byte[] bytes = content.ToArray();
+        if (WriteGate is not null)
+        {
+            await WriteGate.Task.ConfigureAwait(false);
+        }
+        // Wie auf der Platte ist das Geschriebene danach auch lesbar; sonst sähe ein Vergleich nach
+        // dem Speichern den alten Stand.
+        WrittenFiles[path] = bytes;
+        Files[path] = bytes;
     }
 
     /// <summary>

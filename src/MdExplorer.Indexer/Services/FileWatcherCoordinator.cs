@@ -19,7 +19,7 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
     private readonly ILogger<FileWatcherCoordinator> _logger;
     private readonly TimeSpan _debounce;
     private readonly Channel<FileSystemEvent> _channel;
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly Dictionary<string, PendingEvent> _pending = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<IFileWatcher> _watchers = [];
     private bool _started;
@@ -66,13 +66,35 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
             throw new InvalidOperationException("FileWatcherCoordinator wurde bereits gestartet.");
         }
 
-        _started = true;
-        foreach (string root in roots.Where(root => !string.IsNullOrWhiteSpace(root)))
+        lock (_watchers)
         {
-            StartWatcher(root);
+            _started = true;
+            StartWatchers(roots);
+            LogStarted(_logger, _watchers.Count, _debounce.TotalMilliseconds);
         }
+    }
 
-        LogStarted(_logger, _watchers.Count, _debounce.TotalMilliseconds);
+    /// <summary>Beobachtet ab jetzt die angegebenen Wurzeln statt der bisherigen.</summary>
+    /// <remarks>
+    /// Für eine geänderte Wurzelliste im laufenden Betrieb. Vor dem Start und nach dem Anhalten
+    /// geschieht nichts: Der Start nimmt dann ohnehin die aktuelle Liste. Was von den alten Wurzeln
+    /// noch in der Entprellung steckt, geht weiter; was der Indexer davon nicht mehr braucht, räumt
+    /// er beim Wechsel der Wurzeln ab.
+    /// </remarks>
+    /// <param name="roots">Die neuen Wurzeln.</param>
+    public void Retarget(IReadOnlyList<string> roots)
+    {
+        ArgumentNullException.ThrowIfNull(roots);
+        lock (_watchers)
+        {
+            if (_disposed || !_started || _stopped)
+            {
+                return;
+            }
+            DisposeWatchers();
+            StartWatchers(roots);
+            LogRetargeted(_logger, _watchers.Count);
+        }
     }
 
     /// <summary>Beendet die Beobachtung und schließt den Channel.</summary>
@@ -84,12 +106,10 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
             return Task.CompletedTask;
         }
 
-        foreach (IFileWatcher watcher in _watchers)
+        lock (_watchers)
         {
-            watcher.EventOccurred -= OnRawEvent;
-            watcher.Dispose();
+            DisposeWatchers();
         }
-        _watchers.Clear();
 
         // Was beim Anhalten noch in der Entprellung steckt, wird verworfen und nicht mehr gemeldet.
         PendingEvent[] outstanding;
@@ -141,6 +161,29 @@ public sealed partial class FileWatcherCoordinator : IAsyncDisposable
         pending.Kind == FileSystemEventKind.Renamed
             && incoming.Kind == FileSystemEventKind.Renamed
             && !string.Equals(pending.OldPath, incoming.OldPath, StringComparison.OrdinalIgnoreCase);
+
+    [LoggerMessage(EventId = 53, Level = LogLevel.Information, Message = "FileWatcher auf geänderte Wurzeln umgestellt — {WatcherCount} Wurzel(n).")]
+    private static partial void LogRetargeted(ILogger logger, int watcherCount);
+
+    // Aufrufer halten die Sperre auf _watchers.
+    private void StartWatchers(IReadOnlyList<string> roots)
+    {
+        foreach (string root in roots.Where(root => !string.IsNullOrWhiteSpace(root)))
+        {
+            StartWatcher(root);
+        }
+    }
+
+    // Aufrufer halten die Sperre auf _watchers.
+    private void DisposeWatchers()
+    {
+        foreach (IFileWatcher watcher in _watchers)
+        {
+            watcher.EventOccurred -= OnRawEvent;
+            watcher.Dispose();
+        }
+        _watchers.Clear();
+    }
 
     // Ein Netzlaufwerk, das gerade fehlt, oder ein Ordner ohne Leserecht kostet nur die eigene
     // Wurzel. Der kaputte Watcher wird sofort freigegeben, damit er keinen Griff offen hält.

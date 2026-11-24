@@ -36,11 +36,17 @@ internal sealed partial class SettingsWindow : Window
     /// Beendet die Anwendung, sobald das Installationsprogramm läuft. Ohne das Beenden
     /// kann der Installer die noch geöffneten Programmdateien nicht ersetzen.
     /// </summary>
+    /// <remarks>
+    /// Über das Hauptfenster, nicht über <c>Application.Shutdown</c>: Nur so fragt es nach
+    /// ungespeicherten Änderungen und stoppt die Dienste geordnet. Bleibt der Nutzer bei der Rückfrage
+    /// im Programm, läuft es weiter, und das Installationsprogramm meldet die geöffnete Anwendung
+    /// selbst. Erst nach dem Dialog: Das Setzen von <see cref="Window.DialogResult"/> schließt ihn,
+    /// und sein <c>ShowDialog</c> soll zurückgekehrt sein, bevor das Hauptfenster schließt.
+    /// </remarks>
     private void OnInstallerStarted(object? sender, EventArgs args)
     {
         DialogResult = false;
-        Close();
-        Application.Current?.Shutdown();
+        _ = Dispatcher.BeginInvoke(() => Application.Current?.MainWindow?.Close());
     }
 
     private void OnLoadedHandler(object sender, RoutedEventArgs args)
@@ -52,8 +58,8 @@ internal sealed partial class SettingsWindow : Window
     private void OnCloseRequested(object? sender, SettingsCloseEventArgs args)
     {
         ArgumentNullException.ThrowIfNull(args);
+        // Das Setzen schließt den modalen Dialog.
         DialogResult = args.SavedChanges;
-        Close();
     }
 
     private void OnWindowClosed(object? sender, EventArgs args)

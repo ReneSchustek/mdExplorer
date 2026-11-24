@@ -2,6 +2,7 @@
              x:ClassModifier="internal"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:MdExplorer.Presentation;assembly=MdExplorer.Presentation"
              xmlns:l="clr-namespace:MdExplorer.App.Localization"
              xmlns:vm="clr-namespace:MdExplorer.App.ViewModels.Settings"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -55,8 +56,8 @@
         <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,16,0,0"
                     DataContext="{Binding Update}">
             <Separator Margin="0,0,0,10" />
-            <TextBlock Text="{Binding StatusText, Mode=OneWay}"
-                       AutomationProperties.LiveSetting="Polite"
+            <TextBlock Text="{Binding StatusText, Mode=OneWay, NotifyOnTargetUpdated=True}"
+                       c:LiveRegion.Announce="True"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap" />
             <ProgressBar Height="6"

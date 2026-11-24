@@ -50,7 +50,7 @@ public sealed class Fts5IndexMaintainerTests
     [Fact]
     public void ComputeDiff_OnHashUnchanged_DoesNotAddToTargets()
     {
-        Dictionary<Guid, string> indexedHashes = new() { [IdA] = "hash-A" };
+        Dictionary<Guid, string> indexedHashes = new() { [IdA] = Fts5IndexMaintainer.SyncKeyOf(NewDoc(IdA, "hash-A")) };
         SearchSourceData source = new(
             [NewDoc(IdA, "hash-A")],
             new Dictionary<Guid, IReadOnlyList<string>>());
@@ -59,6 +59,22 @@ public sealed class Fts5IndexMaintainerTests
 
         Assert.Empty(diff.Targets);
         Assert.Empty(diff.Orphans);
+    }
+
+    /// <remarks>
+    /// Beim Umbenennen oder Verschieben bleiben Kennung und Inhalt gleich, der Ort nicht. Der Index
+    /// muss dann neu schreiben, sonst zeigt er Titel und Pfad der alten Stelle.
+    /// </remarks>
+    [Fact]
+    public void ComputeDiff_OnAMovedDocumentWithTheSameContent_AddsToTargets()
+    {
+        Dictionary<Guid, string> indexedHashes = new() { [IdA] = Fts5IndexMaintainer.SyncKeyOf(NewDoc(IdA, "hash-A")) };
+        SearchSourceDocument moved = NewDoc(IdA, "hash-A") with { RelativePath = "ordner/neu.md" };
+        SearchSourceData source = new([moved], new Dictionary<Guid, IReadOnlyList<string>>());
+
+        SynchronizationDiff diff = Fts5IndexMaintainer.ComputeDiffCore(indexedHashes, source, batchSize: 100, NothingWaits);
+
+        Assert.Equal(IdA, Assert.Single(diff.Targets).MarkdownFileId);
     }
 
     [Fact]
@@ -78,7 +94,11 @@ public sealed class Fts5IndexMaintainerTests
     [Fact]
     public void ComputeDiff_OnIndexedDocNotInSource_AddsToOrphans()
     {
-        Dictionary<Guid, string> indexedHashes = new() { [IdA] = "hash-A", [IdB] = "hash-B" };
+        Dictionary<Guid, string> indexedHashes = new()
+        {
+            [IdA] = Fts5IndexMaintainer.SyncKeyOf(NewDoc(IdA, "hash-A")),
+            [IdB] = Fts5IndexMaintainer.SyncKeyOf(NewDoc(IdB, "hash-B")),
+        };
         SearchSourceData source = new(
             [NewDoc(IdA, "hash-A")],
             new Dictionary<Guid, IReadOnlyList<string>>());

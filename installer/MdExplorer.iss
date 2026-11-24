@@ -57,6 +57,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#SourceDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; Die Schriften stecken in der Programmdatei; die OFL verlangt ihren Lizenztext bei jeder Weitergabe.
+Source: "..\src\MdExplorer.App\Assets\Fonts\OFL-roboto-flex.txt"; DestDir: "{app}\Lizenzen"; Flags: ignoreversion
+Source: "..\src\MdExplorer.App\Assets\Fonts\OFL-roboto-mono.txt"; DestDir: "{app}\Lizenzen"; Flags: ignoreversion
 
 ; Dateizuordnung. Die Wahl des Standardprogramms trifft unter Windows der Nutzer selbst, einmal
 ; über „Öffnen mit“ und „Immer“; ein Setup darf sie nicht erzwingen. Eingetragen wird deshalb nur,

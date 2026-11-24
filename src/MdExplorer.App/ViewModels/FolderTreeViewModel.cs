@@ -54,9 +54,6 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
     [ObservableProperty]
     private string? _selectedPathPrefix;
 
-    /// <summary>Wird ausgelöst, sobald ein Datei-Knoten selektiert wurde (mit dem absoluten Pfad).</summary>
-    public event Action<string>? FileSelected;
-
     /// <summary>Erzeugt das ViewModel und baut die Root-Knoten auf.</summary>
     public FolderTreeViewModel(
         ISettingsService settings,
@@ -80,6 +77,9 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
         Roots = BuildRoots(settings.Current.Indexing.Roots);
         _settings.SettingsChanged += OnSettingsChanged;
     }
+
+    /// <summary>Wird ausgelöst, sobald ein Datei-Knoten selektiert wurde (mit dem absoluten Pfad).</summary>
+    public event Action<string>? FileSelected;
 
     /// <summary>Wurzel-Knoten des Baums (entspricht den konfigurierten Roots aus den Settings).</summary>
     public ObservableCollection<TreeNodeViewModel> Roots { get; }
@@ -272,5 +272,4 @@ internal sealed partial class FolderTreeViewModel : ObservableObject, IDisposabl
             _dialogService.ShowError(UiText.Get("FolderTree_SaveFailed_Title"), UiText.Format("FolderTree_SaveFailed_Message", ex.Message));
         }
     }
-
 }

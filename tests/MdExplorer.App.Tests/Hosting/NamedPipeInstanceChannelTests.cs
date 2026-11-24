@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO.Pipes;
 using MdExplorer.App.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace MdExplorer.App.Tests.Hosting;
@@ -17,7 +18,11 @@ public sealed class NamedPipeInstanceChannelTests : IDisposable
 {
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(30);
 
-    private readonly string _pipeName = "MdExplorer-Test-" + Guid.NewGuid().ToString("N");
+    // Eindeutig je Prozess und Testfall, ohne Zufall: Der Name ist ein Betriebssystem-Objekt, das
+    // ein gleichzeitig laufender Testprozess sonst mitbenutzte.
+    private static int s_nextName;
+
+    private readonly string _pipeName = $"MdExplorer-Test-{Environment.ProcessId}-{Interlocked.Increment(ref s_nextName)}";
     private readonly BlockingCollection<string?> _received = [];
 
     [Fact]
@@ -145,8 +150,11 @@ public sealed class NamedPipeInstanceChannelTests : IDisposable
     {
         // Scheitert das Anlegen nur kurz, darf das Lauschen nicht für die ganze Laufzeit enden.
         NamedPipeServerStream squatter = new(_pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-        await using NamedPipeInstanceServer server = StartServer();
-        await Task.Delay(NamedPipeInstanceServer.CreateRetryDelay / 2, Token()).ConfigureAwait(true);
+        RetrySignalLogger logger = new();
+        await using NamedPipeInstanceServer server = StartServer(logger);
+        // Erst nach dem gescheiterten ersten Versuch frei geben; sonst liefe der Wiederholungsweg
+        // unter Last gar nicht, und der Test wäre trotzdem grün.
+        await WaitAsync(logger.FirstRetry.Task).ConfigureAwait(true);
         await squatter.DisposeAsync().ConfigureAwait(true);
 
         await WaitAsync(new NamedPipeInstanceClient(_pipeName).SendAsync(@"C:\danach.md", Token())).ConfigureAwait(true);
@@ -247,9 +255,31 @@ public sealed class NamedPipeInstanceChannelTests : IDisposable
         await task.WaitAsync(Patience, Token()).ConfigureAwait(true);
     }
 
-    private NamedPipeInstanceServer StartServer()
+    /// <summary>Meldet, sobald der Server einen gescheiterten Versuch zum Anlegen protokolliert.</summary>
+    private sealed class RetrySignalLogger : ILogger<NamedPipeInstanceServer>
     {
-        NamedPipeInstanceServer server = new(_pipeName, _received.Add, NullLogger<NamedPipeInstanceServer>.Instance);
+        // Kennung von LogCreateRetry im Server.
+        private const int CreateRetryEventId = 1724;
+
+        public TaskCompletionSource FirstRetry { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (eventId.Id == CreateRetryEventId)
+            {
+                _ = FirstRetry.TrySetResult();
+            }
+        }
+    }
+
+    private NamedPipeInstanceServer StartServer(ILogger<NamedPipeInstanceServer>? logger = null)
+    {
+        NamedPipeInstanceServer server = new(_pipeName, _received.Add, logger ?? NullLogger<NamedPipeInstanceServer>.Instance);
         server.Start();
         return server;
     }

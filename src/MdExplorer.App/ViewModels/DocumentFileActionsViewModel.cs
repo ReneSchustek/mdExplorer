@@ -25,6 +25,11 @@ internal sealed partial class DocumentFileActionsViewModel : ObservableObject
     private Guid _documentId;
     private string _absolutePath = string.Empty;
 
+    // Die Erfolgsmeldung eines Umbenennens oder Verschiebens, bis das Dokument unter seinem neuen
+    // Pfad wieder geladen ist. Das Neuladen richtet die Aktionen neu aus und leerte sie sonst.
+    private string? _carriedMessagePath;
+    private string _carriedMessage = string.Empty;
+
     /// <summary>Der neue Name, solange er noch getippt wird.</summary>
     [ObservableProperty]
     private string _newName = string.Empty;
@@ -137,7 +142,7 @@ internal sealed partial class DocumentFileActionsViewModel : ObservableObject
         _documentId = documentId;
         _absolutePath = absolutePath;
         NewName = currentName;
-        OperationMessage = string.Empty;
+        OperationMessage = TakeCarriedMessage(absolutePath);
         MoveCommand.NotifyCanExecuteChanged();
         DeleteCommand.NotifyCanExecuteChanged();
         RenameCommand.NotifyCanExecuteChanged();
@@ -158,7 +163,10 @@ internal sealed partial class DocumentFileActionsViewModel : ObservableObject
             return;
         }
 
-        DocumentImpact impact = await _fileService.GetImpactAsync(_documentId, _shutdownToken).ConfigureAwait(true);
+        if (await ReadImpactAsync().ConfigureAwait(true) is not { } impact)
+        {
+            return;
+        }
         if (impact.IncomingLinkCount > 0
             && !_dialogService.Confirm(UiText.Get("Relations_RenameDialog_Title"), RenameQuestion(impact, NewName)))
         {
@@ -201,7 +209,10 @@ internal sealed partial class DocumentFileActionsViewModel : ObservableObject
             return;
         }
 
-        DocumentImpact impact = await _fileService.GetImpactAsync(_documentId, _shutdownToken).ConfigureAwait(true);
+        if (await ReadImpactAsync().ConfigureAwait(true) is not { } impact)
+        {
+            return;
+        }
         if (!_dialogService.Confirm(UiText.Get("Relations_DeleteDialog_Title"), DeletionQuestion(impact)))
         {
             return;
@@ -210,6 +221,22 @@ internal sealed partial class DocumentFileActionsViewModel : ObservableObject
         ReportAndFollow(await _fileService.DeleteAsync(_documentId, _shutdownToken).ConfigureAwait(true));
     }
 
+    /// <summary>Liest die Folgen; ist der Index nicht lesbar, steht das als Meldung da.</summary>
+    private async Task<DocumentImpact?> ReadImpactAsync()
+    {
+        DocumentImpact? impact = await _fileService.GetImpactAsync(_documentId, _shutdownToken).ConfigureAwait(true);
+        if (impact is null)
+        {
+            OperationMessage = UiText.Get("DocumentFile_IndexUnavailable");
+        }
+        return impact;
+    }
+
+    /// <remarks>
+    /// Nach dem Löschen gibt es kein Dokument mehr und damit keinen Bereich, in dem die Meldung
+    /// stünde; dass die Datei aus Vorschau und Liste verschwindet, ist dort die Rückmeldung.
+    /// Eine Fehlermeldung bleibt stehen, weil auf einen gescheiterten Vorgang nichts neu lädt.
+    /// </remarks>
     private void ReportAndFollow(DocumentFileResult result)
     {
         OperationMessage = result.Message;
@@ -218,7 +245,28 @@ internal sealed partial class DocumentFileActionsViewModel : ObservableObject
             return;
         }
 
+        _carriedMessagePath = result.NewAbsolutePath;
+        _carriedMessage = result.Message;
         DocumentChanged?.Invoke(result.NewAbsolutePath);
+    }
+
+    /// <summary>
+    /// Liefert die mitgetragene Meldung, wenn das neue Ziel das Dokument unter seinem neuen Pfad
+    /// ist. Ein anderes Dokument verwirft sie; das bloße Freigeben dazwischen behält sie.
+    /// </summary>
+    private string TakeCarriedMessage(string absolutePath)
+    {
+        if (absolutePath.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        string message = string.Equals(absolutePath, _carriedMessagePath, StringComparison.OrdinalIgnoreCase)
+            ? _carriedMessage
+            : string.Empty;
+        _carriedMessagePath = null;
+        _carriedMessage = string.Empty;
+        return message;
     }
 
     partial void OnNewNameChanged(string value)

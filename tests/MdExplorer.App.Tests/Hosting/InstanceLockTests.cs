@@ -13,7 +13,11 @@ public sealed class InstanceLockTests
 {
     private static readonly ILogger Logger = NullLogger.Instance;
 
-    private readonly string _name = "MdExplorer-Test-" + Guid.NewGuid().ToString("N");
+    // Eindeutig je Prozess und Testfall, ohne Zufall: Der Name ist ein Betriebssystem-Objekt, das
+    // ein gleichzeitig laufender Testprozess sonst mitbenutzte.
+    private static int s_nextName;
+
+    private readonly string _name = $"MdExplorer-Test-{Environment.ProcessId}-{Interlocked.Increment(ref s_nextName)}";
 
     [Fact]
     public void Acquire_FirstTime_IsTheFirstInstance()

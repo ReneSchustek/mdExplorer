@@ -26,6 +26,15 @@ internal sealed class FakeIndexer : IIndexer
     /// </summary>
     public bool HoldScans { get; set; }
 
+    /// <summary>
+    /// Wenn gesetzt, endet ein gehaltener Durchlauf nach seinem Abbruch erst, wenn der Test das Tor
+    /// öffnet. So sieht der Test, ob das Beenden auf den laufenden Durchlauf wartet.
+    /// </summary>
+    public TaskCompletionSource? AfterCancellation { get; set; }
+
+    /// <summary>Erfüllt, sobald ein gehaltener Durchlauf seinen Abbruch bemerkt hat.</summary>
+    public TaskCompletionSource CancellationSeen { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     /// <summary>Die Abbruchmerker der begonnenen Durchläufe in ihrer Reihenfolge.</summary>
     public IReadOnlyList<CancellationToken> ScanTokens
     {
@@ -53,7 +62,7 @@ internal sealed class FakeIndexer : IIndexer
             return Task.FromException(toThrow);
         }
 
-        return HoldScans ? Task.Delay(Timeout.Infinite, cancellationToken) : Task.CompletedTask;
+        return HoldScans ? HoldAsync(cancellationToken) : Task.CompletedTask;
     }
 
     public void Raise(IndexerScanProgressEventArgs args) =>
@@ -61,4 +70,20 @@ internal sealed class FakeIndexer : IIndexer
 
     public void RaiseProgress(string root, int processedCount, bool isCompleted) =>
         Raise(new IndexerScanProgressEventArgs(root, processedCount, isCompleted));
+
+    private async Task HoldAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _ = CancellationSeen.TrySetResult();
+            if (AfterCancellation is { } gate)
+            {
+                await gate.Task.ConfigureAwait(false);
+            }
+        }
+    }
 }

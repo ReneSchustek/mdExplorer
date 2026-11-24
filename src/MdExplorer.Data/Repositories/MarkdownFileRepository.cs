@@ -41,10 +41,7 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     public async Task<IReadOnlyList<MarkdownFile>> GetAllUnderRootAsync(string rootAbsolutePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(rootAbsolutePath);
-        // Mit abschließendem Trenner: Ohne ihn träfe der Root "C:\Notes" auch Dateien unter
-        // "C:\Notes-alt\...", denn beide Pfade beginnen mit derselben Zeichenfolge.
-        string trimmedRoot = rootAbsolutePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        string prefix = trimmedRoot + Path.DirectorySeparatorChar;
+        string prefix = RootPrefix(rootAbsolutePath);
         // AsNoTracking: Der Erst-Scan und der Abgleich lesen hier den ganzen Bestand einer
         // Wurzel, und die Änderungsverfolgung für jede Zeile kostete nur Zeit. Wer eine dieser
         // Entitäten ändern oder entfernen will, hängt sie über Update oder Remove wieder an.
@@ -54,6 +51,29 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         return result;
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Gelesen werden nur Schlüssel und Pfad; geprüft wird in der Anwendung, mit demselben Anfang
+    /// wie bei <see cref="GetAllUnderRootAsync"/>. Groß- und Kleinschreibung zählt nicht, wie in
+    /// der Spalte selbst.
+    /// </remarks>
+    public async Task<IReadOnlyList<Guid>> GetIdsOutsideRootsAsync(IReadOnlyCollection<string> rootAbsolutePaths, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(rootAbsolutePaths);
+        string[] prefixes = [.. rootAbsolutePaths.Select(RootPrefix)];
+        List<FileLocation> rows = await _dbContext.Set<MarkdownFile>()
+            .AsNoTracking()
+            .Select(file => new FileLocation(file.Id, file.AbsolutePath))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return
+        [
+            .. rows
+                .Where(row => !Array.Exists(prefixes, prefix => row.AbsolutePath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                .Select(row => row.Id),
+        ];
     }
 
     /// <inheritdoc />
@@ -133,6 +153,11 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
         _dbContext.SaveChangesAsync(cancellationToken);
 
+    // Mit abschließendem Trenner: Ohne ihn träfe die Wurzel "C:\Notes" auch Dateien unter
+    // "C:\Notes-alt\...", denn beide Pfade beginnen mit derselben Zeichenfolge.
+    private static string RootPrefix(string rootAbsolutePath) =>
+        rootAbsolutePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
     // Was der Kontext zu den entfernten Dateien noch verfolgt, zeigt jetzt auf Zeilen, die es nicht
     // mehr gibt; ein späteres SaveChanges schriebe sie zurück oder scheiterte daran. Gelöst wird nur
     // das: Andere vorgemerkte Änderungen im selben Kontext gehören anderen Aufrufern.
@@ -154,4 +179,7 @@ public sealed class MarkdownFileRepository(MdExplorerDbContext dbContext) : IMar
             }
         }
     }
+
+    /// <summary>Schlüssel und Pfad einer Datei, ohne den Rest der Zeile.</summary>
+    private sealed record FileLocation(Guid Id, string AbsolutePath);
 }

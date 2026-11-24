@@ -74,12 +74,12 @@ public sealed partial class JsonFileUpdateCheckJournal : IUpdateCheckJournal
         }
     }
 
-    /// <summary>Inhalt der Journal-Datei: ein JSON-Objekt mit dem Zeitpunkt der letzten erfolgreichen Prüfung.</summary>
-    private sealed record JournalState(DateTimeOffset LastCheckUtc);
-
     [LoggerMessage(EventId = 700, Level = LogLevel.Warning, Message = "Update-Journal nicht lesbar — Prüfung läuft trotzdem: {Path}")]
     private static partial void LogReadFailed(ILogger logger, string path, Exception exception);
 
     [LoggerMessage(EventId = 701, Level = LogLevel.Warning, Message = "Update-Journal nicht schreibbar — Throttle ohne Persistenz: {Path}")]
     private static partial void LogWriteFailed(ILogger logger, string path, Exception exception);
+
+    /// <summary>Inhalt der Journal-Datei: ein JSON-Objekt mit dem Zeitpunkt der letzten erfolgreichen Prüfung.</summary>
+    private sealed record JournalState(DateTimeOffset LastCheckUtc);
 }

@@ -292,6 +292,23 @@ public sealed class TagManagementViewModelTests
         Assert.False(sut.IsBusy);
     }
 
+    /// <remarks>
+    /// EF Core meldet einen entsorgten oder falsch benutzten Kontext als
+    /// <see cref="InvalidOperationException"/>, nicht als Datenbankfehler. Die Tag-Verwaltung fing
+    /// nur Letzteren; der Erstere landete aus dem Ladeereignis des Fensters im allgemeinen Fehlerdialog.
+    /// </remarks>
+    [Fact]
+    public async Task RefreshCommand_WhenTheContextIsInAWrongState_ReportsItLikeABusyDatabase()
+    {
+        FakeStatisticsService statsService = new() { Failure = new InvalidOperationException("Kontext entsorgt") };
+        TagManagementViewModel sut = new(statsService, new FakeManagementService(), new FakeDialogService(), NullLogger<TagManagementViewModel>.Instance);
+
+        await sut.RefreshAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Equal(UiText.Get("TagManagement_Status_LoadFailed"), sut.StatusMessage);
+        Assert.False(sut.IsBusy);
+    }
+
     [Fact]
     public async Task RefreshCommand_WhenCancelled_LeavesNoFailureMessage()
     {

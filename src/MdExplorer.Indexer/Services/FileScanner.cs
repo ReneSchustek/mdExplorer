@@ -89,7 +89,7 @@ public sealed partial class FileScanner : IFileScanner
                 yield return entry;
             }
 
-            EnqueueDescendableSubdirectories(current, visitedCanonical, pending, cancellationToken);
+            EnqueueDescendableSubdirectories(current, root, visitedCanonical, pending, cancellationToken);
         }
     }
 
@@ -124,6 +124,7 @@ public sealed partial class FileScanner : IFileScanner
 
     private void EnqueueDescendableSubdirectories(
         string current,
+        string root,
         HashSet<string> visitedCanonical,
         Queue<string> pending,
         CancellationToken cancellationToken)
@@ -131,15 +132,23 @@ public sealed partial class FileScanner : IFileScanner
         foreach (string subdir in _fileSystem.EnumerateDirectories(current))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (ShouldDescendInto(subdir, visitedCanonical))
+            if (ShouldDescendInto(subdir, root, visitedCanonical))
             {
                 pending.Enqueue(subdir);
             }
         }
     }
 
-    private bool ShouldDescendInto(string subdir, HashSet<string> visitedCanonical)
+    private bool ShouldDescendInto(string subdir, string root, HashSet<string> visitedCanonical)
     {
+        // Zuerst der Ausschluss: Werkzeugordner wie vendor oder node_modules enthalten oft mehr
+        // Unterordner als der ganze Notizbestand, und jeder davon kostete sonst zwei Abfragen ans
+        // Dateisystem und eine Aufzählung, ohne dass eine Datei daraus je in den Index käme.
+        if (_exclusionFilter.IsDirectoryExcluded(subdir, root))
+        {
+            return false;
+        }
+
         bool isReparsePoint = _fileSystem.IsReparsePoint(subdir);
         string canonical = _fileSystem.GetDirectoryFinalPath(subdir);
         if (isReparsePoint && !_options.FollowSymlinks)

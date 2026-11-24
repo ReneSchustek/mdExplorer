@@ -10,14 +10,14 @@ namespace MdExplorer.Core.Abstractions;
 /// </summary>
 public interface ISettingsService
 {
-    /// <summary>Der aktuell gültige Settings-Stand. Wird nach <see cref="SaveAsync"/> aktualisiert.</summary>
-    AppSettings Current { get; }
-
     /// <summary>
     /// Wird ausgelöst, wenn <see cref="SaveAsync"/> erfolgreich neue Settings persistiert hat.
     /// Aufrufer können hier Glob-Matcher invalidieren, Re-Scans triggern usw.
     /// </summary>
     event EventHandler<SettingsChangedEventArgs>? SettingsChanged;
+
+    /// <summary>Der aktuell gültige Settings-Stand. Wird nach <see cref="SaveAsync"/> aktualisiert.</summary>
+    AppSettings Current { get; }
 
     /// <summary>
     /// Lädt die Settings aus dem persistierten Speicher. Liefert <see cref="AppSettings.Default"/>,

@@ -57,12 +57,17 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                    <ToggleButton Content="{Binding Label}"
-                                  IsChecked="{Binding IsActive, Mode=OneWay}"
-                                  Command="{Binding DataContext.SelectPeriodCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                  CommandParameter="{Binding Period}"
-                                  Margin="0,0,4,0"
-                                  AutomationProperties.Name="{Binding Label}" />
+                    <!-- Ein Radioknopf im Aussehen der Umschaltknöpfe: Genau ein Zeitraum gilt, und ein
+                         Klick auf den schon gewählten lässt ihn gewählt. Ein Umschaltknopf schaltete
+                         sich dabei selbst ab, während der Filter weiter galt. -->
+                    <RadioButton Content="{Binding Label}"
+                                 GroupName="AllFilesPeriod"
+                                 Style="{StaticResource {x:Type ToggleButton}}"
+                                 IsChecked="{Binding IsActive, Mode=OneWay}"
+                                 Command="{Binding DataContext.SelectPeriodCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                 CommandParameter="{Binding Period}"
+                                 Margin="0,0,4,0"
+                                 AutomationProperties.Name="{Binding Label}" />
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
         </ItemsControl>

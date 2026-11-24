@@ -24,14 +24,20 @@ internal sealed class ReadRetryTracker
         _retryDelay = retryDelay;
     }
 
-    /// <summary>Ob irgendeine Datei noch auf einen neuen Leseversuch wartet.</summary>
-    public bool HasPending
+    /// <summary>Ob für irgendeine Datei ein neuer Leseversuch fällig ist.</summary>
+    /// <remarks>
+    /// Fällig, nicht nur vermerkt: Während der Wartezeit gibt es nichts zu tun. Zählte schon der
+    /// Vermerk, lud die Volltextpflege bei einer dauerhaft gesperrten Datei in jedem Takt den
+    /// ganzen Bestand, nur um festzustellen, dass die Datei noch wartet.
+    /// </remarks>
+    public bool HasDue
     {
         get
         {
             lock (_gate)
             {
-                return _failures.Count > 0;
+                DateTimeOffset now = _timeProvider.GetUtcNow();
+                return _failures.Values.Any(failure => failure.RetryAt <= now);
             }
         }
     }

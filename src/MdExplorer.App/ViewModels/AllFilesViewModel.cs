@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MdExplorer.App.Localization;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Core.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -103,7 +104,7 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     public event Action<char>? JumpRequested;
 
     /// <summary>Aktuelle (gefilterte + sortierte) Sicht auf die Datei-Liste.</summary>
-    public ObservableCollection<AllFilesItemViewModel> Items { get; }
+    public ReplaceableCollection<AllFilesItemViewModel> Items { get; }
 
     /// <summary>Löst einen Lade-Roundtrip aus.</summary>
     public AsyncRelayCommand RefreshCommand { get; }
@@ -297,12 +298,13 @@ internal sealed partial class AllFilesViewModel : ObservableObject
     private void RebuildItems()
     {
         IEnumerable<AllFilesItemViewModel> matches = _allItems.Where(_filters.CreateMatcher(SearchText ?? string.Empty));
-        Items.Clear();
-        foreach (AllFilesItemViewModel item in AllFilesOrdering.Sort(matches, SortMode))
+        AllFilesItemViewModel[] sorted = [.. AllFilesOrdering.Sort(matches, SortMode)];
+        foreach (AllFilesItemViewModel item in sorted)
         {
             item.GroupLabel = AllFilesOrdering.GroupLabelOf(item, SortMode);
-            Items.Add(item);
         }
+        // In einem Schritt: Die Liste ist gruppiert, und jede Einzelmeldung ordnete neu ein.
+        Items.ReplaceAll(sorted);
     }
 
     /// <summary>Stellt die Chip-Leiste der wirkenden Filter neu zusammen.</summary>
@@ -359,185 +361,4 @@ internal sealed partial class AllFilesViewModel : ObservableObject
             JumpRequested?.Invoke(letter[0]);
         }
     }
-}
-
-/// <summary>Ein Buchstabe der Sprungleiste.</summary>
-internal sealed partial class JumpLetterViewModel : ObservableObject
-{
-    [ObservableProperty]
-    private bool _hasEntries;
-
-    /// <summary>Erzeugt den Eintrag für einen Buchstaben.</summary>
-    public JumpLetterViewModel(char letter)
-    {
-        Letter = letter;
-        Label = letter.ToString(CultureInfo.InvariantCulture);
-    }
-
-    /// <summary>Der Buchstabe selbst.</summary>
-    public char Letter { get; }
-
-    /// <summary>Der Buchstabe als Text, für Anzeige und Befehlsparameter.</summary>
-    public string Label { get; }
-}
-
-/// <summary>Was die Datei-Liste gerade zeigt.</summary>
-/// <remarks>
-/// Ein Zustand statt mehrerer bools nebeneinander: Zwei Merker, die sich widersprechen,
-/// ergeben eine Ansicht, die es laut Code nicht geben kann, und genau die sieht dann der
-/// Nutzer. Die Anzeige-Eigenschaften leiten sich hieraus ab.
-/// </remarks>
-internal enum AllFilesListState
-{
-    /// <summary>Der Bestand wird gerade geholt.</summary>
-    Loading = 0,
-
-    /// <summary>Es ist überhaupt nichts indiziert.</summary>
-    EmptyStock = 1,
-
-    /// <summary>Es gibt Einträge, aber keiner passt zu Suche und Filtern.</summary>
-    NoMatches = 2,
-
-    /// <summary>Es gibt etwas zu zeigen.</summary>
-    Items = 3,
-
-    /// <summary>Der Bestand konnte nicht geholt werden.</summary>
-    LoadFailed = 4,
-}
-
-/// <summary>Ein wählbarer Änderungszeitraum.</summary>
-internal sealed partial class PeriodFilterViewModel : ObservableObject
-{
-    [ObservableProperty]
-    private bool _isActive;
-
-    /// <summary>Erzeugt den Umschalter für einen Zeitraum.</summary>
-    public PeriodFilterViewModel(AllFilesPeriod period, string label)
-    {
-        Period = period;
-        Label = label;
-    }
-
-    /// <summary>Der Zeitraum, für den dieser Umschalter steht.</summary>
-    public AllFilesPeriod Period { get; }
-
-    /// <summary>Die Aufschrift.</summary>
-    public string Label { get; }
-}
-
-/// <summary>Ein Filter, der gerade wirkt, als entfernbarer Chip dargestellt.</summary>
-internal sealed class ActiveFilterViewModel
-{
-    /// <summary>Erzeugt den Chip zu einem wirkenden Filter.</summary>
-    public ActiveFilterViewModel(AllFilesFilterKind kind, string value, string label)
-    {
-        Kind = kind;
-        Value = value;
-        Label = label;
-    }
-
-    /// <summary>Woran der Filter greift.</summary>
-    public AllFilesFilterKind Kind { get; }
-
-    /// <summary>Der eingestellte Wert: Ordner, Kennzeichnung oder Zeitraum.</summary>
-    public string Value { get; }
-
-    /// <summary>Die Aufschrift des Chips.</summary>
-    public string Label { get; }
-
-    /// <summary>Beschriftung der Entfernen-Schaltfläche, auch für die Sprachausgabe.</summary>
-    public string RemoveHint => UiText.Format("AllFiles_Filter_Remove", Label);
-}
-
-/// <summary>Woran ein Filter der Datei-Liste greift.</summary>
-internal enum AllFilesFilterKind
-{
-    /// <summary>Der Ordner, in dem eine Datei liegt.</summary>
-    Folder = 0,
-
-    /// <summary>Eine Kennzeichnung der Datei.</summary>
-    Tag = 1,
-
-    /// <summary>Der Zeitraum der letzten Änderung.</summary>
-    Period = 2,
-}
-
-/// <summary>Zeiträume, auf die sich die Liste einschränken lässt.</summary>
-internal enum AllFilesPeriod
-{
-    /// <summary>Ohne Einschränkung.</summary>
-    Any = 0,
-
-    /// <summary>Seit Mitternacht der Ortszeit geändert.</summary>
-    Today = 1,
-
-    /// <summary>In den letzten sieben Tagen geändert.</summary>
-    LastSevenDays = 2,
-
-    /// <summary>In den letzten dreißig Tagen geändert.</summary>
-    LastThirtyDays = 3,
-}
-
-/// <summary>Sortier-Modi für die Datei-Liste.</summary>
-internal enum AllFilesSortMode
-{
-    /// <summary>Standard: nach Schreibdatum absteigend.</summary>
-    LastModified = 0,
-
-    /// <summary>Nach Dateiname (Titel) aufsteigend.</summary>
-    Title = 1,
-
-    /// <summary>Nach relativem Pfad aufsteigend.</summary>
-    RelativePath = 2,
-}
-
-/// <summary>Item-View für einen Datei-Eintrag im Alle-Dateien-Tab.</summary>
-internal sealed class AllFilesItemViewModel
-{
-    /// <summary>Erzeugt einen Eintrag aus einer Query-Zeile.</summary>
-    public AllFilesItemViewModel(AllFilesRow row, TimeZoneInfo timeZone)
-    {
-        ArgumentNullException.ThrowIfNull(row);
-        ArgumentNullException.ThrowIfNull(timeZone);
-        MarkdownFileId = row.MarkdownFileId;
-        Title = row.Title;
-        RelativePath = row.RelativePath;
-        AbsolutePath = row.AbsolutePath;
-        LastWriteTimeUtc = row.LastWriteTimeUtc;
-        LastWriteTime = TimeZoneInfo.ConvertTimeFromUtc(row.LastWriteTimeUtc, timeZone);
-        TagSlugs = row.TagSlugs;
-        FolderPath = RelativeFolder.Of(row.RelativePath);
-    }
-
-    /// <summary>Stabiler Schlüssel.</summary>
-    public Guid MarkdownFileId { get; }
-
-    /// <summary>Dateiname ohne Erweiterung.</summary>
-    public string Title { get; }
-
-    /// <summary>Pfad relativ zum konfigurierten Root.</summary>
-    public string RelativePath { get; }
-
-    /// <summary>Vollqualifizierter Pfad, Eingabe für den Navigations-Locator.</summary>
-    public string AbsolutePath { get; }
-
-    /// <summary>Letzte Änderung auf Disk (UTC), Grundlage für Sortierung und Zeitraumfilter.</summary>
-    public DateTime LastWriteTimeUtc { get; }
-
-    /// <summary>
-    /// Dieselbe Änderung in der Zeitzone des Rechners. Nur diese wird angezeigt: Wer eine
-    /// Datei gerade bearbeitet hat, erwartet die Uhrzeit seiner eigenen Uhr.
-    /// </summary>
-    public DateTime LastWriteTime { get; }
-
-    /// <summary>Slugs der angewendeten Tags.</summary>
-    public IReadOnlyList<string> TagSlugs { get; }
-
-    /// <summary>
-    /// Beschriftung der Gruppe, in der dieser Eintrag steht; leer, wenn nicht gruppiert wird.
-    /// </summary>
-    public string GroupLabel { get; internal set; } = string.Empty;
-
-    /// <summary>Der Ordner relativ zur Wurzel; leer für Dateien, die direkt darin liegen.</summary>
-    public string FolderPath { get; }
 }

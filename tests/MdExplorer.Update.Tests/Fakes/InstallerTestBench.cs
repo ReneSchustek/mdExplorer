@@ -38,6 +38,12 @@ internal sealed class InstallerTestBench : IDisposable
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 10, 25, 9, 0, 0, TimeSpan.Zero));
 
+    /// <summary>Die Version, die ein Paket angekündigt bekommt und die es ab Werk auch trägt.</summary>
+    public static readonly SemanticVersion PackageVersion = new(1, 0, 0);
+
+    /// <summary>Was die Versionsressource des geladenen Pakets meldet; ab Werk die angekündigte Version.</summary>
+    public string? PackagedVersion { get; set; } = "1.0.0";
+
     public List<string> Launched { get; } = [];
 
     /// <summary>Wirft der Start, landet diese Ausnahme beim Installer statt eines Prozesses.</summary>
@@ -67,7 +73,8 @@ internal sealed class InstallerTestBench : IDisposable
         _signingKey.SignData(content, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
 
     /// <summary>Ein vollständig veröffentlichtes Paket: Prüfwert und Signatur passen zum Inhalt.</summary>
-    public UpdateAsset AssetFor(byte[] content) => new(PackageName, PackageAddress, Sha256Of(content), Sign(content));
+    public UpdateAsset AssetFor(byte[] content) =>
+        new(PackageName, PackageAddress, Sha256Of(content), Sign(content)) { Version = PackageVersion };
 
     public HttpUpdateInstaller CreateSut(StubHttpMessageHandler handler, DownloadLimits? limits = null, ReleaseSignatureVerifier? verifier = null) =>
         CreateSut(handler, DownloadDirectory, limits, verifier);
@@ -84,6 +91,7 @@ internal sealed class InstallerTestBench : IDisposable
             verifier ?? Verifier,
             Time,
             Launch,
+            _ => PackagedVersion,
             NullLogger<HttpUpdateInstaller>.Instance);
     }
 

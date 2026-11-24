@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MdExplorer.App.Services;
 using MdExplorer.Core.Abstractions;
+using MdExplorer.Core.Diagnostics;
 using MdExplorer.Core.Models;
 using MdExplorer.Graph.Abstractions;
 using MdExplorer.Graph.Models;
@@ -174,7 +175,11 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         catch (Exception exception) when (DataLoadFailure.IsExpected(exception))
         {
             LogRelationsFailed(_logger, markdownFileId, exception);
-            State = DocumentRelationsState.Failed;
+            // Wie im Erfolgsweg: Ein überholter Ladevorgang lässt den Stand des neueren stehen.
+            if (loadNumber == _loadNumber)
+            {
+                State = DocumentRelationsState.Failed;
+            }
         }
     }
 
@@ -277,46 +282,4 @@ internal sealed partial class DocumentRelationsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasOutgoing));
         OnPropertyChanged(nameof(HasIncoming));
     }
-}
-
-/// <summary>Ein Dokument am anderen Ende einer Verbindung, wie es die Ansicht zeigt.</summary>
-internal sealed class RelatedDocumentViewModel
-{
-    /// <summary>Erzeugt den Eintrag aus einem Ergebnis des Graphen.</summary>
-    public RelatedDocumentViewModel(RelatedDocument document)
-    {
-        ArgumentNullException.ThrowIfNull(document);
-
-        MarkdownFileId = document.MarkdownFileId;
-        Title = document.Title;
-        RelativePath = document.RelativePath;
-    }
-
-    /// <summary>Stabiler Schlüssel, Eingang für das Öffnen.</summary>
-    public Guid MarkdownFileId { get; }
-
-    /// <summary>Dateiname ohne Erweiterung.</summary>
-    public string Title { get; }
-
-    /// <summary>Pfad relativ zur Wurzel; unterscheidet gleichnamige Dateien.</summary>
-    public string RelativePath { get; }
-}
-
-/// <summary>Was der Zusammenhangs-Bereich gerade zeigt.</summary>
-internal enum DocumentRelationsState
-{
-    /// <summary>Es ist kein Dokument geöffnet.</summary>
-    NoDocument = 0,
-
-    /// <summary>Die Verbindungen werden ermittelt.</summary>
-    Loading = 1,
-
-    /// <summary>Das Dokument steht für sich: keine Verweise, keine Kennzeichnungen, kein Unterordner.</summary>
-    NothingRelated = 2,
-
-    /// <summary>Es gibt Verbindungen zu zeigen.</summary>
-    Relations = 3,
-
-    /// <summary>Die Verbindungen ließen sich nicht ermitteln.</summary>
-    Failed = 4,
 }

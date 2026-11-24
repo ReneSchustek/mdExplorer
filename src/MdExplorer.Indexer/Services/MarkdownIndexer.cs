@@ -37,6 +37,15 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     private readonly FileEventProcessor _eventProcessor;
     private readonly SemaphoreSlim _writeGate = new(1, 1);
 
+    // Start und Umstellung lesen die Wurzeln und geben sie an die Watcher unter dieser Sperre weiter.
+    // Der Dienst startet auf einem eigenen Thread; ohne sie konnte eine Änderung zwischen dem Lesen
+    // der Wurzeln beim Start und dem Starten der Watcher verloren gehen.
+    private readonly Lock _rootsLock = new();
+
+    // Die Wurzeln, über die der Abgleich-Takt geht. Eine Änderung der Einstellungen ersetzt sie; der
+    // Takt liest sie bei jedem Schlag neu, statt die Liste vom Start festzuhalten.
+    private volatile IReadOnlyList<string> _liveRoots = [];
+
     /// <summary>Erzeugt den Indexer und löst alle Abhängigkeiten auf.</summary>
     public MarkdownIndexer(
         IServiceScopeFactory scopeFactory,
@@ -78,8 +87,24 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     public event EventHandler<IndexerScanProgressEventArgs>? InitialScanProgress;
 
     /// <inheritdoc />
-    public Task RunInitialScanAsync(CancellationToken cancellationToken) =>
-        SyncRootsAsync(ValidRoots(), SyncMode.Initial, cancellationToken);
+    /// <remarks>
+    /// Läuft auch nach einer Änderung der Wurzeln. Watcher und Abgleich-Takt folgen dann der neuen
+    /// Liste, und die Einträge entfernter Wurzeln verschwinden aus dem Index. Vorher kam nach dem
+    /// Eintragen der ersten Wurzel bis zum Neustart keine Änderung mehr an, und eine entfernte
+    /// Wurzel blieb beobachtet und durchsuchbar.
+    /// </remarks>
+    public async Task RunInitialScanAsync(CancellationToken cancellationToken)
+    {
+        List<string> roots;
+        lock (_rootsLock)
+        {
+            roots = ValidRoots();
+            _liveRoots = roots;
+            _coordinator.Retarget(roots);
+        }
+        await RemoveOutsideConfiguredRootsAsync(cancellationToken).ConfigureAwait(false);
+        await SyncRootsAsync(roots, SyncMode.Initial, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <inheritdoc />
     public override void Dispose()
@@ -91,19 +116,25 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        List<string> roots = ValidRoots();
-        if (roots.Count == 0)
-        {
-            LogNoRoots(_logger);
-            return;
-        }
-
         try
         {
-            _coordinator.Start(roots);
+            List<string> roots;
+            lock (_rootsLock)
+            {
+                roots = ValidRoots();
+                _liveRoots = roots;
+                _coordinator.Start(roots);
+            }
+            if (roots.Count == 0)
+            {
+                // Der Dienst läuft trotzdem weiter: Trägt der Nutzer eine Wurzel ein, folgen
+                // Watcher und Abgleich ihr ohne Neustart.
+                LogNoRoots(_logger);
+            }
             LogIndexerStarted(_logger, roots.Count);
+            await RemoveOutsideConfiguredRootsAsync(stoppingToken).ConfigureAwait(false);
             await SyncRootsAsync(roots, SyncMode.Initial, stoppingToken).ConfigureAwait(false);
-            await RunLiveAsync(roots, stoppingToken).ConfigureAwait(false);
+            await RunLiveAsync(stoppingToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -129,7 +160,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     [LoggerMessage(EventId = 101, Level = LogLevel.Information, Message = "Indexer gestoppt.")]
     private static partial void LogIndexerStopped(ILogger logger);
 
-    [LoggerMessage(EventId = 102, Level = LogLevel.Warning, Message = "Keine gültigen Indexer-Wurzeln konfiguriert — Indexer beendet sich.")]
+    [LoggerMessage(EventId = 102, Level = LogLevel.Warning, Message = "Keine gültigen Indexer-Wurzeln konfiguriert — Indexer wartet auf eine Wurzel.")]
     private static partial void LogNoRoots(ILogger logger);
 
     [LoggerMessage(EventId = 103, Level = LogLevel.Warning, Message = "Konfigurierte Wurzel existiert nicht: {Root}")]
@@ -149,6 +180,15 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
 
     [LoggerMessage(EventId = 120, Level = LogLevel.Warning, Message = "Abgleich der Wurzel {Root} wegen eines Datenbankfehlers abgebrochen — nächster Durchgang versucht es erneut.")]
     private static partial void LogRootSyncFailed(ILogger logger, string root, Exception exception);
+
+    [LoggerMessage(EventId = 121, Level = LogLevel.Information, Message = "{Count} Einträge außerhalb der eingetragenen Wurzeln aus dem Index entfernt.")]
+    private static partial void LogRemovedOutsideRoots(ILogger logger, int count);
+
+    [LoggerMessage(EventId = 122, Level = LogLevel.Warning, Message = "Einträge außerhalb der eingetragenen Wurzeln ließen sich nicht entfernen — der nächste Durchgang versucht es erneut.")]
+    private static partial void LogRemoveOutsideRootsFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(EventId = 123, Level = LogLevel.Warning, Message = "Abgleich der Wurzel {Root} im Takt fehlgeschlagen — der nächste Schlag versucht es erneut.")]
+    private static partial void LogResyncFailed(ILogger logger, string root, Exception exception);
 
     private List<string> ValidRoots()
     {
@@ -210,10 +250,10 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
     // Ereigniskonsum und Abgleich-Takt laufen nebeneinander und enden gemeinsam: Endet der eine,
     // wird der andere abgebrochen und abgewartet, damit keine Aufgabe nach dem Ende des Dienstes
     // noch Scopes eines freigegebenen Containers benutzt.
-    private async Task RunLiveAsync(IReadOnlyList<string> roots, CancellationToken stoppingToken)
+    private async Task RunLiveAsync(CancellationToken stoppingToken)
     {
         using CancellationTokenSource live = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
-        Task resyncLoop = RunResyncLoopAsync(roots, live.Token);
+        Task resyncLoop = RunResyncLoopAsync(live.Token);
         try
         {
             await ConsumeEventsAsync(_coordinator.Events, live.Token).ConfigureAwait(false);
@@ -256,8 +296,12 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex, cancellationToken))
         {
             // Ein Fehler in einem Stapel (Datenbank-Spitze, IO-Fehler, kaputtes Ereignis) bricht den
-            // Konsum nicht ab. Der Stapel ist verloren; was er enthielt, holt der Abgleich nach.
+            // Konsum nicht ab. Die Wurzeln des Stapels werden gleich abgeglichen; auf den Takt
+            // allein ist kein Verlass, er lässt sich abschalten. Ohne den Abgleich würde eine
+            // verlorene Umbenennung beim nächsten Start zu Löschen und Anlegen, und Kennung und
+            // Schlagworte der Datei gingen verloren.
             LogProcessBatchFailed(_logger, ex);
+            rootsToSync = [.. batch.Select(fileSystemEvent => fileSystemEvent.Root).Distinct(StringComparer.OrdinalIgnoreCase)];
         }
         finally
         {
@@ -271,7 +315,7 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         }
     }
 
-    private async Task RunResyncLoopAsync(IReadOnlyList<string> roots, CancellationToken cancellationToken)
+    private async Task RunResyncLoopAsync(CancellationToken cancellationToken)
     {
         TimeSpan resyncInterval = TimeSpan.FromSeconds(_settings.Current.Behavior.IndexerResyncIntervalSeconds);
         if (resyncInterval <= TimeSpan.Zero)
@@ -282,10 +326,63 @@ public sealed partial class MarkdownIndexer : BackgroundService, IIndexer
         using PeriodicTimer timer = new(resyncInterval, _timeProvider);
         while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
         {
-            foreach (string root in roots)
+            foreach (string root in _liveRoots)
             {
-                _ = await SyncRootAsync(root, SyncMode.Background, cancellationToken).ConfigureAwait(false);
+                await TryResyncRootAsync(root, cancellationToken).ConfigureAwait(false);
             }
+        }
+    }
+
+    // Ein Fehler kostet diesen Schlag für diese Wurzel, nicht den Takt. Vorher beendete jede
+    // Ausnahme außer einem Datenbankfehler den Takt ohne Protokolleintrag bis zum Neustart.
+    private async Task TryResyncRootAsync(string root, CancellationToken cancellationToken)
+    {
+        try
+        {
+            _ = await SyncRootAsync(root, SyncMode.Background, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (BackgroundServiceWatchdog.IsRecoverable(ex, cancellationToken))
+        {
+            LogResyncFailed(_logger, root, ex);
+        }
+    }
+
+    /// <summary>Entfernt die Einträge, die unter keiner eingetragenen Wurzel mehr liegen.</summary>
+    /// <remarks>
+    /// Maßgeblich sind die eingetragenen Wurzeln, nicht nur die vorhandenen: Ein abgezogenes
+    /// Laufwerk oder ein gerade fehlendes Netzlaufwerk kostet so nicht seinen ganzen Index.
+    /// </remarks>
+    private async Task RemoveOutsideConfiguredRootsAsync(CancellationToken cancellationToken)
+    {
+        List<string> configured =
+        [
+            .. _settings.Current.Indexing.Roots
+                .Where(root => !string.IsNullOrWhiteSpace(root))
+                .Select(Path.GetFullPath),
+        ];
+        await _writeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
+            await using (scope.ConfigureAwait(false))
+            {
+                IMarkdownFileRepository repository = scope.ServiceProvider.GetRequiredService<IMarkdownFileRepository>();
+                IReadOnlyList<Guid> outside = await repository.GetIdsOutsideRootsAsync(configured, cancellationToken).ConfigureAwait(false);
+                if (outside.Count > 0)
+                {
+                    int removed = await repository.RemoveRangeAsync(outside, cancellationToken).ConfigureAwait(false);
+                    LogRemovedOutsideRoots(_logger, removed);
+                }
+            }
+        }
+        catch (DbException ex)
+        {
+            // Der nächste Start oder die nächste Änderung der Wurzeln versucht es erneut.
+            LogRemoveOutsideRootsFailed(_logger, ex);
+        }
+        finally
+        {
+            _ = _writeGate.Release();
         }
     }
 

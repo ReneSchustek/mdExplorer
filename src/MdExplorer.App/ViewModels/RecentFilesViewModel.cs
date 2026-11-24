@@ -136,10 +136,3 @@ internal sealed partial class RecentFilesViewModel : ObservableObject
         Refresh();
     }
 }
-
-/// <summary>Ein Eintrag im Verlauf.</summary>
-/// <param name="FullPath">Der vollständige Pfad.</param>
-/// <param name="Name">Der Dateiname.</param>
-/// <param name="Folder">Der Ordner der Datei.</param>
-/// <param name="Exists">Ob die Datei bei der letzten Prüfung noch da war.</param>
-internal sealed record RecentFileItem(string FullPath, string Name, string Folder, bool Exists);

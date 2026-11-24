@@ -86,8 +86,3 @@ internal sealed partial class UnindexedFileReader
         }
     }
 }
-
-/// <summary>Eine direkt gelesene Datei: die Bytes für den Editor, die Übersetzung für die Vorschau.</summary>
-/// <param name="Bytes">Der gelesene Inhalt.</param>
-/// <param name="Parsed">Die Übersetzung durch den Parser.</param>
-internal sealed record UnindexedFile(byte[] Bytes, ParseResult Parsed);

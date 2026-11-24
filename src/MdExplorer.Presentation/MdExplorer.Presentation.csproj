@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Gemeinsame Bausteine der Oberfläche für App und Tag-Cloud. Hier steht nur, was beide
+       Module brauchen und keines von beiden besitzt; Fachlogik gehört nicht hierher. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>MdExplorer.Presentation</RootNamespace>
+    <AssemblyName>MdExplorer.Presentation</AssemblyName>
+  </PropertyGroup>
+
+</Project>

@@ -30,17 +30,15 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
     [ObservableProperty]
     private string _statusText = UiText.Get("Update_Status_NotChecked");
 
+    /// <summary>Wo der Abschnitt gerade steht; Anzeige und Befehle leiten sich daraus ab.</summary>
     [ObservableProperty]
-    private bool _isBusy;
+    [NotifyPropertyChangedFor(nameof(IsBusy))]
+    [NotifyPropertyChangedFor(nameof(IsProgressVisible))]
+    [NotifyPropertyChangedFor(nameof(IsInstallAvailable))]
+    private UpdateSectionState _state = UpdateSectionState.NotChecked;
 
     [ObservableProperty]
     private int _progressPercent;
-
-    [ObservableProperty]
-    private bool _isProgressVisible;
-
-    [ObservableProperty]
-    private bool _isInstallAvailable;
 
     private UpdateAsset? _asset;
     private bool _disposed;
@@ -60,6 +58,19 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
 
     /// <summary>Wird ausgelöst, wenn das Installationsprogramm läuft und die Anwendung enden soll.</summary>
     public event EventHandler? InstallerStarted;
+
+    /// <summary>Ob gerade geprüft oder heruntergeladen wird.</summary>
+    public bool IsBusy => State is UpdateSectionState.Checking or UpdateSectionState.Downloading;
+
+    /// <summary>Ob der Fortschritt des Herunterladens zu sehen ist.</summary>
+    public bool IsProgressVisible => State == UpdateSectionState.Downloading;
+
+    /// <summary>
+    /// Ob installiert werden kann: nach einer Prüfung mit installierbarem Paket und, damit ein
+    /// zweiter Versuch möglich ist, nach einem gescheiterten Herunterladen.
+    /// </summary>
+    public bool IsInstallAvailable =>
+        _asset is not null && State is UpdateSectionState.Available or UpdateSectionState.DownloadFailed;
 
     /// <summary>Löst eine vom Nutzer angeforderte Prüfung aus.</summary>
     public AsyncRelayCommand CheckCommand { get; }
@@ -104,16 +115,15 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
         UpdateDownloadStatus.StorageFailed => UiText.Get("Update_Download_StorageFailed"),
         UpdateDownloadStatus.NoSignaturePublished => UiText.Get("Update_Download_NoSignature"),
         UpdateDownloadStatus.SignatureInvalid => UiText.Get("Update_Download_SignatureInvalid"),
+        UpdateDownloadStatus.VersionMismatch => UiText.Get("Update_Download_VersionMismatch"),
         _ => UiText.Get("Update_Download_InstallFailed"),
     };
 
-    partial void OnIsBusyChanged(bool value)
+    partial void OnStateChanged(UpdateSectionState value)
     {
         CheckCommand.NotifyCanExecuteChanged();
         InstallCommand.NotifyCanExecuteChanged();
     }
-
-    partial void OnIsInstallAvailableChanged(bool value) => InstallCommand.NotifyCanExecuteChanged();
 
     private async Task CheckAsync()
     {
@@ -124,9 +134,8 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
             return;
         }
 
-        IsBusy = true;
-        IsInstallAvailable = false;
         _asset = null;
+        State = UpdateSectionState.Checking;
         StatusText = UiText.Get("Update_Status_Checking");
 
         try
@@ -138,28 +147,23 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
         catch (OperationCanceledException)
         {
             // Der Dialog wurde während der Prüfung geschlossen; die Antwort braucht niemand mehr.
+            State = UpdateSectionState.Cancelled;
             StatusText = UiText.Get("Update_Status_Cancelled");
-        }
-        finally
-        {
-            IsBusy = false;
         }
     }
 
     private void ShowResult(UpdateCheckResult result)
     {
         StatusText = DescribeResult(result);
-        if (result.IsInstallable)
-        {
-            _asset = result.Asset;
-            IsInstallAvailable = true;
-        }
+        _asset = result.IsInstallable ? result.Asset : null;
+        State = _asset is null ? UpdateSectionState.Checked : UpdateSectionState.Available;
     }
 
     private void StartVerified(UpdateDownloadResult download)
     {
         if (download is not { IsVerified: true, InstallerPath: { } installerPath })
         {
+            State = UpdateSectionState.DownloadFailed;
             StatusText = DescribeDownloadFailure(download.Status);
             return;
         }
@@ -167,10 +171,12 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
         StatusText = UiText.Get("Update_Status_Verified");
         if (_installer.StartInstaller(installerPath))
         {
+            State = UpdateSectionState.InstallerStarted;
             InstallerStarted?.Invoke(this, EventArgs.Empty);
         }
         else
         {
+            State = UpdateSectionState.DownloadFailed;
             StatusText = UiText.Format("Update_Status_InstallerNotStarted", installerPath);
         }
     }
@@ -182,9 +188,8 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
             return;
         }
 
-        IsBusy = true;
-        IsProgressVisible = true;
         ProgressPercent = 0;
+        State = UpdateSectionState.Downloading;
         StatusText = UiText.Get("Update_Status_Downloading");
 
         try
@@ -196,12 +201,8 @@ internal sealed partial class UpdateSectionViewModel : ObservableObject, IDispos
         {
             // Der Dialog wurde während des Downloads geschlossen. Der Teil-Download ist
             // bereits verworfen; hier bleibt nichts zu tun.
+            State = UpdateSectionState.Cancelled;
             StatusText = UiText.Get("Update_Status_Cancelled");
-        }
-        finally
-        {
-            IsBusy = false;
-            IsProgressVisible = false;
         }
     }
 }

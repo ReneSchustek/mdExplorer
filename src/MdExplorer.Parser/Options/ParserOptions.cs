@@ -27,6 +27,9 @@ public sealed class ParserOptions
     /// <summary>Obergrenze für <see cref="MaxFileSizeBytes"/>.</summary>
     private const long MaxFileSizeBytesUpperBound = 256L * 1024 * 1024;
 
+    /// <summary>Voreinstellung für <see cref="MaxFileSizeBytes"/>: 4 MiB, Begründung dort.</summary>
+    private const long DefaultMaxFileSizeBytes = 4L * 1024 * 1024;
+
     /// <summary>
     /// Maximale Anzahl paralleler Parse-Vorgänge, jeder mit Lesen der Datei und Parsen.
     /// Default: ein Vorgang je Kern, höchstens so viele wie die Obergrenze zulässt. Auf einer
@@ -35,9 +38,6 @@ public sealed class ParserOptions
     /// </summary>
     [Range(1, MaxParallelismUpperBound)]
     public int MaxParallelism { get; set; } = Math.Min(Environment.ProcessorCount, MaxParallelismUpperBound);
-
-    /// <summary>Voreinstellung für <see cref="MaxFileSizeBytes"/>: 4 MiB, Begründung dort.</summary>
-    private const long DefaultMaxFileSizeBytes = 4L * 1024 * 1024;
 
     /// <summary>
     /// Größte Datei in Byte, die der Parser liest. Default: 4 MiB.

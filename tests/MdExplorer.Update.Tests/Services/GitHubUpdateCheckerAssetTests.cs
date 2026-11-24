@@ -47,6 +47,8 @@ public sealed class GitHubUpdateCheckerAssetTests : IDisposable
         Assert.Equal("MdExplorer-1.0.0-setup.exe", asset.FileName, StringComparer.Ordinal);
         Assert.Equal(ValidHash, asset.ExpectedSha256, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(SignatureBytes, asset.Signature.ToArray());
+        // Die angekündigte Version geht mit; der Installer gleicht sie mit der im Paket ab.
+        Assert.Equal(result.LatestVersion, asset.Version);
         Assert.True(asset.IsVerifiable);
         Assert.True(result.IsInstallable);
     }

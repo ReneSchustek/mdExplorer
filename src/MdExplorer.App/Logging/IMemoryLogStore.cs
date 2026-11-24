@@ -7,15 +7,15 @@ namespace MdExplorer.App.Logging;
 /// </summary>
 internal interface IMemoryLogStore
 {
-    /// <summary>Maximale Anzahl gleichzeitig gepufferter Einträge.</summary>
-    int Capacity { get; }
-
     /// <summary>Wird unmittelbar nach jedem hinzugefügten Eintrag gefeuert.</summary>
     /// <remarks>
     /// Handler werden auf dem schreibenden Thread aufgerufen; UI-Konsumenten
     /// müssen selbst auf den Dispatcher marshallen.
     /// </remarks>
     event EventHandler<LogEntry>? EntryAdded;
+
+    /// <summary>Maximale Anzahl gleichzeitig gepufferter Einträge.</summary>
+    int Capacity { get; }
 
     /// <summary>Liefert eine Momentaufnahme aller gehaltenen Einträge in Eingangsreihenfolge.</summary>
     IReadOnlyList<LogEntry> Snapshot();

@@ -13,4 +13,10 @@ internal interface IEffectiveThemeProvider
 {
     /// <summary><see langword="true"/>, wenn die dunkle Belegung gilt.</summary>
     bool IsDarkMode { get; }
+
+    /// <summary>
+    /// <see langword="true"/>, wenn Windows im Kontrastmodus steht. Dann gelten die Farben von
+    /// Windows statt einer Belegung, gleich was in den Einstellungen gewählt ist.
+    /// </summary>
+    bool IsHighContrast { get; }
 }

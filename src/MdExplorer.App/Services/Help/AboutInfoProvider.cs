@@ -6,7 +6,7 @@ namespace MdExplorer.App.Services.Help;
 /// <summary>
 /// Standard-Implementierung von <see cref="IAboutInfoProvider"/>: Version aus der App-Assembly,
 /// Build-Datum aus der Programmdatei und eine von Hand gepflegte Liste der direkt eingebundenen
-/// Open-Source-Bibliotheken. Ein Eintrag steht für ein Paket oder seine Familie
+/// Open-Source-Bibliotheken und mitgelieferten Schriften. Ein Eintrag steht für ein Paket oder seine Familie
 /// (<c>SQLitePCLRaw</c> für Kern und Bündel). Transitive Abhängigkeiten stehen nicht darin; wer ein
 /// Paket direkt einbindet, trägt es hier nach, und ein Test gegen die Projektdateien hält das fest.
 /// </summary>
@@ -15,6 +15,7 @@ internal sealed class AboutInfoProvider(TimeProvider timeProvider) : IAboutInfoP
     private const string MitLicense = "MIT";
     private const string Apache20License = "Apache-2.0";
     private const string Bsd2ClauseLicense = "BSD-2-Clause";
+    private const string OpenFontLicense = "OFL-1.1";
 
     private static readonly IReadOnlyList<LibraryInfo> KnownLibraries =
     [
@@ -29,6 +30,8 @@ internal sealed class AboutInfoProvider(TimeProvider timeProvider) : IAboutInfoP
         new("Microsoft.Extensions.Logging", MitLicense),
         new("Microsoft.Extensions.Options", MitLicense),
         new("Microsoft.Web.WebView2", MitLicense),
+        new("Roboto Flex", OpenFontLicense),
+        new("Roboto Mono", OpenFontLicense),
         new("Serilog", Apache20License),
         new("Serilog.Extensions.Hosting", Apache20License),
         new("Serilog.Sinks.Debug", Apache20License),

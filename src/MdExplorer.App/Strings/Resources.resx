@@ -67,7 +67,7 @@
     <value>Die Liste konnte nicht geladen werden</value>
   </data>
   <data name="AllFiles_Empty_Failed_Hint" xml:space="preserve">
-    <value>Der Bestand ließ sich nicht abrufen. Einzelheiten stehen im Protokoll unter Ansicht → Logs…; ein erneuter Versuch lohnt sich.</value>
+    <value>Der Bestand ließ sich nicht abrufen. Einzelheiten zeigt „Protokoll anzeigen“ in der Kopfleiste; ein erneuter Versuch lohnt sich.</value>
   </data>
   <data name="AllFiles_Empty_NoMatch_Headline" xml:space="preserve">
     <value>Nichts gefunden</value>
@@ -300,8 +300,23 @@
   <data name="Enum_AppTheme_System" xml:space="preserve">
     <value>Wie Windows</value>
   </data>
+  <data name="Enum_LogLevel_Critical" xml:space="preserve">
+    <value>Kritisch</value>
+  </data>
+  <data name="Enum_LogLevel_Debug" xml:space="preserve">
+    <value>Diagnose</value>
+  </data>
+  <data name="Enum_LogLevel_Error" xml:space="preserve">
+    <value>Fehler</value>
+  </data>
+  <data name="Enum_LogLevel_Information" xml:space="preserve">
+    <value>Hinweis</value>
+  </data>
   <data name="Enum_LogLevel_Trace" xml:space="preserve">
     <value>Ablauf</value>
+  </data>
+  <data name="Enum_LogLevel_Warning" xml:space="preserve">
+    <value>Warnung</value>
   </data>
   <data name="Enum_OperationHealth_Error" xml:space="preserve">
     <value>Fehler</value>
@@ -450,7 +465,7 @@ Einzelheiten stehen im Protokoll.</value>
     <value>/ Puffer:</value>
   </data>
   <data name="LogViewer_Column_Level" xml:space="preserve">
-    <value>Level</value>
+    <value>Stufe</value>
   </data>
   <data name="LogViewer_Column_Message" xml:space="preserve">
     <value>Nachricht</value>
@@ -480,16 +495,16 @@ Einzelheiten stehen im Protokoll.</value>
     <value>Kritisch</value>
   </data>
   <data name="LogViewer_Level_Debug" xml:space="preserve">
-    <value>Debug+</value>
+    <value>Diagnose+</value>
   </data>
   <data name="LogViewer_Level_Error" xml:space="preserve">
     <value>Fehler+</value>
   </data>
   <data name="LogViewer_Level_Information" xml:space="preserve">
-    <value>Information+</value>
+    <value>Hinweis+</value>
   </data>
   <data name="LogViewer_Level_Label" xml:space="preserve">
-    <value>Level:</value>
+    <value>Stufe:</value>
   </data>
   <data name="LogViewer_Level_Warning" xml:space="preserve">
     <value>Warnung+</value>
@@ -596,6 +611,9 @@ Versuchen Sie es erneut, sobald das Programm wieder reagiert.</value>
   </data>
   <data name="OpenFile_Rejected_UnsupportedExtension" xml:space="preserve">
     <value>„{0}“ ist keine Markdown-Datei. MdExplorer öffnet Dateien mit der Endung .md oder .markdown.</value>
+  </data>
+  <data name="Preview_LoadFailed" xml:space="preserve">
+    <value>Die Vorschau dieser Datei ließ sich gerade nicht laden. Ein erneuter Klick versucht es noch einmal.</value>
   </data>
   <data name="RecentFiles_Clear" xml:space="preserve">
     <value>Verlauf leeren</value>
@@ -721,7 +739,7 @@ Versuchen Sie es erneut, sobald das Programm wieder reagiert.</value>
     <value>Die Suche ist gescheitert</value>
   </data>
   <data name="Search_Empty_Failed_Hint" xml:space="preserve">
-    <value>Die Anfrage konnte nicht ausgeführt werden. Einzelheiten stehen im Protokoll unter Ansicht → Logs….</value>
+    <value>Die Anfrage konnte nicht ausgeführt werden. Einzelheiten zeigt „Protokoll anzeigen“ in der Kopfleiste.</value>
   </data>
   <data name="Search_Empty_Idle_Headline" xml:space="preserve">
     <value>Noch nichts gesucht</value>
@@ -929,6 +947,9 @@ Einzelheiten stehen im Protokoll.</value>
   </data>
   <data name="Update_Download_StorageFailed" xml:space="preserve">
     <value>Das Paket ließ sich lokal nicht ablegen.</value>
+  </data>
+  <data name="Update_Download_VersionMismatch" xml:space="preserve">
+    <value>Das geladene Paket ist echt, trägt aber eine andere Version als angekündigt. Die Datei wurde verworfen und nicht ausgeführt.</value>
   </data>
   <data name="Update_Status_Available" xml:space="preserve">
     <value>Version {0} ist verfügbar (installiert: {1}).</value>

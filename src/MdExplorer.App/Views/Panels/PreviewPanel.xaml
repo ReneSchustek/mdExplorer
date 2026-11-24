@@ -10,7 +10,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
     <Grid>
-        <wv2:WebView2 x:Name="Browser" Loaded="OnLoaded" Unloaded="OnUnloaded" />
+        <wv2:WebView2 x:Name="Browser" Loaded="OnLoaded" />
         <TextBlock x:Name="UnavailableHint"
                    Text="{l:Loc Browser_Unavailable}"
                    Visibility="Collapsed"

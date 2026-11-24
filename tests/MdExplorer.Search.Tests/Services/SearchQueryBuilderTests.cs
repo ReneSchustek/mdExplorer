@@ -48,7 +48,7 @@ public sealed class SearchQueryBuilderTests
     {
         Fts5QueryPlan plan = _sut.Build("tag:projekt");
 
-        Assert.Equal("Tags:\"projekt\"", plan.MatchExpression);
+        Assert.Equal("Tags:\"mdxtagqq projekt mdxtagqq\"", plan.MatchExpression);
         Assert.Empty(plan.PathPrefixes);
     }
 
@@ -75,7 +75,7 @@ public sealed class SearchQueryBuilderTests
     {
         Fts5QueryPlan plan = _sut.Build("tag:projekt -draft");
 
-        Assert.Equal("Tags:\"projekt\" NOT \"draft\"", plan.MatchExpression);
+        Assert.Equal("Tags:\"mdxtagqq projekt mdxtagqq\" NOT \"draft\"", plan.MatchExpression);
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public sealed class SearchQueryBuilderTests
     {
         Fts5QueryPlan plan = _sut.Build("markdown tag:projekt path:notes/ -draft");
 
-        Assert.Equal("\"markdown\" AND Tags:\"projekt\" NOT \"draft\"", plan.MatchExpression);
+        Assert.Equal("\"markdown\" AND Tags:\"mdxtagqq projekt mdxtagqq\" NOT \"draft\"", plan.MatchExpression);
         _ = Assert.Single(plan.PathPrefixes);
         Assert.Equal("notes/", plan.PathPrefixes[0]);
     }

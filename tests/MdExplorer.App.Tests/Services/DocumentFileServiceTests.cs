@@ -149,11 +149,17 @@ public sealed class DocumentFileServiceTests
         Assert.True(fs.Files.ContainsKey(@"C:\notes\unter\Neu.md"));
     }
 
-    [Fact]
-    public async Task RenameAsync_WhenTheIndexCannotBeRead_IsRefusedAndTouchesNothing()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RenameAsync_WhenTheIndexCannotBeRead_IsRefusedAndTouchesNothing(bool contextInWrongState)
     {
+        // EF Core meldet einen entsorgten Kontext als Zustandsfehler, SQLite eine belegte Datei als
+        // Datenbankfehler; beides ist ein Index, der gerade nicht lesbar ist.
         (DocumentFileService sut, FakeFileSystem fs, FakeMarkdownFileRepository repo) = Build();
-        repo.FailOnGet = new TestDbException("database is locked");
+        repo.FailOnGet = contextInWrongState
+            ? new InvalidOperationException("Kontext entsorgt")
+            : new TestDbException("database is locked");
 
         DocumentFileResult result = await sut.RenameAsync(FileId, "Neu", TestContext.Current.CancellationToken).ConfigureAwait(true);
 
@@ -314,8 +320,9 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, _, _) = Build(incomingLinks: 3);
 
-        DocumentImpact impact = await sut.GetImpactAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        DocumentImpact? impact = await sut.GetImpactAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
+        Assert.NotNull(impact);
         Assert.Equal("Alt", impact.Title);
         Assert.Equal(3, impact.IncomingLinkCount);
     }
@@ -325,10 +332,26 @@ public sealed class DocumentFileServiceTests
     {
         (DocumentFileService sut, _, _) = Build();
 
-        DocumentImpact impact = await sut.GetImpactAsync(UnknownId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+        DocumentImpact? impact = await sut.GetImpactAsync(UnknownId, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
+        Assert.NotNull(impact);
         Assert.Empty(impact.Title);
         Assert.Equal(0, impact.IncomingLinkCount);
+    }
+
+    /// <remarks>
+    /// Ist der Index belegt, kennt niemand die Folgen. „Nichts hängt daran“ wäre die falsche Antwort,
+    /// denn dann liefe das Umbenennen ohne Rückfrage durch und bräche Verweise.
+    /// </remarks>
+    [Fact]
+    public async Task GetImpactAsync_WhenTheIndexCannotBeRead_SaysItDoesNotKnow()
+    {
+        (DocumentFileService sut, _, FakeMarkdownFileRepository repo) = Build(incomingLinks: 3);
+        repo.FailOnGet = new TestDbException("database is locked");
+
+        DocumentImpact? impact = await sut.GetImpactAsync(FileId, TestContext.Current.CancellationToken).ConfigureAwait(true);
+
+        Assert.Null(impact);
     }
 
     private static async Task<MarkdownFile> StoredAsync(FakeMarkdownFileRepository repository)

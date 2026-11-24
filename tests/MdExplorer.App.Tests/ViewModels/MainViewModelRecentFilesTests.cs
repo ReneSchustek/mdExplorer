@@ -60,7 +60,7 @@ public sealed class MainViewModelRecentFilesTests
         RecentFileItem first = harness.RecentFiles.Items.Single(item => item.FullPath == FirstPath);
 
         harness.RecentFiles.OpenCommand.Execute(first);
-        await WaitUntilAsync(() => harness.Editor.FilePath == FirstPath).ConfigureAwait(true);
+        await WaitUntilAsync(() => harness.Editor.FilePath == FirstPath, "Der Eintrag wurde nicht geöffnet.").ConfigureAwait(true);
 
         Assert.Equal(FirstPath, harness.Editor.FilePath);
         Assert.Equal(FirstPath, harness.RecentFiles.Items[0].FullPath);
@@ -77,7 +77,7 @@ public sealed class MainViewModelRecentFilesTests
         harness.UnsavedChangesDialog.Decision = UnsavedChangesDecision.Cancel;
 
         harness.RecentFiles.OpenCommand.Execute(harness.RecentFiles.Items.Single(item => item.FullPath == FirstPath));
-        await WaitUntilAsync(() => harness.UnsavedChangesDialog.AskCount == 1).ConfigureAwait(true);
+        await WaitUntilAsync(() => harness.UnsavedChangesDialog.AskCount == 1, "Die Rückfrage zu den ungespeicherten Änderungen kam nicht.").ConfigureAwait(true);
 
         Assert.Equal(SecondPath, harness.Editor.FilePath);
         Assert.True(harness.Editor.IsDirty);
@@ -156,14 +156,16 @@ public sealed class MainViewModelRecentFilesTests
         return harness;
     }
 
-    // Der Befehl öffnet über das Hauptfenster, das den Auftrag ohne await weiterreicht. Die
-    // Obergrenze hält nur einen Test an, der sonst nie endete; über die Geschwindigkeit sagt sie
-    // nichts, das Warten endet mit der Bedingung.
-    private static async Task WaitUntilAsync(Func<bool> condition)
+    // Der Befehl öffnet über das Hauptfenster, das den Auftrag ohne await weiterreicht; das Warten
+    // gibt dessen Fortsetzungen den Vorrang. Die Obergrenze hält nur einen Test an, der sonst nie
+    // endete. Wird sie erreicht, scheitert der Test: Ein Befehl, der gar nichts mehr tut, darf nicht
+    // still durchgehen.
+    private static async Task WaitUntilAsync(Func<bool> condition, string because)
     {
         for (int attempt = 0; attempt < 3000 && !condition(); attempt++)
         {
             await Task.Delay(10, TestContext.Current.CancellationToken).ConfigureAwait(true);
         }
+        Assert.True(condition(), because);
     }
 }

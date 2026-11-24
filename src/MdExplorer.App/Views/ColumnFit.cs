@@ -31,13 +31,3 @@ internal static class ColumnFit
         return new ColumnWidths(folderWidth, tagCloudWidth);
     }
 }
-
-/// <summary>Wunsch- und Mindestbreite einer Spalte.</summary>
-/// <param name="Wanted">Die Breite, die die Spalte bei genug Platz hat.</param>
-/// <param name="Minimum">Schmaler wird sie nicht.</param>
-internal sealed record ColumnWish(double Wanted, double Minimum);
-
-/// <summary>Die ausgerechneten Breiten.</summary>
-/// <param name="Folder">Linke Spalte.</param>
-/// <param name="TagCloud">Tag-Cloud; 0, wenn sie verborgen ist.</param>
-internal sealed record ColumnWidths(double Folder, double TagCloud);

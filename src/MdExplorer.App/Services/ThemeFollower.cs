@@ -1,15 +1,18 @@
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using MdExplorer.App.ViewModels;
 using MdExplorer.Core.Abstractions;
 using MdExplorer.Core.Models;
+using Microsoft.Win32;
 
 namespace MdExplorer.App.Services;
 
 /// <summary>
 /// Setzt die gewählte Farbbelegung und hält sie bei späteren Änderungen nach: Wörterbücher der
-/// Anwendung, Vorschau und die Titelleisten aller Fenster. Die Vorschau folgt außerdem der
-/// Schriftgröße und der Freigabe für Netzbilder.
+/// Anwendung, Vorschau und die Titelleisten aller Fenster. Nachgezogen wird bei geänderten
+/// Einstellungen und bei Änderungen in Windows (Kontrastmodus, Hell oder Dunkel bei der Wahl
+/// „System“). Die Vorschau folgt außerdem der Schriftgröße und der Freigabe für Netzbilder.
 /// </summary>
 /// <remarks>
 /// Erst nach dem Start des Wirts, weil vorher weder Einstellungen noch Dienste bereitstehen. Das
@@ -22,14 +25,30 @@ internal sealed class ThemeFollower(
     ISettingsService settings,
     ThemeApplier applier,
     PreviewViewModel preview,
-    IEffectiveThemeProvider effectiveTheme)
+    IEffectiveThemeProvider effectiveTheme) : IDisposable
 {
+    private AppliedTheme _applied = new(IsDarkMode: false, IsHighContrast: false);
+
     /// <summary>Setzt die Belegung und folgt ab jetzt jeder Änderung.</summary>
     public void Start()
     {
-        applier.Apply(application.Resources.MergedDictionaries);
+        ApplyPalette();
         FollowNewWindows();
         settings.SettingsChanged += OnSettingsChanged;
+        SystemParameters.StaticPropertyChanged += OnSystemParameterChanged;
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+    }
+
+    /// <summary>Meldet sich von Einstellungen und Windows ab.</summary>
+    /// <remarks>
+    /// <see cref="SystemEvents"/> hält seine Abonnenten bis zum Abmelden fest; ohne Abmelden
+    /// bliebe der Nachführer samt Vorschau erreichbar, solange der Prozess läuft.
+    /// </remarks>
+    public void Dispose()
+    {
+        settings.SettingsChanged -= OnSettingsChanged;
+        SystemParameters.StaticPropertyChanged -= OnSystemParameterChanged;
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
     }
 
     // Jedes Fenster, sobald es steht: Die Titelleiste zeichnet Windows, und es fragt dafür nicht
@@ -62,11 +81,43 @@ internal sealed class ThemeFollower(
         application.Dispatcher.Invoke(() => ApplyChanges(themeChanged, previewChanged));
     }
 
+    private void OnSystemParameterChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (string.Equals(args.PropertyName, nameof(SystemParameters.HighContrast), StringComparison.Ordinal))
+        {
+            FollowWindows();
+        }
+    }
+
+    private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs args)
+    {
+        if (AppliedTheme.MayChangeTheTheme(args.Category))
+        {
+            FollowWindows();
+        }
+    }
+
+    // Asynchron auf den Oberflächen-Thread: Die Meldung kommt auf dem Thread der Systemereignisse.
+    private void FollowWindows() =>
+        _ = application.Dispatcher.BeginInvoke(() =>
+        {
+            if (_applied.DiffersFrom(effectiveTheme))
+            {
+                ApplyChanges(themeChanged: true, previewChanged: true);
+            }
+        });
+
+    private void ApplyPalette()
+    {
+        applier.Apply(application.Resources.MergedDictionaries);
+        _applied = AppliedTheme.From(effectiveTheme);
+    }
+
     private void ApplyChanges(bool themeChanged, bool previewChanged)
     {
         if (themeChanged)
         {
-            applier.Apply(application.Resources.MergedDictionaries);
+            ApplyPalette();
             // Ebenso die Titelleisten der bereits offenen Fenster.
             foreach (Window openWindow in application.Windows)
             {

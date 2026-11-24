@@ -35,6 +35,11 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService
     /// </remarks>
     internal const string UnreadBodyHash = "unread";
 
+    // Fassung des Eintragsformats im Index. Sie steht im Vergleichswert; ändert sich das Format
+    // (etwa die Grenzmarken der Tag-Spalte), gilt jeder alte Eintrag als veraltet und wird neu
+    // geschrieben, ohne Migration.
+    private const string IndexFormat = "2";
+
     // Wartezeit bis zum nächsten Versuch an einer Datei, die sich nicht lesen ließ. Der Wert ist
     // gesetzt, nicht gemessen: lang genug, dass eine dauerhaft gesperrte Datei nicht jeden Takt
     // gelesen wird, kurz genug, dass der Text nach dem Ende einer Sperre bald durchsuchbar ist.
@@ -50,7 +55,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService
     private readonly ILogger<Fts5IndexMaintainer> _logger;
 
     // Der Änderungsmarker nach dem letzten Abgleich, der nichts mehr zu tun fand. Solange er gleich
-    // bleibt und keine Datei auf einen Leseversuch wartet, entfällt der volle Abgleich.
+    // bleibt und für keine Datei ein neuer Leseversuch fällig ist, entfällt der volle Abgleich.
     private SearchSourceVersion? _settledVersion;
 
     /// <summary>Erzeugt den Maintainer und löst Pflichtabhängigkeiten auf.</summary>
@@ -96,7 +101,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService
             ISearchIndexStorage storage = scope.ServiceProvider.GetRequiredService<ISearchIndexStorage>();
 
             SearchSourceVersion version = await sourceProvider.LoadVersionAsync(cancellationToken).ConfigureAwait(false);
-            if (version == _settledVersion && !_readRetries.HasPending)
+            if (version == _settledVersion && !_readRetries.HasDue)
             {
                 return 0;
             }
@@ -151,7 +156,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService
                 continue;
             }
             bool stale = !indexedHashes.TryGetValue(document.MarkdownFileId, out string? existingHash)
-                || !string.Equals(existingHash, document.SourceContentHash, StringComparison.Ordinal);
+                || !string.Equals(existingHash, SyncKeyOf(document), StringComparison.Ordinal);
             if (stale && !isWaitingForRetry(document))
             {
                 targets.Add(document);
@@ -162,6 +167,16 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService
 
         return new SynchronizationDiff(targets, orphans, liveIds);
     }
+
+    /// <summary>Der Vergleichswert, unter dem ein Dokument im Index als aktuell gilt.</summary>
+    /// <remarks>
+    /// Inhalt und Ort: Beim Umbenennen oder Verschieben bleiben Kennung und Inhalt gleich, Titel und
+    /// Pfad im Index aber nicht. Verglich der Abgleich nur den Inhalt, zeigte der Index dauerhaft die
+    /// alte Stelle, und die Suche nach dem neuen Namen fand die Datei nicht.
+    /// </remarks>
+    /// <param name="document">Das Dokument aus dem Bestand.</param>
+    internal static string SyncKeyOf(SearchSourceDocument document) =>
+        IndexFormat + "|" + document.SourceContentHash + "|" + document.RelativePath;
 
     /// <summary>Wrapper um <see cref="SynchronizeAsync"/>, der erwartbare Fehler frisst. Sichtbar für Tests via <c>InternalsVisibleTo</c>.</summary>
     internal async Task TrySynchronizeAsync(CancellationToken stoppingToken)
@@ -259,7 +274,7 @@ public sealed partial class Fts5IndexMaintainer : BackgroundService
                 tags,
                 frontmatter,
                 target.RelativePath,
-                body is null ? UnreadBodyHash : target.SourceContentHash));
+                body is null ? UnreadBodyHash : SyncKeyOf(target)));
         }
         return upserts;
     }

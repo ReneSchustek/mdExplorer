@@ -1,6 +1,6 @@
 using System.Data.Common;
 
-namespace MdExplorer.App.ViewModels;
+namespace MdExplorer.Core.Diagnostics;
 
 /// <summary>
 /// Die Fehler, mit denen ein Lesezugriff auf den Index rechnen muss.
@@ -17,7 +17,7 @@ namespace MdExplorer.App.ViewModels;
 /// Anwendung, und jeder Bereich behandelt ihn eigens.
 /// </para>
 /// </remarks>
-internal static class DataLoadFailure
+public static class DataLoadFailure
 {
     /// <summary>Ob <paramref name="exception"/> ein erwartbarer Lesefehler ist, den der Bereich anzeigt.</summary>
     /// <param name="exception">Die gefangene Ausnahme.</param>

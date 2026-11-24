@@ -19,12 +19,12 @@ internal sealed partial class PreviewHtmlBuilder
     /// <summary>
     /// Sicherheitsregel der Vorschau im Normalfall. Kein Skript läuft (<c>script-src 'none'</c>),
     /// alles nicht ausdrücklich Genannte ist gesperrt (<c>default-src 'none'</c>). Zugelassen sind
-    /// das eingebettete Stylesheet und Bilder als <c>data:</c>-URI oder aus der Index-Wurzel des
-    /// Dokuments über <see cref="ImageHost"/>.
+    /// das eingebettete Stylesheet, die mitgelieferten Schriften (<see cref="WebFontFaces"/>) und
+    /// Bilder als <c>data:</c>-URI oder aus der Index-Wurzel des Dokuments über <see cref="ImageHost"/>.
     /// </summary>
     public const string ContentSecurityPolicy =
         "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://"
-        + ImageHost + "; script-src 'none'";
+        + ImageHost + "; " + WebFontFaces.ContentSecurityPolicySource + "; script-src 'none'";
 
     /// <summary>
     /// Die Regel, wenn der Nutzer Bilder aus dem Netz ausdrücklich zugelassen hat.
@@ -36,7 +36,7 @@ internal sealed partial class PreviewHtmlBuilder
     /// </remarks>
     public const string ContentSecurityPolicyWithRemoteImages =
         "default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: https://"
-        + ImageHost + "; script-src 'none'";
+        + ImageHost + "; " + WebFontFaces.ContentSecurityPolicySource + "; script-src 'none'";
 
     /// <summary>
     /// Virtueller Name für den Ordner, aus dem die Bilder des angezeigten Dokuments kommen.
@@ -113,10 +113,12 @@ internal sealed partial class PreviewHtmlBuilder
             ? ContentSecurityPolicyWithRemoteImages
             : ContentSecurityPolicy;
         string body = imageBase is null ? bodyHtml : RewriteRelativeImageSources(bodyHtml, imageBase);
-        // 512 Zeichen decken den Rahmen samt Sicherheitsregel und Schriftgröße; er braucht knapp 330.
-        StringBuilder builder = new(body.Length + css.Length + 512);
+        string fontFaces = WebFontFaces.Css;
+        // 512 Zeichen decken den Rahmen samt Sicherheitsregel und Schriftgröße; er braucht knapp 350.
+        StringBuilder builder = new(body.Length + fontFaces.Length + css.Length + 512);
         _ = builder.Append("<!doctype html>")
             .Append(CultureInfo.InvariantCulture, $"<html lang=\"de\" data-theme=\"{theme}\"><head><meta charset=\"utf-8\"><meta http-equiv=\"Content-Security-Policy\" content=\"{policy}\"><style>")
+            .Append(fontFaces)
             .Append(css)
             // Hinter dem Stylesheet, damit die Einstellung gewinnt. Der Wert ist nach der Prüfung
             // der Einstellungen eine ganze Zahl in festen Grenzen und kann nichts einschleusen.

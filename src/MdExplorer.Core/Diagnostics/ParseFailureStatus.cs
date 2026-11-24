@@ -9,7 +9,7 @@ namespace MdExplorer.Core.Diagnostics;
 /// </summary>
 public sealed class ParseFailureStatus : IParseFailureStatus
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private int _unparsableFileCount;
 
     /// <inheritdoc />

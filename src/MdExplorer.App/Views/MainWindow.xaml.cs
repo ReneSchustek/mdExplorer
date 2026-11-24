@@ -99,7 +99,9 @@ internal sealed partial class MainWindow : Window
         AutomationProperties.SetHelpText(entry, item.FullPath);
         if (!item.Exists)
         {
-            entry.SetResourceReference(ForegroundProperty, "TextDisabledBrush");
+            // Zurückgenommen, aber nicht abgeschaltet: Ein Klick nimmt den Eintrag aus dem Verlauf.
+            // Die Farbe für Abgeschaltetes sähe bedienungslos aus und erreicht keinen Lesekontrast.
+            entry.SetResourceReference(ForegroundProperty, "TextSecondaryBrush");
         }
         return entry;
     }
@@ -127,7 +129,7 @@ internal sealed partial class MainWindow : Window
                 case AllFilesPanel:
                     return HelpContext.Layout;
             }
-            cursor = VisualTreeHelper.GetParent(cursor) ?? LogicalTreeHelper.GetParent(cursor);
+            cursor = ElementTree.ParentOf(cursor);
         }
         return HelpContext.TableOfContents;
     }

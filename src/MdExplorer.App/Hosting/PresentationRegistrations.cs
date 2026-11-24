@@ -1,3 +1,4 @@
+using System.Windows;
 using MdExplorer.App.Logging;
 using MdExplorer.App.Services;
 using MdExplorer.App.Services.Help;
@@ -66,6 +67,12 @@ internal static class PresentationRegistrations
             sp.GetRequiredService<IEffectiveThemeProvider>(),
             sp.GetRequiredService<ISettingsService>()));
         _ = services.AddSingleton(sp => new ThemeApplier(sp.GetRequiredService<IEffectiveThemeProvider>()));
+        _ = services.AddSingleton(sp => new ThemeFollower(
+            Application.Current,
+            sp.GetRequiredService<ISettingsService>(),
+            sp.GetRequiredService<ThemeApplier>(),
+            sp.GetRequiredService<PreviewViewModel>(),
+            sp.GetRequiredService<IEffectiveThemeProvider>()));
         _ = services.AddSingleton(sp => new UiSettingsStore(
             sp.GetRequiredService<IFileSystem>(),
             sp.GetRequiredService<ILogger<UiSettingsStore>>()));

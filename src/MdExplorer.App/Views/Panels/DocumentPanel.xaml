@@ -2,6 +2,7 @@
              x:ClassModifier="internal"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:MdExplorer.Presentation;assembly=MdExplorer.Presentation"
              xmlns:l="clr-namespace:MdExplorer.App.Localization"
              xmlns:vm="clr-namespace:MdExplorer.App.ViewModels"
              d:DataContext="{d:DesignInstance Type=vm:DocumentPanelViewModel}"
@@ -59,15 +60,15 @@
                     <Button Margin="6,0,0,0"
                             Padding="8,2"
                             Content="{l:Loc Document_Save}"
-                            Command="{Binding SaveCommand}"
+                            Command="{Binding Editor.SaveCommand}"
                             ToolTip="{l:Loc Document_Save_ToolTip}" />
                 </StackPanel>
                 <TextBlock Grid.Column="2"
                            Margin="12,0,0,0"
                            VerticalAlignment="Center"
                            Foreground="{DynamicResource TextSecondaryBrush}"
-                           Text="{Binding Editor.StatusMessage, Mode=OneWay, FallbackValue=''}"
-                           AutomationProperties.LiveSetting="Polite"
+                           Text="{Binding Editor.StatusMessage, Mode=OneWay, FallbackValue='', NotifyOnTargetUpdated=True}"
+                           c:LiveRegion.Announce="True"
                            TextTrimming="CharacterEllipsis" />
             </Grid>
         </Border>
@@ -171,7 +172,7 @@
                             ToolTip="{l:Loc Document_FindPrevious_ToolTip}"
                             AutomationProperties.Name="{l:Loc Document_FindPrevious_ToolTip}" />
                     <TextBlock x:Name="FindStatus"
-                               AutomationProperties.LiveSetting="Polite"
+                               c:LiveRegion.Announce="True"
                                VerticalAlignment="Center"
                                Margin="12,0,0,0"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -365,7 +366,7 @@
                 <TextBox x:Name="EditorTextBox"
                          AutomationProperties.Name="{l:Loc Document_Editor_Name}"
                          Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisibility}}"
-                         FontFamily="Consolas, Courier New, monospace"
+                         FontFamily="{StaticResource MonospaceFontFamily}"
                          FontSize="13"
                          AcceptsReturn="True"
                          AcceptsTab="True"

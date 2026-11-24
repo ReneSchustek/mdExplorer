@@ -18,7 +18,11 @@ internal interface IDocumentFileService
     /// Leere zeigen, kann es nicht mehr abwählen. Gilt für das Löschen wie fürs Umbenennen:
     /// ein WikiLink zeigt auf den Dateinamen, und der ändert sich bei beidem.
     /// </remarks>
-    Task<DocumentImpact> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken);
+    /// <returns>
+    /// <see langword="null"/>, wenn der Index gerade nicht lesbar ist; dann darf der Vorgang nicht
+    /// ohne Rückfrage weiterlaufen, als hinge nichts an der Datei.
+    /// </returns>
+    Task<DocumentImpact?> GetImpactAsync(Guid markdownFileId, CancellationToken cancellationToken);
 
     /// <summary>Benennt die Datei um; der Ordner bleibt derselbe.</summary>
     /// <param name="markdownFileId">Das Dokument.</param>
@@ -45,14 +49,4 @@ internal sealed record DocumentImpact(string Title, int IncomingLinkCount)
 {
     /// <summary>Ein Dokument, das es nicht gibt.</summary>
     public static DocumentImpact Unknown { get; } = new(string.Empty, 0);
-}
-
-/// <summary>Ausgang eines Vorgangs an Datei und Index.</summary>
-/// <param name="Succeeded">Ob der Vorgang vollständig durchlief.</param>
-/// <param name="Message">Was passiert ist, für die Statuszeile, in ganzen Sätzen.</param>
-/// <param name="NewAbsolutePath">Der neue Pfad, sofern die Datei noch existiert.</param>
-internal sealed record DocumentFileResult(bool Succeeded, string Message, string? NewAbsolutePath)
-{
-    /// <summary>Erzeugt ein Fehlschlag-Ergebnis mit Begründung.</summary>
-    public static DocumentFileResult Failed(string message) => new(false, message, null);
 }

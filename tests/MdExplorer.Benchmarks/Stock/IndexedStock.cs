@@ -43,17 +43,17 @@ internal sealed class IndexedStock : IAsyncDisposable
 
     private const string ReadyMarker = "bereit.txt";
 
-    /// <summary>Ordner, in dem Notizen und Datenbank zwischengespeichert liegen.</summary>
-    public static string CacheDirectory => Path.Combine(
-        Path.GetTempPath(),
-        "MdExplorer.Benchmarks",
-        string.Create(CultureInfo.InvariantCulture, $"bestand-v{LayoutVersion}-{StockGenerator.FileCount}-{StockGenerator.Seed}"));
-
     private IndexedStock(string rootPath, ServiceProvider services)
     {
         RootPath = rootPath;
         Services = services;
     }
+
+    /// <summary>Ordner, in dem Notizen und Datenbank zwischengespeichert liegen.</summary>
+    public static string CacheDirectory => Path.Combine(
+        Path.GetTempPath(),
+        "MdExplorer.Benchmarks",
+        string.Create(CultureInfo.InvariantCulture, $"bestand-v{LayoutVersion}-{StockGenerator.FileCount}-{StockGenerator.Seed}"));
 
     /// <summary>Ordner mit den Notizen.</summary>
     public string RootPath { get; }

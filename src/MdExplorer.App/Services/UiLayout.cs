@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace MdExplorer.App.Services;
 
 /// <summary>
@@ -29,13 +31,29 @@ internal sealed record UiLayout(
     private const double DefaultFolderColumnWidth = 320;
     private const double DefaultPreviewColumnWidth = 512;
 
+    // Die linke Spalte hat drei Register: Ordner, Alle Dateien, Suche.
+    private const int LeftTabCount = 3;
+
     /// <summary>Voreinstellung, solange noch kein Layout gespeichert ist.</summary>
     public static UiLayout Default { get; } = new(DefaultFolderColumnWidth, DefaultPreviewColumnWidth, HelpWindow: null, IsTagCloudVisible: true, LeftTabIndex: 0, GraphPathPrefix: null);
-}
 
-/// <summary>Geometrie eines persistierten Fensters in geräteunabhängigen Einheiten (1/96 Zoll), wie WPF sie führt.</summary>
-/// <param name="Left">Linke Kante.</param>
-/// <param name="Top">Obere Kante.</param>
-/// <param name="Width">Breite.</param>
-/// <param name="Height">Höhe.</param>
-internal sealed record WindowGeometry(double Left, double Top, double Width, double Height);
+    /// <summary>
+    /// Ersetzt jeden Wert, mit dem das Fenster nicht aufgebaut werden kann, durch seine Voreinstellung.
+    /// </summary>
+    /// <remarks>
+    /// Die Datei liegt im Profil des Nutzers und lässt sich von Hand bearbeiten. Eine negative Breite
+    /// ließe das Hauptfenster beim Aufbau werfen, und zwar bei jedem Start. Jeder Wert fällt einzeln
+    /// zurück; was brauchbar ist, bleibt.
+    /// </remarks>
+    public UiLayout Sanitized() => this with
+    {
+        FolderColumnWidth = IsUsableLength(FolderColumnWidth) ? FolderColumnWidth : DefaultFolderColumnWidth,
+        PreviewColumnWidth = IsUsableLength(PreviewColumnWidth) ? PreviewColumnWidth : DefaultPreviewColumnWidth,
+        HelpWindow = HelpWindow is { IsUsable: true } ? HelpWindow : null,
+        LeftTabIndex = LeftTabIndex is >= 0 and < LeftTabCount ? LeftTabIndex : 0,
+        RecentFiles = RecentFiles is null ? null : [.. RecentFiles.Where(path => !string.IsNullOrWhiteSpace(path))],
+    };
+
+    /// <summary>Ob eine Länge ein Fenster oder eine Spalte tragen kann: endlich und größer als null.</summary>
+    internal static bool IsUsableLength(double value) => double.IsFinite(value) && value > 0;
+}
